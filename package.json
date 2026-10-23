@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "6.0.0",
-  "description": "Aether Craft v6.0 — 1:1 Official Minecraft Launcher UI + Installations Manager + 3D WebGL Skin Studio + Smooth-Exit Engine",
+  "version": "7.0.0",
+  "description": "Aether Craft v7.0 — Clean Direct Core & Version Selector Minecraft Launcher (No Clutter, 3D WebGL, Smooth-Exit)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v6.0 — 1:1 Minecraft Launcher &amp; Installations Manager</title>
+  <title>Aether Craft v7.0 — Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
-    <!-- TOP FRAMELESS TITLEBAR + OFFICIAL SUB-NAV -->
+    <!-- TOP TITLEBAR -->
     <header class="titlebar">
       <div class="titlebar-brand">
         <div class="brand-cube-svg">
@@ -21,22 +21,20 @@
           </svg>
         </div>
         <div class="brand-titles">
-          <span class="brand-name">MINECRAFT: JAVA EDITION</span>
-          <span class="brand-version">AETHER v6.0 PRO</span>
+          <span class="brand-name">MINECRAFT LAUNCHER</span>
+          <span class="brand-version">v7.0</span>
         </div>
       </div>
 
-      <!-- 5 FAMOUS LAUNCHER THEME SWITCHER -->
       <div class="theme-studio-bar">
-        <span class="ts-label">Style:</span>
-        <button class="ts-chip active" data-theme-pick="mojang">Mojang 1:1</button>
-        <button class="ts-chip" data-theme-pick="lunar">Lunar Neon</button>
+        <span class="ts-label">Giao diện:</span>
+        <button class="ts-chip active" data-theme-pick="mojang">Mojang Dark</button>
+        <button class="ts-chip" data-theme-pick="lunar">Lunar</button>
         <button class="ts-chip" data-theme-pick="modrinth">Modrinth</button>
-        <button class="ts-chip" data-theme-pick="feather">Feather Tím</button>
-        <button class="ts-chip" data-theme-pick="prism">Prism Sáng</button>
+        <button class="ts-chip" data-theme-pick="feather">Feather</button>
+        <button class="ts-chip" data-theme-pick="prism">Sáng (Light)</button>
       </div>
 
-      <!-- Telemetry & Instant RAM Cleaner -->
       <div class="titlebar-telemetry">
         <div class="telemetry-pill"><span id="cpuBadge">CPU</span></div>
         <div class="telemetry-pill"><span id="ramBadge">RAM: -- GB</span></div>
@@ -55,33 +53,29 @@
 
     <!-- MAIN WORKSPACE -->
     <div class="workspace">
-      <!-- LEFT SIDEBAR (1:1 OFFICIAL MINECRAFT LAUNCHER SIDEBAR) -->
+      <!-- CLEAN LEFT SIDEBAR (ZERO CLUTTER / ZERO SUGGESTIONS) -->
       <aside class="sidebar">
         <div class="sidebar-profile-card">
-          <canvas id="avatar2dCanvas" width="44" height="44" class="avatar-face-canvas"></canvas>
+          <canvas id="avatar2dCanvas" width="42" height="42" class="avatar-face-canvas"></canvas>
           <div class="sidebar-profile-info">
             <div class="sidebar-player-name" id="sidebarPlayerName">StevePlayer</div>
             <div class="sidebar-auth-tag" id="sidebarAuthBadge">CRACK / OFFLINE</div>
           </div>
         </div>
 
-        <div class="sidebar-section-label">MINECRAFT LAUNCHER</div>
+        <div class="sidebar-section-label">DANH MỤC CHÍNH</div>
         <nav class="sidebar-nav">
           <button class="nav-item active" data-tab="play">
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" fill-opacity="0.2"/></svg>
-            <span>Chơi Ngay (Play)</span>
+            <span>Trang Chủ &amp; Chọn Bản</span>
           </button>
-          <button class="nav-item" data-tab="installations">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            <span>Quản Lý Phiên Bản</span>
-          </button>
-          <button class="nav-item" data-tab="servers">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
-            <span>Danh Sách Server</span>
+          <button class="nav-item" data-tab="versions">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span>Danh Sách Phiên Bản</span>
           </button>
           <button class="nav-item" data-tab="settings">
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            <span>Cài Đặt &amp; Tắt Mượt</span>
+            <span>Cài Đặt RAM &amp; Java</span>
           </button>
           <button class="nav-item" data-tab="console">
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
@@ -89,8 +83,13 @@
           </button>
         </nav>
 
-        <div class="sidebar-section-label">BẢN CÀI ĐẶT NHANH</div>
-        <div class="quick-version-list" id="sidebarInstallationsList"></div>
+        <!-- CURRENT SELECTION SUMMARY BOX IN SIDEBAR -->
+        <div class="sidebar-current-box">
+          <div class="scb-label">CẤU HÌNH ĐANG CHỌN</div>
+          <div class="scb-row"><span>Phiên bản:</span><strong id="sideVerText">1.21.4</strong></div>
+          <div class="scb-row"><span>Core Loader:</span><strong id="sideCoreText">FABRIC</strong></div>
+          <div class="scb-row"><span>Bộ nhớ RAM:</span><strong id="sideRamText">4 GB</strong></div>
+        </div>
 
         <div class="sidebar-footer">
           <button class="folder-action-btn" id="btnOpenDir">
@@ -100,78 +99,132 @@
         </div>
       </aside>
 
-      <!-- MAIN STAGE -->
+      <!-- MAIN CONTENT AREA -->
       <main class="main-stage">
-        <!-- OFFICIAL MINECRAFT TOP HORIZONTAL SUB-NAVIGATION BAR -->
-        <div class="mc-top-subnav">
-          <div class="mc-subnav-tabs">
-            <button class="mc-subtab active" data-tab-jump="play">Chơi (Play)</button>
-            <button class="mc-subtab" data-tab-jump="installations">Cài Đặt Phiên Bản (Installations)</button>
-            <button class="mc-subtab" data-tab-jump="servers">Máy Chủ (Servers)</button>
-            <button class="mc-subtab" data-tab-jump="settings">Tối Ưu RAM &amp; Java</button>
-            <button class="mc-subtab" data-tab-jump="console">Nhật Ký Game</button>
-          </div>
-          <div class="wallpaper-switcher">
-            <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png">Realms</button>
-            <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">Wilderness</button>
-            <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/1.21.4540x540.jpg">1.21.4 Art</button>
-            <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/touchgrass700x466.jpg">Overworld</button>
-          </div>
-        </div>
-
-        <!-- TAB 1: CHƠI NGAY (1:1 OFFICIAL HERO STAGE + INSTALLED PROFILES) -->
+        <!-- TAB 1: TRANG CHỦ & MỤC CHỌN CORE + PHIÊN BẢN TRỰC TIẾP -->
         <section class="tab-panel active" id="tab-play">
-          <div class="play-hero-grid">
-            <!-- LEFT: OFFICIAL KEY ART + ACCOUNT & QUICK SERVER BAR -->
-            <div class="hero-stage-card" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png');">
-              <div class="hero-stage-overlay"></div>
-              <div class="hero-stage-inner">
-                <div class="hero-emblem-block">
-                  <div class="mc-edition-pill">MINECRAFT: JAVA EDITION • OFFICIAL 1:1 STUDIO</div>
-                  <h1 class="mc-giant-title">AETHER CRAFT</h1>
-                  <p class="mc-hero-sub">Chơi mượt mọi phiên bản <strong>1.7.10 – 1.21.4</strong> với <strong>5 Core Mod Loaders</strong>, đồng bộ <strong>Skin 3D WebGL</strong> và tắt game siêu tốc dưới <strong>0.2 giây</strong>.</p>
+          <div class="main-play-grid">
+            <!-- LEFT COLUMN: HERO BANNER + DIRECT CORE & VERSION SELECTOR -->
+            <div class="left-play-col">
+              <!-- OFFICIAL MINECRAFT KEY ART BANNER -->
+              <div class="hero-banner-clean" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png');">
+                <div class="hbc-overlay"></div>
+                <div class="hbc-content">
+                  <div class="hbc-top">
+                    <span class="mc-badge">MINECRAFT: JAVA EDITION</span>
+                    <div class="wallpaper-switcher">
+                      <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png"> Cảnh 1</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">Cảnh 2</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">Cảnh 3</button>
+                    </div>
+                  </div>
+                  <div class="hbc-bottom">
+                    <h1>MINECRAFT JAVA EDITION</h1>
+                    <p>Chọn trực tiếp Phiên bản, Core Loader và Tài khoản bên dưới để vào game.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DIRECT CORE, VERSION & ACCOUNT SELECTOR PANEL (NHƯ BAO LAUNCHER) -->
+              <div class="direct-selector-panel">
+                <!-- SECTION A: CHỌN CORE & PHIÊN BẢN -->
+                <div class="dsp-block">
+                  <div class="dsp-head">
+                    <span class="card-dot emerald"></span>
+                    <h3>CHỌN CORE &amp; PHIÊN BẢN MINECRAFT</h3>
+                  </div>
+
+                  <label class="field-label">1. Chọn Core (Mod Loader)</label>
+                  <div class="core-selector-bar">
+                    <button class="core-tab-btn" data-core="vanilla">
+                      <strong>Vanilla</strong>
+                      <span>Nguyên bản</span>
+                    </button>
+                    <button class="core-tab-btn active" data-core="fabric">
+                      <strong>Fabric</strong>
+                      <span>Tối ưu FPS</span>
+                    </button>
+                    <button class="core-tab-btn" data-core="forge">
+                      <strong>Forge</strong>
+                      <span>Chạy Mod</span>
+                    </button>
+                    <button class="core-tab-btn" data-core="quilt">
+                      <strong>Quilt</strong>
+                      <span>Loader mới</span>
+                    </button>
+                    <button class="core-tab-btn" data-core="legacyfabric">
+                      <strong>Legacy Fabric</strong>
+                      <span>1.8.9 / 1.12.2</span>
+                    </button>
+                  </div>
+
+                  <div class="version-selectors-row">
+                    <div class="vs-col">
+                      <div class="ver-label-bar">
+                        <label class="field-label" style="margin:0;">2. Chọn Phiên Bản Minecraft</label>
+                        <div class="vtype-group">
+                          <button class="vtype-btn active" data-vtype="release">Release</button>
+                          <button class="vtype-btn" data-vtype="snapshot">Snapshot</button>
+                          <button class="vtype-btn" data-vtype="old">Beta/Alpha</button>
+                        </div>
+                      </div>
+                      <select id="versionSelect" class="pro-select"></select>
+                    </div>
+
+                    <div class="vs-col" id="loaderBuildGroup">
+                      <label class="field-label">3. Phiên Bản Build Core</label>
+                      <select id="loaderVersionSelect" class="pro-select">
+                        <option value="">Tự động chọn bản mới nhất</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- COMPACT GLASS ACCOUNT & SERVER BAR RIGHT INSIDE HERO -->
-                <div class="hero-glass-controls">
-                  <div class="hgc-row">
-                    <div class="auth-switcher-mini">
-                      <button class="auth-mini-btn active" id="tabBtnCrack">Crack / Offline</button>
-                      <button class="auth-mini-btn" id="tabBtnMicrosoft">Bản Quyền Microsoft</button>
-                    </div>
-                    <div class="crack-inline-box" id="panelCrack">
-                      <input type="text" id="usernameInput" class="pro-input" value="StevePlayer" maxlength="16" placeholder="Tên nhân vật..." />
-                      <button class="btn-sync-skin" id="btnReloadSkin">Đổi Skin</button>
-                    </div>
-                    <div class="ms-inline-box hidden" id="panelMicrosoft">
-                      <div id="msNotLoggedBox"><button class="btn-ms-oauth" id="btnMsLogin"><span>Đăng Nhập Microsoft OAuth2</span></button></div>
-                      <div id="msLoggedBox" class="hidden ms-inline-logged">
-                        <strong id="msProfileName">Player</strong>
-                        <span id="msProfileUuid" class="hidden"></span>
-                        <button class="btn-ms-logout" id="btnMsLogout">Thoát</button>
-                      </div>
+                <!-- SECTION B: TÀI KHOẢN & BỘ NHỚ RAM -->
+                <div class="dsp-block">
+                  <div class="dsp-head">
+                    <span class="card-dot cyan"></span>
+                    <h3>TÀI KHOẢN &amp; DUNG LƯỢNG RAM</h3>
+                  </div>
+
+                  <div class="auth-switcher-row">
+                    <button class="auth-tab-btn active" id="tabBtnCrack">Tài khoản Crack (Offline)</button>
+                    <button class="auth-tab-btn" id="tabBtnMicrosoft">Tài khoản Bản Quyền Microsoft</button>
+                  </div>
+
+                  <div id="panelCrack" class="auth-input-area">
+                    <label class="field-label">Tên nhân vật trong Game</label>
+                    <div class="input-with-btn">
+                      <input type="text" id="usernameInput" class="pro-input" value="StevePlayer" maxlength="16" placeholder="Nhập tên nhân vật..." />
+                      <button class="btn-sync-skin" id="btnReloadSkin">Cập nhật Skin</button>
                     </div>
                   </div>
 
-                  <div class="hgc-bottom-row">
-                    <div class="skin-preset-strip">
-                      <span class="preset-lbl">Skin mẫu:</span>
-                      <button class="skin-preset-chip" data-skin="Dream">Dream</button>
-                      <button class="skin-preset-chip" data-skin="Technoblade">Technoblade</button>
-                      <button class="skin-preset-chip" data-skin="Notch">Notch</button>
-                      <button class="skin-preset-chip" data-skin="Alex">Alex</button>
-                      <button class="skin-preset-chip" data-skin="MHF_Steve">Steve</button>
+                  <div id="panelMicrosoft" class="auth-input-area hidden">
+                    <div id="msNotLoggedBox">
+                      <button class="btn-ms-oauth" id="btnMsLogin"><span>Đăng Nhập Microsoft OAuth2</span></button>
                     </div>
-                    <div class="uuid-mini-tag">UUID: <code id="crackUuidText">Offline</code></div>
+                    <div id="msLoggedBox" class="hidden ms-logged-inline">
+                      <strong id="msProfileName">Player</strong>
+                      <button class="btn-ms-logout" id="btnMsLogout">Đăng xuất</button>
+                    </div>
+                  </div>
+
+                  <div class="ram-inline-box">
+                    <div class="qram-top">
+                      <span class="field-label" style="margin:0;">Cấp phát RAM tối đa cho Game</span>
+                      <strong class="qram-val" id="ramValueDisplay">4 GB</strong>
+                    </div>
+                    <input type="range" id="ramSlider" min="2" max="16" step="1" value="4" class="pro-range" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- RIGHT: 3D WEBGL MINECRAFT CHARACTER STAGE -->
+            <!-- RIGHT COLUMN: 3D WEBGL CHARACTER VIEWER -->
             <div class="bento-card skin-studio-card">
               <div class="card-head">
-                <div class="card-title-group"><span class="card-dot emerald"></span><h3>NHÂN VẬT 3D (XOAY 360°)</h3></div>
+                <div class="card-title-group"><span class="card-dot emerald"></span><h3>NHÂN VẬT 3D</h3></div>
                 <div class="pose-bar">
                   <button class="pose-btn active" data-pose="walk">Đi bộ</button>
                   <button class="pose-btn" data-pose="run">Chạy</button>
@@ -185,139 +238,28 @@
               </div>
             </div>
           </div>
-
-          <!-- BOTTOM SECTION OF PLAY TAB: QUẢN LÝ CHỌN BẢN MINE ĐỂ CHƠI (INSTALLATIONS DECK) -->
-          <div class="installations-deck-card">
-            <div class="ideck-header">
-              <div class="ideck-title-wrap">
-                <span class="card-dot emerald"></span>
-                <h3>CHỌN BẢN MINE ĐỂ CHƠI (INSTALLATIONS ĐÃ CÀI ĐẶT)</h3>
-                <span class="ideck-sub">Click chọn bản muốn chơi hoặc tạo thêm bản mới với Core &amp; RAM riêng</span>
-              </div>
-              <button class="btn-new-install" id="btnGoCreateInstall">+ Tạo Bản Mine Mới</button>
-            </div>
-            <div class="home-installs-grid" id="homeInstallationsGrid"></div>
-          </div>
         </section>
 
-        <!-- TAB 2: QUẢN LÝ PHIÊN BẢN (1:1 OFFICIAL MINECRAFT INSTALLATIONS MANAGER) -->
-        <section class="tab-panel" id="tab-installations">
-          <div class="installs-manager-layout">
-            <!-- LEFT: CREATE / EDIT INSTALLATION BUILDER -->
-            <div class="bento-card install-builder-card">
-              <div class="card-head">
-                <div class="card-title-group"><span class="card-dot emerald"></span><h3>TẠO / CẤU HÌNH BẢN MINE MỚI</h3></div>
-                <span class="card-tag" id="selectedCoreBadge">FABRIC</span>
-              </div>
-
-              <label class="field-label">Đặt tên Bản Mine (vd: Sinh tồn 1.21.4, Modpack Forge...)</label>
-              <input type="text" id="newInstallName" class="pro-input" placeholder="Nhập tên cấu hình..." value="Minecraft 1.21.4 Siêu Mượt" />
-
-              <label class="field-label" style="margin-top:8px;">Chọn Biểu Tượng Khối Minecraft</label>
-              <div class="icon-picker-row" id="iconPickerRow">
-                <button class="icon-pick-btn active" data-icon="grass">Khối Cỏ</button>
-                <button class="icon-pick-btn" data-icon="crafting">Bàn Chế Tạo</button>
-                <button class="icon-pick-btn" data-icon="furnace">Lò Nung</button>
-                <button class="icon-pick-btn" data-icon="diamond">Kim Cương</button>
-                <button class="icon-pick-btn" data-icon="tnt">Khối TNT</button>
-              </div>
-
-              <label class="field-label" style="margin-top:8px;">Chọn Nền Tảng Core (Mod Loader)</label>
-              <div class="core-pill-grid">
-                <button class="core-pill" data-core="vanilla"><span class="cp-title">Vanilla</span><span class="cp-sub">Nguyên bản</span></button>
-                <button class="core-pill active" data-core="fabric"><span class="cp-title">Fabric</span><span class="cp-sub">FPS cao nhất</span></button>
-                <button class="core-pill" data-core="forge"><span class="cp-title">Forge</span><span class="cp-sub">Modpack lớn</span></button>
-                <button class="core-pill" data-core="quilt"><span class="cp-title">Quilt</span><span class="cp-sub">Hiện đại</span></button>
-                <button class="core-pill" data-core="legacyfabric"><span class="cp-title">Legacy</span><span class="cp-sub">1.8.9 PvP</span></button>
-              </div>
-
-              <div class="ver-filter-row" style="margin-top:6px;">
-                <label class="field-label" style="margin:0;">Phiên bản Minecraft (Có sẵn tức thì)</label>
-                <div class="ver-type-pills">
-                  <button class="vtype-btn active" data-vtype="release">Chính thức</button>
-                  <button class="vtype-btn" data-vtype="snapshot">Snapshot</button>
-                  <button class="vtype-btn" data-vtype="old">Cổ điển</button>
-                </div>
-              </div>
-              <select id="versionSelect" class="pro-select"></select>
-
-              <div id="loaderBuildGroup" style="margin-top:8px;">
-                <label class="field-label">Phiên bản Build của Core Loader</label>
-                <select id="loaderVersionSelect" class="pro-select">
-                  <option value="">Tự động chọn bản ổn định mới nhất</option>
-                </select>
-              </div>
-
-              <div class="quick-ram-box" style="margin-top:10px;">
-                <div class="qram-top">
-                  <span class="field-label" style="margin:0;">Dung lượng RAM cấp cho bản này</span>
-                  <strong class="qram-val" id="ramValueDisplay">4 GB</strong>
-                </div>
-                <input type="range" id="ramSlider" min="2" max="16" step="1" value="4" class="pro-range" />
-              </div>
-
-              <button class="btn-save-installation" id="btnSaveInstallation">+ Lưu Vào Danh Sách Bản Mine &amp; Chọn Chơi</button>
-            </div>
-
-            <!-- RIGHT: SAVED INSTALLATIONS LIST (1:1 OFFICIAL LAUNCHER LIST) -->
-            <div class="bento-card installs-list-card">
-              <div class="card-head">
-                <div class="card-title-group"><span class="card-dot cyan"></span><h3>DANH SÁCH CÁC BẢN MINE CỦA BẠN (INSTALLATIONS)</h3></div>
-                <span class="card-tag" id="installCountTag">5 Bản cài đặt</span>
-              </div>
-              <div class="official-installs-list" id="installationsListContainer"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- TAB 3: DANH SÁCH MÁY CHỦ (SERVERS QUICK-JOIN) -->
-        <section class="tab-panel" id="tab-servers">
-          <div class="subtab-header">
+        <!-- TAB 2: DANH SÁCH ĐẦY ĐỦ CÁC PHIÊN BẢN (SEARCHABLE VERSION TABLE) -->
+        <section class="tab-panel" id="tab-versions">
+          <div class="versions-tab-header">
             <div>
-              <h2>Danh Sách Máy Chủ Minecraft (Vào Thẳng Khi Bấm Chơi)</h2>
-              <p>Chọn máy chủ bất kỳ bên dưới hoặc nhập IP riêng để tự động kết nối thẳng vào Server.</p>
+              <h2>Danh Sách Phiên Bản Minecraft (Từ Mojang Official)</h2>
+              <p>Tìm kiếm và bấm chọn bất kỳ phiên bản nào bên dưới để nạp vào màn hình chính.</p>
+            </div>
+            <div class="versions-search-controls">
+              <input type="text" id="versionSearchInput" class="pro-input" placeholder="Tìm phiên bản (vd: 1.21.4, 1.16.5, 1.12.2, 1.8.9)..." style="width:280px;" />
             </div>
           </div>
-
-          <div class="server-custom-bar">
-            <input type="text" id="serverIpInput" class="pro-input" placeholder="Nhập IP Server tùy chỉnh (vd: play.luckyvn.com) hoặc để trống để vào Menu chính..." />
-            <button class="sq-chip active" data-server="">Vào Menu Chính</button>
-          </div>
-
-          <div class="servers-showcase-grid">
-            <div class="server-card" data-server="play.luckyvn.com">
-              <div class="srv-badge">VIỆT NAM • ĐÔNG NHẤT</div>
-              <h3>LuckyVN Network</h3>
-              <p>Skyblock, Survival, Prison, Towny, BoxPvP hỗ trợ cả tài khoản Crack &amp; Bản quyền.</p>
-              <code>IP: play.luckyvn.com</code>
-            </div>
-            <div class="server-card" data-server="heromc.net">
-              <div class="srv-badge">VIỆT NAM • MINIGAMES</div>
-              <h3>HeroMC Server</h3>
-              <p>BedWars, SkyWars, Murder Mystery, Đào Mỏ và cộng đồng người chơi Việt sôi động.</p>
-              <code>IP: heromc.net</code>
-            </div>
-            <div class="server-card" data-server="play.pika-network.net">
-              <div class="srv-badge">QUỐC TẾ • CRACK PVP</div>
-              <h3>PikaNetwork</h3>
-              <p>Máy chủ BedWars &amp; Practice PvP lớn nhất thế giới hỗ trợ tài khoản Crack / Offline.</p>
-              <code>IP: play.pika-network.net</code>
-            </div>
-            <div class="server-card" data-server="mc.hypixel.net">
-              <div class="srv-badge">BẢN QUYỀN MICROSOFT</div>
-              <h3>Hypixel Official</h3>
-              <p>Máy chủ Minecraft số 1 thế giới (Yêu cầu đăng nhập Bản Quyền Microsoft).</p>
-              <code>IP: mc.hypixel.net</code>
-            </div>
-          </div>
+          <div class="versions-table-wrap" id="fullVersionsList"></div>
         </section>
 
-        <!-- TAB 4: CÀI ĐẶT & TỐI ƯU TẮT MƯỢT -->
+        <!-- TAB 3: CÀI ĐẶT RAM, JAVA & TẮT MƯỢT -->
         <section class="tab-panel" id="tab-settings">
           <div class="subtab-header">
             <div>
-              <h2>Tối Ưu Hóa Phần Cứng, Đa Nhân &amp; Tắt Game Mượt (&lt;0.2s)</h2>
-              <p>Tinh chỉnh đường dẫn Java, thư mục `.minecraft` và cơ chế giải phóng RAM tức thì.</p>
+              <h2>Cài Đặt Hệ Thống, Đường Dẫn Java &amp; Tối Ưu Tắt Mượt</h2>
+              <p>Tùy chỉnh đường dẫn thực thi Java, thư mục lưu game và tham số tối ưu đa nhân.</p>
             </div>
           </div>
 
@@ -326,72 +268,76 @@
               <h3>Đường Dẫn Java &amp; Thư Mục Game</h3>
               <label class="field-label">Đường dẫn Java (`javaw.exe` hoặc `java`)</label>
               <input type="text" id="javaPathInput" class="pro-input" />
-              <label class="field-label" style="margin-top:12px;">Thư mục lưu dữ liệu Minecraft (`.minecraft`)</label>
+              <label class="field-label" style="margin-top:12px;">Thư mục dữ liệu Minecraft (`.minecraft`)</label>
               <input type="text" id="gameDirInput" class="pro-input" />
+              <label class="field-label" style="margin-top:12px;">Kết nối thẳng Server IP khi mở game (Không bắt buộc)</label>
+              <input type="text" id="serverIpInput" class="pro-input" placeholder="Để trống nếu muốn vào Menu chính..." />
             </div>
 
             <div class="bento-card">
-              <h3>Tùy Chọn Tối Ưu Tốc Độ &amp; Tắt Mượt</h3>
-              <label class="toggle-line" style="margin-top:8px;">
+              <h3>Tùy Chọn Tối Ưu Hiệu Năng</h3>
+              <label class="toggle-line" style="margin-top:10px;">
                 <input type="checkbox" id="hideLauncherCheck" checked />
-                <span><strong>Ngủ đông Launcher khi chơi (0% GPU) &amp; Tắt Mine siêu mượt (&lt;0.2s):</strong> Tự tạm dừng 3D WebGL và thu gọn RAM khi vào game.</span>
+                <span><strong>Ngủ đông Launcher khi chơi (0% GPU) &amp; Tắt Mine siêu mượt (&lt;0.2s):</strong> Tự tạm dừng 3D WebGL khi game mở và giải phóng `javaw.exe` ngay khi đóng game.</span>
               </label>
-              <label class="toggle-line" style="margin-top:12px;">
+              <label class="toggle-line" style="margin-top:14px;">
                 <input type="checkbox" id="fastSkipCheck" checked />
-                <span><strong>Fast-Skip SHA1 Verification:</strong> Vào game dưới 1 giây từ lần khởi động thứ 2.</span>
+                <span><strong>Fast-Skip SHA1 Verification:</strong> Bỏ qua kiểm tra lại file tài nguyên đã tải để vào game dưới 1 giây.</span>
               </label>
-              <label class="toggle-line" style="margin-top:12px;">
+              <label class="toggle-line" style="margin-top:14px;">
                 <input type="checkbox" id="aikarFlagsCheck" checked />
-                <span><strong>Dynamic Low-Commit Heap (`-Xms512M` + Periodic G1GC):</strong> Tự trả RAM trống về Windows mỗi 15 giây, chống tràn Pagefile.</span>
+                <span><strong>Dynamic Low-Commit Heap (`-Xms512M` + Periodic G1GC):</strong> Tự trả RAM trống về Windows mỗi 15 giây, chống tràn Pagefile gây đơ máy.</span>
               </label>
-              <label class="toggle-line" style="margin-top:12px;">
+              <label class="toggle-line" style="margin-top:14px;">
                 <input type="checkbox" id="crackSkinSyncToggle" checked />
-                <span><strong>CustomSkinLoader Auto-Config:</strong> Tự động hiện Skin 3D trong chế độ Crack / Offline.</span>
+                <span><strong>CustomSkinLoader Auto-Config:</strong> Tự động đồng bộ Skin trong chế độ Crack / Offline.</span>
               </label>
             </div>
           </div>
         </section>
 
-        <!-- TAB 5: NHẬT KÝ TIẾN TRÌNH -->
+        <!-- TAB 4: NHẬT KÝ TIẾN TRÌNH -->
         <section class="tab-panel" id="tab-console">
           <div class="console-header-row">
-            <div><h2>Nhật Ký Khởi Động &amp; Smooth-Exit Telemetry</h2><p>Theo dõi trực tiếp tiến trình tải 64 luồng và đầu ra của Minecraft.</p></div>
+            <div><h2>Nhật Ký Khởi Động (Console)</h2><p>Theo dõi tiến trình tải thư viện và log của Minecraft.</p></div>
             <button class="btn-sync-skin" id="btnClearConsole">Xóa nhật ký</button>
           </div>
           <div class="console-terminal" id="consoleOutput">
-            <div class="log-entry info">[Aether Craft v6.0] 1:1 Official Minecraft Launcher + Installations Manager đã sẵn sàng.</div>
+            <div class="log-entry info">[Aether Craft v7.0] Sẵn sàng khởi chạy.</div>
           </div>
         </section>
       </main>
     </div>
 
-    <!-- BOTTOM 1:1 OFFICIAL MINECRAFT LAUNCHER ACTION DOCK -->
+    <!-- BOTTOM OFFICIAL LAUNCHER DOCK -->
     <footer class="mc-official-dock">
-      <!-- LEFT: 1:1 OFFICIAL INSTALLATION SELECTOR POPUP TRIGGER -->
-      <div class="dock-install-selector-wrap">
-        <div class="dock-install-popup hidden" id="dockInstallPopup"></div>
-        <button class="dock-install-trigger" id="btnToggleInstallPopup" title="Click để đổi nhanh Bản Mine muốn chơi">
-          <div class="dit-icon" id="dockActiveIcon"></div>
-          <div class="dit-info">
-            <strong id="dockActiveTitle">Minecraft 1.21.4 Fabric</strong>
-            <span id="dockActiveSub">1.21.4 • FABRIC • 4 GB RAM</span>
-          </div>
-          <span class="dit-arrow">▲</span>
-        </button>
+      <!-- LEFT: ACTIVE VERSION & CORE DISPLAY -->
+      <div class="dock-active-config">
+        <div class="dac-icon">
+          <svg viewBox="0 0 32 32" width="24" height="24">
+            <polygon points="16,2 30,9 16,16 2,9" fill="#4ade80"/>
+            <polygon points="2,9 16,16 16,30 2,23" fill="#92400e"/>
+            <polygon points="30,9 16,16 16,30 30,23" fill="#78350f"/>
+          </svg>
+        </div>
+        <div class="dac-info">
+          <strong id="dockVersionTitle">Minecraft 1.21.4</strong>
+          <span id="dockCoreSubtitle">Core: FABRIC • RAM: 4 GB</span>
+        </div>
       </div>
 
-      <!-- CENTER: ICONIC CHISELED OFFICIAL MINECRAFT GREEN PLAY BUTTON -->
+      <!-- CENTER: CHISELED MINECRAFT GREEN PLAY BUTTON -->
       <div class="dock-center-play">
-        <button class="btn-instant-kill hidden" id="btnForceKill" title="Đóng Minecraft ngay lập tức (0.1s) và giải phóng RAM">
+        <button class="btn-instant-kill hidden" id="btnForceKill">
           <span>TẮT NHANH MINE (0.1s)</span>
         </button>
         <button class="btn-mc-official-play" id="btnLaunch">
           <span class="mc-play-main" id="launchBtnText">CHƠI NGAY</span>
-          <span class="mc-play-sub" id="launchBtnSub">MINECRAFT JAVA EDITION</span>
+          <span class="mc-play-sub" id="launchBtnSub">1.21.4 • FABRIC</span>
         </button>
       </div>
 
-      <!-- RIGHT: TELEMETRY PROGRESS & ACTIVE ACCOUNT -->
+      <!-- RIGHT: PROGRESS BAR & STATUS -->
       <div class="dock-right-status">
         <div class="drs-top">
           <span class="drs-text" id="statusText">Sẵn sàng khởi động</span>

@@ -1,7 +1,7 @@
 const BUILTIN_VERSIONS = [
-  '1.21.4','1.21.3','1.21.1','1.21','1.20.6','1.20.4','1.20.2','1.20.1',
-  '1.19.4','1.19.2','1.18.2','1.17.1','1.16.5','1.15.2','1.14.4','1.13.2',
-  '1.12.2','1.11.2','1.10.2','1.9.4','1.8.9','1.7.10','1.6.4','1.5.2'
+  '1.21.4','1.21.3','1.21.2','1.21.1','1.21','1.20.6','1.20.4','1.20.2','1.20.1','1.20',
+  '1.19.4','1.19.3','1.19.2','1.19','1.18.2','1.18.1','1.17.1','1.16.5','1.16.4','1.16.1',
+  '1.15.2','1.14.4','1.13.2','1.12.2','1.11.2','1.10.2','1.9.4','1.8.9','1.7.10','1.6.4','1.5.2','1.4.7','1.2.5','1.0'
 ].map(id => ({ id, type: 'release' })).concat([
   { id: '26.3', type: 'snapshot' },
   { id: '24w46a', type: 'snapshot' },
@@ -9,26 +9,15 @@ const BUILTIN_VERSIONS = [
   { id: 'a1.2.6', type: 'old_alpha' }
 ]);
 
-const DEFAULT_INSTALLATIONS = [
-  { id: 'inst-1214-fabric', name: 'Bản Mới Nhất 1.21.4 (FPS Cao)', version: '1.21.4', core: 'fabric', loaderVersion: '', ramGB: 4, icon: 'grass' },
-  { id: 'inst-1204-shaders', name: 'Sinh Tồn & Shaders 1.20.4', version: '1.20.4', core: 'fabric', loaderVersion: '', ramGB: 4, icon: 'crafting' },
-  { id: 'inst-1201-forge', name: 'Kho Modpack Lớn 1.20.1', version: '1.20.1', core: 'forge', loaderVersion: '', ramGB: 6, icon: 'furnace' },
-  { id: 'inst-1165-nether', name: 'Speedrun Nether 1.16.5', version: '1.16.5', core: 'fabric', loaderVersion: '', ramGB: 4, icon: 'diamond' },
-  { id: 'inst-189-pvp', name: 'BedWars / PvP 1.8.9', version: '1.8.9', core: 'legacyfabric', loaderVersion: '', ramGB: 3, icon: 'tnt' }
-];
-
 const state = {
   authMode: 'crack',
   username: 'StevePlayer',
   crackSkinSync: true,
   msProfile: null,
-  installations: [...DEFAULT_INSTALLATIONS],
-  activeInstallId: 'inst-1214-fabric',
   selectedCore: 'fabric',
   selectedVersionType: 'release',
   selectedVersion: '1.21.4',
   selectedLoaderVersion: '',
-  selectedIcon: 'grass',
   ramGB: 4,
   javaPath: 'java',
   gameDir: '',
@@ -44,18 +33,6 @@ const state = {
 
 let skinViewer = null;
 let skinFetchTimer = null;
-
-function getBlockSvg(type) {
-  if (type === 'crafting') return `<svg viewBox="0 0 32 32" width="24" height="24"><polygon points="16,2 30,9 16,16 2,9" fill="#d97706"/><polygon points="2,9 16,16 16,30 2,23" fill="#92400e"/><polygon points="30,9 16,16 16,30 30,23" fill="#78350f"/></svg>`;
-  if (type === 'furnace') return `<svg viewBox="0 0 32 32" width="24" height="24"><polygon points="16,2 30,9 16,16 2,9" fill="#94a3b8"/><polygon points="2,9 16,16 16,30 2,23" fill="#64748b"/><polygon points="30,9 16,16 16,30 30,23" fill="#475569"/><polygon points="19,19 26,15.5 26,23 19,26.5" fill="#f97316"/></svg>`;
-  if (type === 'diamond') return `<svg viewBox="0 0 32 32" width="24" height="24"><polygon points="16,2 30,9 16,16 2,9" fill="#67e8f9"/><polygon points="2,9 16,16 16,30 2,23" fill="#06b6d4"/><polygon points="30,9 16,16 16,30 30,23" fill="#0891b2"/></svg>`;
-  if (type === 'tnt') return `<svg viewBox="0 0 32 32" width="24" height="24"><polygon points="16,2 30,9 16,16 2,9" fill="#ef4444"/><polygon points="2,9 16,16 16,30 2,23" fill="#dc2626"/><polygon points="30,9 16,16 16,30 30,23" fill="#991b1b"/><polygon points="2,14 16,21 30,14 30,19 16,26 2,19" fill="#f8fafc"/></svg>`;
-  return `<svg viewBox="0 0 32 32" width="24" height="24"><polygon points="16,2 30,9 16,16 2,9" fill="#4ade80"/><polygon points="2,9 16,16 16,30 2,23" fill="#92400e"/><polygon points="30,9 16,16 16,30 30,23" fill="#78350f"/><polygon points="2,9 16,16 16,19 2,12" fill="#22c55e"/><polygon points="30,9 16,16 16,19 30,12" fill="#16a34a"/></svg>`;
-}
-
-function getActiveInstallation() {
-  return state.installations.find((i) => i.id === state.activeInstallId) || state.installations[0] || DEFAULT_INSTALLATIONS[0];
-}
 
 function generateClassicSteveSkinDataUrl() {
   const c = document.createElement('canvas');
@@ -94,7 +71,7 @@ function init3DSkinViewer() {
   if (!canvas || !window.skinview3d) return;
   const fallbackSkin = generateClassicSteveSkinDataUrl();
   draw2DFaceFromSkin(fallbackSkin);
-  skinViewer = new window.skinview3d.SkinViewer({ canvas, width: 265, height: 245, skin: fallbackSkin });
+  skinViewer = new window.skinview3d.SkinViewer({ canvas, width: 265, height: 320, skin: fallbackSkin });
   skinViewer.fov = 48; skinViewer.zoom = 0.86;
   skinViewer.globalLight.intensity = 2.4; skinViewer.cameraLight.intensity = 1.6;
   skinViewer.animation = new window.skinview3d.WalkingAnimation();
@@ -103,7 +80,7 @@ function init3DSkinViewer() {
   if (wrap && window.ResizeObserver) {
     new ResizeObserver((entries) => {
       for (const e of entries) {
-        skinViewer.setSize(Math.max(200, Math.floor(e.contentRect.width)), Math.max(185, Math.floor(e.contentRect.height)));
+        skinViewer.setSize(Math.max(200, Math.floor(e.contentRect.width)), Math.max(220, Math.floor(e.contentRect.height)));
       }
     }).observe(wrap);
   }
@@ -143,7 +120,6 @@ function applyTheme(themeName) {
 
 function switchTab(tabId) {
   document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.tab === tabId));
-  document.querySelectorAll('.mc-subtab').forEach((b) => b.classList.toggle('active', b.dataset.tabJump === tabId));
   document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === `tab-${tabId}`));
 }
 
@@ -157,92 +133,23 @@ function appendLog(msg, type = 'normal') {
   box.scrollTop = box.scrollHeight;
 }
 
-async function updateCrackUuidPreview() {
-  const uuidEl = document.getElementById('crackUuidText');
-  if (!uuidEl) return;
-  const uuid = await window.aetherAPI.getCrackUuid(state.username);
-  uuidEl.textContent = uuid.slice(0, 18) + '...';
-}
-
-function renderAllInstallationsUI() {
-  const activeInst = getActiveInstallation();
-  document.getElementById('dockActiveIcon').innerHTML = getBlockSvg(activeInst.icon);
-  document.getElementById('dockActiveTitle').textContent = activeInst.name;
-  document.getElementById('dockActiveSub').textContent = `${activeInst.version} • ${activeInst.core.toUpperCase()} • ${activeInst.ramGB} GB RAM`;
-  document.getElementById('launchBtnSub').textContent = `${activeInst.version} (${activeInst.core.toUpperCase()})`;
-
-  const popup = document.getElementById('dockInstallPopup');
-  popup.innerHTML = '';
-  state.installations.forEach((inst) => {
-    const btn = document.createElement('button');
-    btn.className = `dip-item ${inst.id === activeInst.id ? 'active' : ''}`;
-    btn.innerHTML = `<div class="dit-icon">${getBlockSvg(inst.icon)}</div><div><strong>${inst.name}</strong><span>${inst.version} • ${inst.core.toUpperCase()} • ${inst.ramGB} GB RAM</span></div>`;
-    btn.onclick = () => { selectInstallation(inst.id); popup.classList.add('hidden'); };
-    popup.appendChild(btn);
-  });
-
-  const homeGrid = document.getElementById('homeInstallationsGrid');
-  homeGrid.innerHTML = '';
-  state.installations.slice(0, 5).forEach((inst) => {
-    const card = document.createElement('div');
-    card.className = `inst-card ${inst.id === activeInst.id ? 'active' : ''}`;
-    card.innerHTML = `<div class="inst-card-top"><div class="inst-block-icon">${getBlockSvg(inst.icon)}</div><div class="inst-title-group"><h4>${inst.name}</h4><span>${inst.version} • ${inst.core.toUpperCase()}</span></div></div><div class="inst-card-bottom"><span>RAM: ${inst.ramGB} GB</span><button class="inst-play-mini" data-direct-play="${inst.id}">▶ Chơi</button></div>`;
-    card.onclick = (e) => {
-      if (e.target.dataset.directPlay) { selectInstallation(inst.id); triggerLaunchGame(); return; }
-      selectInstallation(inst.id);
-    };
-    homeGrid.appendChild(card);
-  });
-
-  const sideList = document.getElementById('sidebarInstallationsList');
-  sideList.innerHTML = '';
-  state.installations.forEach((inst) => {
-    const b = document.createElement('button');
-    b.className = `quick-ver-btn ${inst.id === activeInst.id ? 'active' : ''}`;
-    b.innerHTML = `<div class="qv-icon-box">${getBlockSvg(inst.icon)}</div><div class="qv-meta"><strong>${inst.name}</strong><span>${inst.version} • ${inst.core.toUpperCase()}</span></div>`;
-    b.onclick = () => selectInstallation(inst.id);
-    sideList.appendChild(b);
-  });
-
-  const managerList = document.getElementById('installationsListContainer');
-  managerList.innerHTML = '';
-  document.getElementById('installCountTag').textContent = `${state.installations.length} Bản cài đặt`;
-
-  state.installations.forEach((inst) => {
-    const row = document.createElement('div');
-    row.className = `official-inst-row ${inst.id === activeInst.id ? 'active' : ''}`;
-    row.innerHTML = `<div class="oir-left"><div class="inst-block-icon">${getBlockSvg(inst.icon)}</div><div class="oir-meta"><h4>${inst.name}</h4><span>Phiên bản: ${inst.version} • Core: ${inst.core.toUpperCase()} • RAM: ${inst.ramGB} GB</span></div></div><div class="oir-actions"><button class="btn-oir-play" data-play-id="${inst.id}">▶ Chơi Ngay</button><button class="btn-oir-sec" data-pick-id="${inst.id}">${inst.id === activeInst.id ? '✓ Đang chọn' : 'Chọn'}</button><button class="btn-oir-sec" data-dir-id="${inst.id}">Thư mục</button>${state.installations.length > 1 ? `<button class="btn-oir-sec" data-del-id="${inst.id}">Xóa</button>` : ''}</div>`;
-    row.querySelector('[data-play-id]').onclick = () => { selectInstallation(inst.id); triggerLaunchGame(); };
-    row.querySelector('[data-pick-id]').onclick = () => selectInstallation(inst.id);
-    row.querySelector('[data-dir-id]').onclick = () => window.aetherAPI.openGameDir(state.gameDir);
-    const delBtn = row.querySelector('[data-del-id]');
-    if (delBtn) {
-      delBtn.onclick = () => {
-        state.installations = state.installations.filter((x) => x.id !== inst.id);
-        if (state.activeInstallId === inst.id) state.activeInstallId = state.installations[0].id;
-        renderAllInstallationsUI(); saveCurrentConfig();
-      };
-    }
-    managerList.appendChild(row);
-  });
-  updateSummaryUI();
-}
-
-function selectInstallation(instId) {
-  const found = state.installations.find((i) => i.id === instId);
-  if (!found) return;
-  state.activeInstallId = found.id;
-  renderAllInstallationsUI();
-  saveCurrentConfig();
-}
-
 function updateSummaryUI() {
   const activeName = state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username || 'StevePlayer';
+  const coreUpper = state.selectedCore.toUpperCase();
+
   document.getElementById('sidebarPlayerName').textContent = activeName;
   document.getElementById('sidebarAuthBadge').textContent = state.authMode === 'microsoft' && state.msProfile ? 'BẢN QUYỀN MICROSOFT' : 'CRACK / OFFLINE';
+
+  document.getElementById('sideVerText').textContent = state.selectedVersion;
+  document.getElementById('sideCoreText').textContent = coreUpper;
+  document.getElementById('sideRamText').textContent = `${state.ramGB} GB`;
+
+  document.getElementById('dockVersionTitle').textContent = `Minecraft ${state.selectedVersion}`;
+  document.getElementById('dockCoreSubtitle').textContent = `Core: ${coreUpper} • RAM: ${state.ramGB} GB`;
+  document.getElementById('launchBtnSub').textContent = `${state.selectedVersion} • ${coreUpper}`;
+
   const authLabel = state.authMode === 'microsoft' && state.msProfile ? `${state.msProfile.name} (Microsoft)` : `${activeName} (Crack)`;
-  const srvText = state.serverIp ? ` • Server: <strong>${state.serverIp}</strong>` : '';
-  document.getElementById('launchSummaryText').innerHTML = `Tài khoản: <strong>${authLabel}</strong>${srvText}`;
+  document.getElementById('launchSummaryText').innerHTML = `Tài khoản: <strong>${authLabel}</strong>`;
 }
 
 function setAuthModeUI(mode) {
@@ -251,6 +158,7 @@ function setAuthModeUI(mode) {
   document.getElementById('tabBtnMicrosoft').classList.toggle('active', state.authMode === 'microsoft');
   document.getElementById('panelCrack').classList.toggle('hidden', state.authMode !== 'crack');
   document.getElementById('panelMicrosoft').classList.toggle('hidden', state.authMode !== 'microsoft');
+
   if (state.authMode === 'microsoft' && state.msProfile) {
     document.getElementById('msNotLoggedBox').classList.add('hidden');
     document.getElementById('msLoggedBox').classList.remove('hidden');
@@ -260,7 +168,9 @@ function setAuthModeUI(mode) {
     document.getElementById('msNotLoggedBox').classList.remove('hidden');
     document.getElementById('msLoggedBox').classList.add('hidden');
   } else load3DSkinForUsername(state.username);
-  updateSummaryUI(); saveCurrentConfig();
+
+  updateSummaryUI();
+  saveCurrentConfig();
 }
 
 function renderVersionOptions() {
@@ -271,37 +181,69 @@ function renderVersionOptions() {
     if (state.selectedVersionType === 'snapshot') return v.type === 'snapshot';
     return v.type === 'old_beta' || v.type === 'old_alpha';
   });
+
   select.innerHTML = '';
-  filtered.slice(0, 200).forEach((v) => {
+  filtered.slice(0, 250).forEach((v) => {
     const opt = document.createElement('option');
     opt.value = v.id;
-    opt.textContent = `Minecraft ${v.id} (${v.type === 'release' ? 'Chính thức' : v.type})`;
+    opt.textContent = `Minecraft ${v.id}`;
     if (v.id === state.selectedVersion) opt.selected = true;
     select.appendChild(opt);
   });
+
   if (!filtered.some((v) => v.id === state.selectedVersion) && filtered[0]) {
     state.selectedVersion = filtered[0].id;
     select.value = state.selectedVersion;
   }
+
   refreshLoaderBuilds();
+  renderFullVersionsTable();
+  updateSummaryUI();
+}
+
+function renderFullVersionsTable(searchTerm = '') {
+  const wrap = document.getElementById('fullVersionsList');
+  if (!wrap) return;
+  const q = searchTerm.trim().toLowerCase();
+  const list = state.versions.filter((v) => !q || v.id.toLowerCase().includes(q)).slice(0, 180);
+
+  wrap.innerHTML = '';
+  list.forEach((v) => {
+    const item = document.createElement('div');
+    item.className = `ver-row-item ${v.id === state.selectedVersion ? 'active' : ''}`;
+    item.innerHTML = `<strong>Minecraft ${v.id}</strong><span>${v.type}</span>`;
+    item.onclick = () => {
+      state.selectedVersion = v.id;
+      state.selectedVersionType = v.type === 'release' ? 'release' : v.type === 'snapshot' ? 'snapshot' : 'old';
+      document.querySelectorAll('.vtype-btn').forEach((b) => b.classList.toggle('active', b.dataset.vtype === state.selectedVersionType));
+      renderVersionOptions();
+      saveCurrentConfig();
+      switchTab('play');
+    };
+    wrap.appendChild(item);
+  });
 }
 
 async function refreshLoaderBuilds() {
   const group = document.getElementById('loaderBuildGroup');
   const select = document.getElementById('loaderVersionSelect');
   if (state.selectedCore === 'vanilla') {
-    group.style.opacity = '0.45'; select.disabled = true;
-    select.innerHTML = '<option value="">Nguyên bản Mojang (Không dùng Loader)</option>';
-    state.selectedLoaderVersion = ''; return;
+    group.style.opacity = '0.45';
+    select.disabled = true;
+    select.innerHTML = '<option value="">Nguyên bản (Không dùng Loader)</option>';
+    state.selectedLoaderVersion = '';
+    return;
   }
-  group.style.opacity = '1'; select.disabled = false;
-  select.innerHTML = '<option value="">Tự động chọn bản ổn định mới nhất</option>';
+  group.style.opacity = '1';
+  select.disabled = false;
+  select.innerHTML = '<option value="">Tự động chọn bản mới nhất</option>';
+
   const res = await window.aetherAPI.getLoaders(state.selectedVersion, state.selectedCore);
   if (res.ok && Array.isArray(res.data)) {
     res.data.forEach((b) => {
       const opt = document.createElement('option');
       opt.value = b.version;
-      opt.textContent = `${state.selectedCore.toUpperCase()} — ${b.version}${b.stable ? ' (Ổn định)' : ''}`;
+      opt.textContent = `${state.selectedCore.toUpperCase()} — ${b.version}`;
       select.appendChild(opt);
     });
   }
@@ -309,44 +251,21 @@ async function refreshLoaderBuilds() {
 
 function saveCurrentConfig() {
   window.aetherAPI.saveConfig({
-    authMode: state.authMode, username: state.username, crackSkinSync: state.crackSkinSync,
-    msProfile: state.msProfile, installations: state.installations, activeInstallId: state.activeInstallId,
-    javaPath: state.javaPath, gameDir: state.gameDir, fastSkipHash: state.fastSkipHash,
-    aikarFlags: state.aikarFlags, hideLauncherOnPlay: state.hideLauncherOnPlay,
-    serverIp: state.serverIp, theme: state.theme
+    authMode: state.authMode,
+    username: state.username,
+    crackSkinSync: state.crackSkinSync,
+    msProfile: state.msProfile,
+    selectedCore: state.selectedCore,
+    selectedVersion: state.selectedVersion,
+    ramGB: state.ramGB,
+    javaPath: state.javaPath,
+    gameDir: state.gameDir,
+    fastSkipHash: state.fastSkipHash,
+    aikarFlags: state.aikarFlags,
+    hideLauncherOnPlay: state.hideLauncherOnPlay,
+    serverIp: state.serverIp,
+    theme: state.theme
   });
-}
-
-async function triggerLaunchGame() {
-  if (state.isLaunching) return;
-  if (state.authMode === 'microsoft' && !state.msProfile) {
-    document.getElementById('statusText').textContent = 'Vui lòng đăng nhập Microsoft trước!';
-    return;
-  }
-  const activeInst = getActiveInstallation();
-  state.isLaunching = true;
-  const btn = document.getElementById('btnLaunch');
-  btn.disabled = true;
-  document.getElementById('btnForceKill').classList.remove('hidden');
-  document.getElementById('launchBtnText').textContent = 'ĐANG KHỞI ĐỘNG...';
-  document.getElementById('launchBtnSub').textContent = `${activeInst.version} • ${activeInst.core.toUpperCase()}`;
-
-  const res = await window.aetherAPI.launchGame({
-    authMode: state.authMode, username: state.username, crackSkinSync: state.crackSkinSync,
-    msProfile: state.msProfile, mcVersion: activeInst.version, loaderType: activeInst.core,
-    loaderVersion: activeInst.loaderVersion || '', ramGB: activeInst.ramGB || 4,
-    javaPath: state.javaPath, gameDir: state.gameDir, useAikarFlags: state.aikarFlags,
-    fastSkipHash: state.fastSkipHash, hideLauncherOnPlay: state.hideLauncherOnPlay,
-    serverIp: state.serverIp, cpuCores: state.cpuCores
-  });
-
-  if (!res.ok) {
-    state.isLaunching = false; btn.disabled = false;
-    document.getElementById('btnForceKill').classList.add('hidden');
-    document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
-    document.getElementById('statusText').textContent = `Lỗi: ${res.error}`;
-    appendLog(`Lỗi khởi động: ${res.error}`, 'error');
-  }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -355,25 +274,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnMax').onclick = () => window.aetherAPI.maximize();
   document.getElementById('btnClose').onclick = () => window.aetherAPI.close();
 
-  renderVersionOptions();
   const saved = await window.aetherAPI.getConfig();
-  if (saved) {
-    Object.assign(state, saved);
-    if (!Array.isArray(state.installations) || !state.installations.length) state.installations = [...DEFAULT_INSTALLATIONS];
-  }
+  if (saved) Object.assign(state, saved);
+
   applyTheme(state.theme);
-  renderAllInstallationsUI();
+  document.querySelectorAll('.core-tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.core === state.selectedCore));
+  renderVersionOptions();
 
-  document.querySelectorAll('.ts-chip').forEach((chip) => { chip.onclick = () => { applyTheme(chip.dataset.themePick); saveCurrentConfig(); }; });
-  document.querySelectorAll('.nav-item').forEach((btn) => { btn.onclick = () => switchTab(btn.dataset.tab); });
-  document.querySelectorAll('.mc-subtab').forEach((btn) => { btn.onclick = () => switchTab(btn.dataset.tabJump); });
-  document.getElementById('btnGoCreateInstall').onclick = () => switchTab('installations');
+  document.querySelectorAll('.ts-chip').forEach((chip) => {
+    chip.onclick = () => { applyTheme(chip.dataset.themePick); saveCurrentConfig(); };
+  });
 
-  document.getElementById('btnToggleInstallPopup').onclick = (e) => {
-    e.stopPropagation();
-    document.getElementById('dockInstallPopup').classList.toggle('hidden');
-  };
-  document.addEventListener('click', () => document.getElementById('dockInstallPopup')?.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach((btn) => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
 
   const sys = await window.aetherAPI.getSystemInfo();
   state.cpuCores = sys.cpuCores || 8;
@@ -408,20 +322,55 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('aikarFlagsCheck').checked = state.aikarFlags !== false;
   document.getElementById('hideLauncherCheck').checked = state.hideLauncherOnPlay !== false;
 
-  await updateCrackUuidPreview();
   setAuthModeUI(state.authMode);
 
-  document.querySelectorAll('.pose-btn').forEach((btn) => { btn.onclick = () => setSkinPose(btn.dataset.pose); });
-  document.querySelectorAll('.skin-preset-chip').forEach((chip) => {
-    chip.onclick = () => {
-      const skinName = chip.dataset.skin;
-      if (state.authMode === 'crack') {
-        state.username = skinName;
-        document.getElementById('usernameInput').value = skinName;
-        updateCrackUuidPreview(); updateSummaryUI(); saveCurrentConfig();
-      }
-      load3DSkinForUsername(skinName);
+  // Direct Core Selector Buttons
+  document.querySelectorAll('.core-tab-btn').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('.core-tab-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.selectedCore = btn.dataset.core;
+      refreshLoaderBuilds();
+      updateSummaryUI();
+      saveCurrentConfig();
     };
+  });
+
+  // Version Type Filter Buttons
+  document.querySelectorAll('.vtype-btn').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('.vtype-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.selectedVersionType = btn.dataset.vtype;
+      renderVersionOptions();
+    };
+  });
+
+  document.getElementById('versionSelect').onchange = (e) => {
+    state.selectedVersion = e.target.value;
+    refreshLoaderBuilds();
+    renderFullVersionsTable(document.getElementById('versionSearchInput')?.value || '');
+    updateSummaryUI();
+    saveCurrentConfig();
+  };
+
+  document.getElementById('loaderVersionSelect').onchange = (e) => {
+    state.selectedLoaderVersion = e.target.value;
+  };
+
+  document.getElementById('versionSearchInput').oninput = (e) => {
+    renderFullVersionsTable(e.target.value);
+  };
+
+  ramSlider.oninput = (e) => {
+    state.ramGB = Number(e.target.value);
+    document.getElementById('ramValueDisplay').textContent = `${state.ramGB} GB`;
+    updateSummaryUI();
+    saveCurrentConfig();
+  };
+
+  document.querySelectorAll('.pose-btn').forEach((btn) => {
+    btn.onclick = () => setSkinPose(btn.dataset.pose);
   });
 
   document.querySelectorAll('.wp-chip').forEach((chip) => {
@@ -437,7 +386,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('usernameInput').oninput = (e) => {
     state.username = e.target.value.trim() || 'StevePlayer';
-    updateCrackUuidPreview(); updateSummaryUI(); saveCurrentConfig();
+    updateSummaryUI();
+    saveCurrentConfig();
     clearTimeout(skinFetchTimer);
     skinFetchTimer = setTimeout(() => load3DSkinForUsername(state.username), 450);
   };
@@ -452,60 +402,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (res.ok && res.profile) { state.msProfile = res.profile; setAuthModeUI('microsoft'); }
   };
 
-  document.getElementById('btnMsLogout').onclick = () => { state.msProfile = null; setAuthModeUI('microsoft'); saveCurrentConfig(); };
-
-  document.querySelectorAll('.icon-pick-btn').forEach((btn) => {
-    btn.onclick = () => {
-      document.querySelectorAll('.icon-pick-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active'); state.selectedIcon = btn.dataset.icon;
-    };
-  });
-
-  document.querySelectorAll('.core-pill').forEach((pill) => {
-    pill.onclick = () => {
-      document.querySelectorAll('.core-pill').forEach((p) => p.classList.remove('active'));
-      pill.classList.add('active'); state.selectedCore = pill.dataset.core;
-      document.getElementById('selectedCoreBadge').textContent = state.selectedCore.toUpperCase();
-      document.getElementById('newInstallName').value = `Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()})`;
-      refreshLoaderBuilds();
-    };
-  });
-
-  document.querySelectorAll('.vtype-btn').forEach((btn) => {
-    btn.onclick = () => {
-      document.querySelectorAll('.vtype-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active'); state.selectedVersionType = btn.dataset.vtype;
-      renderVersionOptions();
-    };
-  });
-
-  document.getElementById('versionSelect').onchange = (e) => {
-    state.selectedVersion = e.target.value;
-    document.getElementById('newInstallName').value = `Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()})`;
-    refreshLoaderBuilds();
+  document.getElementById('btnMsLogout').onclick = () => {
+    state.msProfile = null; setAuthModeUI('microsoft'); saveCurrentConfig();
   };
 
-  document.getElementById('loaderVersionSelect').onchange = (e) => { state.selectedLoaderVersion = e.target.value; };
-  ramSlider.oninput = (e) => { state.ramGB = Number(e.target.value); document.getElementById('ramValueDisplay').textContent = `${state.ramGB} GB`; };
-
-  document.getElementById('btnSaveInstallation').onclick = () => {
-    const customName = document.getElementById('newInstallName').value.trim() || `Minecraft ${state.selectedVersion}`;
-    const newInst = { id: `inst-${Date.now()}`, name: customName, version: state.selectedVersion, core: state.selectedCore, loaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB, icon: state.selectedIcon };
-    state.installations.unshift(newInst);
-    state.activeInstallId = newInst.id;
-    renderAllInstallationsUI(); saveCurrentConfig();
-  };
-
-  document.querySelectorAll('[data-server]').forEach((el) => {
-    el.onclick = () => {
-      document.querySelectorAll('[data-server]').forEach((x) => x.classList.remove('active'));
-      el.classList.add('active'); state.serverIp = el.dataset.server || '';
-      document.getElementById('serverIpInput').value = state.serverIp;
-      updateSummaryUI(); saveCurrentConfig();
-    };
-  });
-
-  document.getElementById('serverIpInput').oninput = (e) => { state.serverIp = e.target.value.trim(); updateSummaryUI(); saveCurrentConfig(); };
+  document.getElementById('serverIpInput').oninput = (e) => { state.serverIp = e.target.value.trim(); saveCurrentConfig(); };
   document.getElementById('javaPathInput').oninput = (e) => { state.javaPath = e.target.value.trim() || 'java'; saveCurrentConfig(); };
   document.getElementById('gameDirInput').oninput = (e) => { state.gameDir = e.target.value.trim(); saveCurrentConfig(); };
   document.getElementById('fastSkipCheck').onchange = (e) => { state.fastSkipHash = e.target.checked; saveCurrentConfig(); };
@@ -521,7 +422,45 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('statusText').textContent = 'Đã tắt nhanh Minecraft & giải phóng RAM!';
   };
 
-  document.getElementById('btnLaunch').onclick = () => triggerLaunchGame();
+  document.getElementById('btnLaunch').onclick = async () => {
+    if (state.isLaunching) return;
+    if (state.authMode === 'microsoft' && !state.msProfile) {
+      document.getElementById('statusText').textContent = 'Vui lòng đăng nhập Microsoft trước!';
+      return;
+    }
+    state.isLaunching = true;
+    const btn = document.getElementById('btnLaunch');
+    btn.disabled = true;
+    document.getElementById('btnForceKill').classList.remove('hidden');
+    document.getElementById('launchBtnText').textContent = 'ĐANG KHỞI ĐỘNG...';
+
+    const res = await window.aetherAPI.launchGame({
+      authMode: state.authMode,
+      username: state.username,
+      crackSkinSync: state.crackSkinSync,
+      msProfile: state.msProfile,
+      mcVersion: state.selectedVersion,
+      loaderType: state.selectedCore,
+      loaderVersion: state.selectedLoaderVersion,
+      ramGB: state.ramGB,
+      javaPath: state.javaPath,
+      gameDir: state.gameDir,
+      useAikarFlags: state.aikarFlags,
+      fastSkipHash: state.fastSkipHash,
+      hideLauncherOnPlay: state.hideLauncherOnPlay,
+      serverIp: state.serverIp,
+      cpuCores: state.cpuCores
+    });
+
+    if (!res.ok) {
+      state.isLaunching = false;
+      btn.disabled = false;
+      document.getElementById('btnForceKill').classList.add('hidden');
+      document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
+      document.getElementById('statusText').textContent = `Lỗi: ${res.error}`;
+      appendLog(`Lỗi khởi động: ${res.error}`, 'error');
+    }
+  };
 
   const verRes = await window.aetherAPI.getVersions();
   if (verRes.ok && verRes.data?.versions?.length) {
@@ -539,7 +478,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.aetherAPI.onGameReady(() => {
     if (skinViewer) skinViewer.renderPaused = true;
     document.getElementById('btnForceKill').classList.remove('hidden');
-    document.getElementById('statusText').textContent = 'Đang chơi (Launcher đã ngủ đông 0% GPU)';
+    document.getElementById('statusText').textContent = 'Đang chơi (Launcher ngủ đông 0% GPU)';
   });
   window.aetherAPI.onClose((code) => {
     state.isLaunching = false;
@@ -548,7 +487,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btnLaunch');
     btn.disabled = false;
     document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
-    renderAllInstallationsUI();
+    updateSummaryUI();
     document.getElementById('statusText').textContent = `Đã thoát Minecraft mượt mà (Mã: ${code})`;
   });
 });

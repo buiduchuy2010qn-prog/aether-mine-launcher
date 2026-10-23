@@ -1,4 +1,4 @@
-name: Build Aether Craft v6.0 Windows EXE
+name: Build Aether Craft v7.0 Windows EXE
 
 on:
   push:
@@ -30,25 +30,22 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AetherCraft-v6.0
+          name: AetherCraft-v7.0
           path: dist/*.exe
 
-      - name: Publish GitHub Release v6.0.0
+      - name: Publish GitHub Release v7.0.0
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v6.0.0
-          name: "Aether Craft v6.0 — Giao Diện 1:1 Minecraft Launcher + Quản Lý Phiên Bản (Installations) + Shortcut Vĩnh Viễn"
+          tag_name: v7.0.0
+          name: "Aether Craft v7.0 — Mục Chọn Core & Phiên Bản Trực Tiếp Chuẩn Launcher (Không Gợi Ý Rối Mắt)"
           body: |
-            ### Aether Craft v6.0 — Thiết Kế 1:1 Minecraft Launcher Chính Hãng & Sửa Triệt Để Lỗi Mất Shortcut
-            1. **Sửa Triệt Để Lỗi Mất Shortcut Khi Tắt Mở Lại (`AetherCraft-Setup-6.0.0.exe`):**
-               - Bản `Setup` cài đặt cố định vào máy chỉ trong 2 giây, tự tạo **Icon Aether Craft ngoài Màn Hình Chính (Desktop) & Thanh Tác Vụ (Taskbar)**. Đóng mở bao nhiêu lần cũng mở lên tức thì trong `0.2s`, **không bao giờ bị lỗi mất file `AetherCraft.exe` hay giải nén tạm vào `%TEMP%` nữa!**
-            2. **Giao Diện 1:1 Với Minecraft Launcher Chính Hãng + Quản Lý Bản Cài Đặt (`Installations`):**
-               - **Thanh chọn Phiên bản góc dưới bên trái + Nút `CHƠI NGAY` màu xanh Minecraft 3D ở giữa** giống y hệt Launcher chính thức.
-               - **Mục `Quản Lý Phiên Bản (Installations)` chuyên nghiệp:** Tạo, sửa, xóa và lưu nhiều cấu hình chơi khác nhau (chọn Icon Khối Cỏ, Bàn Chế Tạo, Lò Nung, Kim Cương, TNT; chọn Core `Vanilla`, `Fabric`, `Forge`, `Quilt`, `Legacy Fabric`; chọn phiên bản từ `1.7.10`, `1.8.9` tới `1.21.4` có sẵn ngay lập tức không cần chờ tải).
-            3. **Tủ Đồ Skin 3D WebGL (`Skins Studio`) & Danh Sách Máy Chủ (`Servers`):**
-               - Xem nhân vật 3D WebGL đứng trên bục cỏ Minecraft, xoay 360°, đổi dáng, chọn nhanh Skin mẫu hoặc tải theo tên Crack/Microsoft.
-               - Vào thẳng các máy chủ **LuckyVN, HeroMC, PikaNetwork, Hypixel** chỉ với 1 cú click.
-            4. **Smooth-Exit Engine (<0.2s):** Tự ngủ đông 0% GPU khi đang chơi và dọn sạch `javaw.exe` ngay khi thoát game.
+            ### Aether Craft v7.0 — Giao Diện Chọn Core & Phiên Bản Trực Tiếp (Không Có Thẻ Gợi Ý Rối Mắt)
+            - **Loại bỏ hoàn toàn các thẻ gợi ý dựng sẵn** ở thanh bên và màn hình chính.
+            - **Mục Chọn Core & Phiên Bản Trực Tiếp Ngay Tại Màn Hình Chính & Thanh Đáy:**
+              - Chọn trực tiếp **5 Core Mod Loaders:** `Vanilla (Gốc)`, `Fabric`, `Forge`, `Quilt`, `Legacy Fabric`.
+              - Chọn trực tiếp **Phiên bản Minecraft** từ danh sách đầy đủ (`1.21.4` xuống `1.0`, có lọc `Release`, `Snapshot`, `Beta/Alpha` và ô tìm kiếm nhanh phiên bản).
+              - Chọn trực tiếp **Phiên bản Build của Core Loader** tương ứng với bản Minecraft đã chọn.
+            - **Bộ cài `AetherCraft-Setup-7.0.0.exe`** tạo Shortcut Desktop & Taskbar cố định không bao giờ lỗi mất file khi đóng mở lại.
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
