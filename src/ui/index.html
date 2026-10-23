@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aether Craft v3.0 — Minecraft Multi-Core Launcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Custom Frameless Titlebar -->
+  <header class="titlebar">
+    <div class="titlebar-brand">
+      <!-- Pixel-Art Grass Block SVG Icon -->
+      <div class="brand-logo" title="Minecraft Grass Block">
+        <svg viewBox="0 0 16 16" width="22" height="22" shape-rendering="crispEdges">
+          <rect x="0" y="0" width="16" height="5" fill="#4ade80"/>
+          <rect x="0" y="5" width="16" height="11" fill="#92400e"/>
+          <rect x="2" y="5" width="2" height="3" fill="#22c55e"/>
+          <rect x="6" y="5" width="3" height="2" fill="#22c55e"/>
+          <rect x="11" y="5" width="2" height="4" fill="#16a34a"/>
+          <rect x="3" y="9" width="2" height="2" fill="#78350f"/>
+          <rect x="10" y="11" width="3" height="2" fill="#78350f"/>
+        </svg>
+      </div>
+      <span class="brand-title">AETHER CRAFT v3.0</span>
+      <span class="brand-tag">SIÊU NHẸ • 5 CORE • 3D SKIN</span>
+    </div>
+
+    <div class="titlebar-pills">
+      <div class="status-pill">
+        <span class="dot dot-online"></span>
+        <span>64 Luồng Tải Siêu Tốc</span>
+      </div>
+      <div class="status-pill" id="topRamBadge">RAM: 4096 MB</div>
+      <div class="status-pill" id="topLoaderBadge">FABRIC • 1.20.4</div>
+      <button class="theme-toggle-btn" id="btnToggleTheme" title="Đổi giao diện Ban Ngày (Sáng) / Ban Đêm (Tối)">
+        ☀️ Giao Diện Sáng
+      </button>
+    </div>
+
+    <div class="titlebar-controls">
+      <button class="win-btn" id="btnMinimize" title="Thu nhỏ">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="1.5" fill="currentColor"/></svg>
+      </button>
+      <button class="win-btn" id="btnMaximize" title="Phóng to">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
+      <button class="win-btn win-close" id="btnClose" title="Đóng">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2L10 10M10 2L2 10" stroke="currentColor" stroke-width="1.7"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="app-shell">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <nav class="nav-list">
+        <button class="nav-item active" data-tab="home">
+          <span class="nav-icon">🏡</span>
+          <div class="nav-text">
+            <span class="nav-title">Sảnh Chính (Play)</span>
+            <span class="nav-sub">Nhân vật 3D &amp; Chọn Core</span>
+          </div>
+        </button>
+
+        <button class="nav-item" data-tab="modrinth">
+          <span class="nav-icon">⚡</span>
+          <div class="nav-text">
+            <span class="nav-title">Kho Mod &amp; FPS</span>
+            <span class="nav-sub">Tải Sodium, Shader, Skin</span>
+          </div>
+        </button>
+
+        <button class="nav-item" data-tab="mods">
+          <span class="nav-icon">📦</span>
+          <div class="nav-text">
+            <span class="nav-title">Quản Lý Thư Mục</span>
+            <span class="nav-sub">Mods, Texture, Shader</span>
+          </div>
+          <span class="nav-badge" id="localModsCountBadge">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="settings">
+          <span class="nav-icon">⚙️</span>
+          <div class="nav-text">
+            <span class="nav-title">Tối Ưu &amp; Java</span>
+            <span class="nav-sub">RAM, Đa nhân CPU, JRE</span>
+          </div>
+        </button>
+
+        <button class="nav-item" data-tab="console">
+          <span class="nav-icon">📜</span>
+          <div class="nav-text">
+            <span class="nav-title">Nhật Ký Game</span>
+            <span class="nav-sub">Theo dõi Log trực tiếp</span>
+          </div>
+        </button>
+      </nav>
+
+      <!-- Bottom Quick Player Card -->
+      <div class="sidebar-footer">
+        <div class="mini-profile-card">
+          <canvas id="sidebarHeadCanvas" width="40" height="40" class="mini-avatar"></canvas>
+          <div class="mini-profile-info">
+            <div class="mini-profile-name" id="sidebarUsername">Steve</div>
+            <div class="mini-profile-mode">
+              <span class="crack-dot" id="sidebarModeDot"></span>
+              <span id="sidebarModeText">Offline (Crack)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-view">
+      <!-- TAB 1: HOME / PLAY -->
+      <section class="tab-panel active" id="tab-home">
+        <!-- Illustrated Minecraft Overworld Hero Banner -->
+        <div class="mc-hero-banner">
+          <!-- Illustrated SVG Voxel Scene Background -->
+          <svg class="mc-scene-svg" viewBox="0 0 900 220" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges">
+            <!-- Square Minecraft Sun -->
+            <rect x="760" y="22" width="54" height="54" fill="#fde047" opacity="0.95"/>
+            <rect x="752" y="14" width="70" height="70" fill="#fef08a" opacity="0.35"/>
+            <!-- Blocky Clouds -->
+            <g fill="#ffffff" opacity="0.85">
+              <rect x="80" y="28" width="90" height="18"/>
+              <rect x="100" y="18" width="50" height="12"/>
+              <rect x="340" y="36" width="110" height="16"/>
+              <rect x="365" y="24" width="60" height="12"/>
+              <rect x="580" y="22" width="85" height="16"/>
+            </g>
+            <!-- Distant Voxel Hills -->
+            <g opacity="0.45">
+              <rect x="0" y="140" width="180" height="80" fill="#86efac"/>
+              <rect x="140" y="125" width="220" height="95" fill="#4ade80"/>
+              <rect x="340" y="145" width="240" height="75" fill="#86efac"/>
+              <rect x="550" y="120" width="210" height="100" fill="#4ade80"/>
+              <rect x="730" y="135" width="170" height="85" fill="#86efac"/>
+            </g>
+            <!-- Voxel Oak & Cherry Trees on Right -->
+            <g>
+              <!-- Cherry Tree -->
+              <rect x="650" y="125" width="12" height="45" fill="#78350f"/>
+              <rect x="626" y="95" width="60" height="32" fill="#f472b6"/>
+              <rect x="636" y="80" width="40" height="18" fill="#fb7185"/>
+              <!-- Oak Tree -->
+              <rect x="820" y="130" width="12" height="40" fill="#78350f"/>
+              <rect x="798" y="98" width="56" height="34" fill="#22c55e"/>
+              <rect x="808" y="84" width="36" height="16" fill="#16a34a"/>
+            </g>
+            <!-- Foreground Grass & Dirt Blocks Layer -->
+            <rect x="0" y="170" width="900" height="14" fill="#22c55e"/>
+            <rect x="0" y="184" width="900" height="36" fill="#92400e"/>
+          </svg>
+
+          <div class="hero-overlay-content">
+            <div class="hero-badges">
+              <span class="mc-badge mc-badge-green">⚡ KHỞI ĐỘNG SIÊU TỐC (&lt; 1 GIÂY)</span>
+              <span class="mc-badge mc-badge-blue" id="heroVersionBadge">MINECRAFT 1.20.4</span>
+              <span class="mc-badge mc-badge-amber">💎 CRACK + BẢN QUYỀN</span>
+            </div>
+            <h1 class="hero-title">Thế Giới Minecraft Trong Tầm Tay</h1>
+            <p class="hero-desc">
+              Chọn nhanh các phiên bản huyền thoại với <strong>5 bộ Core (Vanilla, Fabric, Quilt, Forge, Legacy 1.8.9)</strong>. Tự động tối ưu đa nhân CPU và tải Java tương thích.
+            </p>
+
+            <!-- Visual Era Cards -->
+            <div class="era-cards-row">
+              <button class="era-card" data-ver="1.21.4">
+                <span class="era-icon">⚔️</span>
+                <div class="era-info">
+                  <span class="era-ver">1.21.4</span>
+                  <span class="era-name">Tricky Trials</span>
+                </div>
+              </button>
+              <button class="era-card active" data-ver="1.20.4">
+                <span class="era-icon">🌸</span>
+                <div class="era-info">
+                  <span class="era-ver">1.20.4</span>
+                  <span class="era-name">Rừng Anh Đào</span>
+                </div>
+              </button>
+              <button class="era-card" data-ver="1.20.1">
+                <span class="era-icon">🐪</span>
+                <div class="era-info">
+                  <span class="era-ver">1.20.1</span>
+                  <span class="era-name">Vua Mod Mới</span>
+                </div>
+              </button>
+              <button class="era-card" data-ver="1.19.4">
+                <span class="era-icon">🔮</span>
+                <div class="era-info">
+                  <span class="era-ver">1.19.4</span>
+                  <span class="era-name">Warden Deep</span>
+                </div>
+              </button>
+              <button class="era-card" data-ver="1.18.2">
+                <span class="era-icon">⛰️</span>
+                <div class="era-info">
+                  <span class="era-ver">1.18.2</span>
+                  <span class="era-name">Hang Động</span>
+                </div>
+              </button>
+              <button class="era-card" data-ver="1.16.5">
+                <span class="era-icon">🔥</span>
+                <div class="era-info">
+                  <span class="era-ver">1.16.5</span>
+                  <span class="era-name">Nether Update</span>
+                </div>
+              </button>
+              <button class="era-card" data-ver="1.12.2">
+                <span class="era-icon">🛠️</span>
+                <div class="era-info">
+                  <span class="era-ver">1.12.2</span>
+                  <span class="era-name">Siêu Modpack</span>
+                </div>
+              </button>
+              <button class="era-card" data-ver="1.8.9">
+                <span class="era-icon">💎</span>
+                <div class="era-info">
+                  <span class="era-ver">1.8.9</span>
+                  <span class="era-name">Huyền Thoại PvP</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Column Interactive Deck: [3D Character Stage] + [Account Dual-Auth] + [5 Cores & All Versions] -->
+        <div class="home-three-col">
+          <!-- COL 1: AUTHENTIC 3D VOXEL MINECRAFT CHARACTER STAGE -->
+          <div class="mc-card character-stage-card">
+            <div class="card-header">
+              <h3>🧍 Nhân Vật 3D Minecraft</h3>
+              <span class="card-tag">Kéo chuột xoay 360°</span>
+            </div>
+
+            <!-- Interactive 3D Voxel Player Viewport -->
+            <div class="voxel-stage" id="voxelStage" title="Giữ chuột trái và kéo để xoay nhân vật 3D">
+              <div class="voxel-sky-decor"></div>
+              <div class="voxel-scene" id="voxelScene">
+                <div class="mc-player-rig walking" id="mcPlayerRig">
+                  <!-- Head (8x8x8) + Hat Layer -->
+                  <div class="mc-part mc-head">
+                    <canvas class="face f-front" data-uv="8,8,8,8" width="64" height="64"></canvas>
+                    <canvas class="face f-back" data-uv="24,8,8,8" width="64" height="64"></canvas>
+                    <canvas class="face f-right" data-uv="0,8,8,8" width="64" height="64"></canvas>
+                    <canvas class="face f-left" data-uv="16,8,8,8" width="64" height="64"></canvas>
+                    <canvas class="face f-top" data-uv="8,0,8,8" width="64" height="64"></canvas>
+                    <canvas class="face f-bottom" data-uv="16,0,8,8" width="64" height="64"></canvas>
+                    <!-- 3D Hat Outer Layer -->
+                    <div class="mc-hat">
+                      <canvas class="face h-front" data-uv="40,8,8,8" width="64" height="64"></canvas>
+                      <canvas class="face h-back" data-uv="56,8,8,8" width="64" height="64"></canvas>
+                      <canvas class="face h-right" data-uv="32,8,8,8" width="64" height="64"></canvas>
+                      <canvas class="face h-left" data-uv="48,8,8,8" width="64" height="64"></canvas>
+                      <canvas class="face h-top" data-uv="40,0,8,8" width="64" height="64"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- Torso / Body (8x12x4) -->
+                  <div class="mc-part mc-body">
+                    <canvas class="face f-front" data-uv="20,20,8,12" width="64" height="96"></canvas>
+                    <canvas class="face f-back" data-uv="32,20,8,12" width="64" height="96"></canvas>
+                    <canvas class="face f-right" data-uv="16,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-left" data-uv="28,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-top" data-uv="20,16,8,4" width="64" height="32"></canvas>
+                    <canvas class="face f-bottom" data-uv="28,16,8,4" width="64" height="32"></canvas>
+                  </div>
+
+                  <!-- Right Arm (4x12x4) -->
+                  <div class="mc-part mc-arm-right">
+                    <canvas class="face f-front" data-uv="44,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-back" data-uv="52,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-right" data-uv="40,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-left" data-uv="48,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-top" data-uv="44,16,4,4" width="32" height="32"></canvas>
+                    <canvas class="face f-bottom" data-uv="48,16,4,4" width="32" height="32"></canvas>
+                  </div>
+
+                  <!-- Left Arm (4x12x4) -->
+                  <div class="mc-part mc-arm-left">
+                    <canvas class="face f-front" data-uv="36,52,4,12" width="32" height="96" data-fallback-uv="44,20,4,12"></canvas>
+                    <canvas class="face f-back" data-uv="44,52,4,12" width="32" height="96" data-fallback-uv="52,20,4,12"></canvas>
+                    <canvas class="face f-right" data-uv="32,52,4,12" width="32" height="96" data-fallback-uv="40,20,4,12"></canvas>
+                    <canvas class="face f-left" data-uv="40,52,4,12" width="32" height="96" data-fallback-uv="48,20,4,12"></canvas>
+                    <canvas class="face f-top" data-uv="36,48,4,4" width="32" height="32" data-fallback-uv="44,16,4,4"></canvas>
+                    <canvas class="face f-bottom" data-uv="40,48,4,4" width="32" height="32" data-fallback-uv="48,16,4,4"></canvas>
+                  </div>
+
+                  <!-- Right Leg (4x12x4) -->
+                  <div class="mc-part mc-leg-right">
+                    <canvas class="face f-front" data-uv="4,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-back" data-uv="12,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-right" data-uv="0,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-left" data-uv="8,20,4,12" width="32" height="96"></canvas>
+                    <canvas class="face f-top" data-uv="4,16,4,4" width="32" height="32"></canvas>
+                    <canvas class="face f-bottom" data-uv="8,16,4,4" width="32" height="32"></canvas>
+                  </div>
+
+                  <!-- Left Leg (4x12x4) -->
+                  <div class="mc-part mc-leg-left">
+                    <canvas class="face f-front" data-uv="20,52,4,12" width="32" height="96" data-fallback-uv="4,20,4,12"></canvas>
+                    <canvas class="face f-back" data-uv="28,52,4,12" width="32" height="96" data-fallback-uv="12,20,4,12"></canvas>
+                    <canvas class="face f-right" data-uv="16,52,4,12" width="32" height="96" data-fallback-uv="0,20,4,12"></canvas>
+                    <canvas class="face f-left" data-uv="24,52,4,12" width="32" height="96" data-fallback-uv="8,20,4,12"></canvas>
+                    <canvas class="face f-top" data-uv="20,48,4,4" width="32" height="32" data-fallback-uv="4,16,4,4"></canvas>
+                    <canvas class="face f-bottom" data-uv="24,48,4,4" width="32" height="32" data-fallback-uv="8,16,4,4"></canvas>
+                  </div>
+                </div>
+                <!-- Grass Block Pedestal under feet -->
+                <div class="voxel-pedestal"></div>
+              </div>
+              <div class="player-nametag" id="stageNametag">Steve</div>
+            </div>
+
+            <!-- Pose & Skin Controls -->
+            <div class="pose-controls">
+              <button class="pose-btn active" data-pose="walking">🚶 Đi bộ</button>
+              <button class="pose-btn" data-pose="running">🏃 Chạy</button>
+              <button class="pose-btn" data-pose="idle">🧍 Đứng</button>
+              <button class="pose-btn" id="btnUploadSkin" title="Chọn file ảnh Skin .png từ máy tính">👕 Đổi Skin (.png)</button>
+            </div>
+          </div>
+
+          <!-- COL 2: DUAL-AUTH ACCOUNT CARD (CRACK + MICROSOFT) -->
+          <div class="mc-card">
+            <div class="card-header">
+              <h3>🔐 Tài Khoản (Crack &amp; Bản Quyền)</h3>
+              <span class="card-tag" id="authCardStatusTag">Offline (Crack)</span>
+            </div>
+
+            <div class="auth-mode-tabs">
+              <button class="auth-tab active" data-authmode="offline" id="tabBtnOffline">
+                🔓 Offline / Crack
+              </button>
+              <button class="auth-tab" data-authmode="microsoft" id="tabBtnMicrosoft">
+                🛡️ Bản Quyền MS
+              </button>
+            </div>
+
+            <!-- Offline View -->
+            <div id="offlineAuthView">
+              <div class="form-group">
+                <label>Tên nhân vật trong game (Tự động tải Skin theo tên)</label>
+                <div class="input-with-btn">
+                  <input type="text" id="usernameInput" maxlength="16" placeholder="Nhập tên (VD: Technoblade, Dream)..." value="Steve" />
+                  <button class="btn-primary" id="btnSaveUsername">Áp Dụng</button>
+                </div>
+              </div>
+
+              <div class="uuid-box">
+                <div class="uuid-info">
+                  <span class="uuid-label">Offline UUID v3 chuẩn Mojang:</span>
+                  <code id="offlineUuidText">00000000-0000-0000-0000-000000000000</code>
+                </div>
+                <button class="btn-icon" id="btnCopyUuid" title="Sao chép UUID">📋</button>
+              </div>
+
+              <div class="saved-profiles-wrap">
+                <span class="sub-label">Đổi nhanh nhân vật &amp; Skin mẫu:</span>
+                <div class="saved-profiles-list" id="savedProfilesList"></div>
+              </div>
+            </div>
+
+            <!-- Microsoft Official View -->
+            <div id="microsoftAuthView" style="display: none;">
+              <div id="msLoggedOutBox" class="ms-login-box">
+                <p class="ms-desc">
+                  Đăng nhập bằng tài khoản <strong>Microsoft / Xbox Game Pass</strong> có bản quyền Minecraft để chơi trên <strong>Hypixel, Wynncraft, CubeCraft</strong>.
+                </p>
+                <button class="btn-microsoft" id="btnLoginMicrosoft">
+                  <svg width="16" height="16" viewBox="0 0 21 21">
+                    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                  </svg>
+                  <span>Đăng Nhập Microsoft Chính Hãng</span>
+                </button>
+              </div>
+
+              <div id="msLoggedInBox" class="ms-profile-active" style="display: none;">
+                <div class="ms-user-row">
+                  <div style="flex:1;">
+                    <div class="ms-user-name" id="msAccountName">Player</div>
+                    <div class="ms-user-badge">✓ Tài khoản Bản Quyền Chính Hãng (MSA)</div>
+                  </div>
+                </div>
+                <div class="uuid-box" style="margin-top: 10px;">
+                  <div class="uuid-info">
+                    <span class="uuid-label">Online UUID Bản Quyền:</span>
+                    <code id="msAccountUuid">00000000-0000-0000-0000-000000000000</code>
+                  </div>
+                </div>
+                <div class="ms-actions-row">
+                  <button class="btn-secondary" id="btnRefreshMicrosoft">🔄 Gia Hạn Token</button>
+                  <button class="btn-secondary" id="btnLogoutMicrosoft" style="color:#dc2626;">🚪 Đăng Xuất</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COL 3: MULTI-CORE & ALL VERSIONS SELECTOR -->
+          <div class="mc-card">
+            <div class="card-header">
+              <h3>🚀 Chọn Core &amp; Phiên Bản</h3>
+              <span class="card-tag" id="versionInstalledStatus">Kiểm tra...</span>
+            </div>
+
+            <div class="form-group">
+              <label>Hệ thống 5 Core Khởi Chạy (Mod Loaders)</label>
+              <div class="core-grid">
+                <button class="core-card" data-loader="vanilla">
+                  <span class="core-icon">🌿</span>
+                  <span class="core-name">Vanilla</span>
+                  <span class="core-desc">Gốc Mojang</span>
+                </button>
+                <button class="core-card active" data-loader="fabric">
+                  <span class="core-icon">⚡</span>
+                  <span class="core-name">Fabric</span>
+                  <span class="core-desc">Siêu mượt FPS</span>
+                </button>
+                <button class="core-card" data-loader="quilt">
+                  <span class="core-icon">🧵</span>
+                  <span class="core-name">Quilt</span>
+                  <span class="core-desc">Core Thế Hệ Mới</span>
+                </button>
+                <button class="core-card" data-loader="forge">
+                  <span class="core-icon">🔨</span>
+                  <span class="core-name">Forge</span>
+                  <span class="core-desc">Chuyên Modpack</span>
+                </button>
+                <button class="core-card" data-loader="legacy-fabric">
+                  <span class="core-icon">⚔️</span>
+                  <span class="core-name">Legacy 1.8.9</span>
+                  <span class="core-desc">Fabric cho PvP</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <div class="label-row">
+                <label>Kho 920+ Phiên Bản Minecraft</label>
+                <label class="checkbox-inline">
+                  <input type="checkbox" id="chkShowSnapshots" />
+                  <span>Hiện cả Snapshot &amp; Alpha/Beta</span>
+                </label>
+              </div>
+              <div class="version-select-row">
+                <input type="text" id="versionSearchInput" placeholder="🔍 Tìm bản (VD: 1.16.5)..." />
+                <select id="versionSelect">
+                  <option value="1.20.4">Đang tải danh sách phiên bản...</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: MODRINTH FPS & MOD STORE -->
+      <section class="tab-panel" id="tab-modrinth">
+        <div class="panel-top-bar">
+          <div>
+            <h2>⚡ Kho Mod Tăng FPS &amp; Tiện Ích (Modrinth)</h2>
+            <p class="panel-sub">
+              Tự động tải đúng bản Mod tương thích với <strong id="storeTargetBadge">Minecraft 1.20.4 (FABRIC)</strong> vào thẳng thư mục <code>mods/</code>.
+            </p>
+          </div>
+          <button class="btn-accent" id="btnInstallFpsBundle">
+            🚀 Cài Đặt Trọn Bộ Tăng FPS + Skin (1-Click)
+          </button>
+        </div>
+
+        <div class="section-label">🔥 Gói Mod Thiết Yếu Khuyên Dùng (Tăng gấp 3-4 lần FPS &amp; Hiện Skin Cho Crack)</div>
+        <div class="curated-mods-grid" id="curatedModsGrid"></div>
+
+        <div class="section-label" style="margin-top: 20px;">🌐 Tìm Kiếm Mọi Mod Trên Modrinth</div>
+        <div class="search-bar-row">
+          <input type="text" id="modrinthSearchInput" placeholder="Nhập tên mod (VD: sodium, iris, customskinloader, journeymap, appleskin)..." />
+          <button class="btn-primary" id="btnSearchModrinth">Tìm Kiếm Mod</button>
+        </div>
+
+        <div class="modrinth-results-grid" id="modrinthResultsGrid"></div>
+      </section>
+
+      <!-- TAB 3: LOCAL MODS & FOLDERS -->
+      <section class="tab-panel" id="tab-mods">
+        <div class="panel-top-bar">
+          <div>
+            <h2>📦 Quản Lý Mods &amp; Thư Mục Game</h2>
+            <p class="panel-sub">Bật/tắt nhanh từng file Mod mà không cần xóa file, hoặc mở nhanh thư mục tài nguyên.</p>
+          </div>
+          <button class="btn-secondary" id="btnRefreshMods">🔄 Làm Mới Danh Sách</button>
+        </div>
+
+        <div class="folders-quick-row">
+          <button class="folder-card" data-folder="">
+            <span class="folder-icon">📂</span>
+            <div>
+              <div class="folder-title">Thư mục .minecraft</div>
+              <div class="folder-sub">Thư mục gốc của game</div>
+            </div>
+          </button>
+          <button class="folder-card" data-folder="mods">
+            <span class="folder-icon">🧩</span>
+            <div>
+              <div class="folder-title">Thư mục Mods</div>
+              <div class="folder-sub">Chứa các file .jar mod</div>
+            </div>
+          </button>
+          <button class="folder-card" data-folder="resourcepacks">
+            <span class="folder-icon">🎨</span>
+            <div>
+              <div class="folder-title">Resource Packs</div>
+              <div class="folder-sub">Gói tài nguyên &amp; Texture</div>
+            </div>
+          </button>
+          <button class="folder-card" data-folder="shaderpacks">
+            <span class="folder-icon">✨</span>
+            <div>
+              <div class="folder-title">Shader Packs</div>
+              <div class="folder-sub">Bóng đổ Iris / OptiFine</div>
+            </div>
+          </button>
+          <button class="folder-card" data-folder="screenshots">
+            <span class="folder-icon">📸</span>
+            <div>
+              <div class="folder-title">Ảnh Chụp Màn Hình</div>
+              <div class="folder-sub">Ảnh chụp F2 trong game</div>
+            </div>
+          </button>
+        </div>
+
+        <div class="mc-card" style="margin-top: 16px;">
+          <div class="card-header">
+            <h3>Danh sách file Mod trong thư mục <code>mods/</code></h3>
+            <span class="card-tag" id="localModsSummaryTag">0 mod</span>
+          </div>
+          <div id="localModsContainer" class="local-mods-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB 4: SETTINGS (RAM, AUTO-JAVA, MULTI-CORE JVM) -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="panel-top-bar">
+          <div>
+            <h2>⚙️ Tối Ưu Đa Nhân CPU, RAM &amp; Java Runtime</h2>
+            <p class="panel-sub" id="sysHardwareSummary">Đang kiểm tra cấu hình phần cứng...</p>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <div class="mc-card">
+            <div class="card-header">
+              <h3>🧠 Dung Lượng RAM Cấp Cho Game</h3>
+              <span class="mc-badge mc-badge-green" id="ramValueDisplay">4096 MB (4.0 GB)</span>
+            </div>
+            <p class="setting-hint">
+              Khuyên dùng <strong>2048 MB - 4096 MB</strong> cho Vanilla/Fabric nhẹ, và <strong>6144 MB - 8192 MB</strong> nếu cài nhiều Mod hoặc Shader.
+            </p>
+            <input type="range" id="ramSlider" min="1024" max="16384" step="512" value="4096" class="ram-slider" />
+            <div class="ram-presets">
+              <button class="ram-chip" data-ram="2048">2 GB</button>
+              <button class="ram-chip" data-ram="4096">4 GB (Chuẩn)</button>
+              <button class="ram-chip" data-ram="6144">6 GB</button>
+              <button class="ram-chip" data-ram="8192">8 GB (Mod nặng)</button>
+              <button class="ram-chip" data-ram="12288">12 GB</button>
+            </div>
+
+            <hr class="divider" />
+
+            <div class="toggle-list">
+              <label class="toggle-row">
+                <div>
+                  <div class="toggle-title">⚡ Tăng Tốc Đa Nhân CPU &amp; G1GC (Multi-Core Boost)</div>
+                  <div class="toggle-sub">Tự động chia luồng Garbage Collection theo số nhân CPU và bỏ qua kiểm tra SHA1 lặp lại</div>
+                </div>
+                <input type="checkbox" id="chkFpsBoostJvm" checked />
+              </label>
+
+              <label class="toggle-row">
+                <div>
+                  <div class="toggle-title">🖥️ Chơi ở chế độ Toàn màn hình (Fullscreen)</div>
+                  <div class="toggle-sub">Tự động bật Fullscreen ngay khi mở cửa sổ Minecraft</div>
+                </div>
+                <input type="checkbox" id="chkFullscreen" />
+              </label>
+
+              <label class="toggle-row">
+                <div>
+                  <div class="toggle-title">🔽 Tự thu nhỏ Launcher khi vào Game</div>
+                  <div class="toggle-sub">Giải phóng tài nguyên giao diện khi đang chơi Minecraft</div>
+                </div>
+                <input type="checkbox" id="chkHideLauncher" />
+              </label>
+            </div>
+          </div>
+
+          <div class="mc-card">
+            <div class="card-header">
+              <h3>☕ Quản Lý Java Tự Động (Auto-JRE)</h3>
+              <span class="card-tag">Eclipse Temurin OpenJDK</span>
+            </div>
+            <p class="setting-hint">
+              Launcher sẽ <strong>tự động tải bản Java phù hợp</strong> khi bấm Chơi, hoặc bạn có thể tải sẵn ngay dưới đây:
+            </p>
+
+            <div class="java-runtimes-list" id="javaRuntimesList"></div>
+
+            <hr class="divider" />
+
+            <div class="form-group">
+              <label>Thư mục dữ liệu Game (<code>.minecraft</code>)</label>
+              <div class="input-with-btn">
+                <input type="text" id="gameDirInput" readonly />
+                <button class="btn-secondary" id="btnPickGameDir">Đổi Thư Mục</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Đường dẫn Java tùy chỉnh (Để trống để Launcher tự chọn)</label>
+              <div class="input-with-btn">
+                <input type="text" id="customJavaInput" placeholder="Tự động chọn Java phù hợp theo phiên bản..." readonly />
+                <button class="btn-secondary" id="btnPickJava">Chọn File</button>
+                <button class="btn-secondary" id="btnClearJava">Tự Động</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: LIVE CONSOLE LOGS -->
+      <section class="tab-panel" id="tab-console">
+        <div class="panel-top-bar">
+          <div>
+            <h2>📜 Nhật Ký Hoạt Động (Live Console)</h2>
+            <p class="panel-sub">Theo dõi chi tiết tiến trình xác thực, tải thư viện, khởi tạo JVM và log trực tiếp từ Minecraft.</p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-secondary" id="btnCopyLogs">📋 Sao Chép Log</button>
+            <button class="btn-secondary" id="btnClearLogs">🗑️ Xóa Log</button>
+          </div>
+        </div>
+        <div class="console-box" id="consoleOutput"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Bottom Minecraft XP-Style Launch Bar -->
+  <footer class="launch-footer">
+    <div class="launch-progress-area">
+      <div class="launch-status-header">
+        <span class="stage-badge" id="statusStageBadge">SẴN SÀNG</span>
+        <span class="status-message" id="statusMessageText">Chọn phiên bản &amp; Core rồi bấm CHƠI NGAY để vào thế giới Minecraft!</span>
+        <span class="status-percent" id="statusPercentText">0%</span>
+      </div>
+      <!-- Minecraft XP Bar Style Progress Track -->
+      <div class="mc-xp-track">
+        <div class="mc-xp-fill" id="progressBarFill" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <div class="launch-actions">
+      <button class="btn-stop" id="btnStopGame" style="display: none;">
+        ⏹ DỪNG GAME
+      </button>
+      <button class="btn-launch" id="btnLaunchGame">
+        <span class="launch-icon">⛏️</span>
+        <div class="launch-btn-text">
+          <span class="launch-main">CHƠI NGAY</span>
+          <span class="launch-sub" id="launchBtnSub">FABRIC • 1.20.4 • OFFLINE</span>
+        </div>
+      </button>
+    </div>
+  </footer>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

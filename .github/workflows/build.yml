@@ -1,0 +1,49 @@
+name: Build Aether Craft v3.0 Windows (.exe)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Windows Portable .exe
+        run: npm run build:win
+
+      - name: Upload .exe to GitHub Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherCraft-Windows-Portable-v3
+          path: dist/*.exe
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.0.0
+          name: "Aether Craft v3.0.0 — Giao diện Sáng Overworld, 3D Skin & 5 Core (.exe)"
+          body: |
+            ### ☀️ Aether Craft v3.0.0 — Overworld Daylight & Multi-Core Edition (.exe)
+            - **🧍 Nhân vật 3D Minecraft y chang trong game:** Mô hình Voxel 3D đầy đủ Đầu, Nón 3D (Hat Layer), Thân, 2 Tay, 2 Chân chuyển động đi bộ/chạy/đứng thở, kéo chuột xoay 360°, tự động tải Skin hoặc chọn file `.png` từ máy.
+            - **☀️ Giao diện Sáng Sủa Đậm Chất Minecraft (Overworld Daylight):** Cảnh quan bầu trời vuông, đồi cỏ, cây anh đào, thanh tiến trình XP Bar chuẩn Minecraft (có nút chuyển Sáng ☀️ / Tối 🌙).
+            - **🚀 Hỗ trợ 5 Core Khởi Chạy:** **Vanilla**, **Fabric**, **Quilt**, **Forge** và **Legacy Fabric (1.8.9 / 1.12.2 PvP)** cùng kho **920+ phiên bản**.
+            - **⚡ Siêu nhẹ & Khởi động < 1 giây:** Tải 64 luồng song song, tự động chia luồng JVM G1GC theo số nhân CPU và bỏ qua băm lại SHA1 ở các lần chơi sau.
+            - **🔐 Dual-Auth:** Chơi **Offline (Crack miễn phí)** hoặc **Bản Quyền Microsoft OAuth2 (vào Hypixel)**.
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

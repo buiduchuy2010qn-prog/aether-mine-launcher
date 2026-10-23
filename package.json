@@ -1,0 +1,47 @@
+{
+  "name": "aether-mine-launcher",
+  "version": "3.0.0",
+  "description": "Aether Craft v3.0 — Ultra-Light Multi-Core Minecraft Launcher (5 Cores, 3D Voxel Player Rig, Daylight Overworld UI, Crack + Microsoft Official Auth)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable"
+  },
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "electron",
+    "fabric",
+    "quilt",
+    "forge",
+    "legacy-fabric",
+    "3d-skin"
+  ],
+  "author": "buiduchuy2010qn-prog",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "minecraft-launcher-core": "^3.18.2"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.aether.minelauncher",
+    "productName": "AetherCraft",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "AetherCraft-Portable-${version}.exe"
+    }
+  }
+}
