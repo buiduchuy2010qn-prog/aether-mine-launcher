@@ -1,0 +1,48 @@
+name: Build Aether Client Windows (.exe)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Windows Portable .exe
+        run: npm run build:win
+
+      - name: Upload .exe to GitHub Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherClient-Windows-Portable
+          path: dist/*.exe
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.0
+          name: "Aether Client v2.0.0 — Dual-Auth (Crack & Microsoft .exe)"
+          body: |
+            ### 🚀 Aether Client v2.0.0 — Dual-Auth Edition (Portable .exe)
+            - **Xác thực kép (Dual-Auth):** Chuyển đổi 1 nút giữa **Offline (Crack miễn phí)** và **Bản Quyền Microsoft (OAuth2 chính hãng vào Hypixel)**.
+            - **Mọi phiên bản:** Vanilla, Fabric, Forge từ `1.8.9` đến `1.21.4+ / 26.x`.
+            - **Auto-Java (Adoptium JRE):** Tự động tải Java 8 / 17 / 21 / 25 nếu máy chưa cài.
+            - **Kho Mod Tăng FPS & Skin (Modrinth):** Cài đặt 1-Click trọn bộ Sodium, Lithium, Fabric API, CustomSkinLoader, Iris Shaders, FerriteCore, EntityCulling, Mod Menu.
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
