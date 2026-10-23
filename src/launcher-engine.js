@@ -29,11 +29,16 @@ Handler.prototype.checkSum = async function (hash, file) {
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     https
-      .get(url, { headers: { 'User-Agent': 'AetherCraft-Launcher/5.0' } }, (res) => {
+      .get(url, { headers: { 'User-Agent': 'AetherCraft-Launcher/8.0 (https://github.com/buiduchuy2010qn-prog)' } }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return fetchJson(res.headers.location).then(resolve).catch(reject);
+          const nextUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : new URL(res.headers.location, url).toString();
+          res.resume();
+          return fetchJson(nextUrl).then(resolve).catch(reject);
         }
         if (res.statusCode !== 200) {
+          res.resume();
           return reject(new Error(`HTTP ${res.statusCode}: ${url}`));
         }
         let raw = '';
@@ -56,13 +61,18 @@ function downloadFile(url, destPath) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const file = fs.createWriteStream(destPath);
     https
-      .get(url, { headers: { 'User-Agent': 'AetherCraft-Launcher/5.0' } }, (res) => {
+      .get(url, { headers: { 'User-Agent': 'AetherCraft-Launcher/8.0' } }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           file.close();
-          return downloadFile(res.headers.location, destPath).then(resolve).catch(reject);
+          const nextUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : new URL(res.headers.location, url).toString();
+          res.resume();
+          return downloadFile(nextUrl, destPath).then(resolve).catch(reject);
         }
         if (res.statusCode !== 200) {
           file.close();
+          res.resume();
           return reject(new Error(`Download failed HTTP ${res.statusCode}`));
         }
         res.pipe(file);
@@ -112,7 +122,6 @@ function detectJavaPath() {
   return 'java';
 }
 
-// Smooth Exit & RAM Optimizer (Trims Working Set & Cleans Java Temp Locks)
 function cleanupJavaTempAndTrimRam() {
   try {
     const tmp = os.tmpdir();
@@ -127,7 +136,6 @@ function cleanupJavaTempAndTrimRam() {
   } catch (_) {}
 
   if (process.platform === 'win32') {
-    // Trim WorkingSet of current process & lingering javaw processes via Win32 psapi.dll
     const psCmd = `powershell -NoProfile -WindowStyle Hidden -Command "$sig='[DllImport(\\"psapi.dll\\")]public static extern bool EmptyWorkingSet(IntPtr h);';$t=Add-Type -MemberDefinition $sig -Name WS -Namespace Win32 -PassThru -ErrorAction SilentlyContinue;Get-Process -Id ${process.pid} -ErrorAction SilentlyContinue | ForEach-Object { $t::EmptyWorkingSet($_.Handle) | Out-Null }"`;
     exec(psCmd, () => {});
   }
@@ -162,8 +170,6 @@ function forceKillMinecraft() {
   return true;
 }
 
-// Multi-Core + Smooth-Exit JVM Arguments
-// Uses -Xms512M (via memory.min) and G1PeriodicGCInterval so Java never hogs RAM or causes pagefile freeze when closing!
 function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
   const parallelThreads = Math.max(2, Math.min(12, cpuCores));
   const concThreads = Math.max(1, Math.floor(parallelThreads / 2));
@@ -189,7 +195,6 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     '-XX:SurvivorRatio=32',
     '-XX:+PerfDisableSharedMem',
     '-XX:MaxTenuringThreshold=1',
-    // Smooth Exit & Continuous RAM Release Flags:
     '-XX:G1PeriodicGCInterval=15000',
     '-XX:+G1PeriodicGCInvokesConcurrent',
     '-XX:MaxHeapFreeRatio=38',
@@ -197,8 +202,22 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     '-XX:-OmitStackTraceInFastThrow',
     '-Dfml.ignoreInvalidMinecraftCertificates=true',
     '-Dfml.ignorePatchDiscrepancies=true',
-    '-Dminecraft.launcher.brand=AetherCraft-v5'
+    '-Dminecraft.launcher.brand=AetherCraft-v8'
   ];
+}
+
+function getInstalledVersions(gameDir) {
+  const root = gameDir || getDefaultGameDir();
+  const verDir = path.join(root, 'versions');
+  if (!fs.existsSync(verDir)) return [];
+  try {
+    return fs.readdirSync(verDir).filter((name) => {
+      const jsonP = path.join(verDir, name, `${name}.json`);
+      return fs.existsSync(jsonP);
+    });
+  } catch (_) {
+    return [];
+  }
 }
 
 async function fetchVersionManifest() {
@@ -276,7 +295,7 @@ async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVer
   if (!loaderVer) {
     const available = await fetchLoaderVersions(mcVersion, loaderType);
     if (!available.length) {
-      throw new Error(`Core "${loaderType.toUpperCase()}" chưa hỗ trợ phiên bản ${mcVersion}. Hãy chọn Vanilla hoặc bản khác.`);
+      throw new Error(`Core "${loaderType.toUpperCase()}" chưa hỗ trợ phiên bản ${mcVersion}. Hãy chọn Vanilla hoặc Fabric.`);
     }
     loaderVer = available[0].version;
   }
@@ -319,6 +338,204 @@ async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVer
   return null;
 }
 
+// === MODRINTH API V2: KHO MOD / SHADER / RESOURCE PACK & 1-CLICK FPS BOOST ===
+async function searchModrinth({ query = '', projectType = 'mod', mcVersion = '1.21.4', loaderType = 'fabric' }) {
+  const facets = [[`project_type:${projectType}`]];
+  if (mcVersion) {
+    facets.push([`versions:${mcVersion}`]);
+  }
+  if (projectType === 'mod') {
+    const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+    facets.push([`categories:${effectiveLoader}`]);
+  }
+  const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&limit=18&index=downloads&facets=${encodeURIComponent(JSON.stringify(facets))}`;
+  const res = await fetchJson(url);
+  return (res.hits || []).map((h) => ({
+    projectId: h.project_id,
+    slug: h.slug,
+    title: h.title,
+    description: h.description,
+    iconUrl: h.icon_url,
+    downloads: h.downloads,
+    author: h.author,
+    categories: (h.categories || []).slice(0, 4)
+  }));
+}
+
+async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const folderMap = {
+    mod: 'mods',
+    shader: 'shaderpacks',
+    resourcepack: 'resourcepacks'
+  };
+  const targetFolder = path.join(rootDir, folderMap[projectType] || 'mods');
+  if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
+
+  const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  let versionsUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version?game_versions=${encodeURIComponent(JSON.stringify([mcVersion]))}`;
+  if (projectType === 'mod') {
+    versionsUrl += `&loaders=${encodeURIComponent(JSON.stringify([effectiveLoader]))}`;
+  }
+
+  let verList = await fetchJson(versionsUrl);
+  if (!Array.isArray(verList) || verList.length === 0) {
+    // Fallback without strict game_version if minor subversion differs (e.g. 1.21.4 -> 1.21.x)
+    const fallbackUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version${projectType === 'mod' ? `?loaders=${encodeURIComponent(JSON.stringify([effectiveLoader]))}` : ''}`;
+    verList = await fetchJson(fallbackUrl);
+  }
+  if (!Array.isArray(verList) || verList.length === 0) {
+    throw new Error(`Không tìm thấy bản cài phù hợp cho "${slug}" trên ${mcVersion}.`);
+  }
+
+  const chosen = verList[0];
+  const fileObj = chosen.files.find((f) => f.primary) || chosen.files[0];
+  if (!fileObj || !fileObj.url) {
+    throw new Error(`Gói "${slug}" không có file tải hợp lệ.`);
+  }
+
+  const destPath = path.join(targetFolder, fileObj.filename);
+  onStatus?.(`Đang tải ${fileObj.filename}...`);
+  await downloadFile(fileObj.url, destPath);
+  return {
+    ok: true,
+    fileName: fileObj.filename,
+    versionNumber: chosen.version_number,
+    destPath
+  };
+}
+
+async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
+  const effectiveLoader = loaderType === 'forge' ? 'forge' : 'fabric';
+  const packSlugs =
+    effectiveLoader === 'forge'
+      ? ['embeddium', 'ferrite-core', 'entityculling', 'immediatelyfast']
+      : ['fabric-api', 'sodium', 'lithium', 'ferrite-core', 'entityculling', 'immediatelyfast', 'iris'];
+
+  const installed = [];
+  const errors = [];
+  for (let i = 0; i < packSlugs.length; i++) {
+    const slug = packSlugs[i];
+    try {
+      onStatus?.(`[${i + 1}/${packSlugs.length}] Đang cài gói tối ưu FPS: ${slug.toUpperCase()} (${mcVersion})...`);
+      const res = await installModrinthProject(
+        { slug, projectType: 'mod', mcVersion, loaderType: effectiveLoader, gameDir },
+        onStatus
+      );
+      installed.push(res.fileName);
+    } catch (e) {
+      errors.push(`${slug}: ${e.message}`);
+    }
+  }
+  return {
+    ok: installed.length > 0,
+    installed,
+    errors,
+    recommendedCore: effectiveLoader
+  };
+}
+
+function listLocalAddons(gameDir, folderType = 'mods') {
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
+  const dir = path.join(rootDir, safeFolder);
+  if (!fs.existsSync(dir)) return [];
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((f) => /\.(jar|zip)(\.disabled)?$/i.test(f))
+      .map((f) => {
+        const full = path.join(dir, f);
+        let sizeKB = 0;
+        try {
+          sizeKB = Math.round(fs.statSync(full).size / 1024);
+        } catch (_) {}
+        return {
+          name: f,
+          cleanName: f.replace(/\.disabled$/i, ''),
+          enabled: !f.toLowerCase().endsWith('.disabled'),
+          sizeKB
+        };
+      });
+  } catch (_) {
+    return [];
+  }
+}
+
+function toggleLocalAddon(gameDir, folderType, fileName) {
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
+  const cleanBase = path.basename(fileName);
+  const fullPath = path.join(rootDir, safeFolder, cleanBase);
+  if (!fs.existsSync(fullPath)) return { ok: false };
+  const isDisabled = cleanBase.toLowerCase().endsWith('.disabled');
+  const nextName = isDisabled ? cleanBase.replace(/\.disabled$/i, '') : `${cleanBase}.disabled`;
+  const nextPath = path.join(rootDir, safeFolder, nextName);
+  fs.renameSync(fullPath, nextPath);
+  return { ok: true, newName: nextName, enabled: isDisabled };
+}
+
+function deleteLocalAddon(gameDir, folderType, fileName) {
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
+  const cleanBase = path.basename(fileName);
+  const fullPath = path.join(rootDir, safeFolder, cleanBase);
+  if (fs.existsSync(fullPath)) {
+    fs.unlinkSync(fullPath);
+  }
+  return { ok: true };
+}
+
+function listLocalWorlds(gameDir) {
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const savesDir = path.join(rootDir, 'saves');
+  if (!fs.existsSync(savesDir)) return [];
+  try {
+    return fs
+      .readdirSync(savesDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => {
+        const wPath = path.join(savesDir, d.name);
+        let lastPlayed = '';
+        try {
+          const st = fs.statSync(wPath);
+          lastPlayed = st.mtime.toLocaleString('vi-VN');
+        } catch (_) {}
+        let iconDataUrl = null;
+        const iconPath = path.join(wPath, 'icon.png');
+        if (fs.existsSync(iconPath)) {
+          try {
+            iconDataUrl = `data:image/png;base64,${fs.readFileSync(iconPath).toString('base64')}`;
+          } catch (_) {}
+        }
+        return {
+          name: d.name,
+          path: wPath,
+          lastPlayed,
+          iconDataUrl
+        };
+      });
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveCustomLocalSkin(gameDir, username, sourceFilePath) {
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const cleanName = (username || 'StevePlayer').replace(/[^a-zA-Z0-9_]/g, '') || 'StevePlayer';
+  const buf = fs.readFileSync(sourceFilePath);
+  const skinsDir = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'skins');
+  if (!fs.existsSync(skinsDir)) fs.mkdirSync(skinsDir, { recursive: true });
+  const targetPng = path.join(skinsDir, `${cleanName}.png`);
+  fs.writeFileSync(targetPng, buf);
+  configureCrackSkinSupport(rootDir, cleanName);
+  return {
+    ok: true,
+    dataUrl: `data:image/png;base64,${buf.toString('base64')}`,
+    savedPath: targetPng
+  };
+}
+
 function configureCrackSkinSupport(gameDir, username) {
   try {
     const cslDir = path.join(gameDir, 'CustomSkinLoader');
@@ -326,22 +543,22 @@ function configureCrackSkinSupport(gameDir, username) {
     const cslConfig = {
       enable: true,
       loadlist: [
+        { name: 'LocalSkin', type: 'Legacy', root: 'LocalSkin/' },
         { name: 'Mojang', type: 'MojangAPI' },
-        { name: 'LittleSkin', type: 'CustomSkinAPI', root: 'https://littleskin.cn/csl/' },
         { name: 'ElyBy', type: 'ElyByAPI' },
-        { name: 'LocalSkin', type: 'Legacy', checkPNG: false, skin: `LocalSkin/skins/${username}.png` }
+        { name: 'LittleSkin', type: 'CustomSkinAPI', root: 'https://littleskin.cn/csl/' }
       ]
     };
     fs.writeFileSync(path.join(cslDir, 'CustomSkinLoader.json'), JSON.stringify(cslConfig, null, 2), 'utf8');
   } catch (_) {}
 }
 
-async function launchMinecraft(options, callbacks) {
+async function launchMinecraft(config, callbacks = {}) {
   const {
     authMode = 'crack',
-    username = 'Player',
-    msProfile = null,
+    username = 'StevePlayer',
     crackSkinSync = true,
+    msProfile = null,
     mcVersion = '1.21.4',
     loaderType = 'vanilla',
     loaderVersion = '',
@@ -350,9 +567,9 @@ async function launchMinecraft(options, callbacks) {
     gameDir = '',
     useAikarFlags = true,
     fastSkipHash = true,
-    cpuCores = os.cpus().length,
-    serverIp = ''
-  } = options;
+    serverIp = '',
+    cpuCores = os.cpus().length
+  } = config;
 
   fastSkipEnabled = Boolean(fastSkipHash);
 
@@ -403,10 +620,8 @@ async function launchMinecraft(options, callbacks) {
   const resolvedJava = javaPath && javaPath.trim() ? javaPath.trim() : detectJavaPath();
   const customArgs = useAikarFlags ? buildMultiCoreSmoothExitArgs(ramGB, cpuCores) : [];
 
-  // Optional Direct Server Quick-Join
   if (serverIp && serverIp.trim()) {
     const cleanHost = serverIp.trim();
-    const [host, port] = cleanHost.split(':');
     customArgs.push(`--quickPlayMultiplayer=${cleanHost}`);
   }
 
@@ -421,7 +636,7 @@ async function launchMinecraft(options, callbacks) {
     },
     memory: {
       max: `${ramGB}G`,
-      min: '512M' // Dynamic low initial heap prevents Windows pagefile thrashing & exit stutter!
+      min: '512M'
     },
     javaPath: resolvedJava === 'java' ? undefined : resolvedJava,
     customArgs,
@@ -455,16 +670,12 @@ async function launchMinecraft(options, callbacks) {
     const line = String(msg).trim();
     callbacks.onLog?.(line);
 
-    // Detect when Minecraft window is up -> trigger Zero-RAM Hibernate mode in Launcher
     if (!gameWindowNotified && (line.includes('LWJGL') || line.includes('OpenAL initialized') || line.includes('Sound engine started') || line.includes('Created: '))) {
       gameWindowNotified = true;
       callbacks.onGameWindowReady?.();
     }
 
-    // SMOOTH INSTANT EXIT HOOK:
-    // As soon as Minecraft finishes saving worlds and logs "Stopping!" or "SoundSystem shutting down",
-    // kill lingering threads after 650ms so the game window closes with ZERO freeze!
-    if (line.includes('Stopping!') || line.includes('SoundSystem shutting down') || line.includes(' ThreadedAnvilChunkStorage: All dimensions are saved')) {
+    if (line.includes('Stopping!') || line.includes('SoundSystem shutting down') || line.includes('ThreadedAnvilChunkStorage: All dimensions are saved')) {
       if (!fastExitTimer) {
         fastExitTimer = setTimeout(() => {
           forceKillMinecraft();
@@ -500,7 +711,6 @@ async function launchMinecraft(options, callbacks) {
   const proc = await launcher.launch(launchOpts);
   activeMcProcess = proc;
 
-  // Fallback timer in case stdout doesn't emit LWJGL line
   setTimeout(() => {
     if (!gameWindowNotified && activeMcProcess) {
       gameWindowNotified = true;
@@ -514,6 +724,15 @@ async function launchMinecraft(options, callbacks) {
 module.exports = {
   fetchVersionManifest,
   fetchLoaderVersions,
+  getInstalledVersions,
+  searchModrinth,
+  installModrinthProject,
+  installFpsBoostPack,
+  listLocalAddons,
+  toggleLocalAddon,
+  deleteLocalAddon,
+  listLocalWorlds,
+  saveCustomLocalSkin,
   launchMinecraft,
   forceKillMinecraft,
   cleanupJavaTempAndTrimRam,

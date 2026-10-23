@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -6,6 +6,15 @@ const https = require('https');
 const {
   fetchVersionManifest,
   fetchLoaderVersions,
+  getInstalledVersions,
+  searchModrinth,
+  installModrinthProject,
+  installFpsBoostPack,
+  listLocalAddons,
+  toggleLocalAddon,
+  deleteLocalAddon,
+  listLocalWorlds,
+  saveCustomLocalSkin,
   launchMinecraft,
   forceKillMinecraft,
   cleanupJavaTempAndTrimRam,
@@ -18,7 +27,6 @@ const {
   generateOfflineUUID
 } = require('./microsoft-auth');
 
-// Reduce Chromium GPU/RAM overhead so Minecraft gets 100% hardware priority
 app.commandLine.appendSwitch('js-flags', '--expose-gc');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
 
@@ -30,7 +38,7 @@ function fetchBinaryBuffer(url, redirects = 3) {
   return new Promise((resolve, reject) => {
     const req = https.get(
       url,
-      { headers: { 'User-Agent': 'AetherCraft-Launcher/5.0' }, timeout: 6500 },
+      { headers: { 'User-Agent': 'AetherCraft-Launcher/8.0' }, timeout: 6500 },
       (res) => {
         if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
           const nextUrl = res.headers.location.startsWith('http')
@@ -58,9 +66,9 @@ function fetchBinaryBuffer(url, redirects = 3) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 1120,
+    width: 1320,
+    height: 820,
+    minWidth: 1140,
     minHeight: 720,
     frame: false,
     backgroundColor: '#090c14',
@@ -170,6 +178,22 @@ ipcMain.handle('skin:fetch-base64', async (_e, username) => {
   return { ok: false };
 });
 
+ipcMain.handle('skin:upload-local', async (_e, gameDir, username) => {
+  try {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Chọn file ảnh Skin Minecraft (.png - 64x64 hoặc 64x32)',
+      properties: ['openFile'],
+      filters: [{ name: 'Minecraft Skin PNG', extensions: ['png'] }]
+    });
+    if (res.canceled || !res.filePaths?.length) {
+      return { ok: false, canceled: true };
+    }
+    return saveCustomLocalSkin(gameDir, username, res.filePaths[0]);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 ipcMain.handle('auth:ms-login', async () => {
   try {
     const profile = await loginWithMicrosoftModal(mainWindow);
@@ -200,6 +224,14 @@ ipcMain.handle('mc:versions', async () => {
   }
 });
 
+ipcMain.handle('mc:installed-versions', async (_e, gameDir) => {
+  try {
+    return { ok: true, list: getInstalledVersions(gameDir) };
+  } catch (err) {
+    return { ok: false, list: [] };
+  }
+});
+
 ipcMain.handle('mc:loaders', async (_e, mcVersion, loaderType) => {
   try {
     return { ok: true, data: await fetchLoaderVersions(mcVersion, loaderType) };
@@ -208,8 +240,71 @@ ipcMain.handle('mc:loaders', async (_e, mcVersion, loaderType) => {
   }
 });
 
+ipcMain.handle('modrinth:search', async (_e, params) => {
+  try {
+    const hits = await searchModrinth(params || {});
+    return { ok: true, hits };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('modrinth:install', async (_e, params) => {
+  try {
+    const res = await installModrinthProject(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+    return res;
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('modrinth:fps-boost', async (_e, params) => {
+  try {
+    const res = await installFpsBoostPack(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+    return res;
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('addons:list', async (_e, gameDir, folderType) => {
+  return { ok: true, items: listLocalAddons(gameDir, folderType) };
+});
+
+ipcMain.handle('addons:toggle', async (_e, gameDir, folderType, fileName) => {
+  try {
+    return toggleLocalAddon(gameDir, folderType, fileName);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('addons:delete', async (_e, gameDir, folderType, fileName) => {
+  try {
+    return deleteLocalAddon(gameDir, folderType, fileName);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worlds:list', async (_e, gameDir) => {
+  return { ok: true, worlds: listLocalWorlds(gameDir) };
+});
+
 ipcMain.handle('mc:open-dir', async (_e, dirPath) => {
   const target = dirPath || getDefaultGameDir();
+  if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
+  shell.openPath(target);
+  return target;
+});
+
+ipcMain.handle('mc:open-subfolder', async (_e, gameDir, subFolder) => {
+  const root = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const target = subFolder ? path.join(root, subFolder) : root;
   if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
   shell.openPath(target);
   return target;

@@ -1,29 +1,31 @@
 {
   "name": "aether-craft-launcher",
-  "version": "7.0.0",
-  "description": "Aether Craft v7.0 — Clean Direct Core & Version Selector Minecraft Launcher (No Clutter, 3D WebGL, Smooth-Exit)",
+  "version": "8.0.0",
+  "description": "Aether Craft v8.0 - Ultimate Minecraft Launcher (Modrinth Store, 1-Click FPS Boost, 3D Cape/Skin Wardrobe, Quick Join Server)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "dist:win": "electron-builder --win nsis portable --publish never"
   },
+  "keywords": ["minecraft", "launcher", "modrinth", "fabric", "forge", "quilt"],
   "author": "buiduchuy2010qn-prog",
   "license": "MIT",
   "dependencies": {
-    "minecraft-launcher-core": "^3.17.1"
+    "minecraft-launcher-core": "^3.16.2"
   },
   "devDependencies": {
     "electron": "^30.0.0",
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.aethercraft.launcher",
+    "appId": "com.buiduchuy.aethercraft",
     "productName": "AetherCraft",
     "directories": {
       "output": "dist"
     },
     "files": [
-      "src/**/*"
+      "src/**/*",
+      "package.json"
     ],
     "win": {
       "target": [
@@ -36,12 +38,11 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Aether Craft Launcher",
-      "runAfterFinish": true,
-      "artifactName": "AetherCraft-Setup-${version}.exe"
+      "shortcutName": "Minecraft Launcher (Aether Craft)",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "AetherCraft-Portable-${version}.exe"
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     }
   }
 }
