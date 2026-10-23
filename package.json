@@ -5,7 +5,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis portable"
+    "dist:win": "electron-builder --win nsis portable --publish never"
   },
   "author": "buiduchuy2010qn-prog",
   "license": "MIT",
