@@ -72,12 +72,12 @@ function saveConfig(partial) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1240,
-    height: 810,
-    minWidth: 1024,
-    minHeight: 680,
+    width: 1360,
+    height: 860,
+    minWidth: 1120,
+    minHeight: 700,
     frame: false,
-    backgroundColor: '#090c12',
+    backgroundColor: '#dce8d4',
     title: 'Aether Client — Minecraft Launcher (Dual-Auth: Crack & Bản Quyền)',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
