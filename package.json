@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "4.0.0",
-  "description": "Aether Craft v4.0 — Pro 3D WebGL Minecraft Launcher (Dual Crack & Microsoft Auth, 5 Mod Loaders, 64-Socket Fast Launch)",
+  "version": "5.0.0",
+  "description": "Aether Craft v5.0 — Multi-Style Pro Gaming 3D WebGL Minecraft Launcher (Smooth-Exit Engine, 5 Famous Themes, Server Quick-Join)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -17,7 +17,7 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.aethercraft.launcher.v4",
+    "appId": "com.aethercraft.launcher.v5",
     "productName": "AetherCraft",
     "directories": {
       "output": "dist"

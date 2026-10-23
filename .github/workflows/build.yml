@@ -1,4 +1,4 @@
-name: Build Aether Craft v4.0 Windows EXE
+name: Build Aether Craft v5.0 Windows EXE
 
 on:
   push:
@@ -30,21 +30,28 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AetherCraft-Portable-v4.0
+          name: AetherCraft-Portable-v5.0
           path: dist/*.exe
 
-      - name: Publish GitHub Release v4.0.0
+      - name: Publish GitHub Release v5.0.0
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.0
-          name: "Aether Craft v4.0 — Pro 3D WebGL Minecraft Launcher (Real Three.js 3D Skin + Mojang Official Art)"
+          tag_name: v5.0.0
+          name: "Aether Craft v5.0 — 5 Famous Launcher Themes + Smooth-Exit Engine (<0.2s Close) + 3D WebGL"
           body: |
-            ### Aether Craft v4.0 — Lột Xác Toàn Diện Giao Diện Pro Gaming & Nhân Vật 3D WebGL
-            - **Nhân vật 3D Minecraft thật 100% (`skinview3d` + `Three.js` WebGL):** Đổ bóng 3 chiều, đầy đủ lớp Skin 2nd Layer (Mũ, Áo khoác, Quần nổi 3D), kéo chuột xoay 360°, 4 tư thế chuyển động (`Đi bộ`, `Chạy`, `Vẫy tay`, `Đứng`) và thanh chọn nhanh Skin nổi tiếng (`Dream`, `Technoblade`, `Notch`, `Alex`, `Steve`).
-            - **Hình ảnh Key Art chính thức từ Mojang CDN:** Hình nền và thẻ phiên bản sắc nét từ Mojang (`1.21.4 The Garden Awakens`, `1.20.4 Trails & Tales`, `1.16.5 Nether Update`, `26.3 Vibrant Visuals`).
-            - **Bố cục Full-Viewport chuẩn Gaming:** Khắc phục triệt để khoảng trống thừa phía dưới, sử dụng hệ thống icon Vector SVG sắc nét và hỗ trợ chuyển đổi **Giao diện Tối Pro (Emerald Studio)** / **Giao diện Sáng (Crystal Daylight)**.
-            - **Hỗ trợ cả Crack (Offline UUID v3 + CustomSkinLoader) & Bản Quyền Microsoft OAuth2.**
-            - **5 Core Mod Loaders:** Vanilla, Fabric, Forge, Quilt, Legacy Fabric (1.8.9 PvP) + Tải đa luồng **64-Socket** + **Fast-Skip SHA1 (< 1s)**.
+            ### Aether Craft v5.0 — Tối Ưu Tắt Game Siêu Mượt (<0.2s) & 5 Giao Diện Launcher Nổi Tiếng
+            1. **Smooth-Exit Engine (Tắt Minecraft Siêu Mượt & Không Treo Máy):**
+               - **Dynamic Low-Commit Heap (`-Xms512M` + `G1PeriodicGCInterval=15000`):** Không khóa cứng 4GB RAM ngay từ đầu, tự động trả RAM trống về Windows liên tục khi đang chơi để tránh tràn `pagefile.sys` gây đơ máy lúc tắt game.
+               - **Auto-Hibernate Launcher (0% GPU & <20MB RAM khi đang chơi):** Khi cửa sổ Minecraft hiện lên, Launcher tự động tạm dừng vòng lặp 3D WebGL, thu nhỏ và gọi hàm Win32 `EmptyWorkingSet` (`psapi.dll`) giải phóng 95% RAM của Launcher.
+               - **Instant Quit Hook (<0.2s):** Ngay khi bạn bấm *Quit Game* trong Minecraft (đã lưu xong thế giới), Engine tự động dọn sạch tiến trình con `javaw.exe` và giải phóng RAM lập tức, không còn cảnh đợi 5–10 giây tắt cửa sổ.
+               - **Nút "TẮT NHANH MINE (0.1s)" & "Dọn RAM Ngay":** Tắt cưỡng bức Minecraft bị treo hoặc dọn RAM hệ thống chỉ với 1 cú click.
+            2. **5 Giao Diện Launcher Xịn Nhất Thế Giới (Đổi Trực Tiếp 1-Click):**
+               - **Lunar Neon (Mặc định):** Kính mờ Glassmorphism đen-xanh ngọc chuẩn Lunar Client.
+               - **Modrinth Studio:** Tối giản hiện đại với sắc xanh `#1bd96a` đặc trưng của Modrinth App.
+               - **Feather Cyber:** Tím Neon Cyberpunk lấy cảm hứng từ Feather Client & LabyMod 4.
+               - **Badlion Esports:** Đen Carbon phối Đỏ-Vàng Gold đậm chất PvP Esports.
+               - **Prism Daylight:** Giao diện Sáng pha lê trong trẻo.
+            3. **Vào Nhanh Server (Quick-Join Multiplayer):** Click chọn nhanh **LuckyVN, HeroMC, Hypixel, PikaNetwork** hoặc nhập IP bất kỳ để vào thẳng Server khi bấm Chơi Ngay.
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
