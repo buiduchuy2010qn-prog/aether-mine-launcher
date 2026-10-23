@@ -96,7 +96,7 @@ const els = {
   btnCopyUuid: document.getElementById('btnCopyUuid'),
   savedProfilesList: document.getElementById('savedProfilesList'),
   versionInstalledStatus: document.getElementById('versionInstalledStatus'),
-  chkShowSnapshots: document.getElementById('chkShowSnapshots'),
+  versionTypeFilter: document.getElementById('versionTypeFilter'),
   versionSearchInput: document.getElementById('versionSearchInput'),
   versionSelect: document.getElementById('versionSelect'),
   storeTargetBadge: document.getElementById('storeTargetBadge'),
@@ -254,12 +254,12 @@ function updateOfflineProfileUI(username, uuid) {
 }
 
 function renderVersionDropdown() {
-  const showSnapshots = els.chkShowSnapshots.checked;
+  const typeFilter = els.versionTypeFilter.value || 'all';
   const search = (els.versionSearchInput.value || '').trim().toLowerCase();
   const currentVer = appState.config?.mcVersion || '1.20.4';
 
   const filtered = appState.allVersions.filter(v => {
-    if (!showSnapshots && v.type !== 'release') return false;
+    if (typeFilter !== 'all' && v.type !== typeFilter) return false;
     if (search && !v.id.toLowerCase().includes(search)) return false;
     return true;
   });
@@ -651,7 +651,7 @@ async function initApp() {
     });
   });
 
-  els.chkShowSnapshots.addEventListener('change', renderVersionDropdown);
+  els.versionTypeFilter.addEventListener('change', renderVersionDropdown);
   els.versionSearchInput.addEventListener('input', renderVersionDropdown);
   els.versionSelect.addEventListener('change', async () => {
     appState.config = await window.launcherAPI.saveConfig({ mcVersion: els.versionSelect.value });
