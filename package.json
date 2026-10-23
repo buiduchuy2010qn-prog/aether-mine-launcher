@@ -1,11 +1,11 @@
 {
   "name": "aether-craft-launcher",
-  "version": "5.0.0",
-  "description": "Aether Craft v5.0 — Multi-Style Pro Gaming 3D WebGL Minecraft Launcher (Smooth-Exit Engine, 5 Famous Themes, Server Quick-Join)",
+  "version": "6.0.0",
+  "description": "Aether Craft v6.0 — 1:1 Official Minecraft Launcher UI + Installations Manager + 3D WebGL Skin Studio + Smooth-Exit Engine",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win portable"
+    "dist:win": "electron-builder --win nsis portable"
   },
   "author": "buiduchuy2010qn-prog",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.aethercraft.launcher.v5",
+    "appId": "com.aethercraft.launcher",
     "productName": "AetherCraft",
     "directories": {
       "output": "dist"
@@ -27,8 +27,18 @@
     ],
     "win": {
       "target": [
+        "nsis",
         "portable"
       ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Aether Craft Launcher",
+      "runAfterFinish": true,
+      "artifactName": "AetherCraft-Setup-${version}.exe"
     },
     "portable": {
       "artifactName": "AetherCraft-Portable-${version}.exe"

@@ -1,4 +1,4 @@
-name: Build Aether Craft v5.0 Windows EXE
+name: Build Aether Craft v6.0 Windows EXE
 
 on:
   push:
@@ -24,34 +24,31 @@ jobs:
       - name: Install dependencies in GitHub Cloud
         run: npm install
 
-      - name: Build Portable Windows EXE
+      - name: Build Windows Setup & Portable EXE
         run: npm run dist:win
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AetherCraft-Portable-v5.0
+          name: AetherCraft-v6.0
           path: dist/*.exe
 
-      - name: Publish GitHub Release v5.0.0
+      - name: Publish GitHub Release v6.0.0
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v5.0.0
-          name: "Aether Craft v5.0 — 5 Famous Launcher Themes + Smooth-Exit Engine (<0.2s Close) + 3D WebGL"
+          tag_name: v6.0.0
+          name: "Aether Craft v6.0 — Giao Diện 1:1 Minecraft Launcher + Quản Lý Phiên Bản (Installations) + Shortcut Vĩnh Viễn"
           body: |
-            ### Aether Craft v5.0 — Tối Ưu Tắt Game Siêu Mượt (<0.2s) & 5 Giao Diện Launcher Nổi Tiếng
-            1. **Smooth-Exit Engine (Tắt Minecraft Siêu Mượt & Không Treo Máy):**
-               - **Dynamic Low-Commit Heap (`-Xms512M` + `G1PeriodicGCInterval=15000`):** Không khóa cứng 4GB RAM ngay từ đầu, tự động trả RAM trống về Windows liên tục khi đang chơi để tránh tràn `pagefile.sys` gây đơ máy lúc tắt game.
-               - **Auto-Hibernate Launcher (0% GPU & <20MB RAM khi đang chơi):** Khi cửa sổ Minecraft hiện lên, Launcher tự động tạm dừng vòng lặp 3D WebGL, thu nhỏ và gọi hàm Win32 `EmptyWorkingSet` (`psapi.dll`) giải phóng 95% RAM của Launcher.
-               - **Instant Quit Hook (<0.2s):** Ngay khi bạn bấm *Quit Game* trong Minecraft (đã lưu xong thế giới), Engine tự động dọn sạch tiến trình con `javaw.exe` và giải phóng RAM lập tức, không còn cảnh đợi 5–10 giây tắt cửa sổ.
-               - **Nút "TẮT NHANH MINE (0.1s)" & "Dọn RAM Ngay":** Tắt cưỡng bức Minecraft bị treo hoặc dọn RAM hệ thống chỉ với 1 cú click.
-            2. **5 Giao Diện Launcher Xịn Nhất Thế Giới (Đổi Trực Tiếp 1-Click):**
-               - **Lunar Neon (Mặc định):** Kính mờ Glassmorphism đen-xanh ngọc chuẩn Lunar Client.
-               - **Modrinth Studio:** Tối giản hiện đại với sắc xanh `#1bd96a` đặc trưng của Modrinth App.
-               - **Feather Cyber:** Tím Neon Cyberpunk lấy cảm hứng từ Feather Client & LabyMod 4.
-               - **Badlion Esports:** Đen Carbon phối Đỏ-Vàng Gold đậm chất PvP Esports.
-               - **Prism Daylight:** Giao diện Sáng pha lê trong trẻo.
-            3. **Vào Nhanh Server (Quick-Join Multiplayer):** Click chọn nhanh **LuckyVN, HeroMC, Hypixel, PikaNetwork** hoặc nhập IP bất kỳ để vào thẳng Server khi bấm Chơi Ngay.
+            ### Aether Craft v6.0 — Thiết Kế 1:1 Minecraft Launcher Chính Hãng & Sửa Triệt Để Lỗi Mất Shortcut
+            1. **Sửa Triệt Để Lỗi Mất Shortcut Khi Tắt Mở Lại (`AetherCraft-Setup-6.0.0.exe`):**
+               - Bản `Setup` cài đặt cố định vào máy chỉ trong 2 giây, tự tạo **Icon Aether Craft ngoài Màn Hình Chính (Desktop) & Thanh Tác Vụ (Taskbar)**. Đóng mở bao nhiêu lần cũng mở lên tức thì trong `0.2s`, **không bao giờ bị lỗi mất file `AetherCraft.exe` hay giải nén tạm vào `%TEMP%` nữa!**
+            2. **Giao Diện 1:1 Với Minecraft Launcher Chính Hãng + Quản Lý Bản Cài Đặt (`Installations`):**
+               - **Thanh chọn Phiên bản góc dưới bên trái + Nút `CHƠI NGAY` màu xanh Minecraft 3D ở giữa** giống y hệt Launcher chính thức.
+               - **Mục `Quản Lý Phiên Bản (Installations)` chuyên nghiệp:** Tạo, sửa, xóa và lưu nhiều cấu hình chơi khác nhau (chọn Icon Khối Cỏ, Bàn Chế Tạo, Lò Nung, Kim Cương, TNT; chọn Core `Vanilla`, `Fabric`, `Forge`, `Quilt`, `Legacy Fabric`; chọn phiên bản từ `1.7.10`, `1.8.9` tới `1.21.4` có sẵn ngay lập tức không cần chờ tải).
+            3. **Tủ Đồ Skin 3D WebGL (`Skins Studio`) & Danh Sách Máy Chủ (`Servers`):**
+               - Xem nhân vật 3D WebGL đứng trên bục cỏ Minecraft, xoay 360°, đổi dáng, chọn nhanh Skin mẫu hoặc tải theo tên Crack/Microsoft.
+               - Vào thẳng các máy chủ **LuckyVN, HeroMC, PikaNetwork, Hypixel** chỉ với 1 cú click.
+            4. **Smooth-Exit Engine (<0.2s):** Tự ngủ đông 0% GPU khi đang chơi và dọn sạch `javaw.exe` ngay khi thoát game.
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
