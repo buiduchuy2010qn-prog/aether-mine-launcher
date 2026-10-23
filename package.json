@@ -1,0 +1,46 @@
+{
+  "name": "aether-mine-launcher",
+  "version": "2.0.0",
+  "description": "Aether Client v2.0 — Modern Minecraft Launcher (Dual-Auth: Offline Crack + Microsoft Official OAuth2, Vanilla, Fabric, Forge, Auto-Java, Modrinth Store)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable"
+  },
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "electron",
+    "fabric",
+    "forge",
+    "microsoft-auth",
+    "offline-mode"
+  ],
+  "author": "buiduchuy2010qn-prog",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "minecraft-launcher-core": "^3.18.2"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.aether.minelauncher",
+    "productName": "AetherClient",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "AetherClient-Portable-${version}.exe"
+    }
+  }
+}
