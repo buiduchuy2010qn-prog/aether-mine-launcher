@@ -1,0 +1,37 @@
+{
+  "name": "aether-craft-launcher",
+  "version": "4.0.0",
+  "description": "Aether Craft v4.0 — Pro 3D WebGL Minecraft Launcher (Dual Crack & Microsoft Auth, 5 Mod Loaders, 64-Socket Fast Launch)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable"
+  },
+  "author": "buiduchuy2010qn-prog",
+  "license": "MIT",
+  "dependencies": {
+    "minecraft-launcher-core": "^3.17.1"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.aethercraft.launcher.v4",
+    "productName": "AetherCraft",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "AetherCraft-Portable-${version}.exe"
+    }
+  }
+}

@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="emerald-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aether Craft v4.0 — Pro 3D WebGL Minecraft Launcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP FRAMELESS TITLEBAR -->
+    <header class="titlebar">
+      <div class="titlebar-brand">
+        <div class="brand-cube-svg">
+          <svg viewBox="0 0 32 32" width="24" height="24" fill="none">
+            <!-- Isometric 3D Minecraft Grass Block SVG -->
+            <polygon points="16,2 30,9 16,16 2,9" fill="#34d399" />
+            <polygon points="2,9 16,16 16,30 2,23" fill="#92400e" />
+            <polygon points="30,9 16,16 16,30 30,23" fill="#78350f" />
+            <polygon points="2,9 16,16 16,19 2,12" fill="#10b981" />
+            <polygon points="30,9 16,16 16,19 30,12" fill="#059669" />
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <span class="brand-name">AETHER CRAFT</span>
+          <span class="brand-version">v4.0 PRO 3D WEBGL</span>
+        </div>
+      </div>
+
+      <!-- Top Hardware Telemetry & Theme Switcher -->
+      <div class="titlebar-telemetry">
+        <div class="telemetry-pill" title="Bộ vi xử lý & số nhân đa luồng">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+            <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+            <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>
+          </svg>
+          <span id="cpuBadge">Đang quét CPU...</span>
+        </div>
+        <div class="telemetry-pill" title="RAM khả dụng trên hệ thống">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+            <path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M4 15h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2Z"/>
+          </svg>
+          <span id="ramBadge">RAM: -- GB</span>
+        </div>
+        <div class="telemetry-pill emerald-pill" title="Tải đa luồng 64-Socket + Fast-Skip SHA1">
+          <span class="pulse-dot"></span>
+          <span>64-Socket Turbo</span>
+        </div>
+        <button class="theme-switch-btn" id="btnToggleTheme" title="Chuyển đổi giao diện Sáng / Tối Pro">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <span id="themeLabel">Giao diện: Sáng</span>
+        </button>
+      </div>
+
+      <!-- Window Control Buttons -->
+      <div class="titlebar-controls">
+        <button class="win-btn" id="btnMin" title="Thu nhỏ">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="1.8" fill="currentColor"/></svg>
+        </button>
+        <button class="win-btn" id="btnMax" title="Phóng to">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+        </button>
+        <button class="win-btn win-close" id="btnClose" title="Đóng">
+          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN BODY WORKSPACE -->
+    <div class="workspace">
+      <!-- LEFT PRO GAMING SIDEBAR -->
+      <aside class="sidebar">
+        <!-- Active Player Mini Card -->
+        <div class="sidebar-profile-card">
+          <canvas id="avatar2dCanvas" width="44" height="44" class="avatar-face-canvas" title="Khuôn mặt Skin 2D trực tiếp"></canvas>
+          <div class="sidebar-profile-info">
+            <div class="sidebar-player-name" id="sidebarPlayerName">StevePlayer</div>
+            <div class="sidebar-auth-tag" id="sidebarAuthBadge">CRACK / OFFLINE</div>
+          </div>
+        </div>
+
+        <div class="sidebar-section-label">ĐIỀU HƯỚNG</div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-tab="play">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" fill-opacity="0.18"/>
+            </svg>
+            <span>Sảnh Chơi &amp; 3D Skin</span>
+          </button>
+          <button class="nav-item" data-tab="cores">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+            </svg>
+            <span>Kho Phiên Bản &amp; Core</span>
+          </button>
+          <button class="nav-item" data-tab="settings">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            <span>Tối Ưu Đa Nhân &amp; RAM</span>
+          </button>
+          <button class="nav-item" data-tab="console">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+              <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+            </svg>
+            <span>Nhật Ký Tiến Trình</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-section-label">CHỌN NHANH PHIÊN BẢN HOT</div>
+        <div class="quick-version-list">
+          <button class="quick-ver-btn active" data-quick-ver="1.21.4" data-quick-core="fabric" data-art="https://launchercontent.mojang.com/v2/images/1.21.4540x540.jpg">
+            <img src="https://launchercontent.mojang.com/v2/images/1.21.4540x540.jpg" alt="1.21.4" class="qv-thumb" />
+            <div class="qv-meta">
+              <strong>1.21.4 Fabric</strong>
+              <span>Mới nhất • Siêu mượt</span>
+            </div>
+          </button>
+          <button class="quick-ver-btn" data-quick-ver="1.20.4" data-quick-core="fabric" data-art="https://launchercontent.mojang.com/v2/images/78lvSIdTl1HmVNoHTTnYkAMinecraft1.20.4.jpeg">
+            <img src="https://launchercontent.mojang.com/v2/images/78lvSIdTl1HmVNoHTTnYkAMinecraft1.20.4.jpeg" alt="1.20.4" class="qv-thumb" />
+            <div class="qv-meta">
+              <strong>1.20.4 Fabric</strong>
+              <span>SMP &amp; Shaders ổn định</span>
+            </div>
+          </button>
+          <button class="quick-ver-btn" data-quick-ver="1.20.1" data-quick-core="forge" data-art="https://launchercontent.mojang.com/v2/images/5GW9TGsMULr7xEsDrhxS3n1.20.1.jpeg">
+            <img src="https://launchercontent.mojang.com/v2/images/5GW9TGsMULr7xEsDrhxS3n1.20.1.jpeg" alt="1.20.1" class="qv-thumb" />
+            <div class="qv-meta">
+              <strong>1.20.1 Forge</strong>
+              <span>Kho Modpack đồ sộ</span>
+            </div>
+          </button>
+          <button class="quick-ver-btn" data-quick-ver="1.16.5" data-quick-core="forge" data-art="https://launchercontent.mojang.com/v2/images/2q0u4Zq5AM17pwj5twUIQ0MinecraftJavaEdition1.16.5.jpeg">
+            <img src="https://launchercontent.mojang.com/v2/images/2q0u4Zq5AM17pwj5twUIQ0MinecraftJavaEdition1.16.5.jpeg" alt="1.16.5" class="qv-thumb" />
+            <div class="qv-meta">
+              <strong>1.16.5 Nether</strong>
+              <span>Speedrun &amp; Mod nhẹ</span>
+            </div>
+          </button>
+          <button class="quick-ver-btn" data-quick-ver="1.8.9" data-quick-core="legacyfabric" data-art="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">
+            <img src="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png" alt="1.8.9" class="qv-thumb" />
+            <div class="qv-meta">
+              <strong>1.8.9 BedWars</strong>
+              <span>Legacy Fabric PvP</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="sidebar-footer">
+          <button class="folder-action-btn" id="btnOpenDir">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Mở thư mục .minecraft</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- CENTER CONTENT AREA (ZERO BOTTOM WHITESPACE) -->
+      <main class="main-stage">
+        <!-- TAB 1: SẢNH CHƠI & 3D WEBGL SKIN STUDIO -->
+        <section class="tab-panel active" id="tab-play">
+          <!-- HERO KEY ART BANNER (Official Mojang High-Res CDN Artwork) -->
+          <div class="hero-banner" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png');">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+              <div class="hero-top-row">
+                <div class="hero-badges">
+                  <span class="badge-emerald">MINECRAFT JAVA EDITION</span>
+                  <span class="badge-glass" id="heroActiveBadge">1.21.4 • FABRIC CORE</span>
+                </div>
+                <!-- Artwork Wallpaper Switcher -->
+                <div class="wallpaper-switcher">
+                  <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png">Realms World</button>
+                  <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">Wilderness</button>
+                  <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">Java Classic</button>
+                  <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/touchgrass700x466.jpg">Overworld</button>
+                </div>
+              </div>
+
+              <div class="hero-bottom-row">
+                <div class="hero-text-block">
+                  <h1>Khởi Động Siêu Tốc • Đa Core • Chuẩn 3D</h1>
+                  <p>Hỗ trợ song song <strong>Crack (Offline UUID chuẩn Mojang + Skin 3D)</strong> &amp; <strong>Microsoft Bản Quyền</strong>, tải 64 luồng và bỏ qua kiểm tra SHA1 chỉ dưới 1 giây.</p>
+                </div>
+                <div class="hero-stats-strip">
+                  <div class="hero-stat-box">
+                    <span class="hs-val" id="statVersionCount">920+</span>
+                    <span class="hs-lbl">Phiên bản</span>
+                  </div>
+                  <div class="hero-stat-box">
+                    <span class="hs-val">5 Core</span>
+                    <span class="hs-lbl">Mod Loaders</span>
+                  </div>
+                  <div class="hero-stat-box">
+                    <span class="hs-val">&lt; 1 Giây</span>
+                    <span class="hs-lbl">Fast-Skip Launch</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3-COLUMN FULL-HEIGHT BENTO GRID -->
+          <div class="bento-grid">
+            <!-- COLUMN 1: TRUE 3D WEBGL MINECRAFT SKIN VIEWER (skinview3d + Three.js) -->
+            <div class="bento-card skin-studio-card">
+              <div class="card-head">
+                <div class="card-title-group">
+                  <span class="card-dot emerald"></span>
+                  <h3>NHÂN VẬT 3D MINECRAFT (WEBGL)</h3>
+                </div>
+                <div class="pose-bar">
+                  <button class="pose-btn active" data-pose="walk" title="Đi bộ 3D">Đi bộ</button>
+                  <button class="pose-btn" data-pose="run" title="Chạy Sprint">Chạy</button>
+                  <button class="pose-btn" data-pose="wave" title="Vẫy tay chào">Vẫy tay</button>
+                  <button class="pose-btn" data-pose="idle" title="Đứng thở">Đứng</button>
+                </div>
+              </div>
+
+              <!-- WebGL 3D Canvas Container -->
+              <div class="webgl-stage-wrap">
+                <canvas id="skinViewerCanvas"></canvas>
+                <div class="webgl-hint-pill">Kéo chuột để xoay 360° • Cuộn để phóng to</div>
+              </div>
+
+              <!-- Quick Famous Skin Presets -->
+              <div class="skin-preset-strip">
+                <span class="preset-lbl">Thử Skin mẫu:</span>
+                <button class="skin-preset-chip" data-skin="Dream">Dream</button>
+                <button class="skin-preset-chip" data-skin="Technoblade">Technoblade</button>
+                <button class="skin-preset-chip" data-skin="Notch">Notch</button>
+                <button class="skin-preset-chip" data-skin="Alex">Alex</button>
+                <button class="skin-preset-chip" data-skin="MHF_Steve">Steve</button>
+              </div>
+            </div>
+
+            <!-- COLUMN 2: DUAL AUTH (CRACK + MICROSOFT) & ACCOUNT MANAGEMENT -->
+            <div class="bento-card auth-studio-card">
+              <div class="card-head">
+                <div class="card-title-group">
+                  <span class="card-dot cyan"></span>
+                  <h3>CHẾ ĐỘ TÀI KHOẢN &amp; ĐỒNG BỘ SKIN</h3>
+                </div>
+                <span class="card-tag" id="authStatusTag">Sẵn sàng</span>
+              </div>
+
+              <!-- Mode Switch Tabs -->
+              <div class="auth-switcher">
+                <button class="auth-mode-tab active" data-auth-mode="crack" id="tabBtnCrack">
+                  <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  <span>Crack / Offline (Miễn Phí)</span>
+                </button>
+                <button class="auth-mode-tab" data-auth-mode="microsoft" id="tabBtnMicrosoft">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+                    <path d="M3 3h8.5v8.5H3V3zm9.5 0H21v8.5h-8.5V3zM3 12.5h8.5V21H3v-8.5zm9.5 0H21V21h-8.5v-8.5z"/>
+                  </svg>
+                  <span>Bản Quyền Microsoft</span>
+                </button>
+              </div>
+
+              <!-- CRACK PANEL -->
+              <div class="auth-body" id="panelCrack">
+                <label class="field-label">Tên nhân vật trong Game (tự động tải Skin 3D trùng tên)</label>
+                <div class="input-with-btn">
+                  <input type="text" id="usernameInput" class="pro-input" value="StevePlayer" maxlength="16" placeholder="Nhập tên nhân vật..." />
+                  <button class="btn-sync-skin" id="btnReloadSkin" title="Tải lại Skin 3D theo tên">Tải Skin</button>
+                </div>
+
+                <div class="uuid-preview-card">
+                  <div class="uuid-row">
+                    <span class="uuid-lbl">Offline UUID (v3 Mojang):</span>
+                    <code id="crackUuidText">00000000-0000-3000-8000-000000000000</code>
+                  </div>
+                  <label class="toggle-line">
+                    <input type="checkbox" id="crackSkinSyncToggle" checked />
+                    <span>Tự động cấu hình <strong>CustomSkinLoader</strong> để hiện Skin HD trong cả chế độ Crack</span>
+                  </label>
+                </div>
+
+                <!-- Version Visual Cards inside Center Column -->
+                <div class="era-showcase-title">BẢN CẬP NHẬT MINECRAFT NỔI BẬT</div>
+                <div class="mini-era-grid">
+                  <div class="mini-era-card" data-select-ver="1.21.4" data-select-core="fabric" style="background-image: url('https://launchercontent.mojang.com/v2/images/1.21.4540x540.jpg');">
+                    <div class="mini-era-overlay">
+                      <span class="me-ver">1.21.4</span>
+                      <span class="me-name">The Garden Awakens</span>
+                    </div>
+                  </div>
+                  <div class="mini-era-card" data-select-ver="1.20.4" data-select-core="fabric" style="background-image: url('https://launchercontent.mojang.com/v2/images/78lvSIdTl1HmVNoHTTnYkAMinecraft1.20.4.jpeg');">
+                    <div class="mini-era-overlay">
+                      <span class="me-ver">1.20.4</span>
+                      <span class="me-name">Trails &amp; Tales</span>
+                    </div>
+                  </div>
+                  <div class="mini-era-card" data-select-ver="1.19.4" data-select-core="fabric" style="background-image: url('https://launchercontent.mojang.com/v2/images/7lKi3Yf0Qyt3y6hniqecG11.19.4.jpeg');">
+                    <div class="mini-era-overlay">
+                      <span class="me-ver">1.19.4</span>
+                      <span class="me-name">The Wild Update</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MICROSOFT PANEL -->
+              <div class="auth-body hidden" id="panelMicrosoft">
+                <div class="ms-card" id="msNotLoggedBox">
+                  <p class="ms-desc">Đăng nhập tài khoản <strong>Microsoft / Xbox Live</strong> chính thức để vào các máy chủ Bản Quyền (Hypixel, Realms, CubeCraft) và đồng bộ Skin + Áo choàng gốc.</p>
+                  <button class="btn-ms-oauth" id="btnMsLogin">
+                    <svg width="16" height="16" viewBox="0 0 21 21">
+                      <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                      <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                      <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                      <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                    </svg>
+                    <span>Đăng Nhập Microsoft OAuth2</span>
+                  </button>
+                </div>
+
+                <div class="ms-logged-card hidden" id="msLoggedBox">
+                  <div class="ms-logged-row">
+                    <div>
+                      <div class="ms-logged-name" id="msProfileName">Player</div>
+                      <div class="ms-logged-uuid" id="msProfileUuid">UUID: --</div>
+                    </div>
+                    <button class="btn-ms-logout" id="btnMsLogout">Đăng xuất</button>
+                  </div>
+                  <div class="ms-verified-pill">Đã xác thực bản quyền Mojang • Sẵn sàng vào Hypixel</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLUMN 3: MULTI-CORE ENGINE & VERSION SELECTOR -->
+            <div class="bento-card engine-studio-card">
+              <div class="card-head">
+                <div class="card-title-group">
+                  <span class="card-dot amber"></span>
+                  <h3>CẤU HÌNH CORE &amp; PHIÊN BẢN</h3>
+                </div>
+                <span class="card-tag" id="selectedCoreBadge">FABRIC</span>
+              </div>
+
+              <!-- 5 Core Loaders Selector -->
+              <label class="field-label">Chọn Nền Tảng Core (Mod Loader)</label>
+              <div class="core-pill-grid">
+                <button class="core-pill" data-core="vanilla">
+                  <span class="cp-title">Vanilla</span>
+                  <span class="cp-sub">Nguyên bản</span>
+                </button>
+                <button class="core-pill active" data-core="fabric">
+                  <span class="cp-title">Fabric</span>
+                  <span class="cp-sub">FPS cao nhất</span>
+                </button>
+                <button class="core-pill" data-core="forge">
+                  <span class="cp-title">Forge</span>
+                  <span class="cp-sub">Modpack lớn</span>
+                </button>
+                <button class="core-pill" data-core="quilt">
+                  <span class="cp-title">Quilt</span>
+                  <span class="cp-sub">Hiện đại</span>
+                </button>
+                <button class="core-pill" data-core="legacyfabric">
+                  <span class="cp-title">Legacy</span>
+                  <span class="cp-sub">1.8.9 / 1.12.2</span>
+                </button>
+              </div>
+
+              <!-- Version Filter & Dropdown -->
+              <div class="version-picker-group">
+                <div class="ver-filter-row">
+                  <label class="field-label" style="margin:0;">Phiên bản Minecraft</label>
+                  <div class="ver-type-pills">
+                    <button class="vtype-btn active" data-vtype="release">Chính thức</button>
+                    <button class="vtype-btn" data-vtype="snapshot">Snapshot</button>
+                    <button class="vtype-btn" data-vtype="old">Cổ điển</button>
+                  </div>
+                </div>
+                <select id="versionSelect" class="pro-select">
+                  <option value="1.21.4">Đang tải danh sách từ Mojang...</option>
+                </select>
+              </div>
+
+              <div class="loader-picker-group" id="loaderBuildGroup">
+                <label class="field-label">Phiên bản Build của Core Loader</label>
+                <select id="loaderVersionSelect" class="pro-select">
+                  <option value="">Tự động chọn bản ổn định mới nhất</option>
+                </select>
+              </div>
+
+              <!-- Quick RAM Slider right on Dashboard -->
+              <div class="quick-ram-box">
+                <div class="qram-top">
+                  <span class="field-label" style="margin:0;">Bộ nhớ RAM cấp phát</span>
+                  <strong class="qram-val" id="ramValueDisplay">4 GB</strong>
+                </div>
+                <input type="range" id="ramSlider" min="2" max="16" step="1" value="4" class="pro-range" />
+                <div class="qram-meta">
+                  <span id="gcThreadInfo">Đa luồng GC: Tự động theo CPU</span>
+                  <span>G1GC Turbo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: KHO PHIÊN BẢN & 5 CORE MOD LOADERS CHI TIẾT -->
+        <section class="tab-panel" id="tab-cores">
+          <div class="subtab-header">
+            <div>
+              <h2>Kho Phiên Bản Minecraft &amp; 5 Core Mod Loaders</h2>
+              <p>Click vào bất kỳ bản cập nhật hoặc Core nào bên dưới để tự động áp dụng ngay vào Sảnh Chơi.</p>
+            </div>
+          </div>
+
+          <div class="cores-detail-grid">
+            <div class="core-detail-card active" data-pick-core="fabric">
+              <div class="cdc-badge">KHUYÊN DÙNG CHO FPS CAO</div>
+              <h3>Fabric Loader</h3>
+              <p>Khởi động dưới 3 giây, tương thích hoàn hảo với Sodium, Iris Shaders, Lithium giúp tăng gấp 3 lần FPS trên máy yếu.</p>
+            </div>
+            <div class="core-detail-card" data-pick-core="forge">
+              <div class="cdc-badge">KHO MOD ĐỒ SỘ NHẤT</div>
+              <h3>Minecraft Forge</h3>
+              <p>Nền tảng huyền thoại cho RLCraft, Pixelmon, Create, Ice and Fire và hàng chục ngàn Modpack lớn.</p>
+            </div>
+            <div class="core-detail-card" data-pick-core="vanilla">
+              <div class="cdc-badge">CHÍNH THỨC MOJANG</div>
+              <h3>Vanilla Official</h3>
+              <p>100% nguyên bản từ máy chủ Mojang Studios, hỗ trợ từ bản cổ 1.0 tới 1.21.4 và Snapshot 26.3.</p>
+            </div>
+            <div class="core-detail-card" data-pick-core="quilt">
+              <div class="cdc-badge">CÔNG NGHỆ MỚI</div>
+              <h3>Quilt Loader</h3>
+              <p>Hậu duệ hiện đại của Fabric, chạy mượt các mod Fabric và tối ưu hóa tải gói tài nguyên.</p>
+            </div>
+            <div class="core-detail-card" data-pick-core="legacyfabric">
+              <div class="cdc-badge">CHUYÊN PVP 1.8.9</div>
+              <h3>Legacy Fabric</h3>
+              <p>Đem sức mạnh tối ưu hóa của Fabric về các bản 1.8.9 BedWars / SkyWars và 1.12.2.</p>
+            </div>
+          </div>
+
+          <h3 class="gallery-section-title">Thư Viện Hình Ảnh Bản Cập Nhật Chính Thức (Click Để Chọn)</h3>
+          <div class="artwork-gallery-grid">
+            <div class="art-card" data-select-ver="26.3" data-select-core="vanilla" style="background-image: url('https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg');">
+              <div class="art-card-overlay">
+                <span class="ac-tag">Bản Mới 26.3</span>
+                <h4>Vibrant Visuals Drop</h4>
+                <span>Vanilla • 26.3</span>
+              </div>
+            </div>
+            <div class="art-card" data-select-ver="1.21.4" data-select-core="fabric" style="background-image: url('https://launchercontent.mojang.com/v2/images/1.21.4540x540.jpg');">
+              <div class="art-card-overlay">
+                <span class="ac-tag">1.21.4 Release</span>
+                <h4>The Garden Awakens</h4>
+                <span>Fabric • 1.21.4</span>
+              </div>
+            </div>
+            <div class="art-card" data-select-ver="1.21.1" data-select-core="fabric" style="background-image: url('https://launchercontent.mojang.com/v2/images/1.21.1540x540.jpg');">
+              <div class="art-card-overlay">
+                <span class="ac-tag">1.21.1 Release</span>
+                <h4>Tricky Trials</h4>
+                <span>Fabric • 1.21.1</span>
+              </div>
+            </div>
+            <div class="art-card" data-select-ver="1.20.4" data-select-core="fabric" style="background-image: url('https://launchercontent.mojang.com/v2/images/78lvSIdTl1HmVNoHTTnYkAMinecraft1.20.4.jpeg');">
+              <div class="art-card-overlay">
+                <span class="ac-tag">1.20.4 Release</span>
+                <h4>Trails &amp; Tales</h4>
+                <span>Fabric • 1.20.4</span>
+              </div>
+            </div>
+            <div class="art-card" data-select-ver="1.18.2" data-select-core="forge" style="background-image: url('https://launchercontent.mojang.com/v2/images/5hKF2GUp8XiOAmxBTA2lK9MinecraftJavaEdition1.18.2.jpeg');">
+              <div class="art-card-overlay">
+                <span class="ac-tag">1.18.2 Release</span>
+                <h4>Caves &amp; Cliffs Part II</h4>
+                <span>Forge • 1.18.2</span>
+              </div>
+            </div>
+            <div class="art-card" data-select-ver="1.16.5" data-select-core="forge" style="background-image: url('https://launchercontent.mojang.com/v2/images/2q0u4Zq5AM17pwj5twUIQ0MinecraftJavaEdition1.16.5.jpeg');">
+              <div class="art-card-overlay">
+                <span class="ac-tag">1.16.5 Release</span>
+                <h4>Nether Update</h4>
+                <span>Forge • 1.16.5</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: TỐI ƯU ĐA NHÂN & RAM -->
+        <section class="tab-panel" id="tab-settings">
+          <div class="subtab-header">
+            <div>
+              <h2>Tối Ưu Hóa Phần Cứng Đa Nhân &amp; Đường Dẫn</h2>
+              <p>Tự động tinh chỉnh Aikar's G1GC Flags, số luồng CPU và Fast-Skip SHA1 giúp vào game dưới 1 giây.</p>
+            </div>
+          </div>
+
+          <div class="settings-bento">
+            <div class="bento-card">
+              <h3>Đường Dẫn Java &amp; Thư Mục Game</h3>
+              <label class="field-label">Đường dẫn Java (`javaw.exe` hoặc `java`)</label>
+              <input type="text" id="javaPathInput" class="pro-input" placeholder="Tự động phát hiện Java 17 / 21..." />
+              <label class="field-label" style="margin-top:14px;">Thư mục lưu dữ liệu Minecraft (`.minecraft`)</label>
+              <input type="text" id="gameDirInput" class="pro-input" placeholder="%APPDATA%/.minecraft" />
+            </div>
+
+            <div class="bento-card">
+              <h3>Tăng Tốc Khởi Động &amp; Đa Luồng</h3>
+              <label class="toggle-line" style="margin-top:10px;">
+                <input type="checkbox" id="fastSkipCheck" checked />
+                <span><strong>Fast-Skip SHA1 Verification:</strong> Bỏ qua kiểm tra lại hàng nghìn file tài nguyên đã có sẵn, giúp vào game lần thứ 2 trở đi chỉ dưới 1 giây.</span>
+              </label>
+              <label class="toggle-line" style="margin-top:14px;">
+                <input type="checkbox" id="aikarFlagsCheck" checked />
+                <span><strong>Multi-Core Aikar's G1GC Flags:</strong> Tự động đồng bộ `-XX:ParallelGCThreads` theo số luồng CPU thực tế để chống giật lag khi load chunk.</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: NHẬT KÝ TIẾN TRÌNH (CONSOLE) -->
+        <section class="tab-panel" id="tab-console">
+          <div class="console-header-row">
+            <div>
+              <h2>Nhật Ký Khởi Động &amp; JVM Telemetry</h2>
+              <p>Theo dõi trực tiếp tiến trình tải 64 luồng và đầu ra của Minecraft.</p>
+            </div>
+            <button class="btn-sync-skin" id="btnClearConsole">Xóa nhật ký</button>
+          </div>
+          <div class="console-terminal" id="consoleOutput">
+            <div class="log-entry info">[Aether Craft v4.0] Engine 3D WebGL (skinview3d) + 64-Socket Downloader đã sẵn sàng.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- BOTTOM COMMAND & LAUNCH DOCK -->
+    <footer class="launch-dock">
+      <div class="dock-status-area">
+        <div class="dock-status-top">
+          <span class="dock-status-title" id="statusText">Sẵn sàng khởi động Minecraft</span>
+          <span class="dock-status-pct" id="progressPercent">100%</span>
+        </div>
+        <div class="dock-progress-track">
+          <div class="dock-progress-bar" id="progressBar" style="width: 100%"></div>
+        </div>
+        <div class="dock-meta-summary" id="launchSummaryText">
+          Chế độ: <strong>Crack (Offline + Skin 3D)</strong> • Phiên bản: <strong>1.21.4 (Fabric)</strong> • RAM: <strong>4 GB</strong>
+        </div>
+      </div>
+
+      <!-- 3D CHISELED MINECRAFT EMERALD PLAY BUTTON -->
+      <button class="btn-emerald-launch" id="btnLaunch">
+        <div class="launch-icon-wrap">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </div>
+        <div class="launch-label-wrap">
+          <span class="launch-main-txt" id="launchBtnText">CHƠI NGAY</span>
+          <span class="launch-sub-txt" id="launchBtnSub">KHỞI ĐỘNG SIÊU TỐC</span>
+        </div>
+      </button>
+    </footer>
+  </div>
+
+  <!-- Real Three.js + skinview3d WebGL Bundle -->
+  <script src="skinview3d.bundle.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

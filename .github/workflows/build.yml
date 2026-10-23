@@ -1,0 +1,50 @@
+name: Build Aether Craft v4.0 Windows EXE
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies in GitHub Cloud
+        run: npm install
+
+      - name: Build Portable Windows EXE
+        run: npm run dist:win
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AetherCraft-Portable-v4.0
+          path: dist/*.exe
+
+      - name: Publish GitHub Release v4.0.0
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v4.0.0
+          name: "Aether Craft v4.0 — Pro 3D WebGL Minecraft Launcher (Real Three.js 3D Skin + Mojang Official Art)"
+          body: |
+            ### Aether Craft v4.0 — Lột Xác Toàn Diện Giao Diện Pro Gaming & Nhân Vật 3D WebGL
+            - **Nhân vật 3D Minecraft thật 100% (`skinview3d` + `Three.js` WebGL):** Đổ bóng 3 chiều, đầy đủ lớp Skin 2nd Layer (Mũ, Áo khoác, Quần nổi 3D), kéo chuột xoay 360°, 4 tư thế chuyển động (`Đi bộ`, `Chạy`, `Vẫy tay`, `Đứng`) và thanh chọn nhanh Skin nổi tiếng (`Dream`, `Technoblade`, `Notch`, `Alex`, `Steve`).
+            - **Hình ảnh Key Art chính thức từ Mojang CDN:** Hình nền và thẻ phiên bản sắc nét từ Mojang (`1.21.4 The Garden Awakens`, `1.20.4 Trails & Tales`, `1.16.5 Nether Update`, `26.3 Vibrant Visuals`).
+            - **Bố cục Full-Viewport chuẩn Gaming:** Khắc phục triệt để khoảng trống thừa phía dưới, sử dụng hệ thống icon Vector SVG sắc nét và hỗ trợ chuyển đổi **Giao diện Tối Pro (Emerald Studio)** / **Giao diện Sáng (Crystal Daylight)**.
+            - **Hỗ trợ cả Crack (Offline UUID v3 + CustomSkinLoader) & Bản Quyền Microsoft OAuth2.**
+            - **5 Core Mod Loaders:** Vanilla, Fabric, Forge, Quilt, Legacy Fabric (1.8.9 PvP) + Tải đa luồng **64-Socket** + **Fast-Skip SHA1 (< 1s)**.
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
