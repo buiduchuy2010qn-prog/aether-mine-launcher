@@ -511,6 +511,13 @@ async function searchModrinthMods() {
 }
 
 async function initApp() {
+  document.querySelectorAll('[data-home-tab]').forEach(item => {
+    item.addEventListener('click', () => {
+      const target = item.dataset.homeTab;
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.toggle('active', nav.dataset.tab === target));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.toggle('active', panel.id === 'tab-' + target));
+    });
+  });
   els.btnMinimize.addEventListener('click', () => window.launcherAPI.minimizeWindow());
   els.btnMaximize.addEventListener('click', () => window.launcherAPI.maximizeWindow());
   els.btnClose.addEventListener('click', () => window.launcherAPI.closeWindow());
