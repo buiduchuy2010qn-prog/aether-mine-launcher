@@ -246,11 +246,14 @@
 
             <div class="form-group">
               <div class="label-row">
-                <label>Chọn phiên bản Minecraft</label>
-                <label class="checkbox-inline">
-                  <input type="checkbox" id="chkShowSnapshots" />
-                  <span>Hiện cả bản thử nghiệm (Snapshot)</span>
-                </label>
+                <label for="versionTypeFilter">Kho phiên bản Minecraft</label>
+                <select id="versionTypeFilter" class="version-type-filter" aria-label="Lọc loại phiên bản">
+                  <option value="all" selected>Tất cả (Release / Snapshot / Beta / Alpha)</option>
+                  <option value="release">Release ổn định</option>
+                  <option value="snapshot">Snapshot</option>
+                  <option value="old_beta">Beta cũ</option>
+                  <option value="old_alpha">Alpha cổ điển</option>
+                </select>
               </div>
               <div class="version-select-row">
                 <input type="text" id="versionSearchInput" class="version-filter-input" placeholder="🔍 Lọc nhanh (VD: 1.20)..." />
