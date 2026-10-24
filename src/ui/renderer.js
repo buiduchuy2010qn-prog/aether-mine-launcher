@@ -244,7 +244,7 @@ function setAuthModeUI(mode) {
 }
 
 function setServerIpEverywhere(ip) {
-  state.serverIp = (ip || '').trim();
+  state.serverIp = '';
   const qInput = document.getElementById('quickServerInput'), sInput = document.getElementById('serverIpInput');
   if (qInput) qInput.value = state.serverIp;
   if (sInput) sInput.value = state.serverIp;
@@ -391,7 +391,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.aetherAPI.openSubFolder(state.gameDir, folderMap[state.activeModStoreType] || 'mods');
   };
 
-  document.getElementById('btnAddServer').onclick = () => {
+  if (document.getElementById('btnAddServer')) document.getElementById('btnAddServer').onclick = () => {
     const nameEl = document.getElementById('newServerNameInput'), ipEl = document.getElementById('newServerIpInput');
     const name = nameEl.value.trim() || 'Minecraft Server', ip = ipEl.value.trim();
     if (!ip) return;
@@ -399,6 +399,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderFavoriteServers(); saveCurrentConfig();
   };
   document.getElementById('btnOpenScreenshots').onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'screenshots');
+  if (document.getElementById('btnOpenSavesFolder')) document.getElementById('btnOpenSavesFolder').onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'saves');
   document.getElementById('btnRefreshWorlds').onclick = () => renderLocalWorlds();
 
   ramSlider.oninput = (e) => {
@@ -429,8 +430,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnMsLogout').onclick = () => { state.msProfile = null; setAuthModeUI('microsoft'); saveCurrentConfig(); };
 
   document.querySelectorAll('.srv-pill').forEach((pill) => { pill.onclick = () => setServerIpEverywhere(pill.dataset.srv); });
-  document.getElementById('quickServerInput').oninput = (e) => setServerIpEverywhere(e.target.value);
-  document.getElementById('serverIpInput').oninput = (e) => setServerIpEverywhere(e.target.value);
+  if (document.getElementById('quickServerInput')) document.getElementById('quickServerInput').oninput = (e) => setServerIpEverywhere(e.target.value);
+  if (document.getElementById('serverIpInput')) document.getElementById('serverIpInput').oninput = (e) => setServerIpEverywhere(e.target.value);
 
   const bindTogglePair = (homeId, setId, key) => {
     const hEl = document.getElementById(homeId), sEl = document.getElementById(setId);
