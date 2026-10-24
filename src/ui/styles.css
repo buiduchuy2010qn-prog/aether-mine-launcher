@@ -2175,7 +2175,7 @@ body {
   border-radius: 50%;
   background: #22c55e;
   box-shadow: 0 0 8px #22c55e;
-  animation: pulseLive 2s infinite;
+  
 }
 
 @keyframes pulseLive {
@@ -2253,7 +2253,7 @@ body {
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
   transform: skewX(-24deg);
-  animation: playShimmerSweep 3.8s infinite;
+  transition: left 0.55s ease;
   pointer-events: none;
 }
 
@@ -2314,4 +2314,54 @@ body {
 .world-card-row:hover {
   transform: translateY(-1px);
   border-color: var(--accent);
+}
+/* ================= V19.1 PRO: LOW-GPU & UNIFIED 3D TOOLBAR FIXES ================= */
+.btn-mc-official-play:hover::after {
+  left: 160%;
+}
+
+.stage-unified-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.stage-unified-toolbar .stage-ctrl-btn {
+  width: 100%;
+  padding: 5px 2px;
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dsp-block {
+  overflow-x: hidden !important;
+}
+
+.core-selector-bar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  width: 100%;
+}
+
+.core-tab-btn {
+  min-width: 0 !important;
+  overflow: hidden;
+}
+
+.version-selectors-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) !important;
+  gap: 8px !important;
+  width: 100%;
+}
+
+.hbc-content {
+  padding: 16px 20px !important;
 }

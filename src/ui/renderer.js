@@ -42,7 +42,7 @@ function init3DSkinViewer() {
   currentSkinDataUrl = fallbackUrl;
   skinViewer = new window.skinview3d.SkinViewer({ canvas, width: 265, height: 330, skin: fallbackUrl });
   skinViewer.camera.position.set(18, 12, 38);
-  skinViewer.zoom = 0.86; skinViewer.autoRotate = true; skinViewer.autoRotateSpeed = 0.45;
+  skinViewer.zoom = 0.86; skinViewer.autoRotate = false; skinViewer.autoRotateSpeed = 0.45;
   skinViewer.animation = new window.skinview3d.WalkingAnimation();
   skinViewer.animation.speed = 0.85;
   applyCapeToViewer(state.capeType);
@@ -467,6 +467,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         : '🧣 Đã chuyển sang chế độ Áo choàng (Cape 3D).';
     };
   }
+    const stageElForGpu = document.getElementById('webglStageWrap');
+  if (stageElForGpu) {
+    stageElForGpu.addEventListener('mouseenter', () => {
+      if (skinViewer) skinViewer.renderPaused = false;
+    });
+  }
+  window.addEventListener('blur', () => {
+    if (skinViewer && !skinViewer.autoRotate) skinViewer.renderPaused = true;
+  });
+  window.addEventListener('focus', () => {
+    if (skinViewer) skinViewer.renderPaused = false;
+  });
   const btnStageFx = document.getElementById('btnStageBgFx');
   const stageWrapEl = document.getElementById('webglStageWrap');
   if (btnStageFx && stageWrapEl) {
@@ -474,7 +486,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.stageStars = !state.stageStars;
       stageWrapEl.classList.toggle('stage-bg-stars', state.stageStars);
       btnStageFx.classList.toggle('active', state.stageStars);
-      btnStageFx.textContent = state.stageStars ? '✨ Sao Đêm' : '💡 Spotlight';
+      btnStageFx.textContent = state.stageStars ? '✨ Sao Đêm' : '💡 Đèn Nền';
     };
   }
   document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((chip) => {
