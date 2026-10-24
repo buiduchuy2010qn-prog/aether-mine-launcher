@@ -606,21 +606,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btnLaunch'); btn.disabled = false;
     document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
     await refreshInstalledVersions();
-  if (!state.acceptedEula) {
-    const eulaAsk = await askUserAgreement({
-      title: '🛡️ Điều Khoản Sử Dụng & Cài Đặt Aether Craft Launcher',
-      message: 'Trước khi bắt đầu sử dụng Launcher và tải tài nguyên Minecraft, vui lòng đọc và xác nhận bạn đồng ý với các điều khoản dưới đây:',
-      showEula: true,
-      agreeText: '✓ Tôi Đồng Ý & Sử Dụng',
-      cancelText: '✕ Không Đồng Ý (Thoát)'
-    });
-    if (!eulaAsk.agreed) {
-      window.aetherAPI.close();
-      return;
-    }
-    state.acceptedEula = true;
-    saveCurrentConfig();
-  } updateSummaryUI();
+  updateSummaryUI();
     document.getElementById('statusText').textContent = `Đã thoát Minecraft mượt mà (Mã: ${code})`;
   });
 });

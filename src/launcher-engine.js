@@ -532,22 +532,7 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
 }
 
 async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) {
-  if (loaderType === 'vanilla') return;
-  const modsDir = path.join(gameDir, 'mods');
-  if (!fs.existsSync(modsDir)) return;
-  const files = fs.readdirSync(modsDir).filter((f) => f.toLowerCase().endsWith('.jar'));
-  if (!files.length) return;
-
-  const baseMc = mcVersion.split('-')[0];
-  for (const f of files) {
-    const lower = f.toLowerCase();
-    const verMatch = lower.match(/(?:\+mc|\+|-)((?:1\.\d+(?:\.\d+)?)|(?:2[5-9]\.\d+(?:\.\d+)?))(?=\.jar|[-+])/);
-    if (verMatch && verMatch[1] && verMatch[1] !== baseMc && verMatch[1] !== mcVersion) {
-      const fullPath = path.join(modsDir, f);
-      onStatus?.(Tạm tắt Mod khác phiên bản ( + f + ) để tránh xung đột...);
-      try { fs.renameSync(fullPath, ${fullPath}.disabled); } catch (_) {}
-    }
-  }
+  return;
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const effectiveLoader = loaderType === 'forge' ? 'forge' : 'fabric';
