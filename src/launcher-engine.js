@@ -5,8 +5,9 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { execSync, exec } = require('child_process');
-const { createOfflineAuth, authenticateMicrosoftFromRefreshToken } = require('./microsoft-auth');
+const msAuth = require('./microsoft-auth');
 
 https.globalAgent.maxSockets = 64;
 http.globalAgent.maxSockets = 64;
@@ -14,6 +15,26 @@ http.globalAgent.maxSockets = 64;
 let fastSkipEnabled = true;
 let activeMcProcess = null;
 let fastExitTimer = null;
+
+function buildOfflineAuthFallback(username = 'StevePlayer') {
+  if (typeof msAuth.createOfflineAuth === 'function') {
+    return msAuth.createOfflineAuth(username);
+  }
+  const clean = (username || 'StevePlayer').trim().slice(0, 16) || 'StevePlayer';
+  const md5Bytes = crypto.createHash('md5').update(`OfflinePlayer:${clean}`, 'utf8').digest();
+  md5Bytes[6] = (md5Bytes[6] & 0x0f) | 0x30;
+  md5Bytes[8] = (md5Bytes[8] & 0x3f) | 0x80;
+  const hex = md5Bytes.toString('hex');
+  const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  return {
+    access_token: uuid,
+    client_token: uuid,
+    uuid,
+    name: clean,
+    user_properties: '{}',
+    meta: { type: 'mojang', demo: false }
+  };
+}
 
 const origCheckSum = Handler.prototype.checkSum;
 Handler.prototype.checkSum = async function (hash, file) {
@@ -95,30 +116,86 @@ function getDefaultGameDir() {
   return path.join(os.homedir(), '.minecraft');
 }
 
-function detectJavaPath() {
-  if (process.platform === 'win32') {
-    const candidates = [
-      process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', 'javaw.exe') : null,
-      'C:\\Program Files\\Eclipse Adoptium',
-      'C:\\Program Files\\Java',
-      'C:\\Program Files\\Microsoft',
-      'C:\\Program Files\\BellSoft',
-      'C:\\Program Files\\Zulu'
-    ].filter(Boolean);
-
-    for (const item of candidates) {
-      if (item.endsWith('.exe') && fs.existsSync(item)) return item;
-      if (fs.existsSync(item)) {
-        try {
-          const subdirs = fs.readdirSync(item);
-          for (const sub of subdirs.reverse()) {
-            const javaw = path.join(item, sub, 'bin', 'javaw.exe');
-            if (fs.existsSync(javaw)) return javaw;
-          }
-        } catch (_) {}
+function findJavawInDir(baseDir, maxDepth = 4, currentDepth = 0) {
+  const results = [];
+  if (!baseDir || !fs.existsSync(baseDir) || currentDepth > maxDepth) return results;
+  try {
+    const binCheck = path.join(baseDir, 'bin', process.platform === 'win32' ? 'javaw.exe' : 'java');
+    if (fs.existsSync(binCheck)) {
+      results.push(binCheck);
+      return results;
+    }
+    const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        results.push(...findJavawInDir(path.join(baseDir, entry.name), maxDepth, currentDepth + 1));
       }
     }
+  } catch (_) {}
+  return results;
+}
+
+function detectJavaPath(customGameDir, mcVersion = '1.21.4') {
+  const gameDir = customGameDir || getDefaultGameDir();
+  const searchRoots = [
+    path.join(gameDir, 'runtimes'),
+    path.join(gameDir, 'runtime'),
+    path.join(os.homedir(), 'sdk'),
+    process.env.JAVA_HOME || null,
+    'C:\\Program Files\\Eclipse Adoptium',
+    'C:\\Program Files\\Java',
+    'C:\\Program Files\\Microsoft',
+    'C:\\Program Files\\BellSoft',
+    'C:\\Program Files\\Zulu'
+  ].filter(Boolean);
+
+  const allFound = [];
+  for (const root of searchRoots) {
+    if (root.endsWith('.exe') && fs.existsSync(root)) {
+      allFound.push(root);
+    } else {
+      allFound.push(...findJavawInDir(root, 4));
+    }
   }
+
+  if (allFound.length === 0) return 'java';
+
+  // Prefer Java 21 for modern MC (1.20.5+ / 1.21+ / snapshots), or Java 17 for 1.17-1.20.4
+  const needs21 = !mcVersion || mcVersion.startsWith('1.21') || mcVersion.includes('w') || mcVersion.includes('rc') || mcVersion.includes('pre');
+  if (needs21) {
+    const j21 = allFound.find((p) => p.includes('21'));
+    if (j21) return j21;
+  } else {
+    const j17 = allFound.find((p) => p.includes('17'));
+    if (j17) return j17;
+  }
+
+  return allFound[0];
+}
+
+async function ensureJavaRuntime(gameDir, mcVersion, requestedJavaPath, onStatus) {
+  if (requestedJavaPath && requestedJavaPath !== 'java' && fs.existsSync(requestedJavaPath)) {
+    return requestedJavaPath;
+  }
+  const detected = detectJavaPath(gameDir, mcVersion);
+  if (detected && detected !== 'java' && fs.existsSync(detected)) {
+    return detected;
+  }
+
+  // Auto-download Portable Java 21 JRE into .minecraft/runtimes/jre-21 if not installed on PC
+  if (process.platform === 'win32') {
+    const jreRoot = path.join(gameDir, 'runtimes', 'jre-21');
+    const zipPath = path.join(jreRoot, 'jre21.zip');
+    onStatus?.('Đang tự động tải Java 21 Runtime cho máy (chỉ tải 1 lần đầu)...');
+    const adoptiumUrl = 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse';
+    await downloadFile(adoptiumUrl, zipPath);
+    onStatus?.('Đang giải nén Java 21 Runtime...');
+    execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${jreRoot}' -Force"`, { stdio: 'ignore' });
+    try { fs.unlinkSync(zipPath); } catch (_) {}
+    const afterInstall = detectJavaPath(gameDir, mcVersion);
+    if (afterInstall && afterInstall !== 'java') return afterInstall;
+  }
+
   return 'java';
 }
 
@@ -295,7 +372,7 @@ async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVer
   if (!loaderVer) {
     const available = await fetchLoaderVersions(mcVersion, loaderType);
     if (!available.length) {
-      throw new Error(`Core "${loaderType.toUpperCase()}" chưa hỗ trợ phiên bản ${mcVersion}. Hãy chọn Vanilla hoặc Fabric.`);
+      throw new Error(`Core "${loaderType.toUpperCase()}" chưa hỗ trợ phiên bản ${mcVersion}. Hãy chọn Vanilla hoặc phiên bản khác.`);
     }
     loaderVer = available[0].version;
   }
@@ -338,7 +415,6 @@ async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVer
   return null;
 }
 
-// === MODRINTH API V2: KHO MOD / SHADER / RESOURCE PACK & 1-CLICK FPS BOOST ===
 async function searchModrinth({ query = '', projectType = 'mod', mcVersion = '1.21.4', loaderType = 'fabric' }) {
   const facets = [[`project_type:${projectType}`]];
   if (mcVersion) {
@@ -364,11 +440,7 @@ async function searchModrinth({ query = '', projectType = 'mod', mcVersion = '1.
 
 async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
-  const folderMap = {
-    mod: 'mods',
-    shader: 'shaderpacks',
-    resourcepack: 'resourcepacks'
-  };
+  const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
   const targetFolder = path.join(rootDir, folderMap[projectType] || 'mods');
   if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
 
@@ -380,12 +452,11 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
 
   let verList = await fetchJson(versionsUrl);
   if (!Array.isArray(verList) || verList.length === 0) {
-    // Fallback without strict game_version if minor subversion differs (e.g. 1.21.4 -> 1.21.x)
     const fallbackUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version${projectType === 'mod' ? `?loaders=${encodeURIComponent(JSON.stringify([effectiveLoader]))}` : ''}`;
     verList = await fetchJson(fallbackUrl);
   }
   if (!Array.isArray(verList) || verList.length === 0) {
-    throw new Error(`Không tìm thấy bản cài phù hợp cho "${slug}" trên ${mcVersion}.`);
+    throw new Error(`Không tìm thấy bản cài phù hợp cho "${slug}".`);
   }
 
   const chosen = verList[0];
@@ -397,12 +468,7 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   const destPath = path.join(targetFolder, fileObj.filename);
   onStatus?.(`Đang tải ${fileObj.filename}...`);
   await downloadFile(fileObj.url, destPath);
-  return {
-    ok: true,
-    fileName: fileObj.filename,
-    versionNumber: chosen.version_number,
-    destPath
-  };
+  return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath };
 }
 
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
@@ -427,12 +493,7 @@ async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric'
       errors.push(`${slug}: ${e.message}`);
     }
   }
-  return {
-    ok: installed.length > 0,
-    installed,
-    errors,
-    recommendedCore: effectiveLoader
-  };
+  return { ok: installed.length > 0, installed, errors, recommendedCore: effectiveLoader };
 }
 
 function listLocalAddons(gameDir, folderType = 'mods') {
@@ -447,9 +508,7 @@ function listLocalAddons(gameDir, folderType = 'mods') {
       .map((f) => {
         const full = path.join(dir, f);
         let sizeKB = 0;
-        try {
-          sizeKB = Math.round(fs.statSync(full).size / 1024);
-        } catch (_) {}
+        try { sizeKB = Math.round(fs.statSync(full).size / 1024); } catch (_) {}
         return {
           name: f,
           cleanName: f.replace(/\.disabled$/i, ''),
@@ -470,19 +529,15 @@ function toggleLocalAddon(gameDir, folderType, fileName) {
   if (!fs.existsSync(fullPath)) return { ok: false };
   const isDisabled = cleanBase.toLowerCase().endsWith('.disabled');
   const nextName = isDisabled ? cleanBase.replace(/\.disabled$/i, '') : `${cleanBase}.disabled`;
-  const nextPath = path.join(rootDir, safeFolder, nextName);
-  fs.renameSync(fullPath, nextPath);
+  fs.renameSync(fullPath, path.join(rootDir, safeFolder, nextName));
   return { ok: true, newName: nextName, enabled: isDisabled };
 }
 
 function deleteLocalAddon(gameDir, folderType, fileName) {
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
   const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
-  const cleanBase = path.basename(fileName);
-  const fullPath = path.join(rootDir, safeFolder, cleanBase);
-  if (fs.existsSync(fullPath)) {
-    fs.unlinkSync(fullPath);
-  }
+  const fullPath = path.join(rootDir, safeFolder, path.basename(fileName));
+  if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
   return { ok: true };
 }
 
@@ -497,23 +552,13 @@ function listLocalWorlds(gameDir) {
       .map((d) => {
         const wPath = path.join(savesDir, d.name);
         let lastPlayed = '';
-        try {
-          const st = fs.statSync(wPath);
-          lastPlayed = st.mtime.toLocaleString('vi-VN');
-        } catch (_) {}
+        try { lastPlayed = fs.statSync(wPath).mtime.toLocaleString('vi-VN'); } catch (_) {}
         let iconDataUrl = null;
         const iconPath = path.join(wPath, 'icon.png');
         if (fs.existsSync(iconPath)) {
-          try {
-            iconDataUrl = `data:image/png;base64,${fs.readFileSync(iconPath).toString('base64')}`;
-          } catch (_) {}
+          try { iconDataUrl = `data:image/png;base64,${fs.readFileSync(iconPath).toString('base64')}`; } catch (_) {}
         }
-        return {
-          name: d.name,
-          path: wPath,
-          lastPlayed,
-          iconDataUrl
-        };
+        return { name: d.name, path: wPath, lastPlayed, iconDataUrl };
       });
   } catch (_) {
     return [];
@@ -529,14 +574,10 @@ function saveCustomLocalSkin(gameDir, username, sourceFilePath) {
   const targetPng = path.join(skinsDir, `${cleanName}.png`);
   fs.writeFileSync(targetPng, buf);
   configureCrackSkinSupport(rootDir, cleanName);
-  return {
-    ok: true,
-    dataUrl: `data:image/png;base64,${buf.toString('base64')}`,
-    savedPath: targetPng
-  };
+  return { ok: true, dataUrl: `data:image/png;base64,${buf.toString('base64')}`, savedPath: targetPng };
 }
 
-function configureCrackSkinSupport(gameDir, username) {
+function configureCrackSkinSupport(gameDir) {
   try {
     const cslDir = path.join(gameDir, 'CustomSkinLoader');
     if (!fs.existsSync(cslDir)) fs.mkdirSync(cslDir, { recursive: true });
@@ -582,9 +623,9 @@ async function launchMinecraft(config, callbacks = {}) {
   if (authMode === 'microsoft' && msProfile && msProfile.accessToken) {
     callbacks.onStatus?.(`Đang xác thực tài khoản Bản Quyền Microsoft (${msProfile.name})...`);
     let activeProfile = msProfile;
-    if (msProfile.refreshToken) {
+    if (msProfile.refreshToken && typeof msAuth.authenticateMicrosoftFromRefreshToken === 'function') {
       try {
-        activeProfile = await authenticateMicrosoftFromRefreshToken(msProfile.refreshToken);
+        activeProfile = await msAuth.authenticateMicrosoftFromRefreshToken(msProfile.refreshToken);
       } catch (_) {
         activeProfile = msProfile;
       }
@@ -595,17 +636,14 @@ async function launchMinecraft(config, callbacks = {}) {
       uuid: activeProfile.uuid,
       name: activeProfile.name,
       user_properties: '{}',
-      meta: {
-        type: 'msa',
-        demo: false
-      }
+      meta: { type: 'msa', demo: false }
     };
   } else {
     const cleanName = (username || 'Player').trim().slice(0, 16) || 'Player';
     callbacks.onStatus?.(`Đang khởi tạo chế độ Crack / Offline (UUID v3) cho "${cleanName}"...`);
-    authorization = createOfflineAuth(cleanName);
+    authorization = buildOfflineAuthFallback(cleanName);
     if (crackSkinSync) {
-      configureCrackSkinSupport(rootDir, cleanName);
+      configureCrackSkinSupport(rootDir);
     }
   }
 
@@ -617,12 +655,11 @@ async function launchMinecraft(config, callbacks = {}) {
     callbacks.onStatus
   );
 
-  const resolvedJava = javaPath && javaPath.trim() ? javaPath.trim() : detectJavaPath();
+  const resolvedJava = await ensureJavaRuntime(rootDir, mcVersion, javaPath, callbacks.onStatus);
   const customArgs = useAikarFlags ? buildMultiCoreSmoothExitArgs(ramGB, cpuCores) : [];
 
   if (serverIp && serverIp.trim()) {
-    const cleanHost = serverIp.trim();
-    customArgs.push(`--quickPlayMultiplayer=${cleanHost}`);
+    customArgs.push(`--quickPlayMultiplayer=${serverIp.trim()}`);
   }
 
   const launcher = new Client();
@@ -647,14 +684,8 @@ async function launchMinecraft(config, callbacks = {}) {
 
   if (serverIp && serverIp.trim()) {
     const [host, port] = serverIp.trim().split(':');
-    launchOpts.quickPlay = {
-      type: 'multiplayer',
-      identifier: serverIp.trim()
-    };
-    launchOpts.server = {
-      host,
-      port: port || '25565'
-    };
+    launchOpts.quickPlay = { type: 'multiplayer', identifier: serverIp.trim() };
+    launchOpts.server = { host, port: port || '25565' };
   }
 
   if (loaderPrep?.type === 'customJson') {
@@ -686,12 +717,7 @@ async function launchMinecraft(config, callbacks = {}) {
 
   launcher.on('progress', (e) => {
     const pct = e.total > 0 ? Math.min(100, Math.round((e.task / e.total) * 100)) : 0;
-    callbacks.onProgress?.({
-      type: e.type,
-      task: e.task,
-      total: e.total,
-      percent: pct
-    });
+    callbacks.onProgress?.({ type: e.type, task: e.task, total: e.total, percent: pct });
   });
 
   launcher.on('close', (code) => {
@@ -704,9 +730,7 @@ async function launchMinecraft(config, callbacks = {}) {
     callbacks.onClose?.(code);
   });
 
-  callbacks.onStatus?.(
-    `Đang khởi chạy Minecraft ${mcVersion} (${loaderType.toUpperCase()}) • Smooth-Exit Engine...`
-  );
+  callbacks.onStatus?.(`Đang khởi chạy Minecraft ${mcVersion} (${loaderType.toUpperCase()}) • Java: ${path.basename(path.dirname(path.dirname(resolvedJava)) || 'Java')}...`);
 
   const proc = await launcher.launch(launchOpts);
   activeMcProcess = proc;

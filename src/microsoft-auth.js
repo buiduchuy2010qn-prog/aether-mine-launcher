@@ -1,4 +1,5 @@
 const { BrowserWindow } = require('electron');
+const crypto = require('crypto');
 
 const MS_CLIENT_ID = '00000000402b5328';
 const MS_REDIRECT_URI = 'https://login.live.com/oauth20_desktop.srf';
@@ -9,6 +10,31 @@ function formatUUID(rawId) {
   const clean = rawId.replace(/-/g, '');
   if (clean.length !== 32) return rawId;
   return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20, 32)}`;
+}
+
+// Standard Minecraft Offline UUID (v3 MD5 of "OfflinePlayer:<username>")
+function generateOfflineUUID(username = 'StevePlayer') {
+  const clean = (username || 'StevePlayer').trim() || 'StevePlayer';
+  const md5Bytes = crypto.createHash('md5').update(`OfflinePlayer:${clean}`, 'utf8').digest();
+  md5Bytes[6] = (md5Bytes[6] & 0x0f) | 0x30; // version 3
+  md5Bytes[8] = (md5Bytes[8] & 0x3f) | 0x80; // variant RFC 4122
+  return formatUUID(md5Bytes.toString('hex'));
+}
+
+function createOfflineAuth(username = 'StevePlayer') {
+  const clean = (username || 'StevePlayer').trim().slice(0, 16) || 'StevePlayer';
+  const uuid = generateOfflineUUID(clean);
+  return {
+    access_token: uuid,
+    client_token: uuid,
+    uuid: uuid,
+    name: clean,
+    user_properties: '{}',
+    meta: {
+      type: 'mojang',
+      demo: false
+    }
+  };
 }
 
 async function authenticateMinecraftChain({ code, refreshToken }) {
@@ -121,7 +147,7 @@ async function authenticateMinecraftChain({ code, refreshToken }) {
   });
 
   if (profileRes.status === 404) {
-    throw new Error('Tài khoản Microsoft này chưa sở hữu Minecraft Java Edition! Bạn vẫn có thể chọn chế độ Offline (Crack) để chơi miễn phí.');
+    throw new Error('Tài khoản Microsoft này chưa sở hữu Minecraft Java Edition! Bạn vẫn có thể chọn chế độ Crack (Offline) để chơi miễn phí.');
   }
   if (!profileRes.ok) {
     throw new Error(`Lỗi khi tải hồ sơ Minecraft bản quyền (${profileRes.status}).`);
@@ -202,8 +228,20 @@ function openMicrosoftLoginPopup(parentWindow) {
   });
 }
 
+async function loginWithMicrosoftModal(parentWindow) {
+  return openMicrosoftLoginPopup(parentWindow);
+}
+
+async function authenticateMicrosoftFromRefreshToken(refreshToken) {
+  return authenticateMinecraftChain({ refreshToken });
+}
+
 module.exports = {
   openMicrosoftLoginPopup,
+  loginWithMicrosoftModal,
   authenticateMinecraftChain,
+  authenticateMicrosoftFromRefreshToken,
+  generateOfflineUUID,
+  createOfflineAuth,
   formatUUID
 };
