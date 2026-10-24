@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v12.0 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v13.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -22,7 +22,7 @@
         </div>
         <div class="brand-titles">
           <span class="brand-name">MINECRAFT LAUNCHER</span>
-          <span class="brand-version">v12.0 PRO</span>
+          <span class="brand-version">v13.0 PRO</span>
         </div>
       </div>
 
@@ -133,7 +133,7 @@
                   <div class="hbc-bottom-row">
                     <div class="hbc-bottom">
                       <h1>MINECRAFT JAVA EDITION</h1>
-                      <p>Chọn Core, Phiên bản, Tài khoản và cài 1-Click Bộ Mod X3 FPS bên dưới để vào game.</p>
+                      <p>Chọn Core, Phiên bản Minecraft và Tài khoản bên dưới để khởi chạy ngay lập tức.</p>
                     </div>
                     <div class="hbc-quick-actions">
                       <button class="banner-cta-btn" id="btnGoModStore">🧩 Kho Mod &amp; Shaders</button>
@@ -201,24 +201,13 @@
                     </div>
                   </div>
 
-                  <!-- QUICK POPULAR VERSION CHIPS (FILLS MIDDLE SPACE NATURALLY) -->
-                  <div class="quick-ver-section">
-                    <div class="ver-label-bar">
-                      <label class="field-label" style="margin:0;">4. Đổi Nhanh Phiên Bản Phổ Biến (1-Chạm)</label>
-                      <span class="installed-count-tag" id="installedCountLabel">Đang kiểm tra máy...</span>
+                                    <!-- CLEAN VERSION STATUS BAR (ZERO CLUTTER, ZERO PRE-DOWNLOAD) -->
+                  <div class="version-ready-bar" id="selectedVersionStatusBox">
+                    <div class="vrb-left">
+                      <span class="vrb-badge ready" id="verReadyBadge">✓ Đã cài sẵn trên máy</span>
+                      <span class="vrb-desc" id="verReadyDesc">Sẵn sàng vào thẳng game ngay lập tức (&lt; 1 giây)</span>
                     </div>
-                    <div class="quick-ver-grid" id="quickVersionGrid"></div>
-                  </div>
-
-                  <!-- 1-CLICK FPS BOOST PACK BOX -->
-                  <div class="fps-boost-card-box">
-                    <div class="fbcb-info">
-                      <div class="fbcb-title">⚡ Gói Tối Ưu X3 FPS Cực Đại (1-Click)</div>
-                      <div class="fbcb-desc" id="fpsBoostStatusText">Tự động tải Sodium + Lithium + FerriteCore + EntityCulling + Iris cho bản đang chọn.</div>
-                    </div>
-                    <button class="btn-fps-boost-1click" id="btnOneClickFpsBoost">
-                      <span>⚡ Cài Gói X3 FPS</span>
-                    </button>
+                    <span class="installed-count-tag" id="installedCountLabel">Đang kiểm tra máy...</span>
                   </div>
                 </div>
 
@@ -338,7 +327,7 @@
               <p>Tự động lọc và tải thẳng vào đúng thư mục phiên bản <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong> trên máy bạn.</p>
             </div>
             <div class="mods-header-actions">
-              <button class="btn-fps-boost-1click" id="btnStoreFpsBoost">⚡ Cài Trọn Bộ Mod X3 FPS</button>
+              
               <button class="btn-sync-skin" id="btnOpenModsFolder">📂 Mở thư mục đang chọn</button>
             </div>
           </div>
@@ -453,7 +442,7 @@
             <button class="btn-sync-skin" id="btnClearConsole">Xóa nhật ký</button>
           </div>
           <div class="console-terminal" id="consoleOutput">
-            <div class="log-entry info">[Aether Craft v12.0] Sẵn sàng khởi chạy.</div>
+            <div class="log-entry info">[Aether Craft v13.0] Sẵn sàng khởi chạy.</div>
           </div>
         </section>
       </main>

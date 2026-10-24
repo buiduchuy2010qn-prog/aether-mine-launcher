@@ -541,35 +541,14 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   const baseMc = mcVersion.split('-')[0];
   for (const f of files) {
     const lower = f.toLowerCase();
-    // Detect explicit MC version tag in filename like +26.3, -mc26.3, +1.20.1, +mc1.21.4
     const verMatch = lower.match(/(?:\+mc|\+|-)((?:1\.\d+(?:\.\d+)?)|(?:2[5-9]\.\d+(?:\.\d+)?))(?=\.jar|[-+])/);
     if (verMatch && verMatch[1] && verMatch[1] !== baseMc && verMatch[1] !== mcVersion) {
-      const badVer = verMatch[1];
       const fullPath = path.join(modsDir, f);
-      // Check if it is one of the auto-updatable FPS mods
-      const fpsMap = [
-        ['fabric-api-', 'fabric-api'],
-        ['sodium-', 'sodium'],
-        ['lithium-', 'lithium'],
-        ['entityculling-', 'entityculling'],
-        ['immediatelyfast-', 'immediatelyfast'],
-        ['iris-', 'iris']
-      ];
-      const foundFps = fpsMap.find(([pref]) => lower.startsWith(pref));
-      if (foundFps) {
-        onStatus?.(`Đang tự động đổi ${f} (${badVer}) sang bản chuẩn ${mcVersion}...`);
-        try { fs.unlinkSync(fullPath); } catch (_) {}
-        try {
-          await installModrinthProject({ slug: foundFps[1], projectType: 'mod', mcVersion, loaderType, gameDir }, onStatus);
-        } catch (_) {}
-      } else {
-        onStatus?.(`Tạm tắt Mod khác phiên bản (${f}) để tránh lỗi xung đột...`);
-        try { fs.renameSync(fullPath, `${fullPath}.disabled`); } catch (_) {}
-      }
+      onStatus?.(Tạm tắt Mod khác phiên bản ( + f + ) để tránh xung đột...);
+      try { fs.renameSync(fullPath, ${fullPath}.disabled); } catch (_) {}
     }
   }
 }
-
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const effectiveLoader = loaderType === 'forge' ? 'forge' : 'fabric';
   const packSlugs =

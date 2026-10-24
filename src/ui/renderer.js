@@ -88,6 +88,14 @@ function updateSummaryUI() {
   document.getElementById('dockCoreSubtitle').textContent = `Core: ${coreUpper} • RAM: ${ram}`;
   const srvSuffix = state.serverIp ? ` • ${state.serverIp}` : '';
   document.getElementById('launchBtnSub').textContent = `${ver} • ${coreUpper}${srvSuffix}`;
+  const isInst = isVersionInstalledOnDisk(ver);
+  const vBadge = document.getElementById('verReadyBadge');
+  const vDesc = document.getElementById('verReadyDesc');
+  if (vBadge && vDesc) {
+    vBadge.className = 'vrb-badge ' + (isInst ? 'ready' : 'cloud');
+    vBadge.textContent = isInst ? ('✓ Đã cài sẵn trên máy (' + ver + ')') : ('☁ Chưa tải trên máy (' + ver + ')');
+    vDesc.textContent = isInst ? 'Sẵn sàng vào thẳng game ngay lập tức (< 1 giây)' : 'Sẵn sàng tải tự động từ máy chủ Mojang khi bấm CHƠI NGAY';
+  }
   const javaBadge = document.getElementById('javaReqBadge');
   if (javaBadge) javaBadge.textContent = getRecommendedJavaBadge(ver);
   const storeLabel = document.getElementById('modStoreVerLabel');
@@ -432,8 +440,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('loaderVersionSelect').onchange = (e) => { state.selectedLoaderVersion = e.target.value; saveCurrentConfig(); };
   document.getElementById('versionSearchInput').oninput = (e) => renderFullVersionTable(e.target.value);
 
-  document.getElementById('btnOneClickFpsBoost').onclick = (e) => runOneClickFpsBoost(e.currentTarget);
-  document.getElementById('btnStoreFpsBoost').onclick = (e) => runOneClickFpsBoost(e.currentTarget);
+  const bFps1 = document.getElementById('btnOneClickFpsBoost'); if (bFps1) bFps1.onclick = (e) => runOneClickFpsBoost(e.currentTarget);
+  const bFps2 = document.getElementById('btnStoreFpsBoost'); if (bFps2) bFps2.onclick = (e) => runOneClickFpsBoost(e.currentTarget);
 
   document.querySelectorAll('.mtype-btn').forEach((btn) => {
     btn.onclick = () => {
