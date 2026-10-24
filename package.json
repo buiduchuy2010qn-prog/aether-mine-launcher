@@ -1,6 +1,6 @@
 {
   "name": "aether-craft-launcher",
-  "version": "9.0.0",
+  "version": "10.0.0",
   "description": "Aether Craft v9.0 - Ultimate Minecraft Launcher with Setup Wizard & User Consent Dialogs",
   "main": "src/main.js",
   "scripts": {
@@ -26,7 +26,7 @@
     "files": [
       "src/**/*",
       "package.json",
-      "LICENSE.txt"
+      "LICENSE.rtf"
     ],
     "win": {
       "target": [
@@ -35,10 +35,10 @@
       ]
     },
     "nsis": {
-      "oneClick": false,
+      "oneClick": false, "unicode": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "license": "LICENSE.txt",
+      "license": "LICENSE.rtf",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Minecraft Launcher (Aether Craft)",
