@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   deleteLocalAddon: (gameDir, folderType, fileName) => ipcRenderer.invoke('addons:delete', gameDir, folderType, fileName),
   listLocalWorlds: (gameDir) => ipcRenderer.invoke('worlds:list', gameDir),
 
+  checkForUpdate: () => ipcRenderer.invoke('updater:check'),
+  installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
+  onUpdateProgress: (cb) => ipcRenderer.on('updater:progress', (_e, pct) => cb(pct)),
+
   onProgress: (cb) => ipcRenderer.on('mc:progress', (_e, data) => cb(data)),
   onLog: (cb) => ipcRenderer.on('mc:log', (_e, line) => cb(line)),
   onStatus: (cb) => ipcRenderer.on('mc:status', (_e, status) => cb(status)),

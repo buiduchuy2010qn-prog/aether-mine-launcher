@@ -267,6 +267,69 @@ function appendLog(line, type = 'normal') {
   out.appendChild(div); out.scrollTop = out.scrollHeight;
 }
 
+
+async function checkAndPromptLauncherUpdate(manualClick = false) {
+  const updBtnText = document.getElementById('updateBtnText');
+  if (manualClick && updBtnText) updBtnText.textContent = '⏳ Đang kiểm tra...';
+  const res = await window.aetherAPI.checkForUpdate();
+  if (!res?.ok) {
+    if (manualClick && updBtnText) {
+      updBtnText.textContent = '⚠ Lỗi mạng';
+      setTimeout(() => (updBtnText.textContent = '🔄 Cập nhật App'), 2000);
+    }
+    return;
+  }
+
+  if (!res.hasUpdate) {
+    if (updBtnText) updBtnText.textContent = `✓ Bản mới nhất (v${res.currentVersion})`;
+    if (manualClick) {
+      await askUserAgreement({
+        title: '✓ Launcher Đã Ở Phiên Bản Mới Nhất',
+        message: `Bạn đang sử dụng phiên bản mới nhất của Aether Craft Launcher (v${res.currentVersion}). Khi nào có bản mới, Launcher sẽ tự động thông báo ngay lúc mở!`,
+        agreeText: 'Đã hiểu',
+        cancelText: 'Đóng'
+      });
+    }
+    return;
+  }
+
+  if (updBtnText) updBtnText.textContent = `🚀 Cập nhật v${res.latestVersion}!`;
+  const ask = await askUserAgreement({
+    title: `🚀 Có Bản Cập Nhật Launcher Mới (v${res.latestVersion})!`,
+    message: `Phát hiện phiên bản mới v${res.latestVersion} trên GitHub Cloud (bản hiện tại: v${res.currentVersion}). Bấm "Cập Nhật Ngay" để Launcher tự động tải về, tự tắt bản cũ và mở bản mới lên ngay lập tức!`,
+    agreeText: '⚡ Cập Nhật Ngay (Tự tắt & Mở mới)',
+    cancelText: 'Để sau'
+  });
+
+  if (!ask.agreed) return;
+
+  const modal = document.getElementById('userConfirmModal');
+  const titleEl = document.getElementById('modalTitleText');
+  const bodyEl = document.getElementById('modalBodyText');
+  const btnAgree = document.getElementById('btnModalAgree');
+  const btnCancel = document.getElementById('btnModalCancel');
+
+  modal.classList.remove('hidden');
+  titleEl.textContent = `⏳ Đang Tải Bản Cập Nhật v${res.latestVersion}...`;
+  bodyEl.textContent = 'Đang tải gói nâng cấp từ GitHub Cloud (0%)... Sau khi tải xong Launcher sẽ tự tắt và mở lại bản mới!';
+  btnAgree.disabled = true;
+  btnAgree.textContent = 'Đang cập nhật...';
+  btnCancel.classList.add('hidden');
+
+  window.aetherAPI.onUpdateProgress((pct) => {
+    bodyEl.textContent = `Đang tải gói nâng cấp từ GitHub Cloud (${pct}%)... Vui lòng đợi vài giây!`;
+    btnAgree.textContent = `Đang tải ${pct}%...`;
+  });
+
+  const instRes = await window.aetherAPI.installUpdateNow(res.downloadUrl, res.latestVersion);
+  if (!instRes?.ok) {
+    btnAgree.disabled = false;
+    btnCancel.classList.remove('hidden');
+    bodyEl.textContent = `Lỗi khi tải bản cập nhật: ${instRes?.error || 'Không xác định'}`;
+    btnAgree.textContent = 'Đóng';
+    btnAgree.onclick = () => modal.classList.add('hidden');
+  }
+}
 window.addEventListener('DOMContentLoaded', async () => {
   init3DSkinViewer();
   const sys = await window.aetherAPI.getSystemInfo();
@@ -513,6 +576,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     saveCurrentConfig();
   }
   await refreshLocalAddonsCount();
+  const btnUpd = document.getElementById('btnCheckUpdate'); if (btnUpd) btnUpd.onclick = () => checkAndPromptLauncherUpdate(true);
+  setTimeout(() => checkAndPromptLauncherUpdate(false), 1200);
   const verRes = await window.aetherAPI.getVersions();
   if (verRes.ok && verRes.data?.versions?.length) {
     state.versions = verRes.data.versions;

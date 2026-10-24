@@ -438,37 +438,116 @@ async function searchModrinth({ query = '', projectType = 'mod', mcVersion = '1.
   }));
 }
 
-async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
+function removeConflictingModJars(modsFolder, slug) {
+  if (!fs.existsSync(modsFolder)) return;
+  const prefixMap = {
+    'fabric-api': ['fabric-api-'],
+    'sodium': ['sodium-'],
+    'lithium': ['lithium-'],
+    'ferrite-core': ['ferritecore-'],
+    'entityculling': ['entityculling-'],
+    'immediatelyfast': ['immediatelyfast-'],
+    'iris': ['iris-'],
+    'embeddium': ['embeddium-']
+  };
+  const prefixes = prefixMap[slug.toLowerCase()] || [`${slug.toLowerCase()}-`];
+  try {
+    for (const file of fs.readdirSync(modsFolder)) {
+      const lower = file.toLowerCase();
+      if (prefixes.some((p) => lower.startsWith(p))) {
+        try { fs.unlinkSync(path.join(modsFolder, file)); } catch (_) {}
+      }
+    }
+  } catch (_) {}
+}
+
+async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.11', loaderType = 'fabric', gameDir }, onStatus) {
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
   const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
   const targetFolder = path.join(rootDir, folderMap[projectType] || 'mods');
   if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
 
   const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
-  let versionsUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version?game_versions=${encodeURIComponent(JSON.stringify([mcVersion]))}`;
-  if (projectType === 'mod') {
-    versionsUrl += `&loaders=${encodeURIComponent(JSON.stringify([effectiveLoader]))}`;
+  const allVersions = await fetchJson(`https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version`);
+  if (!Array.isArray(allVersions) || allVersions.length === 0) {
+    throw new Error(`Không tìm thấy dữ liệu cho "${slug}".`);
   }
 
-  let verList = await fetchJson(versionsUrl);
-  if (!Array.isArray(verList) || verList.length === 0) {
-    const fallbackUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version${projectType === 'mod' ? `?loaders=${encodeURIComponent(JSON.stringify([effectiveLoader]))}` : ''}`;
-    verList = await fetchJson(fallbackUrl);
-  }
-  if (!Array.isArray(verList) || verList.length === 0) {
-    throw new Error(`Không tìm thấy bản cài phù hợp cho "${slug}".`);
+  // 1. Strict match on both mcVersion and loader
+  let matched = allVersions.filter((v) => {
+    const gvOk = Array.isArray(v.game_versions) && v.game_versions.includes(mcVersion);
+    const ldOk = projectType !== 'mod' || (Array.isArray(v.loaders) && v.loaders.includes(effectiveLoader));
+    return gvOk && ldOk;
+  });
+
+  // 2. If mcVersion is a snapshot/RC (e.g. 1.21.8-rc1), match same major.minor family (e.g. 1.21.x), NEVER jump to 26.x!
+  if (matched.length === 0) {
+    const baseParts = mcVersion.split('-')[0].split('.');
+    const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
+    matched = allVersions.filter((v) => {
+      const gvOk = Array.isArray(v.game_versions) && v.game_versions.some((g) => g === familyPrefix || g.startsWith(`${familyPrefix}.`));
+      const ldOk = projectType !== 'mod' || (Array.isArray(v.loaders) && v.loaders.includes(effectiveLoader));
+      return gvOk && ldOk;
+    });
   }
 
-  const chosen = verList[0];
+  if (matched.length === 0) {
+    throw new Error(`Gói "${slug}" chưa có bản tương thích với Minecraft ${mcVersion}.`);
+  }
+
+  const chosen = matched[0];
   const fileObj = chosen.files.find((f) => f.primary) || chosen.files[0];
   if (!fileObj || !fileObj.url) {
     throw new Error(`Gói "${slug}" không có file tải hợp lệ.`);
   }
 
+  if (projectType === 'mod') {
+    removeConflictingModJars(targetFolder, slug);
+  }
+
   const destPath = path.join(targetFolder, fileObj.filename);
-  onStatus?.(`Đang tải ${fileObj.filename}...`);
+  onStatus?.(`Đang tải ${fileObj.filename} (chuẩn ${mcVersion})...`);
   await downloadFile(fileObj.url, destPath);
   return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath };
+}
+
+async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) {
+  if (loaderType === 'vanilla') return;
+  const modsDir = path.join(gameDir, 'mods');
+  if (!fs.existsSync(modsDir)) return;
+  const files = fs.readdirSync(modsDir).filter((f) => f.toLowerCase().endsWith('.jar'));
+  if (!files.length) return;
+
+  const baseMc = mcVersion.split('-')[0];
+  for (const f of files) {
+    const lower = f.toLowerCase();
+    // Detect explicit MC version tag in filename like +26.3, -mc26.3, +1.20.1, +mc1.21.4
+    const verMatch = lower.match(/(?:\+mc|\+|-)((?:1\.\d+(?:\.\d+)?)|(?:2[5-9]\.\d+(?:\.\d+)?))(?=\.jar|[-+])/);
+    if (verMatch && verMatch[1] && verMatch[1] !== baseMc && verMatch[1] !== mcVersion) {
+      const badVer = verMatch[1];
+      const fullPath = path.join(modsDir, f);
+      // Check if it is one of the auto-updatable FPS mods
+      const fpsMap = [
+        ['fabric-api-', 'fabric-api'],
+        ['sodium-', 'sodium'],
+        ['lithium-', 'lithium'],
+        ['entityculling-', 'entityculling'],
+        ['immediatelyfast-', 'immediatelyfast'],
+        ['iris-', 'iris']
+      ];
+      const foundFps = fpsMap.find(([pref]) => lower.startsWith(pref));
+      if (foundFps) {
+        onStatus?.(`Đang tự động đổi ${f} (${badVer}) sang bản chuẩn ${mcVersion}...`);
+        try { fs.unlinkSync(fullPath); } catch (_) {}
+        try {
+          await installModrinthProject({ slug: foundFps[1], projectType: 'mod', mcVersion, loaderType, gameDir }, onStatus);
+        } catch (_) {}
+      } else {
+        onStatus?.(`Tạm tắt Mod khác phiên bản (${f}) để tránh lỗi xung đột...`);
+        try { fs.renameSync(fullPath, `${fullPath}.disabled`); } catch (_) {}
+      }
+    }
+  }
 }
 
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
@@ -647,6 +726,7 @@ async function launchMinecraft(config, callbacks = {}) {
     }
   }
 
+  await ensureModsMatchVersion(rootDir, mcVersion, loaderType, callbacks.onStatus);
   const loaderPrep = await prepareCustomLoaderJson(
     rootDir,
     mcVersion,

@@ -351,3 +351,114 @@ ipcMain.handle('mc:launch', async (_e, config) => {
     return { ok: false, error: err.message };
   }
 });
+function compareSemver(a, b) {
+  const pa = String(a || '0.0.0').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || '0.0.0').split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+    if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+  }
+  return 0;
+}
+
+function fetchJsonSimple(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'AetherCraft-Updater/11.0' } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        return fetchJsonSimple(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      let raw = '';
+      res.on('data', (c) => (raw += c));
+      res.on('end', () => {
+        try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
+      });
+    }).on('error', reject);
+  });
+}
+
+function downloadWithProgress(url, destPath, onPct) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'AetherCraft-Updater/11.0' } }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+        const nextUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, url).toString();
+        res.resume();
+        return downloadWithProgress(nextUrl, destPath, onPct).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      const total = parseInt(res.headers['content-length'] || '0', 10);
+      let received = 0;
+      const file = fs.createWriteStream(destPath);
+      res.on('data', (chunk) => {
+        received += chunk.length;
+        if (total > 0 && onPct) {
+          onPct(Math.min(100, Math.round((received / total) * 100)));
+        }
+      });
+      res.pipe(file);
+      file.on('finish', () => file.close(resolve));
+    });
+    req.on('error', (err) => {
+      fs.unlink(destPath, () => {});
+      reject(err);
+    });
+  });
+}
+
+ipcMain.handle('updater:check', async () => {
+  try {
+    const currentVersion = app.getVersion();
+    const remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/package.json?t=${Date.now()}`);
+    const latestVersion = remotePkg?.version || currentVersion;
+    const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
+    const downloadUrl = `https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/download/v7.0.0/AetherCraft-Setup-${latestVersion}.exe`;
+    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl };
+  } catch (err) {
+    return { ok: false, error: err.message, currentVersion: app.getVersion() };
+  }
+});
+
+ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => {
+  try {
+    const tempExe = path.join(os.tmpdir(), `AetherCraft-Setup-${latestVersion || 'latest'}.exe`);
+    await downloadWithProgress(downloadUrl, tempExe, (pct) => {
+      mainWindow?.webContents.send('updater:progress', pct);
+    });
+
+    const currentExe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+    const installDir = path.dirname(currentExe);
+    const batPath = path.join(os.tmpdir(), 'aether-auto-update.bat');
+    const batContent = [
+      '@echo off',
+      'timeout /t 1 /nobreak >nul',
+      `start "" /wait "${tempExe}" /S /D=${installDir}`,
+      `if exist "${currentExe}" start "" "${currentExe}"`,
+      'del "%~f0"'
+    ].join('\r\n');
+    fs.writeFileSync(batPath, batContent, 'utf8');
+
+    const { spawn } = require('child_process');
+    const child = spawn('cmd.exe', ['/c', batPath], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    });
+    child.unref();
+
+    setTimeout(() => {
+      app.exit(0);
+    }, 350);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
