@@ -75,6 +75,15 @@ function draw2DAvatarFace(imgSource) {
 }
 
 async function runOneClickFpsBoost(btnElement) {
+  if (btnElement.dataset.alreadyInstalled === 'true') {
+    await askUserAgreement({
+      title: '✓ Gói X3 FPS Đã Được Cài Sẵn!',
+      message: `Bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, ImmediatelyFast, Iris) đã có sẵn trong máy cho phiên bản ${state.selectedVersion} rồi, bạn không cần tải lại nữa! Chỉ cần bấm CHƠI NGAY là vào game luôn.`,
+      agreeText: 'Đã hiểu',
+      cancelText: 'Đóng'
+    });
+    return;
+  }
   const confirmRes = await askUserAgreement({
     title: '⚡ Xác Nhận Cài Đặt Gói X3 FPS',
     message: 'Bạn có đồng ý để Launcher tự động tải và cài đặt bộ Mod tối ưu FPS (Sodium, Lithium, FerriteCore, EntityCulling, ImmediatelyFast, Iris Shaders) vào thư mục .minecraft/mods không?',
@@ -103,10 +112,42 @@ async function runOneClickFpsBoost(btnElement) {
 async function refreshLocalAddonsCount() {
   const modsRes = await window.aetherAPI.listLocalAddons(state.gameDir, 'mods');
   const items = modsRes?.items || [];
+  const enabledItems = items.filter((i) => i.enabled);
   const sideEl = document.getElementById('sideModsCount');
-  if (sideEl) sideEl.textContent = `${items.filter((i) => i.enabled).length} Mod`;
+  if (sideEl) sideEl.textContent = `${enabledItems.length} Mod`;
   const tabCountEl = document.getElementById('localAddonCount');
   if (tabCountEl) tabCountEl.textContent = items.length;
+
+  // Check if core FPS Boost pack is already installed for current selectedVersion
+  const lowerNames = enabledItems.map((i) => i.cleanName.toLowerCase());
+  const hasSodium = lowerNames.some((n) => n.startsWith('sodium-') || n.startsWith('embeddium-'));
+  const hasLithium = lowerNames.some((n) => n.startsWith('lithium-') || n.startsWith('ferritecore-'));
+  const btnHomeFps = document.getElementById('btnOneClickFpsBoost');
+  const btnStoreFps = document.getElementById('btnStoreFpsBoost');
+  const descEl = document.getElementById('fpsBoostStatusText');
+
+  if (hasSodium && hasLithium) {
+    if (btnHomeFps) {
+      btnHomeFps.innerHTML = '<span>✓ Đã Cài Sẵn X3 FPS</span>';
+      btnHomeFps.dataset.alreadyInstalled = 'true';
+    }
+    if (btnStoreFps) {
+      btnStoreFps.innerHTML = '<span>✓ Đã Cài Sẵn Bộ X3 FPS</span>';
+      btnStoreFps.dataset.alreadyInstalled = 'true';
+    }
+    if (descEl) {
+      descEl.textContent = `✓ Bộ Mod X3 FPS (${enabledItems.length} Mod: Sodium, Lithium, Iris...) đã cài sẵn trong máy — Bấm CHƠI NGAY để vào game!`;
+    }
+  } else {
+    if (btnHomeFps) {
+      btnHomeFps.innerHTML = '<span>⚡ Cài Gói X3 FPS</span>';
+      btnHomeFps.dataset.alreadyInstalled = 'false';
+    }
+    if (btnStoreFps) {
+      btnStoreFps.innerHTML = '<span>⚡ Cài Trọn Bộ Mod X3 FPS</span>';
+      btnStoreFps.dataset.alreadyInstalled = 'false';
+    }
+  }
 }
 
 async function loadModrinthStore() {

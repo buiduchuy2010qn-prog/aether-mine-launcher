@@ -47,6 +47,21 @@ Handler.prototype.checkSum = async function (hash, file) {
   return origCheckSum.call(this, hash, file);
 };
 
+const origGetAssets = Handler.prototype.getAssets;
+Handler.prototype.getAssets = async function () {
+  if (fastSkipEnabled && this.options?.root && this.options?.version?.number) {
+    try {
+      const verNum = this.options.version.number;
+      const verJar = path.join(this.options.root, 'versions', verNum, `${verNum}.jar`);
+      const objectsDir = path.join(this.options.root, 'assets', 'objects');
+      if (fs.existsSync(verJar) && fs.existsSync(objectsDir) && fs.readdirSync(objectsDir).length > 20) {
+        return [];
+      }
+    } catch (_) {}
+  }
+  return origGetAssets.call(this);
+};
+
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     https
@@ -501,11 +516,16 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
     throw new Error(`Gói "${slug}" không có file tải hợp lệ.`);
   }
 
+  const destPath = path.join(targetFolder, fileObj.filename);
+  if (fs.existsSync(destPath) && fs.statSync(destPath).size > 1024) {
+    onStatus?.(`✓ Gói ${fileObj.filename} đã cài sẵn trên máy, bỏ qua tải lại.`);
+    return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true };
+  }
+
   if (projectType === 'mod') {
     removeConflictingModJars(targetFolder, slug);
   }
 
-  const destPath = path.join(targetFolder, fileObj.filename);
   onStatus?.(`Đang tải ${fileObj.filename} (chuẩn ${mcVersion})...`);
   await downloadFile(fileObj.url, destPath);
   return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath };

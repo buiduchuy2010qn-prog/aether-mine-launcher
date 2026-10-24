@@ -523,19 +523,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('statusText').textContent = 'Vui lòng đăng nhập Microsoft trước!'; return;
     }
     const isInstalled = isVersionInstalledOnDisk(state.selectedVersion);
-    if (!isInstalled || !state.skipLaunchConfirm) {
-      const msg = isInstalled
-        ? `Bạn có đồng ý khởi chạy Minecraft ${state.selectedVersion} (Core: ${state.selectedCore.toUpperCase()} • RAM: ${state.ramGB} GB) ngay bây giờ không?`
-        : `Phiên bản Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) chưa có sẵn trên máy. Bạn có đồng ý để Launcher tự động tải và cài đặt phiên bản này từ máy chủ chính thức không?`;
+    if (!isInstalled) {
       const ask = await askUserAgreement({
-        title: isInstalled ? '🎮 Xác Nhận Vào Game' : '📥 Xác Nhận Tải & Cài Đặt Phiên Bản Minecraft',
-        message: msg,
-        showDontAsk: isInstalled,
-        agreeText: isInstalled ? '✓ Đồng Ý Chơi Ngay' : '✓ Đồng Ý Tải & Chơi',
+        title: '📥 Xác Nhận Tải Phiên Bản Mới',
+        message: `Phiên bản Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) chưa có trên máy. Bạn có đồng ý tải về để chơi không?`,
+        agreeText: '✓ Đồng Ý Tải & Chơi',
         cancelText: '✕ Không, Quay lại'
       });
       if (!ask.agreed) return;
-      if (ask.dontAskAgain) { state.skipLaunchConfirm = true; saveCurrentConfig(); }
     }
     state.isLaunching = true;
     const btn = document.getElementById('btnLaunch'); btn.disabled = true;
