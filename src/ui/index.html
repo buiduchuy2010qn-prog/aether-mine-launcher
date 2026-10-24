@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v18.0 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v19.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -22,7 +22,7 @@
         </div>
         <div class="brand-titles">
           <span class="brand-name">MINECRAFT LAUNCHER</span>
-          <span class="brand-version">v18.0 PRO</span>
+          <span class="brand-version">v19.0 PRO</span>
         </div>
       </div>
 
@@ -37,7 +37,11 @@
 
       <div class="titlebar-telemetry">
         <div class="telemetry-pill"><span id="cpuBadge">12 Nhân CPU</span></div>
-        <div class="telemetry-pill"><span id="ramBadge">RAM trống: -- GB</span></div>
+        <div class="telemetry-pill telemetry-ram-live" title=" Tự động cập nhật dung lượng RAM thực tế mỗi 3 giây">
+          <span class="live-dot-green"></span>
+          <span id="ramBadge">RAM trống: -- GB</span>
+          <div class="ram-mini-track"><div class="ram-mini-fill" id="ramLiveBarFill" style="width: 45%"></div></div>
+        </div>
         <button class="ram-boost-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <span id="updateBtnText">🔄 Cập nhật App</span>
         </button>
@@ -137,7 +141,7 @@
 
                   <div class="hbc-bottom-row">
                     <div class="hbc-bottom">
-                      <div class="hbc-edition-tag">AETHER CRAFT STUDIO • LAUNCHER THẾ HỆ MỚI</div>
+                      <div class="hbc-edition-tag" id="hbcEditionTag">🌲 THE GARDEN AWAKENS &amp; WILDERNESS • 1.21+</div>
                       <h1>MINECRAFT: JAVA EDITION</h1>
                       <p id="bannerSubStatus">Phiên bản đã sẵn sàng trên máy — Bấm CHƠI NGAY để vào thẳng thế giới.</p>
                     </div>
@@ -322,11 +326,16 @@
                   <button class="pose-btn" data-pose="idle">Đứng</button>
                 </div>
               </div>
-              <div class="webgl-stage-wrap">
-                <div class="stage-top-controls">
-                  <button class="stage-ctrl-btn active" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">🔄 Tự xoay</button>
-                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện nhân vật">🎯 Chính diện</button>
+              <div class="webgl-stage-wrap stage-bg-stars" id="webglStageWrap">
+                <div class="stage-top-left-fx">
+                  <button class="stage-ctrl-btn active" id="btnStageBgFx" title="Đổi hiệu ứng nền Sân khấu 3D (Sao đêm / Spotlight)">✨ Sao Đêm</button>
+                  <button class="stage-ctrl-btn" id="btnToggleElytra" title="Đeo thử Cánh cứng Elytra 3D sau lưng nhân vật">🪽 Cánh Elytra</button>
                 </div>
+                <div class="stage-top-controls">
+                  <button class="stage-ctrl-btn active" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">🔄 Xoay</button>
+                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện nhân vật">🎯 Giữa</button>
+                </div>
+                <div class="starfield-layer"></div>
                 <canvas id="skinViewerCanvas"></canvas>
                 <div class="webgl-floor-glow"></div>
                 <div class="webgl-hint-pill">Kéo chuột xoay 360° • Cuộn để Zoom</div>
@@ -389,6 +398,16 @@
               <input type="text" id="modSearchInput" class="pro-input" placeholder="Tìm Mod / Shader (vd: Sodium, Iris, Complementary, Minimap, VoiceChat)..." />
               <button class="btn-sync-skin" id="btnSearchModrinth">Tìm kiếm</button>
             </div>
+          </div>
+
+          <div class="mods-quick-tags-bar" id="modQuickCategoryBar">
+            <span class="mqt-label">Gợi ý 1-Chạm:</span>
+            <button class="mqt-chip active" data-mcat="" data-mtype="mod">🔥 Phổ biến nhất</button>
+            <button class="mqt-chip" data-mcat="Sodium" data-mtype="mod">⚡ Siêu Tăng FPS (Sodium/Lithium)</button>
+            <button class="mqt-chip" data-mcat="Iris" data-mtype="mod">🌈 Cài Shaders (Iris)</button>
+            <button class="mqt-chip" data-mcat="Complementary" data-mtype="shader">☀️ Bóng đổ Complementary</button>
+            <button class="mqt-chip" data-mcat="Minimap" data-mtype="mod">🗺️ Bản đồ Minimap</button>
+            <button class="mqt-chip" data-mcat="Zoom" data-mtype="mod">🔍 Ống nhòm Zoom &amp; Tiện ích</button>
           </div>
 
           <!-- ONLINE MODRINTH RESULTS GRID -->
@@ -488,7 +507,7 @@
             <button class="btn-sync-skin" id="btnClearConsole">Xóa nhật ký</button>
           </div>
           <div class="console-terminal" id="consoleOutput">
-            <div class="log-entry info">[Aether Craft v18.0] Sẵn sàng khởi chạy.</div>
+            <div class="log-entry info">[Aether Craft v19.0] Sẵn sàng khởi chạy.</div>
           </div>
         </section>
       </main>

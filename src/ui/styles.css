@@ -2162,3 +2162,156 @@ body {
     padding: 5px 1px !important;
   }
 }
+/* ================= V19.0 PRO: 3D STAGE FX, SHIMMER PLAY BUTTON, LIVE RAM & STUDIO MOD CARDS ================= */
+.telemetry-ram-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-dot-green {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulseLive 2s infinite;
+}
+
+@keyframes pulseLive {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.ram-mini-track {
+  width: 38px;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.ram-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #38bdf8);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* SMART BANNER SMOOTH TRANSITION */
+.hero-banner-clean {
+  transition: background-image 0.35s ease-in-out, box-shadow 0.25s ease;
+}
+
+/* 3D STAGE STARFIELD & ELYTRA CONTROLS */
+.stage-top-left-fx {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  gap: 5px;
+}
+
+.webgl-stage-wrap.stage-bg-stars {
+  background:
+    radial-gradient(circle at 50% 25%, rgba(56, 189, 248, 0.16), transparent 60%),
+    radial-gradient(circle at 50% 75%, var(--accent-glow), rgba(6, 10, 19, 0.88)) !important;
+}
+
+.starfield-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background-image:
+    radial-gradient(1.5px 1.5px at 22% 18%, rgba(255, 255, 255, 0.75) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 76% 24%, rgba(167, 243, 208, 0.8) 50%, transparent 100%),
+    radial-gradient(2px 2px at 38% 42%, rgba(56, 189, 248, 0.75) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 84% 58%, rgba(255, 255, 255, 0.7) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 16% 68%, rgba(196, 181, 253, 0.75) 50%, transparent 100%),
+    radial-gradient(2px 2px at 64% 14%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
+}
+
+.webgl-stage-wrap.stage-bg-stars .starfield-layer {
+  opacity: 1;
+}
+
+/* 3D SHIMMER PLAY BUTTON */
+.btn-mc-official-play {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-mc-official-play::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 65%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+  transform: skewX(-24deg);
+  animation: playShimmerSweep 3.8s infinite;
+  pointer-events: none;
+}
+
+@keyframes playShimmerSweep {
+  0% { left: -120%; }
+  38%, 100% { left: 160%; }
+}
+
+/* MOD STORE QUICK FILTER BAR & UPGRADED CARDS */
+.mods-quick-tags-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.mqt-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.mqt-chip {
+  padding: 5px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border-col);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.mqt-chip:hover,
+.mqt-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.mod-card {
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.mod-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+}
+
+.world-card-row {
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.world-card-row:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}

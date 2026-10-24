@@ -5,7 +5,7 @@ const state = {
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
   ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
-  versions: [], installedVersions: [], skinModel: 'default', capeType: 'mojang',
+  versions: [], installedVersions: [], skinModel: 'default', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
   activeModStoreType: 'mod', activeLocalFolder: 'mods',
   favoriteServers: [
     { name: 'LuckyVN Network (Việt Nam)', ip: 'play.luckyvn.com' },
@@ -23,9 +23,16 @@ function applyCapeToViewer(capeType) {
   document.querySelectorAll('#capeSelectorBar .cape-chip').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.cape === state.capeType);
   });
+  const btnElytra = document.getElementById('btnToggleElytra');
+  if (btnElytra) btnElytra.classList.toggle('active', state.backEquipment === 'elytra');
   if (!skinViewer) return;
-  const capeUrl = buildCapeDataUrl(state.capeType);
-  skinViewer.loadCape(capeUrl || null);
+  const effectiveType = (state.backEquipment === 'elytra' && state.capeType === 'none') ? 'diamond' : state.capeType;
+  const capeUrl = buildCapeDataUrl(effectiveType);
+  if (capeUrl) {
+    skinViewer.loadCape(capeUrl, { backEquipment: state.backEquipment || 'cape' });
+  } else {
+    skinViewer.loadCape(null);
+  }
 }
 
 function init3DSkinViewer() {
@@ -110,6 +117,31 @@ function updateSummaryUI() {
   if (bannerSub) bannerSub.textContent = isInst
     ? `Phiên bản Minecraft ${ver} (${coreUpper}) đã cài sẵn trên máy — Bấm CHƠI NGAY để vào thẳng game!`
     : `Phiên bản Minecraft ${ver} (${coreUpper}) sẵn sàng tải tự động từ Mojang khi bấm CHƠI NGAY.`;
+    const editionTag = document.getElementById('hbcEditionTag');
+  const heroBanner = document.getElementById('heroBanner');
+  if (editionTag && heroBanner) {
+    let wpUrl = 'https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png';
+    let eraTitle = '🌲 THE GARDEN AWAKENS & WILDERNESS • 1.21+';
+    if (ver.startsWith('26.') || ver.includes('w')) {
+      wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
+      eraTitle = '🔥 SNAPSHOT & VIBRANT VISUALS • ' + ver;
+    } else if (ver === '1.21.11' || ver === '1.21.10' || ver === '1.21.9') {
+      wpUrl = 'https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png';
+      eraTitle = '🌲 WILDERNESS & PALE GARDEN • ' + ver;
+    } else if (ver.startsWith('1.21')) {
+      wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
+      eraTitle = '⚔️ TRICKY TRIALS UPDATE • ' + ver;
+    } else if (ver.startsWith('1.20')) {
+      wpUrl = 'https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png';
+      eraTitle = '🌸 TRAILS & TALES UPDATE • ' + ver;
+    } else if (ver.startsWith('1.8') || ver.startsWith('1.12')) {
+      wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
+      eraTitle = '⚔️ HUYỀN THOẠI PVP & MODPACK • ' + ver;
+    }
+    editionTag.textContent = eraTitle;
+    heroBanner.style.backgroundImage = `url('${wpUrl}')`;
+    document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.dataset.wp === wpUrl));
+  }
   const javaBadge = document.getElementById('javaReqBadge');
   if (javaBadge) javaBadge.textContent = getRecommendedJavaBadge(ver);
   const storeLabel = document.getElementById('modStoreVerLabel');
@@ -424,6 +456,50 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnQuickVerDir = document.getElementById('btnQuickOpenVersions');
   if (btnQuickVerDir) btnQuickVerDir.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'versions');
 
+    const btnElytra = document.getElementById('btnToggleElytra');
+  if (btnElytra) {
+    btnElytra.onclick = () => {
+      state.backEquipment = state.backEquipment === 'elytra' ? 'cape' : 'elytra';
+      if (state.backEquipment === 'elytra' && state.capeType === 'none') state.capeType = 'diamond';
+      applyCapeToViewer(state.capeType);
+      document.getElementById('statusText').textContent = state.backEquipment === 'elytra'
+        ? '🪽 Đã đeo Cánh cứng Elytra 3D lên lưng nhân vật!'
+        : '🧣 Đã chuyển sang chế độ Áo choàng (Cape 3D).';
+    };
+  }
+  const btnStageFx = document.getElementById('btnStageBgFx');
+  const stageWrapEl = document.getElementById('webglStageWrap');
+  if (btnStageFx && stageWrapEl) {
+    btnStageFx.onclick = () => {
+      state.stageStars = !state.stageStars;
+      stageWrapEl.classList.toggle('stage-bg-stars', state.stageStars);
+      btnStageFx.classList.toggle('active', state.stageStars);
+      btnStageFx.textContent = state.stageStars ? '✨ Sao Đêm' : '💡 Spotlight';
+    };
+  }
+  document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((chip) => {
+    chip.onclick = () => {
+      document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((c) => c.classList.toggle('active', c === chip));
+      const targetType = chip.dataset.mtype || 'mod';
+      state.activeModStoreType = targetType;
+      document.querySelectorAll('.mtype-btn').forEach((b) => b.classList.toggle('active', b.dataset.ptype === targetType));
+      const searchIn = document.getElementById('modSearchInput');
+      if (searchIn) searchIn.value = chip.dataset.mcat || '';
+      loadModrinthStore();
+    };
+  });
+  setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const info = await window.aetherAPI.getSystemInfo();
+      if (info && info.totalMemGB) {
+        document.getElementById('ramBadge').textContent = `RAM trống: ${info.freeMemGB}/${info.totalMemGB} GB`;
+        const usedPct = Math.max(10, Math.min(95, Math.round(((info.totalMemGB - info.freeMemGB) / info.totalMemGB) * 100)));
+        const fillEl = document.getElementById('ramLiveBarFill');
+        if (fillEl) fillEl.style.width = `${usedPct}%`;
+      }
+    } catch (_) {}
+  }, 3500);
   const btnRot = document.getElementById('btnToggleRotate');
   if (btnRot) {
     btnRot.onclick = () => {
