@@ -2051,3 +2051,114 @@ body {
   border-color: var(--accent);
   color: #fff;
 }
+/* ================= V17.0 RESPONSIVE WINDOW RESIZE & ANTI-OVERFLOW FIX ================= */
+.workspace,
+.main-stage,
+.tab-panel,
+.main-play-grid,
+.left-play-col,
+.hero-banner-clean,
+.direct-selector-panel,
+.dsp-block,
+.skin-studio-card,
+.vs-col {
+  min-width: 0 !important;
+}
+
+.sidebar {
+  width: clamp(172px, 15vw, 206px) !important;
+  flex-shrink: 0;
+}
+
+.main-play-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(250px, 24vw, 320px) !important;
+  gap: 10px !important;
+  height: 100%;
+  width: 100%;
+}
+
+.direct-selector-panel {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr) !important;
+  gap: 10px !important;
+  width: 100%;
+}
+
+.hbc-top,
+.hbc-bottom-row,
+.dsp-head,
+.ver-label-bar,
+.qram-top {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hbc-bottom {
+  min-width: 0;
+  flex: 1;
+}
+
+.hbc-bottom h1 {
+  font-size: clamp(18px, 1.8vw, 25px) !important;
+}
+
+.hbc-bottom p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.booster-pills-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 5px;
+}
+
+.booster-check-pill {
+  min-width: 0;
+  overflow: hidden;
+  padding: 6px 4px !important;
+  font-size: clamp(9.5px, 0.85vw, 10.5px) !important;
+}
+
+.booster-check-pill span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1280px) {
+  .titlebar {
+    padding: 0 8px;
+  }
+  .ts-label,
+  .field-hint-mini,
+  .hbc-edition-tag {
+    display: none !important;
+  }
+  .ts-chip {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+  .telemetry-pill {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+  .dsp-block {
+    padding: 11px 12px !important;
+    gap: 9px !important;
+  }
+  .core-tab-btn {
+    padding: 7px 3px !important;
+  }
+  .core-tab-btn strong {
+    font-size: 11px;
+  }
+  .core-tab-btn span {
+    font-size: 8.5px;
+  }
+  .skin-preset-chip,
+  .cape-chip {
+    font-size: 9.5px !important;
+    padding: 5px 1px !important;
+  }
+}

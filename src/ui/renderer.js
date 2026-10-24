@@ -40,6 +40,14 @@ function init3DSkinViewer() {
   skinViewer.animation.speed = 0.85;
   applyCapeToViewer(state.capeType);
   draw2DAvatarFace(fallbackUrl);
+  const stageWrap = canvas.parentElement;
+  if (stageWrap && window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      if (!skinViewer || !stageWrap.clientWidth || !stageWrap.clientHeight) return;
+      skinViewer.setSize(Math.max(180, stageWrap.clientWidth - 10), Math.max(180, stageWrap.clientHeight - 16));
+    });
+    ro.observe(stageWrap);
+  }
 }
 
 async function loadCharacterSkin(username) {
@@ -71,12 +79,12 @@ function setTheme(themeId) {
 }
 
 function getRecommendedJavaBadge(mcVer) {
-  if (!mcVer) return 'Java 21 Tự Động';
+  if (!mcVer) return '☕ Dùng Java 21 khi vào Game';
   const parts = mcVer.split('.').map((n) => parseInt(n, 10));
   const minor = parts[1] || 21, patch = parts[2] || 0;
-  if (minor > 20 || (minor === 20 && patch >= 5)) return 'Java 21 Tự Động';
-  if (minor >= 17) return 'Java 17 Tự Động';
-  return 'Java 8 Tự Động';
+  if (minor > 20 || (minor === 20 && patch >= 5)) return '☕ Dùng Java 21 khi vào Game';
+  if (minor >= 17) return '☕ Dùng Java 17 khi vào Game';
+  return '☕ Dùng Java 8 khi vào Game';
 }
 
 function updateSummaryUI() {
@@ -577,14 +585,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('statusText').textContent = 'Vui lòng đăng nhập Microsoft trước!'; return;
     }
     const isInstalled = isVersionInstalledOnDisk(state.selectedVersion);
-    if (!isInstalled) {
+    if (!isInstalled || !state.skipLaunchConfirm) {
       const ask = await askUserAgreement({
-        title: '📥 Xác Nhận Tải Phiên Bản Mới',
-        message: `Phiên bản Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) chưa có trên máy. Bạn có đồng ý tải về để chơi không?`,
-        agreeText: '✓ Đồng Ý Tải & Chơi',
-        cancelText: '✕ Không, Quay lại'
+        title: isInstalled ? '🚀 Xác Nhận Khởi Chạy Minecraft (Java)' : '📥 Xác Nhận Tải & Khởi Chạy Minecraft',
+        message: isInstalled
+          ? `Bạn có đồng ý khởi chạy Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) với ${state.ramGB} GB RAM ngay bây giờ không?`
+          : `Phiên bản Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) chưa có trên máy. Bạn có đồng ý tải về và khởi chạy không?`,
+        showDontAsk: isInstalled,
+        agreeText: '✓ Đồng Ý Chạy Game',
+        cancelText: '✕ Hủy bỏ'
       });
       if (!ask.agreed) return;
+      if (ask.dontAskAgain) {
+        state.skipLaunchConfirm = true;
+        saveCurrentConfig();
+      }
     }
     state.isLaunching = true;
     const btn = document.getElementById('btnLaunch'); btn.disabled = true;
