@@ -1,3 +1,35 @@
+function askUserAgreement({ title, message, showEula = false, showDontAsk = false, agreeText = '✓ Tôi Đồng Ý', cancelText = '✕ Không Đồng Ý (Hủy)' }) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('userConfirmModal');
+    const titleEl = document.getElementById('modalTitleText');
+    const bodyEl = document.getElementById('modalBodyText');
+    const eulaBox = document.getElementById('modalEulaBox');
+    const dontAskWrap = document.getElementById('modalDontAskWrap');
+    const dontAskCheck = document.getElementById('modalDontAskCheck');
+    const btnCancel = document.getElementById('btnModalCancel');
+    const btnAgree = document.getElementById('btnModalAgree');
+
+    titleEl.textContent = title || 'Xác Nhận Đồng Ý';
+    bodyEl.textContent = message || 'Bạn có đồng ý tiếp tục thao tác này không?';
+    eulaBox.classList.toggle('hidden', !showEula);
+    dontAskWrap.classList.toggle('hidden', !showDontAsk);
+    if (dontAskCheck) dontAskCheck.checked = false;
+    btnCancel.textContent = cancelText;
+    btnAgree.textContent = agreeText;
+
+    modal.classList.remove('hidden');
+
+    const cleanup = (agreed) => {
+      modal.classList.add('hidden');
+      btnCancel.onclick = null;
+      btnAgree.onclick = null;
+      resolve({ agreed, dontAskAgain: Boolean(dontAskCheck?.checked) });
+    };
+
+    btnCancel.onclick = () => cleanup(false);
+    btnAgree.onclick = () => cleanup(true);
+  });
+}
 function createFallbackSteveSkinDataUrl() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 64;
   const ctx = c.getContext('2d');
@@ -43,6 +75,13 @@ function draw2DAvatarFace(imgSource) {
 }
 
 async function runOneClickFpsBoost(btnElement) {
+  const confirmRes = await askUserAgreement({
+    title: '⚡ Xác Nhận Cài Đặt Gói X3 FPS',
+    message: 'Bạn có đồng ý để Launcher tự động tải và cài đặt bộ Mod tối ưu FPS (Sodium, Lithium, FerriteCore, EntityCulling, ImmediatelyFast, Iris Shaders) vào thư mục .minecraft/mods không?',
+    agreeText: '✓ Đồng Ý Cài Đặt',
+    cancelText: '✕ Không, Hủy bỏ'
+  });
+  if (!confirmRes.agreed) return;
   if (state.selectedCore === 'vanilla') setCore('fabric');
   const origHtml = btnElement.innerHTML;
   btnElement.disabled = true; btnElement.innerHTML = '<span>⏳ Đang tải bộ X3 FPS...</span>';
@@ -92,6 +131,13 @@ async function loadModrinthStore() {
   }).join('');
   grid.querySelectorAll('.btn-install-mod').forEach((btn) => {
     btn.onclick = async () => {
+      const cRes = await askUserAgreement({
+        title: '📥 Xác Nhận Tải & Cài Đặt',
+        message: `Bạn có đồng ý tải và cài đặt gói "${btn.dataset.slug}" cho phiên bản Minecraft ${state.selectedVersion} vào máy không?`,
+        agreeText: '✓ Đồng Ý Tải Về',
+        cancelText: '✕ Không, Hủy'
+      });
+      if (!cRes.agreed) return;
       btn.disabled = true; btn.textContent = '⏳ Đang tải...';
       const r = await window.aetherAPI.installModrinth({ slug: btn.dataset.slug, projectType: state.activeModStoreType, mcVersion: state.selectedVersion, loaderType: state.selectedCore, gameDir: state.gameDir });
       if (r?.ok) { btn.textContent = '✓ Đã Cài'; await refreshLocalAddonsCount(); }

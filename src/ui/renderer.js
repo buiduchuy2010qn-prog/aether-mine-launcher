@@ -13,7 +13,7 @@ const state = {
     { name: 'Hypixel Official', ip: 'mc.hypixel.net' },
     { name: 'HerobrineVN Server', ip: 'mc.herobrine.org' }
   ],
-  isLaunching: false
+  acceptedEula: false, skipLaunchConfirm: false, isLaunching: false
 };
 const POPULAR_VERSIONS = ['1.21.11', '1.21.4', '1.21.1', '1.20.4', '1.20.1', '1.19.4', '1.16.5', '1.12.2'];
 let skinViewer = null, currentSkinDataUrl = null;
@@ -107,7 +107,7 @@ function saveCurrentConfig() {
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
     hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel,
-    capeType: state.capeType, favoriteServers: state.favoriteServers
+    capeType: state.capeType, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm
   });
 }
 
@@ -458,6 +458,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (state.authMode === 'microsoft' && !state.msProfile) {
       document.getElementById('statusText').textContent = 'Vui lòng đăng nhập Microsoft trước!'; return;
     }
+    const isInstalled = isVersionInstalledOnDisk(state.selectedVersion);
+    if (!isInstalled || !state.skipLaunchConfirm) {
+      const msg = isInstalled
+        ? `Bạn có đồng ý khởi chạy Minecraft ${state.selectedVersion} (Core: ${state.selectedCore.toUpperCase()} • RAM: ${state.ramGB} GB) ngay bây giờ không?`
+        : `Phiên bản Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) chưa có sẵn trên máy. Bạn có đồng ý để Launcher tự động tải và cài đặt phiên bản này từ máy chủ chính thức không?`;
+      const ask = await askUserAgreement({
+        title: isInstalled ? '🎮 Xác Nhận Vào Game' : '📥 Xác Nhận Tải & Cài Đặt Phiên Bản Minecraft',
+        message: msg,
+        showDontAsk: isInstalled,
+        agreeText: isInstalled ? '✓ Đồng Ý Chơi Ngay' : '✓ Đồng Ý Tải & Chơi',
+        cancelText: '✕ Không, Quay lại'
+      });
+      if (!ask.agreed) return;
+      if (ask.dontAskAgain) { state.skipLaunchConfirm = true; saveCurrentConfig(); }
+    }
     state.isLaunching = true;
     const btn = document.getElementById('btnLaunch'); btn.disabled = true;
     document.getElementById('btnForceKill').classList.remove('hidden');
@@ -481,6 +496,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   await refreshInstalledVersions();
+  if (!state.acceptedEula) {
+    const eulaAsk = await askUserAgreement({
+      title: '🛡️ Điều Khoản Sử Dụng & Cài Đặt Aether Craft Launcher',
+      message: 'Trước khi bắt đầu sử dụng Launcher và tải tài nguyên Minecraft, vui lòng đọc và xác nhận bạn đồng ý với các điều khoản dưới đây:',
+      showEula: true,
+      agreeText: '✓ Tôi Đồng Ý & Sử Dụng',
+      cancelText: '✕ Không Đồng Ý (Thoát)'
+    });
+    if (!eulaAsk.agreed) {
+      window.aetherAPI.close();
+      return;
+    }
+    state.acceptedEula = true;
+    saveCurrentConfig();
+  }
   await refreshLocalAddonsCount();
   const verRes = await window.aetherAPI.getVersions();
   if (verRes.ok && verRes.data?.versions?.length) {
@@ -506,7 +536,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnForceKill').classList.add('hidden');
     const btn = document.getElementById('btnLaunch'); btn.disabled = false;
     document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
-    await refreshInstalledVersions(); updateSummaryUI();
+    await refreshInstalledVersions();
+  if (!state.acceptedEula) {
+    const eulaAsk = await askUserAgreement({
+      title: '🛡️ Điều Khoản Sử Dụng & Cài Đặt Aether Craft Launcher',
+      message: 'Trước khi bắt đầu sử dụng Launcher và tải tài nguyên Minecraft, vui lòng đọc và xác nhận bạn đồng ý với các điều khoản dưới đây:',
+      showEula: true,
+      agreeText: '✓ Tôi Đồng Ý & Sử Dụng',
+      cancelText: '✕ Không Đồng Ý (Thoát)'
+    });
+    if (!eulaAsk.agreed) {
+      window.aetherAPI.close();
+      return;
+    }
+    state.acceptedEula = true;
+    saveCurrentConfig();
+  } updateSummaryUI();
     document.getElementById('statusText').textContent = `Đã thoát Minecraft mượt mà (Mã: ${code})`;
   });
 });
