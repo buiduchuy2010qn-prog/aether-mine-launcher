@@ -108,7 +108,7 @@ function updateSummaryUI() {
   if (storeLabel) storeLabel.textContent = `${ver} (${coreUpper})`;
   const playerName = state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username;
   document.getElementById('sidebarPlayerName').textContent = playerName;
-  document.getElementById('sidebarAuthBadge').textContent = state.authMode === 'microsoft' ? 'BẢN QUYỀN MS' : 'CRACK / OFFLINE';
+  document.getElementById('sidebarAuthBadge').textContent = (state.authMode === 'microsoft' && state.msProfile?.name) ? 'BẢN QUYỀN MS' : 'CRACK / OFFLINE';
   document.getElementById('dockAccountText').textContent = `${playerName} (${state.authMode === 'microsoft' ? 'Microsoft' : 'Crack'})`;
 }
 
@@ -398,6 +398,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   });
   document.getElementById('btnGoModStore').onclick = () => document.querySelector('.nav-item[data-tab="mods"]').click();
+  const btnBanWorlds = document.getElementById('btnBannerWorlds');
+  if (btnBanWorlds) btnBanWorlds.onclick = () => document.querySelector('.nav-item[data-tab="worlds"]').click();
+  document.querySelectorAll('#ramPresetBar .ram-pill-btn').forEach((btn) => {
+    btn.classList.toggle('active', parseInt(btn.dataset.ram, 10) === state.ramGB);
+    btn.onclick = () => {
+      state.ramGB = parseInt(btn.dataset.ram, 10);
+      ramSlider.value = state.ramGB;
+      document.getElementById('ramValueDisplay').textContent = `${state.ramGB} GB`;
+      document.querySelectorAll('#ramPresetBar .ram-pill-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      updateSummaryUI();
+      saveCurrentConfig();
+    };
+  });
   const btnBanShots = document.getElementById('btnBannerScreenshots');
   if (btnBanShots) btnBanShots.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'screenshots');
   const btnQuickVerDir = document.getElementById('btnQuickOpenVersions');

@@ -1989,3 +1989,65 @@ body {
   overflow: visible !important;
   text-overflow: clip !important;
 }
+/* ================= V16.0 STUDIO EDITION UPGRADES ================= */
+.hbc-edition-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #86efac;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+
+.dsp-head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-hint-mini {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.core-svg-icon {
+  opacity: 0.85;
+  margin-bottom: 1px;
+}
+
+.core-tab-btn.active .core-svg-icon {
+  opacity: 1;
+}
+
+.booster-check-pill {
+  justify-content: center;
+  padding: 7px 6px !important;
+  white-space: nowrap;
+}
+
+.ram-preset-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.ram-pill-btn {
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--border-col);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.ram-pill-btn:hover,
+.ram-pill-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

@@ -75,12 +75,10 @@ function draw2DAvatarFace(imgSource) {
     octx.drawImage(img, 0, 0);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // 1. Draw base head face (8, 8, 8, 8)
     ctx.drawImage(img, 8, 8, 8, 8, 0, 0, canvas.width, canvas.height);
 
-    // 2. Only overlay hat layer (40, 8, 8, 8) if the hat region actually uses alpha transparency!
-    // (Prevents legacy 64x32 skins like Notch with opaque black (40,8,8,8) from covering the face)
     try {
+      // Only overlay hat layer (40, 8, 8, 8) if the hat region uses alpha transparency
       const hatData = octx.getImageData(32, 0, 32, 16).data;
       let hasTransparent = false;
       let hasOpaque = false;
@@ -92,29 +90,29 @@ function draw2DAvatarFace(imgSource) {
         ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
       }
 
-      // 3. Check if face (8,8,8,8) is 100% a single solid color (like Dream's neon green hood)
+      // Check if head (8,8,8,8) is a single solid color (like Dream's neon green skin)
       const faceData = octx.getImageData(8, 8, 8, 8).data;
       const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
       let solidHead = true;
       for (let i = 0; i < faceData.length; i += 4) {
-        if (Math.abs(faceData[i] - r0) > 10 || Math.abs(faceData[i + 1] - g0) > 10 || Math.abs(faceData[i + 2] - b0) > 10) {
+        if (Math.abs(faceData[i] - r0) > 12 || Math.abs(faceData[i + 1] - g0) > 12 || Math.abs(faceData[i + 2] - b0) > 12) {
           solidHead = false;
           break;
         }
       }
-      if (solidHead && off.height >= 32) {
-        // Check if torso front (20, 20, 8, 8) has Dream's iconic smiley face!
-        const torsoData = octx.getImageData(20, 20, 8, 8).data;
-        let torsoVaried = false;
-        for (let i = 0; i < torsoData.length; i += 4) {
-          if (Math.abs(torsoData[i] - torsoData[0]) > 15 || Math.abs(torsoData[i + 1] - torsoData[1]) > 15) {
-            torsoVaried = true;
-            break;
-          }
-        }
-        if (torsoVaried) {
-          ctx.drawImage(img, 20, 20, 8, 8, 0, 0, canvas.width, canvas.height);
-        }
+      if (solidHead) {
+        const w = canvas.width;
+        // Render Dream-style framed avatar: green border + white mask + pixel smiley eyes & mouth!
+        ctx.fillStyle = `rgb(${r0}, ${g0}, ${b0})`;
+        ctx.fillRect(0, 0, w, w);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(Math.round(w * 0.14), Math.round(w * 0.14), Math.round(w * 0.72), Math.round(w * 0.72));
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
+        ctx.fillRect(Math.round(w * 0.60), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
+        ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.62), Math.round(w * 0.44), Math.round(w * 0.10));
+        ctx.fillRect(Math.round(w * 0.21), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
+        ctx.fillRect(Math.round(w * 0.69), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
       }
     } catch (_) {}
   };
