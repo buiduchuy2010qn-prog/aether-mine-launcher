@@ -96,6 +96,12 @@ function updateSummaryUI() {
     vBadge.textContent = isInst ? ('✓ Đã cài sẵn trên máy (' + ver + ')') : ('☁ Chưa tải trên máy (' + ver + ')');
     vDesc.textContent = isInst ? 'Sẵn sàng vào thẳng game ngay lập tức (< 1 giây)' : 'Sẵn sàng tải tự động từ máy chủ Mojang khi bấm CHƠI NGAY';
   }
+  const bannerPill = document.getElementById('bannerActivePill');
+  if (bannerPill) bannerPill.textContent = `⚡ Đang chọn: Minecraft ${ver} • ${coreUpper} • ${ram} RAM`;
+  const bannerSub = document.getElementById('bannerSubStatus');
+  if (bannerSub) bannerSub.textContent = isInst
+    ? `Phiên bản Minecraft ${ver} (${coreUpper}) đã cài sẵn trên máy — Bấm CHƠI NGAY để vào thẳng game!`
+    : `Phiên bản Minecraft ${ver} (${coreUpper}) sẵn sàng tải tự động từ Mojang khi bấm CHƠI NGAY.`;
   const javaBadge = document.getElementById('javaReqBadge');
   if (javaBadge) javaBadge.textContent = getRecommendedJavaBadge(ver);
   const storeLabel = document.getElementById('modStoreVerLabel');
@@ -392,6 +398,33 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   });
   document.getElementById('btnGoModStore').onclick = () => document.querySelector('.nav-item[data-tab="mods"]').click();
+  const btnBanShots = document.getElementById('btnBannerScreenshots');
+  if (btnBanShots) btnBanShots.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'screenshots');
+  const btnQuickVerDir = document.getElementById('btnQuickOpenVersions');
+  if (btnQuickVerDir) btnQuickVerDir.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'versions');
+
+  const btnRot = document.getElementById('btnToggleRotate');
+  if (btnRot) {
+    btnRot.onclick = () => {
+      if (!skinViewer) return;
+      skinViewer.autoRotate = !skinViewer.autoRotate;
+      btnRot.classList.toggle('active', skinViewer.autoRotate);
+    };
+  }
+  const btnCam = document.getElementById('btnResetCam');
+  if (btnCam) {
+    btnCam.onclick = () => {
+      if (!skinViewer) return;
+      skinViewer.camera.position.set(0, 12, 42);
+      if (skinViewer.playerObject) skinViewer.playerObject.rotation.y = 0;
+    };
+  }
+  document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {
+    chip.onclick = () => {
+      document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.toggle('active', c === chip));
+      loadCharacterSkin(chip.dataset.skinpreset);
+    };
+  });
 
   document.querySelectorAll('.wp-chip').forEach((wp) => {
     wp.onclick = () => {

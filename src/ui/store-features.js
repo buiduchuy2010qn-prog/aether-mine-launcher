@@ -64,16 +64,38 @@ function buildCapeDataUrl(type) {
 function draw2DAvatarFace(imgSource) {
   const canvas = document.getElementById('avatar2dCanvas');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
   const img = new Image();
   img.onload = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 8, 8, 8, 8, 0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
+    // Check if the 8x8 head is a single solid color (like Dream's neon green hood)
+    try {
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const r0 = data[0], g0 = data[1], b0 = data[2];
+      let allSame = true;
+      for (let i = 0; i < data.length; i += 16) {
+        if (Math.abs(data[i] - r0) > 8 || Math.abs(data[i + 1] - g0) > 8 || Math.abs(data[i + 2] - b0) > 8) {
+          allSame = false;
+          break;
+        }
+      }
+      if (allSame) {
+        // Draw iconic pixel eyes & smile so solid-hood skins look crisp!
+        const u = canvas.width / 8;
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(Math.round(2 * u), Math.round(2.5 * u), Math.round(1.2 * u), Math.round(1.5 * u));
+        ctx.fillRect(Math.round(4.8 * u), Math.round(2.5 * u), Math.round(1.2 * u), Math.round(1.5 * u));
+        ctx.fillRect(Math.round(2 * u), Math.round(5.3 * u), Math.round(4 * u), Math.round(0.9 * u));
+        ctx.fillRect(Math.round(1.4 * u), Math.round(4.6 * u), Math.round(0.9 * u), Math.round(0.9 * u));
+        ctx.fillRect(Math.round(5.7 * u), Math.round(4.6 * u), Math.round(0.9 * u), Math.round(0.9 * u));
+      }
+    } catch (_) {}
   };
   img.src = imgSource;
 }
-
 async function runOneClickFpsBoost(btnElement) {
   if (btnElement.dataset.alreadyInstalled === 'true') {
     await askUserAgreement({

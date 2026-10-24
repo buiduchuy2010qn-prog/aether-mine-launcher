@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v13.1 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v14.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -22,7 +22,7 @@
         </div>
         <div class="brand-titles">
           <span class="brand-name">MINECRAFT LAUNCHER</span>
-          <span class="brand-version">v13.1 PRO</span>
+          <span class="brand-version">v14.0 PRO</span>
         </div>
       </div>
 
@@ -119,23 +119,28 @@
             <!-- LEFT COLUMN: HERO BANNER + 2 RICH CARDS (NO BLANK SPACE) -->
             <div class="left-play-col">
               <!-- OFFICIAL MINECRAFT KEY ART BANNER -->
-              <div class="hero-banner-clean" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png');">
+              <div class="hero-banner-clean" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png');">
                 <div class="hbc-overlay"></div>
                 <div class="hbc-content">
                   <div class="hbc-top">
-                    <span class="mc-badge">MINECRAFT: JAVA EDITION • SMOOTH-EXIT ENGINE</span>
+                    <div class="hbc-badges-left">
+                      <span class="mc-badge">MINECRAFT: JAVA EDITION</span>
+                      <span class="mc-live-pill" id="bannerActivePill">⚡ 1.21.11 • FABRIC • 4 GB RAM</span>
+                    </div>
                     <div class="wallpaper-switcher">
-                      <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/MCVFallDropRealmsPrimaryMinecraftLauncher700x466.png">Cảnh 1</button>
-                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">Cảnh 2</button>
-                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">Cảnh 3</button>
+                      <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">🌲 Rừng Hoang</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">⛰️ Thế Giới</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg">⚔️ Bản 1.21.11</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg">🔥 Lửa Trại</button>
                     </div>
                   </div>
                   <div class="hbc-bottom-row">
                     <div class="hbc-bottom">
-                      <h1>MINECRAFT JAVA EDITION</h1>
-                      <p>Chọn Core, Phiên bản Minecraft và Tài khoản bên dưới để khởi chạy ngay lập tức.</p>
+                      <h1>MINECRAFT: JAVA EDITION</h1>
+                      <p id="bannerSubStatus">Chọn Core, Phiên bản Minecraft và Tài khoản bên dưới để khởi chạy ngay lập tức.</p>
                     </div>
                     <div class="hbc-quick-actions">
+                      <button class="banner-cta-btn secondary" id="btnBannerScreenshots" title="Mở thư mục ảnh chụp trong game">📸 Ảnh Chụp</button>
                       <button class="banner-cta-btn" id="btnGoModStore">🧩 Kho Mod &amp; Shaders</button>
                     </div>
                   </div>
@@ -144,7 +149,7 @@
 
               <!-- TWO BALANCED DIRECT CONTROL CARDS (ZERO EMPTY GAP) -->
               <div class="direct-selector-panel">
-                <!-- CARD A: CHỌN CORE, PHIÊN BẢN & 1-CLICK FPS BOOST -->
+                <!-- CARD A: CHỌN CORE & PHIÊN BẢN MINECRAFT -->
                 <div class="dsp-block">
                   <div class="dsp-head">
                     <div class="dsp-head-left">
@@ -183,35 +188,38 @@
                   <div class="version-selectors-row">
                     <div class="vs-col">
                       <div class="ver-label-bar">
-                        <label class="field-label" style="margin:0;">2. Phiên Bản Minecraft</label>
+                        <label class="field-label no-wrap-label" style="margin:0;">2. Phiên Bản Game</label>
                         <div class="vtype-group">
                           <button class="vtype-btn active" data-vtype="release">Release</button>
                           <button class="vtype-btn" data-vtype="snapshot">Snapshot</button>
-                          <button class="vtype-btn" data-vtype="old">Beta/Alpha</button>
+                          <button class="vtype-btn" data-vtype="old">Beta</button>
                         </div>
                       </div>
                       <select id="versionSelect" class="pro-select"></select>
                     </div>
 
                     <div class="vs-col" id="loaderBuildGroup">
-                      <label class="field-label">3. Phiên Bản Build Core</label>
+                      <div class="ver-label-bar">
+                        <label class="field-label no-wrap-label" style="margin:0;">3. Bản Build Core</label>
+                        <span class="installed-count-tag" id="installedCountLabel">Đang kiểm tra...</span>
+                      </div>
                       <select id="loaderVersionSelect" class="pro-select">
                         <option value="">Tự động chọn bản mới nhất</option>
                       </select>
                     </div>
                   </div>
 
-                                    <!-- CLEAN VERSION STATUS BAR (ZERO CLUTTER, ZERO PRE-DOWNLOAD) -->
+                  <!-- CLEAN VERSION STATUS BAR (ZERO CLUTTER, ZERO PRE-DOWNLOAD) -->
                   <div class="version-ready-bar" id="selectedVersionStatusBox">
                     <div class="vrb-left">
                       <span class="vrb-badge ready" id="verReadyBadge">✓ Đã cài sẵn trên máy</span>
                       <span class="vrb-desc" id="verReadyDesc">Sẵn sàng vào thẳng game ngay lập tức (&lt; 1 giây)</span>
                     </div>
-                    <span class="installed-count-tag" id="installedCountLabel">Đang kiểm tra máy...</span>
+                    <button class="vrb-action-btn" id="btnQuickOpenVersions" title="Mở thư mục versions trong .minecraft">📂 Thư mục Bản</button>
                   </div>
                 </div>
 
-                <!-- CARD B: TÀI KHOẢN, ĐỔI NHANH, QUICK SERVER & GAME BOOSTER -->
+                <!-- CARD B: TÀI KHOẢN, TỐI ƯU & DUNG LƯỢNG RAM -->
                 <div class="dsp-block">
                   <div class="dsp-head">
                     <div class="dsp-head-left">
@@ -292,11 +300,26 @@
                 </div>
               </div>
               <div class="webgl-stage-wrap">
+                <div class="stage-top-controls">
+                  <button class="stage-ctrl-btn active" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">🔄 Tự xoay</button>
+                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện nhân vật">🎯 Chính diện</button>
+                </div>
                 <canvas id="skinViewerCanvas"></canvas>
+                <div class="webgl-floor-glow"></div>
                 <div class="webgl-hint-pill">Kéo chuột xoay 360° • Cuộn để Zoom</div>
               </div>
-              <!-- NEW 3D WARDROBE TOOLBAR: UPLOAD PNG, SLIM/CLASSIC, 3D CAPES -->
+              <!-- UPGRADED 3D WARDROBE TOOLBAR: SKIN PRESETS, UPLOAD PNG, SLIM/CLASSIC, 1-ROW 3D CAPES -->
               <div class="wardrobe-toolbar">
+                <div class="wt-cape-row">
+                  <span class="wt-cape-label">Đổi nhanh Skin 3D mẫu:</span>
+                  <div class="wt-skin-presets" id="skinPresetBar">
+                    <button class="skin-preset-chip" data-skinpreset="Technoblade">👑 Techno</button>
+                    <button class="skin-preset-chip" data-skinpreset="Dream">💚 Dream</button>
+                    <button class="skin-preset-chip" data-skinpreset="Notch">🎩 Notch</button>
+                    <button class="skin-preset-chip" data-skinpreset="MHF_Alex">👩 Alex</button>
+                    <button class="skin-preset-chip" data-skinpreset="MHF_Steve">🧑 Steve</button>
+                  </div>
+                </div>
                 <div class="wt-row">
                   <button class="wt-upload-btn" id="btnUploadSkinPng">📂 Tải Ảnh Skin (.PNG)</button>
                   <div class="wt-model-switch">
@@ -309,8 +332,8 @@
                   <div class="wt-cape-pills" id="capeSelectorBar">
                     <button class="cape-chip active" data-cape="none">Không</button>
                     <button class="cape-chip" data-cape="mojang">🔥 Mojang</button>
-                    <button class="cape-chip" data-cape="gold">✨ Minecon</button>
-                    <button class="cape-chip" data-cape="cherry">🌸 Anh Đào</button>
+                    <button class="cape-chip" data-cape="gold">⭐ Minecon</button>
+                    <button class="cape-chip" data-cape="cherry">🌸 Đào</button>
                     <button class="cape-chip" data-cape="diamond">💎 Aether</button>
                   </div>
                 </div>
@@ -442,7 +465,7 @@
             <button class="btn-sync-skin" id="btnClearConsole">Xóa nhật ký</button>
           </div>
           <div class="console-terminal" id="consoleOutput">
-            <div class="log-entry info">[Aether Craft v13.1] Sẵn sàng khởi chạy.</div>
+            <div class="log-entry info">[Aether Craft v14.0] Sẵn sàng khởi chạy.</div>
           </div>
         </section>
       </main>
