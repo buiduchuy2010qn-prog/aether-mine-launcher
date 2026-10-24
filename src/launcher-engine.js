@@ -657,6 +657,56 @@ function configureCrackSkinSupport(gameDir) {
   } catch (_) {}
 }
 
+function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl) {
+  try {
+    if (!skinDataUrl || !skinDataUrl.startsWith('data:image/png;base64,')) return;
+    const base64Data = skinDataUrl.replace(/^data:image\/png;base64,/, '');
+    const skinBuf = Buffer.from(base64Data, 'base64');
+    if (skinBuf.length < 100) return;
+
+    const cleanName = (username || 'StevePlayer').replace(/[^a-zA-Z0-9_]/g, '') || 'StevePlayer';
+    const skinsDir = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'skins');
+    if (!fs.existsSync(skinsDir)) fs.mkdirSync(skinsDir, { recursive: true });
+    fs.writeFileSync(path.join(skinsDir, `${cleanName}.png`), skinBuf);
+    configureCrackSkinSupport(rootDir);
+
+    // Also build a lightweight Vanilla ResourcePack so even 0-mod Vanilla displays the active 3D skin in-game!
+    const rpDir = path.join(rootDir, 'resourcepacks');
+    if (!fs.existsSync(rpDir)) fs.mkdirSync(rpDir, { recursive: true });
+    const zip = new AdmZip();
+    const mcmeta = {
+      pack: {
+        pack_format: 34,
+        supported_formats: [1, 99],
+        description: 'Aether Craft - Dong bo Skin 3D vao Game'
+      }
+    };
+    zip.addFile('pack.mcmeta', Buffer.from(JSON.stringify(mcmeta, null, 2), 'utf8'));
+    zip.addFile('assets/minecraft/textures/entity/steve.png', skinBuf);
+    zip.addFile('assets/minecraft/textures/entity/alex.png', skinBuf);
+    const defaultActors = ['steve', 'alex', 'ari', 'efe', 'kai', 'makena', 'noor', 'sunny', 'zuri'];
+    for (const actor of defaultActors) {
+      zip.addFile(`assets/minecraft/textures/entity/player/wide/${actor}.png`, skinBuf);
+      zip.addFile(`assets/minecraft/textures/entity/player/slim/${actor}.png`, skinBuf);
+    }
+    const rpZipPath = path.join(rpDir, 'AetherSkinSync.zip');
+    zip.writeZip(rpZipPath);
+
+    // Ensure AetherSkinSync.zip is enabled in options.txt
+    const optsPath = path.join(rootDir, 'options.txt');
+    let optsContent = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
+    if (optsContent.includes('resourcePacks:')) {
+      optsContent = optsContent.replace(/^resourcePacks:\[(.*)\]$/m, (full, inner) => {
+        if (inner.includes('AetherSkinSync.zip')) return full;
+        const trimmed = inner.trim();
+        return trimmed ? `resourcePacks:[${trimmed},"file/AetherSkinSync.zip"]` : `resourcePacks:["vanilla","file/AetherSkinSync.zip"]`;
+      });
+    } else {
+      optsContent += (optsContent.endsWith('\n') || !optsContent ? '' : '\n') + 'resourcePacks:["vanilla","file/AetherSkinSync.zip"]\n';
+    }
+    fs.writeFileSync(optsPath, optsContent, 'utf8');
+  } catch (_) {}
+}
 async function launchMinecraft(config, callbacks = {}) {
   const {
     authMode = 'crack',

@@ -422,7 +422,7 @@ body {
 /* HOME PLAY GRID */
 .main-play-grid {
   display: grid;
-  grid-template-columns: 1fr 295px;
+  grid-template-columns: 1fr 332px;
   gap: 12px;
   height: 100%;
   min-height: 0;
@@ -1968,4 +1968,24 @@ body {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+/* V15.0 FULL-TEXT 3D WARDROBE & HEADER FIXES (ZERO ELLIPSIS) */
+.card-title-group h3 {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.pose-btn {
+  white-space: nowrap;
+  padding: 4px 8px;
+  font-size: 10.5px;
+}
+
+.skin-preset-chip,
+.cape-chip {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  padding: 6px 3px !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
 }

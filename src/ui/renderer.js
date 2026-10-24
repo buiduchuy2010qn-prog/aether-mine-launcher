@@ -422,7 +422,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {
     chip.onclick = () => {
       document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.toggle('active', c === chip));
-      loadCharacterSkin(chip.dataset.skinpreset);
+      loadCharacterSkin(chip.dataset.skinpreset); document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') — Tự động lưu vào Game khi bấm CHƠI NGAY!';
     };
   });
 
@@ -583,7 +583,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       msProfile: state.msProfile, mcVersion: state.selectedVersion, loaderType: state.selectedCore,
       loaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB, javaPath: state.javaPath,
       gameDir: state.gameDir, useAikarFlags: state.aikarFlags, fastSkipHash: state.fastSkipHash,
-      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores
+      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores, skinDataUrl: currentSkinDataUrl
     });
 
     if (!res.ok) {

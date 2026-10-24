@@ -68,29 +68,53 @@ function draw2DAvatarFace(imgSource) {
   ctx.imageSmoothingEnabled = false;
   const img = new Image();
   img.onload = () => {
+    const off = document.createElement('canvas');
+    off.width = img.width || 64;
+    off.height = img.height || 64;
+    const octx = off.getContext('2d');
+    octx.drawImage(img, 0, 0);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 1. Draw base head face (8, 8, 8, 8)
     ctx.drawImage(img, 8, 8, 8, 8, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
-    // Check if the 8x8 head is a single solid color (like Dream's neon green hood)
+
+    // 2. Only overlay hat layer (40, 8, 8, 8) if the hat region actually uses alpha transparency!
+    // (Prevents legacy 64x32 skins like Notch with opaque black (40,8,8,8) from covering the face)
     try {
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      const r0 = data[0], g0 = data[1], b0 = data[2];
-      let allSame = true;
-      for (let i = 0; i < data.length; i += 16) {
-        if (Math.abs(data[i] - r0) > 8 || Math.abs(data[i + 1] - g0) > 8 || Math.abs(data[i + 2] - b0) > 8) {
-          allSame = false;
+      const hatData = octx.getImageData(32, 0, 32, 16).data;
+      let hasTransparent = false;
+      let hasOpaque = false;
+      for (let i = 3; i < hatData.length; i += 4) {
+        if (hatData[i] < 245) hasTransparent = true;
+        if (hatData[i] > 15) hasOpaque = true;
+      }
+      if (hasTransparent && hasOpaque) {
+        ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
+      }
+
+      // 3. Check if face (8,8,8,8) is 100% a single solid color (like Dream's neon green hood)
+      const faceData = octx.getImageData(8, 8, 8, 8).data;
+      const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
+      let solidHead = true;
+      for (let i = 0; i < faceData.length; i += 4) {
+        if (Math.abs(faceData[i] - r0) > 10 || Math.abs(faceData[i + 1] - g0) > 10 || Math.abs(faceData[i + 2] - b0) > 10) {
+          solidHead = false;
           break;
         }
       }
-      if (allSame) {
-        // Draw iconic pixel eyes & smile so solid-hood skins look crisp!
-        const u = canvas.width / 8;
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(Math.round(2 * u), Math.round(2.5 * u), Math.round(1.2 * u), Math.round(1.5 * u));
-        ctx.fillRect(Math.round(4.8 * u), Math.round(2.5 * u), Math.round(1.2 * u), Math.round(1.5 * u));
-        ctx.fillRect(Math.round(2 * u), Math.round(5.3 * u), Math.round(4 * u), Math.round(0.9 * u));
-        ctx.fillRect(Math.round(1.4 * u), Math.round(4.6 * u), Math.round(0.9 * u), Math.round(0.9 * u));
-        ctx.fillRect(Math.round(5.7 * u), Math.round(4.6 * u), Math.round(0.9 * u), Math.round(0.9 * u));
+      if (solidHead && off.height >= 32) {
+        // Check if torso front (20, 20, 8, 8) has Dream's iconic smiley face!
+        const torsoData = octx.getImageData(20, 20, 8, 8).data;
+        let torsoVaried = false;
+        for (let i = 0; i < torsoData.length; i += 4) {
+          if (Math.abs(torsoData[i] - torsoData[0]) > 15 || Math.abs(torsoData[i + 1] - torsoData[1]) > 15) {
+            torsoVaried = true;
+            break;
+          }
+        }
+        if (torsoVaried) {
+          ctx.drawImage(img, 20, 20, 8, 8, 0, 0, canvas.width, canvas.height);
+        }
       }
     } catch (_) {}
   };
