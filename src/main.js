@@ -429,11 +429,43 @@ ipcMain.handle('updater:check', async () => {
 
 ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => {
   try {
+    const appRoot = path.resolve(__dirname, '..');
+    const isUnpackedApp = path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
+
+    if (isUnpackedApp) {
+      const filesToSync = [
+        'package.json',
+        'src/main.js',
+        'src/preload.js',
+        'src/launcher-engine.js',
+        'src/microsoft-auth.js',
+        'src/ui/index.html',
+        'src/ui/styles.css',
+        'src/ui/renderer.js',
+        'src/ui/store-features.js'
+      ];
+      const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main';
+      for (let i = 0; i < filesToSync.length; i++) {
+        const rel = filesToSync[i];
+        const buf = await fetchBinaryBuffer(`${baseRaw}/${rel}?t=${Date.now()}`);
+        const targetFile = path.join(appRoot, rel);
+        const dir = path.dirname(targetFile);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(targetFile, buf);
+        mainWindow?.webContents.send('updater:progress', Math.round(((i + 1) / filesToSync.length) * 100));
+      }
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 250);
+      return { ok: true };
+    }
+
+    // Fallback if running from legacy app.asar
     const tempExe = path.join(os.tmpdir(), `AetherCraft-Setup-${latestVersion || 'latest'}.exe`);
     await downloadWithProgress(downloadUrl, tempExe, (pct) => {
       mainWindow?.webContents.send('updater:progress', pct);
     });
-
     const currentExe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
     const installDir = path.dirname(currentExe);
     const batPath = path.join(os.tmpdir(), 'aether-auto-update.bat');
@@ -445,18 +477,10 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
       'del "%~f0"'
     ].join('\r\n');
     fs.writeFileSync(batPath, batContent, 'utf8');
-
     const { spawn } = require('child_process');
-    const child = spawn('cmd.exe', ['/c', batPath], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true
-    });
+    const child = spawn('cmd.exe', ['/c', batPath], { detached: true, stdio: 'ignore', windowsHide: true });
     child.unref();
-
-    setTimeout(() => {
-      app.exit(0);
-    }, 350);
+    setTimeout(() => app.exit(0), 350);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };

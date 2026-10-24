@@ -3,7 +3,7 @@ const state = {
   savedAccounts: ['StevePlayer', 'Dream', 'Technoblade'],
   crackSkinSync: true, msProfile: null, selectedVersion: '1.21.4',
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
-  ramGB: 4, javaPath: 'java', gameDir: '', serverIp: '',
+  ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
   versions: [], installedVersions: [], skinModel: 'default', capeType: 'mojang',
   activeModStoreType: 'mod', activeLocalFolder: 'mods',

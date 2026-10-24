@@ -263,9 +263,10 @@ function forceKillMinecraft() {
 }
 
 function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
-  const parallelThreads = Math.max(2, Math.min(12, cpuCores));
+  const parallelThreads = Math.max(2, Math.min(8, cpuCores));
   const concThreads = Math.max(1, Math.floor(parallelThreads / 2));
 
+  // Strictly cap native off-heap memory & DO NOT use -XX:+AlwaysPreTouch so Java starts light (~1.1 GB) and never exceeds selected RAM!
   return [
     '-XX:+UnlockExperimentalVMOptions',
     '-XX:+UseG1GC',
@@ -274,30 +275,34 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     '-XX:+ParallelRefProcEnabled',
     '-XX:MaxGCPauseMillis=35',
     '-XX:+DisableExplicitGC',
-    '-XX:+AlwaysPreTouch',
-    '-XX:G1NewSizePercent=28',
-    '-XX:G1MaxNewSizePercent=40',
+    '-XX:+UseStringDeduplication',
+    '-XX:MaxDirectMemorySize=384M',
+    '-XX:MaxMetaspaceSize=224M',
+    '-XX:ReservedCodeCacheSize=128M',
+    '-Xss512k',
+    '-XX:G1NewSizePercent=20',
+    '-XX:G1MaxNewSizePercent=35',
     '-XX:G1HeapRegionSize=8M',
-    '-XX:G1ReservePercent=15',
+    '-XX:G1ReservePercent=10',
     '-XX:G1HeapWastePercent=5',
     '-XX:G1MixedGCCountTarget=4',
-    '-XX:InitiatingHeapOccupancyPercent=15',
-    '-XX:G1MixedGCLiveThresholdPercent=90',
+    '-XX:InitiatingHeapOccupancyPercent=20',
+    '-XX:G1MixedGCLiveThresholdPercent=85',
     '-XX:G1RSetUpdatingPauseTimePercent=5',
     '-XX:SurvivorRatio=32',
     '-XX:+PerfDisableSharedMem',
     '-XX:MaxTenuringThreshold=1',
-    '-XX:G1PeriodicGCInterval=15000',
+    '-XX:G1PeriodicGCInterval=6000',
     '-XX:+G1PeriodicGCInvokesConcurrent',
-    '-XX:MaxHeapFreeRatio=38',
-    '-XX:MinHeapFreeRatio=15',
+    '-XX:-G1PeriodicGCSystemLoadThreshold',
+    '-XX:MaxHeapFreeRatio=25',
+    '-XX:MinHeapFreeRatio=10',
     '-XX:-OmitStackTraceInFastThrow',
     '-Dfml.ignoreInvalidMinecraftCertificates=true',
     '-Dfml.ignorePatchDiscrepancies=true',
-    '-Dminecraft.launcher.brand=AetherCraft-v8'
+    '-Dminecraft.launcher.brand=AetherCraft-v18'
   ];
 }
-
 function getInstalledVersions(gameDir) {
   const root = gameDir || getDefaultGameDir();
   const verDir = path.join(root, 'versions');
@@ -786,8 +791,8 @@ async function launchMinecraft(config, callbacks = {}) {
       type: mcVersion.includes('w') || mcVersion.includes('pre') || mcVersion.includes('rc') ? 'snapshot' : 'release'
     },
     memory: {
-      max: `${ramGB}G`,
-      min: '512M'
+      max: `${Math.max(1024, Math.round(ramGB * 1024 - 700))}M`,
+      min: '256M'
     },
     javaPath: resolvedJava === 'java' ? undefined : resolvedJava,
     customArgs,
