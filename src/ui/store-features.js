@@ -463,17 +463,313 @@ async function loadModrinthStore(append = false) {
     atmosphere: 'Hiệu ứng',
     realistic: 'Chân thực',
     fantasy: 'Huyền ảo',
-    ' vanilla-like': 'Chuẩn gốc'
+    'vanilla-like': 'Chuẩn gốc',
+    ' vanilla-like': 'Chuẩn gốc',
+    gui: 'Giao diện',
+    models: 'Mô hình 3D',
+    tweaks: 'Tinh chỉnh',
+    blocks: 'Khối vuông',
+    items: 'Vật phẩm',
+    entities: 'Thực thể',
+    environment: 'Môi trường',
+    audio: 'Âm thanh',
+    fonts: 'Phông chữ',
+    simplistic: 'Tối giản',
+    'semi-realistic': 'Bán chân thực',
+    shadows: 'Bóng đổ',
+    pbr: 'Bề mặt PBR',
+    foliage: 'Cây cối',
+    'colored-lighting': 'Ánh sáng màu',
+    'path-tracing': 'Dò tia sáng',
+    bloom: 'Phát sáng',
+    reflections: 'Phản chiếu',
+    high: 'Cấu hình cao',
+    medium: 'Tầm trung',
+    low: 'Máy yếu',
+    potato: 'Siêu nhẹ',
+    iris: 'Iris',
+    optifine: 'OptiFine',
+    canvas: 'Canvas',
+    vanilla: 'Vanilla',
+    datapack: 'Data Pack'
   };
+
+  const HIDDEN_RETRO_TAGS = new Set([
+    'babric', 'bta-babric', 'liteloader', 'modloader', 'risugamis-modloader',
+    'rift', 'ornithe', 'nilloader', 'legacy-fabric'
+  ]);
+
+  const MOD_DESC_VI_MAP = {
+    'fabric-api': 'Thư viện nền tảng bắt buộc cho Fabric: Cung cấp các kết nối cốt lõi để hầu hết các Mod Fabric hoạt động ổn định cùng nhau.',
+    'sodium': 'Mod tối ưu đồ họa số 1 cho Minecraft: Tăng gấp 2–3 lần FPS, loại bỏ giật lag khung hình (stutter) và làm mượt game rõ rệt.',
+    'iris': 'Trình chạy Shader hiện đại cho Minecraft: Giúp bật các gói bóng đổ (Shader Packs) tuyệt đẹp của OptiFine kết hợp mượt mà cùng Sodium.',
+    'entityculling': 'Tối ưu FPS thông minh: Tự động ẩn và ngừng vẽ các sinh vật/khối vuông bị khuất sau tường để tăng mạnh tốc độ khung hình.',
+    'cloth-config': 'Thư viện tạo bảng cài đặt (Config GUI) cho các Mod Minecraft, giúp bạn tùy chỉnh tính năng Mod trực tiếp ngay trong game.',
+    'ferrite-core': 'Tối ưu hóa bộ nhớ RAM cực mạnh: Giảm tới 40–45% lượng RAM Minecraft tiêu thụ, giúp máy yếu chơi nhiều Mod không bị tràn RAM.',
+    'modmenu': 'Thêm nút "Mods" vào màn hình chính và Menu tạm dừng, giúp xem danh sách các Mod đã cài và mở bảng chỉnh cài đặt từng Mod.',
+    'lithium': 'Tối ưu hóa toàn diện logic game, vật lý, AI sinh vật và tải bản đồ (Chunk) mà không làm thay đổi bất kỳ cơ chế gốc nào của Minecraft.',
+    'immediatelyfast': 'Tăng tốc độ vẽ giao diện (HUD, bản đồ, chữ), thực thể (Entities) và vật phẩm trên màn hình giúp tăng FPS rõ rệt.',
+    'yacl': 'Thư viện giao diện cấu hình (YetAnotherConfigLib) hiện đại được nhiều Mod tối ưu và đồ họa sử dụng để tạo menu tùy chỉnh.',
+    'fabric-language-kotlin': 'Thư viện hỗ trợ ngôn ngữ Kotlin bắt buộc cho các Mod hiện đại được viết bằng Kotlin trên nền tảng Fabric.',
+    'xaeros-minimap': 'Bản đồ thu nhỏ (Minimap) góc màn hình: Hiển thị địa hình xung quanh, tọa độ, sinh vật và đánh dấu điểm dịch chuyển (Waypoint).',
+    'xaeros-world-map': 'Bản đồ thế giới toàn màn hình (bấm phím M): Tự động lưu lại mọi vùng đất đã đi qua, kết hợp hoàn hảo với Xaero\'s Minimap.',
+    'journeymap': 'Bản đồ thế giới & Minimap thời gian thực: Xem địa hình ngày/đêm, hang động, đánh dấu tọa độ và tìm đường về nhà dễ dàng.',
+    'appleskin': 'Hiển thị chi tiết lượng thức ăn và độ bão hòa (Saturation) mà mỗi món ăn hồi lại ngay trên thanh độ đói và trong túi đồ.',
+    'continuity': 'Kết nối liền mạch viền các khối kính, đá cát và kệ sách (Connected Textures) giống hệt tính năng nối kính của OptiFine.',
+    'indium': 'Tiện ích mở rộng cho Sodium hỗ trợ chuẩn Fabric Rendering API, giúp các Mod như Continuity và Create hiển thị đúng đồ họa.',
+    'sodium-extra': 'Bổ sung hàng chục tùy chọn đồ họa chuyên sâu cho Sodium: Bật/tắt sương mù, mây, hiệu ứng hạt, hoạt ảnh lửa/nước và hiện FPS góc màn hình.',
+    'reeses-sodium-options': 'Làm lại giao diện Cài đặt Đồ họa (Video Settings) của Sodium thành dạng danh sách dọc kèm thanh tìm kiếm cực kỳ gọn gàng, dễ nhìn.',
+    'lambdynamiclights': 'Ánh sáng động chân thực: Cầm đuốc, đèn lồng hoặc vật phát sáng trên tay sẽ tỏa sáng rực rỡ vùng xung quanh khi đi hang tối.',
+    'dynamiclights': 'Ánh sáng động: Đuốc và vật phẩm phát sáng khi cầm trên tay hoặc ném ra đất sẽ tự động chiếu sáng môi trường xung quanh.',
+    'zoomify': 'Phóng to tầm nhìn (Zoom ống nhòm) siêu mượt với hiệu ứng cuộn chuột phóng xa/gần và làm mượt chuyển động chuột giống OptiFine.',
+    'wi-zoom': 'Ống nhòm phóng to siêu xa (lên tới 50x) bằng phím C hoặc cuộn chuột mà không cần chế tạo ống nhòm trong game.',
+    'logical-zoom': 'Thêm phím tắt phóng to tầm nhìn (Zoom) đơn giản, gọn nhẹ giống hệt phím C của OptiFine.',
+    'jei': 'Từ điển công thức chế tạo (Just Enough Items): Xem công thức ghép đồ và cách nung/pha chế của mọi vật phẩm ngay cạnh túi đồ.',
+    'rei': 'Tra cứu công thức chế tạo (Roughly Enough Items): Giao diện tìm kiếm vật phẩm và xem công thức ghép đồ trực quan trong túi đồ.',
+    'emi': 'Trình xem công thức chế tạo (EMI) hiện đại: Hỗ trợ cây công thức nhiều bước, tính toán nguyên liệu cần thiết và tìm kiếm siêu nhanh.',
+    'jade': 'Hiển thị bảng thông tin ở đầu màn hình: Cho biết chính xác bạn đang nhìn vào khối vuông gì, sinh vật bao nhiêu máu, lò nung còn bao lâu.',
+    'wthit': 'Cho biết tên khối vuông, máu quái vật, tiến độ cây trồng và nội dung trong rương ngay khi bạn chĩa tâm ngắm vào.',
+    'architectury-api': 'Thư viện cầu nối trung gian giúp các Mod đa nền tảng chạy mượt mà trên cả Fabric, Forge và NeoForge.',
+    'geckolib': 'Thư viện hoạt ảnh 3D cao cấp giúp các Mod vũ khí, rồng, Boss và sinh vật mới có chuyển động mượt mà, sống động.',
+    'collective': 'Thư viện dùng chung cung cấp các hàm xử lý sự kiện và tiện ích cho hàng loạt Mod cải tiến lối chơi của Serilum.',
+    'balm': 'Thư viện nền tảng đa năng hỗ trợ hệ thống phím tắt, cấu hình và mạng cho các Mod như Waystones, Cooking for Blockheads.',
+    'bookshelf': 'Thư viện mã nguồn mở cung cấp công cụ xử lý công thức, thuộc tính vật phẩm và lệnh cho nhiều Mod khác.',
+    'puzzles-lib': 'Thư viện lõi giúp đồng bộ tính năng và giao diện của hàng chục Mod tiện ích giữa Fabric và Forge.',
+    'forge-config-api-port': 'Mang hệ thống quản lý file cấu hình của Forge/NeoForge sang Fabric để các Mod đa nền tảng hoạt động ổn định.',
+    'cristel-lib': 'Thư viện hỗ trợ tạo và tùy chỉnh các công trình kiến trúc (Structures) tự nhiên trên bản đồ Minecraft.',
+    'terrablender': 'Thư viện trộn địa hình giúp nhiều Mod thêm quần xã (Biome) mới cùng hoạt động chung trong một thế giới mà không xung đột.',
+    'curios': 'Mở rộng thêm các ô trang bị phụ (nhẫn, dây chuyền, bùa hộ mệnh, ba lô) bên cạnh bộ giáp truyền thống.',
+    'trinkets': 'Thêm hệ thống ô đeo trang sức, phụ kiện, cánh và ba lô cho nhân vật trên nền tảng Fabric.',
+    'accessories': 'Hệ thống ô đeo phụ kiện và trang sức mở rộng thế hệ mới tương thích cả Trinkets lẫn Curios.',
+    'carry-on': 'Cho phép dùng hai tay bê trực tiếp rương đầy đồ, lò nung hoặc bế cả động vật/dân làng đi đặt sang chỗ khác mà không cần đập vỡ.',
+    'waystones': 'Thêm các Cột Đá Dịch Chuyển (Waystones) tại làng mạc hoặc tự chế tạo để dịch chuyển tức thời giữa các căn cứ xa nhau.',
+    'natures-compass': 'La bàn tìm quần xã (Biome): Giúp tìm tọa độ và chỉ đường đến bất kỳ loại rừng, sa mạc, núi tuyết nào trên bản đồ.',
+    'explorers-compass': 'La bàn nhà thám hiểm: Giúp dò tìm vị trí các công trình hiếm như Pháo đài cổ, Đền thờ, Hầm ngục, Biệt thự rừng.',
+    'biomes-o-plenty': 'Đại tu thế giới với hơn 80 quần xã (Biome) mới tuyệt đẹp ở cả Overworld, Nether và End kèm cây cối, hoa cỏ độc đáo.',
+    'terralith': 'Nâng cấp địa hình thế giới với gần 100 quần xã mới hùng vĩ (núi lửa, hẻm núi, rừng anh đào cổ đại) chỉ dùng khối vuông gốc.',
+    'tectonic': 'Tái tạo địa hình kiến tạo mảng: Tạo ra những dãy núi cao chạm mây, sông ngòi uốn lượn, vách đá dựng đứng và đại dương sâu thẳm.',
+    'incendium': 'Biến đổi hoàn toàn địa ngục Nether với 8 quần xã mới, 9 công trình lâu đài rực lửa, vũ khí huyền thoại và Boss cực mạnh.',
+    'nullscape': 'Cải tạo thế giới The End thành không gian siêu thực, hùng vĩ với địa hình đảo bay đa tầng và các vùng sinh thái kỳ ảo.',
+    'structory': 'Thêm hàng chục công trình kiến trúc hoang tàn, tháp canh, nhà cổ và di tích bí ẩn rải rác khắp thế giới kèm kho báu.',
+    'create': 'Mod công nghệ cơ khí đình đám: Chế tạo bánh răng, băng chuyền, máy khoan tự động, cối xay gió và cả đoàn tàu hỏa chạy hơi nước!',
+    'create-fabric': 'Phiên bản Fabric của Mod cơ khí Create: Xây dựng nhà máy tự động hóa bằng bánh răng, trục xoay, cánh tay robot và tàu hỏa.',
+    'farmers-delight': 'Mở rộng nghề nông trại & nấu ăn: Thêm bếp lò, chảo rán, thớt thái thịt và hàng trăm món ăn ngon miệng tăng chỉ số mạnh mẽ.',
+    'sophisticated-backpacks': 'Ba lô đeo lưng thông minh: Nâng cấp sức chứa cực lớn, có mô-đun tự nhặt đồ, tự nung quặng, tự cho nhân vật ăn khi đói.',
+    'travelers-backpack': 'Ba lô phượt thủ đa năng: Có bình chứa chất lỏng 2 bên, bàn chế tạo tích hợp, túi ngủ trải ra nằm ngay và hiệu ứng đặc biệt.',
+    'iron-chests': 'Nâng cấp rương gỗ thành Rương Sắt, Vàng, Kim Cương, Pha Lê và Obsidian với sức chứa gấp nhiều lần trong cùng 1 ô diện tích.',
+    'tom-simple-storage': 'Hệ thống quản lý kho đồ tập trung: Kết nối hàng chục rương lại thành 1 màn hình duy nhất có thanh tìm kiếm và bàn chế tạo liền kề.',
+    'applied-energistics-2': 'Công nghệ lưu trữ kỹ thuật số (AE2): Chuyển toàn bộ vật phẩm vào ổ đĩa năng lượng ME và tự động hóa chế tạo quy mô công nghiệp.',
+    'refined-storage': 'Hệ thống mạng lưu trữ đồ đạc bằng máy tính: Gom hàng triệu vật phẩm từ mọi rương vào một bảng điều khiển thông minh.',
+    'mekanism': 'Mod công nghệ cao: Chế tạo máy nhân năm quặng, lò phản ứng hạt nhân, bộ giáp cơ khí MekaSuit và jetpack bay lượn.',
+    'botania': 'Mod ma thuật thiên nhiên: Sử dụng hoa thần kỳ để tạo năng lượng Mana, rèn giáp phép thuật, nhẫn thần và triệu hồi Boss Gaia.',
+    'twilight-forest': 'Cổng dịch chuyển sang Rừng Chạng Vạng (Twilight Forest): Thế giới cổ tích đầy mê cung, lâu đài khổng lồ và chuỗi Boss huyền thoại.',
+    'ice-and-fire-dragons': 'Thế giới Rồng Lửa & Rồng Băng: Săn rồng khổng lồ, ấp trứng thuần hóa rồng bay, rèn giáp vảy rồng và chiến đấu với quái vật thần thoại.',
+    'alexs-mobs': 'Thêm hơn 85 loài động vật và quái vật sống động (Hổ, Voi, Cá Voi, Gấu, Đại Bàng...) với tập tính tự nhiên và vật phẩm rơi riêng biệt.',
+    'alexs-caves': 'Thêm 5 quần xã hang động ngầm khổng lồ dưới lòng đất: Hang Khủng Long tiền sử, Hang Từ Trường, Hang Axit Độc, Hang Kẹo Ngọt và Vực Thẳm.',
+    'mowzies-mobs': 'Thêm các Boss và quái vật tinh nhuệ có hoạt ảnh chiến đấu cực kỳ mượt mà, kỹ năng né đòn thông minh và vũ khí rơi độc nhất.',
+    'l_enders_cataclysm': 'Thêm những hầm ngục đại thảm họa và chuỗi Boss siêu khủng khiếp với hiệu ứng kỹ năng hoành tráng như game nhập vai AAA.',
+    'origins': 'Chọn Nguồn Gốc (Chủng tộc) khi bắt đầu game: Hóa thân thành Người Rồng, Người Cá, Bóng Ma, Người Nhện với siêu năng lực và điểm yếu riêng.',
+    'pehkui': 'Cho phép phóng to nhân vật khổng lồ hoặc thu nhỏ tí hon đi lọt qua khe 1 ô vuông, tương thích tốt với các gói Origins.',
+    'voice-chat': 'Đàm thoại giọng nói trong game (Simple Voice Chat): Nói chuyện trực tiếp qua mic với bạn bè đứng gần với hiệu ứng âm thanh vòm 3D.',
+    'plasmo-voice': 'Hệ thống chat giọng nói theo khoảng cách (Proximity Voice Chat) với chất lượng âm thanh trong trẻo và khử ồn thông minh.',
+    'sound-physics-remastered': 'Vật lý âm thanh chân thực: Tiếng bước chân và tiếng nổ vang vọng trong hang sâu, bị cản lại khi qua tường kín giống đời thực.',
+    'ambientsounds': 'Bổ sung âm thanh thiên nhiên sống động: Tiếng chim hót trong rừng, tiếng gió thổi trên đỉnh núi, tiếng sóng biển và dế kêu ban đêm.',
+    'presence-footsteps': 'Làm lại toàn bộ tiếng bước chân: Đi trên gỗ, đá, cỏ, cát, tuyết hay bùn đều phát ra âm thanh chân thực và sắc nét khác nhau.',
+    'not-enough-animations': 'Bổ sung hoạt ảnh góc nhìn thứ 3 cho nhân vật: Thấy rõ tay đưa lên ăn uống, cầm bản đồ, chèo thuyền, leo thang và nạp cung tên.',
+    'first-person-model': 'Nhìn thấy thân người, hai tay và chân của chính mình khi cúi xuống ở góc nhìn thứ nhất (First-Person) cực kỳ chân thực.',
+    'skin-layers-3d': 'Biến lớp áo ngoài (mũ, tóc, tay áo, quần) từ mặt phẳng 2D thành mô hình khối 3D nổi sắc nét trên nhân vật.',
+    'eating-animation': 'Thêm hoạt ảnh thức ăn vơi dần từng miếng sinh động mỗi khi nhân vật đang nhai đồ ăn hoặc uống thuốc.',
+    'visuality': 'Thêm các hạt hiệu ứng bắt mắt: Đánh quái tóe tia sáng, xương vỡ vụn, lấp lánh trên quặng quý và gợn nước khi trời mưa.',
+    'fallingtree': 'Chặt cây siêu tốc (FallingTree): Chỉ cần dùng rìu chặt 1 gốc cây dưới cùng là toàn bộ thân cây và lá sẽ tự động đổ xuống.',
+    'treeharvester': 'Thu hoạch cây nhanh: Giữ phím Shift + chặt gốc cây để đốn hạ toàn bộ cây cổ thụ và làm rụng lá lấy mầm cây ngay lập tức.',
+    'veinminer': 'Đào quặng theo mạch (VeinMiner): Đập 1 viên than hoặc sắt sẽ tự động đào luôn toàn bộ mạch quặng dính liền nhau.',
+    'mouse-tweaks': 'Thao tác chuột siêu nhanh trong túi đồ: Giữ chuột kéo qua các ô để chuyển/chia đồ hàng loạt và dùng con lăn chuột rút từng món.',
+    'inventory-profiles-next': 'Sắp xếp túi đồ & rương tự động chỉ bằng 1 nút bấm (phím R), kèm tính năng tự thay công cụ mới lên tay khi công cụ cũ bị gãy.',
+    'controlling': 'Thêm thanh tìm kiếm vào phần Cài đặt Phím tắt (Keybinds): Dễ dàng lọc phím theo tên chức năng hoặc phát hiện các phím bị trùng nhau.',
+    'searchables': 'Thư viện hỗ trợ tìm kiếm nâng cao với bộ lọc tự động hoàn thành cho thanh tìm kiếm phím tắt và vật phẩm.',
+    'clumps': 'Gom hàng trăm quả cầu kinh nghiệm (XP Orbs) rơi ra thành một quả cầu lớn duy nhất để chống giật lag máy và hút XP ngay lập tức.',
+    'spark': 'Công cụ chẩn đoán hiệu năng chuyên nghiệp: Phân tích chi tiết mức dùng CPU, RAM và tốc độ Tick để tìm ra nguyên nhân gây lag.',
+    'krypton': 'Tối ưu hóa hệ thống mạng (Network Stack) của Minecraft: Giảm độ trễ Ping và tiết kiệm băng thông CPU khi chơi Multiplayer/LAN.',
+    'modernfix': 'Bộ tối ưu tổng hợp cực mạnh: Giúp Minecraft khởi động nhanh gấp 2 lần, giảm mạnh lượng RAM tiêu thụ và sửa hàng chục lỗi rò rỉ bộ nhớ.',
+    'noisium': 'Tăng tốc độ thuật toán tạo địa hình (Noise Generation) thêm 20–30%, giúp bay khám phá vùng đất mới tải Chunk nhanh hơn.',
+    'c2me-fabric': 'Tải và tạo bản đồ đa nhân (Concurrent Chunk Management): Tận dụng toàn bộ nhân CPU để tải địa hình siêu tốc khi di chuyển nhanh.',
+    'scalablelux': 'Tối ưu hóa hệ thống tính toán ánh sáng (Lighting Engine) bằng đa luồng, loại bỏ hiện tượng khựng game khi đi qua vùng mới.',
+    'badoptimizations': 'Tối ưu các tác vụ ngầm dư thừa (bầu trời, sương mù, tính góc nhìn) khi không thay đổi để tăng thêm FPS cho máy yếu.',
+    'moreculling': 'Mở rộng cơ chế ẩn bề mặt khuất cho lá cây, khung vật phẩm, biển báo và khối vuông để tăng mạnh FPS ở khu vực rừng rậm.',
+    'dynamic-fps': 'Tự động giảm FPS và giải phóng GPU/CPU xuống gần 0% khi bạn thu nhỏ cửa sổ Minecraft hoặc chuyển sang dùng ứng dụng khác.',
+    'enhanced-block-entities': 'Tối ưu hóa Rương, Biển báo, Giường và Đầu lâu: Chuyển sang mô hình khối tĩnh giúp tăng gấp đôi FPS ở khu vực kho chứa nhiều rương.',
+    'fastquit': 'Thoát thế giới về Menu chính ngay lập tức: Cho phép lưu bản đồ chạy ngầm ở hậu cảnh để bạn không phải chờ màn hình "Saving World".',
+    'memoryleakfix': 'Sửa triệt để các lỗi rò rỉ bộ nhớ RAM (Memory Leaks) tồn tại trong mã nguồn Minecraft khi chuyển thế giới hoặc chơi lâu.',
+    'debugify': 'Sửa hơn 70 lỗi bug chính thức đã được ghi nhận trên Mojang Bug Tracker nhưng chưa được vá trong phiên bản gốc.',
+    'bobby': 'Lưu trữ đệm các vùng đất đã đi qua trên máy để bạn nhìn xa tới 32–64 Chunks ngay cả trên Server giới hạn tầm nhìn 8 Chunks.',
+    'distant-horizons': 'Tầm nhìn vô cực (LOD): Cho phép nhìn thấy núi non và công trình cách xa hàng trăm Chunks ở đường chân trời mà vẫn giữ FPS cao!',
+    'nvidium': 'Tăng tốc vẽ địa hình bằng công nghệ Mesh Shaders độc quyền cho card đồ họa NVIDIA GTX 1600 / RTX, đẩy FPS lên hàng trăm khung hình.',
+    'voxy': 'Công nghệ hiển thị tầm nhìn siêu xa (LoD Engine) tốc độ cao dành cho Sodium giúp nhìn toàn cảnh bản đồ rộng lớn cực mượt.',
+    'worldedit': 'Công cụ xây dựng thần tốc: Sao chép, xoay, lấp đầy hàng triệu khối vuông, tạo quả cầu, núi non và chỉnh sửa địa hình bằng lệnh.',
+    'axiom': 'Phần mềm chỉnh sửa 3D trực tiếp trong Minecraft: Nặn núi non, tô màu địa hình, xoay/kéo công trình bằng giao diện đồ họa chuyên nghiệp.',
+    'litematica': 'Bản vẽ kiến trúc 3D (Schematic): Chiếu hình ảnh hologram công trình mẫu vào thế giới để bạn đặt từng khối theo đúng bản thiết kế.',
+    'malilib': 'Thư viện cốt lõi bắt buộc để chạy bộ Mod kỹ thuật nổi tiếng của Masa: Litematica, MiniHUD, Tweakeroo và ItemScroller.',
+    'minihud': 'Hiển thị thông tin kỹ thuật gọn nhẹ góc màn hình: Tọa độ, FPS, tốc độ di chuyển, vùng quái vật sinh sản và ranh giới Chunk.',
+    'tweakeroo': 'Bộ công cụ kỹ thuật cao cấp: Đặt khối siêu tốc, khóa góc đặt khối, đổi công cụ tự động và hàng chục tinh chỉnh tiện lợi.',
+    'itemscroller': 'Di chuyển vật phẩm trong rương và giao dịch với Dân làng cực nhanh chỉ bằng cách cuộn con lăn chuột hoặc kéo giữ chuột.',
+    'freecam': 'Tách camera bay tự do xuyên tường (chế độ hồn ma) để quan sát hang động, kiểm tra mạch Redstone hoặc ngắm toàn cảnh công trình.',
+    'replaymod': 'Quay phim hành trình chơi game dưới dạng 3D: Xem lại từ mọi góc máy, làm video tua nhanh (Timelapse) xây dựng tuyệt đẹp.',
+    'flashback': 'Quay và dựng phim 3D trong Minecraft thế hệ mới: Ghi lại toàn bộ thế giới với dung lượng siêu nhẹ và trình chỉnh sửa góc quay trực quan.',
+    'ears': 'Cho phép gắn thêm tai mèo, tai cáo, sừng, đuôi, cánh và phụ kiện 3D trực tiếp lên nhân vật từ file ảnh Skin.',
+    'capes': 'Hiển thị đầy đủ áo choàng (Capes) của OptiFine, LabyMod, MinecraftCapes và Mojang cho mọi người chơi trong game.',
+    'custom-skin-loader': 'Đồng bộ và hiển thị Skin HD, Áo choàng (Capes) từ nhiều nguồn máy chủ cho cả chế độ Offline/Crack lẫn Multiplayer.',
+    'fabrishot': 'Chụp ảnh màn hình (Screenshot) độ phân giải siêu cao 4K / 8K sắc nét gấp nhiều lần kích thước màn hình thực tế.',
+    'advancement-plaques': 'Thay thế thông báo Thành tựu (Advancements) góc trên bằng biểu ngữ huy chương vàng kèm hiệu ứng âm thanh sang trọng.',
+    'iceberg': 'Thư viện đồ họa và sự kiện nền tảng cần thiết cho các Mod giao diện của Grend_G như Advancement Plaques, Legendary Tooltips.',
+    'prism-lib': 'Thư viện xử lý màu sắc, hiệu ứng chuyển màu (Gradients) và viền khung giao diện cho các Mod trang trí HUD.',
+    'legendary-tooltips': 'Làm đẹp khung thông tin vật phẩm (Tooltips): Thêm viền kim loại, vương miện và màu sắc phân cấp độ hiếm cho vũ khí, trang bị.',
+    'betterf3': 'Biến màn hình thông số kỹ thuật F3 rối mắt thành bảng thông tin màu sắc chia từng nhóm rõ ràng, trực quan dễ đọc.',
+    'chat-heads': 'Hiển thị ảnh đại diện khuôn mặt 3D của người chơi ngay trước mỗi dòng tin nhắn trong khung Chat.',
+    'no-chat-reports': 'Bảo vệ quyền riêng tư trong khung Chat: Gỡ bỏ chữ ký mã hóa báo cáo tin nhắn để bạn trò chuyện an toàn trên các Server.',
+    'entity-model-features': 'Hỗ trợ mô hình sinh vật tùy chỉnh (CEM - Custom Entity Models) giống OptiFine, cần thiết để chạy gói Fresh Animations.',
+    'entity-texture-features': 'Hỗ trợ kết cấu sinh vật ngẫu nhiên, phát sáng trong đêm và chớp mắt (OptiFine ETF), dùng chung với Entity Model Features.',
+    'cit-resewn': 'Cho phép gói tài nguyên đổi hình dạng vũ khí/vật phẩm khi đổi tên trong Đe (Anvil) hoặc phù phép giống tính năng CIT của OptiFine.',
+    'polytone': 'Tùy chỉnh màu sắc bầu trời, sương mù, ánh sáng, màu nước và âm thanh theo từng quần xã cho các gói Resource Pack.',
+    'fusion-connected-textures': 'Thư viện kết nối bề mặt khối vuông (Connected Textures) và mô hình nâng cao cho các gói Resource Pack thế hệ mới.',
+    'chipped': 'Thêm hơn 10.000 biến thể khối trang trí đẹp mắt (gỗ chạm khắc, gạch hoa văn, kính màu, đèn lồng) dành cho tín đồ xây nhà.',
+    'macaws-furniture': 'Thêm hàng trăm món đồ nội thất: Bàn ghế, tủ quần áo, kệ tivi, bàn làm việc, ghế sofa nhiều loại gỗ để trang trí nhà cửa.',
+    'macaws-bridges': 'Thêm các loại cầu gỗ, cầu dây văng, cầu đá cổ điển và cầu đường sắt với lan can đẹp mắt để bắc qua sông, hẻm núi.',
+    'macaws-doors': 'Thêm hàng chục mẫu cửa mới: Cửa trượt kiểu Nhật, cửa kính hiện đại, cửa hầm ngục, cửa chuồng trại và cửa cổng lâu đài.',
+    'handcrafted': 'Bộ sưu tập nội thất phong cách châu Âu cổ điển: Ghế đệm, bàn ăn, tủ kệ, cúp trang trí, tượng đá và chậu cây cảnh tinh xảo.',
+    'supplementaries': 'Thêm hàng trăm vật dụng thông minh hợp phong cách gốc: Biển chỉ đường, lọ thủy tinh, quả địa cầu, đồng hồ, bệ trưng bày và ròng rọc.',
+    'moonlight': 'Thư viện cốt lõi cung cấp hệ thống dữ liệu bản đồ và vật phẩm động cho Supplementaries và các Mod trang trí.',
+    'artifacts': 'Thêm các cổ vật và trang sức phép thuật quý hiếm nằm trong rương kho báu ngầm, mang lại kỹ năng đặc biệt khi đeo lên người.',
+    'better-combat': 'Đại tu hệ thống chiến đấu cận chiến: Thêm hoạt ảnh vung kiếm hai tay, đâm giáo, chém vòng cung mượt mà như Minecraft Dungeons.',
+    'bettercombat': 'Đại tu hệ thống chiến đấu cận chiến: Thêm hoạt ảnh vung kiếm hai tay, đâm giáo, chém vòng cung mượt mà như Minecraft Dungeons.',
+    'playeranimator': 'Thư viện hoạt ảnh nhân vật giúp hiển thị các động tác múa kiếm, né đòn và tung chiêu thức của Better Combat.',
+    'simply-swords': 'Thêm hơn 50 loại vũ khí cận chiến mới: Đại kiếm, song đao, lưỡi hái, thương dài, katana cùng vũ khí huyền thoại có kỹ năng riêng.',
+    'corpse': 'Khi nhân vật chết sẽ để lại một bộ xương giữ toàn bộ đồ đạc bên trong, không bao giờ lo đồ bị cháy mất hay biến mất sau 5 phút.',
+    'youre-in-grave-danger': 'Tạo một ngôi mộ tại đúng vị trí bạn tử trận để bảo quản nguyên vẹn toàn bộ trang bị và trả lại đúng từng ô khi bấm nhận lại.',
+    'comforts': 'Thêm Túi Ngủ (ngủ qua đêm ngoài trời mà không làm mất điểm hồi sinh ở nhà) và Võng (ngủ ban ngày để tua nhanh đến ban đêm).',
+    'polymorph': 'Cho phép bấm nút chọn món đồ muốn ghép khi có 2 công thức chế tạo trùng nguyên liệu nhau giữa các Mod.',
+    'cherished-worlds': 'Cho phép gắn dấu Sao yêu thích để ghim thế giới quan trọng lên đầu danh sách và khóa bảo vệ không cho bấm xóa nhầm.',
+    'better-advancements': 'Mở rộng cửa sổ Thành tựu (Advancements) rộng toàn màn hình với biểu tượng trực quan và xem rõ tiến độ từng nhiệm vụ.',
+    'patchouli': 'Thư viện tạo sách hướng dẫn minh họa trực quan ngay trong game cho các Mod phép thuật và công nghệ.',
+    'owo-lib': 'Thư viện giao diện (UI) và mạng hiện đại trên Fabric giúp các Mod tạo bảng điều khiển mượt mà.',
+    'cardinal-components-api': 'Thư viện lưu trữ dữ liệu đính kèm thực thể, người chơi và thế giới cho các Mod lớn trên Fabric.',
+    'placeholder-api': 'Thư viện hỗ trợ hiển thị biến văn bản động (tên người chơi, máu, ping, thời gian) trên bảng điểm và khung chat.',
+    'midnightlib': 'Thư viện gọn nhẹ cung cấp giao diện chỉnh cài đặt (Config) tự động cho hàng chục Mod tiện ích.',
+    'rightclickharvest': 'Thu hoạch nông sản bằng 1 cú Chuột Phải: Tự động hái lúa, cà rốt, khoai tây chín và trồng lại hạt giống ngay tại chỗ.',
+    'complementary-unbound': 'Gói Shader đẹp và phổ biến nhất thế giới: Nước biển gợn sóng 3D, mây bồng bềnh chân thực, ánh nắng xuyên tán lá tuyệt đẹp.',
+    'complementary-reimagined': 'Gói Shader giữ trọn vẹn phong cách khối vuông gốc của Minecraft (mây vuông, nước trong) nhưng nâng cấp ánh sáng và bóng đổ lung linh.',
+    'bsl-shaders': 'Gói Shader kinh điển với tông màu ấm áp, ánh sáng dịu mắt, mặt nước trong vắt và tối ưu FPS cực tốt cho máy tầm trung.',
+    'solas-shader': 'Gói Shader huyền ảo với hiệu ứng bầu trời đêm đầy tinh vân, cực quang rực rỡ, ánh sáng màu và sương mù điện ảnh.',
+    'bliss-shader': 'Gói Shader bầu khí quyển động: Sương mù thay đổi theo thời tiết, ánh nắng hoàng hôn/bình minh chân thực và hỗ trợ Distant Horizons.',
+    'makeup-ultra-fast': 'Gói Shader siêu nhẹ dành riêng cho máy yếu / Card Onboard: Vẫn có bóng đổ, nước đẹp và lá cây đung đưa mà giữ FPS cực cao.',
+    'super-duper-vanilla': 'Gói Shader phong cách trailer chính thức của Mojang với ánh sáng rực rỡ, bóng đổ sắc nét và hiệu ứng mặt nước sống động.',
+    'fresh-animations': 'Biến toàn bộ Dân làng, Quái vật và Động vật trong Minecraft có chuyển động bước đi, chớp mắt, lắc đầu sống động như phim hoạt hình!',
+    'faithful-32x': 'Nâng cấp độ phân giải toàn bộ khối vuông và vật phẩm từ 16x16 lên 32x32 sắc nét gấp đôi nhưng vẫn giữ nguyên nét vẽ gốc.',
+    'faithful-64x': 'Gói đồ họa độ phân giải cao 64x64 siêu nét, làm mịn chi tiết mọi khối vuông mà không làm mất bản sắc Minecraft gốc.',
+    'bare-bones': 'Đưa đồ họa Minecraft về phong cách tối giản, tươi sáng và mịn màng giống hệt trong các video Trailer chính thức của Mojang.',
+    'stay-true': 'Tinh chỉnh lại kết cấu khối vuông gốc: Thêm lá cây rậm rạp, hoa cỏ đa dạng và chuyển màu địa hình tự nhiên, hài hòa hơn.',
+    'unique-dark': 'Chuyển toàn bộ giao diện túi đồ, rương, bàn chế tạo và menu sang tông màu Tối (Dark Mode) dịu mắt khi chơi ban đêm.',
+    'low-on-fire': 'Hạ thấp ngọn lửa trên màn hình khi nhân vật bị cháy để không che khuất tầm nhìn lúc đang chiến đấu PvP hoặc đi Nether.',
+    'glowing-ores': 'Làm các mạch quặng (Kim cương, Sắt, Vàng, Ngọc lục bảo...) có viền phát sáng nhẹ trong bóng tối để dễ nhận biết khi đào mỏ.'
+  };
+
+  function getVietnameseModExplanation(item, projectType) {
+    const slugLower = String(item.slug || '').toLowerCase();
+    const cleanSlug = slugLower.replace(/-(fabric|forge|neoforge|quilt|mod|pack)$/i, '');
+    if (MOD_DESC_VI_MAP[slugLower]) return MOD_DESC_VI_MAP[slugLower];
+    if (MOD_DESC_VI_MAP[cleanSlug]) return MOD_DESC_VI_MAP[cleanSlug];
+
+    const raw = String(item.description || '').trim();
+    const text = `${item.title || ''} ${raw} ${(item.categories || []).join(' ')}`.toLowerCase();
+    const numMatch = raw.match(/\b(\d+\+?)\b/);
+    const numStr = numMatch && parseInt(numMatch[1], 10) >= 3 ? `hơn ${numMatch[1]} ` : '';
+
+    if (projectType === 'shader') {
+      const sFeats = [];
+      if (/low|potato|fast|fps|performance|lightweight/.test(text)) sFeats.push('tối ưu nhẹ máy giữ FPS cao');
+      if (/water|wave|reflection/.test(text)) sFeats.push('mặt nước phản chiếu 3D');
+      if (/cloud|sky|aurora|atmosphere|fog/.test(text)) sFeats.push('bầu trời, mây & sương mù điện ảnh');
+      if (/shadow|light|sun|ray|pbr|bloom/.test(text)) sFeats.push('ánh nắng & bóng đổ thời gian thực');
+      if (/vanilla|reimagined|cartoon|fantasy/.test(text)) sFeats.push('giữ nét thẩm mỹ hài hòa với Minecraft gốc');
+      if (sFeats.length > 0) {
+        return `Gói Shader nâng cấp đồ họa: Mang lại hiệu ứng ${sFeats.slice(0, 3).join(', ')} giúp thế giới Minecraft lung linh hơn.`;
+      }
+      return 'Gói Shader nâng cấp đồ họa ánh sáng: Hiệu ứng bóng đổ thời gian thực, mặt nước phản chiếu lung linh và bầu trời sống động.';
+    }
+
+    if (projectType === 'resourcepack') {
+      const rFeats = [];
+      if (/32x|64x|128x|hd|faithful|resolution/.test(text)) rFeats.push('nâng cấp độ phân giải sắc nét');
+      if (/gui|hud|dark|menu|inventory/.test(text)) rFeats.push('làm đẹp giao diện túi đồ & menu');
+      if (/3d|model|animation|entity|fresh/.test(text)) rFeats.push('bổ sung mô hình 3D & hoạt ảnh sinh động');
+      if (/pvp|fps|short sword|low fire|clear|ore/.test(text)) rFeats.push('tối ưu tầm nhìn rõ ràng cho PvP & đào mỏ');
+      if (/sound|audio|music|ambient/.test(text)) rFeats.push('cải thiện hiệu ứng âm thanh chân thực');
+      if (rFeats.length > 0) {
+        return `Gói Resource Pack đồ họa: Giúp ${rFeats.slice(0, 3).join(', ')} mà vẫn giữ trải nghiệm mượt mà.`;
+      }
+      return 'Gói tài nguyên đồ họa (Resource Pack): Làm mới kết cấu khối vuông, vật phẩm, mô hình và giao diện trong game đẹp mắt hơn.';
+    }
+
+    const features = [];
+    if (/\b(library|api|core|config|framework|dependency|hook|shared code|kotlin)\b/.test(text) && !/\b(biome|weapon|boss|dungeon)\b/.test(text)) {
+      return 'Thư viện nền tảng & cấu hình (API/Core): Hỗ trợ kỹ thuật bắt buộc giúp các Mod phụ thuộc khác khởi chạy ổn định trong Minecraft.';
+    }
+    if (/\b(fps|performance|lag|stutter|optimize|optimization|cull|culling|memory|ram|tick|chunk load|render engine|fast)\b/.test(text)) {
+      features.push('tối ưu hiệu năng, tăng FPS và giảm giật lag/tiêu thụ RAM');
+    }
+    if (/\b(minimap|world map|waypoint|compass|radar|map)\b/.test(text)) {
+      features.push('hiển thị bản đồ định vị, đánh dấu tọa độ (Waypoint) và dẫn đường');
+    }
+    if (/\b(recipe|jei|rei|emi|crafting|smelt|anvil|disenchant)\b/.test(text)) {
+      features.push('tra cứu & mở rộng công thức chế tạo, rèn đúc vật phẩm tiện lợi');
+    }
+    if (/\b(backpack|chest|storage|inventory|sort|shulker|bag|crate|vault)\b/.test(text)) {
+      features.push('mở rộng ba lô, rương chứa đồ và sắp xếp quản lý kho vật phẩm thông minh');
+    }
+    if (/\b(dragon|boss|monster|mob|creature|animal|wildlife|pet|wolf|dog|cat|bird|fish)\b/.test(text)) {
+      features.push(`bổ sung ${numStr}sinh vật, động vật hoang dã và Boss chiến đấu mới`);
+    }
+    if (/\b(sword|weapon|combat|armor|shield|bow|crossbow|gun|pvp|attack|spear|dagger|katana|damage)\b/.test(text)) {
+      features.push(`thêm ${numStr}vũ khí, giáp trụ và nâng cấp kỹ năng chiến đấu PvP/săn Boss`);
+    }
+    if (/\b(biome|terrain|worldgen|dimension|cave|nether|end|village|structure|dungeon|temple|tower|castle|ruin)\b/.test(text)) {
+      features.push(`mở rộng thế giới với ${numStr}quần xã (Biome), hầm ngục và công trình kiến trúc mới`);
+    }
+    if (/\b(furniture|decor|chair|table|lamp|roof|bridge|window|door|building|chisel|statue|plushie|painting)\b/.test(text)) {
+      features.push(`thêm ${numStr}đồ nội thất, vật phẩm trang trí và khối kiến trúc xây dựng nhà cửa`);
+    }
+    if (/\b(farm|food|crop|cook|kitchen|meal|tree|harvest|fishing|bake|fruit|tea|coffee|wine)\b/.test(text)) {
+      features.push('mở rộng hệ thống trồng trọt, thu hoạch nông trại và chế biến ẩm thực');
+    }
+    if (/\b(magic|spell|mana|wand|enchant|potion|alchemy|ritual|artifact|trinket|ring|amulet|relic)\b/.test(text)) {
+      features.push('bổ sung phép thuật, phù phép (Enchantments) và cổ vật mang năng lực đặc biệt');
+    }
+    if (/\b(machine|tech|energy|power|automation|pipe|factory|train|vehicle|car|plane|aircraft|ship|boat|redstone|gear)\b/.test(text)) {
+      features.push('bổ sung máy móc công nghệ, tự động hóa dây chuyền và phương tiện di chuyển');
+    }
+    if (/\b(animation|3d|skin|cape|camera|first-person|first person|third person|particle|visual|sound|audio|footstep|voice|chat)\b/.test(text)) {
+      features.push('nâng cấp hoạt ảnh chuyển động 3D, hiệu ứng hình ảnh, âm thanh và giao tiếp trong game');
+    }
+    if (/\b(zoom|keybind|tooltip|hud|gui|menu|screenshot|f3|grave|corpse|sleep|bed|villager|trade|xp|experience|vein|tree)\b/.test(text)) {
+      features.push('cải tiến giao diện HUD, phím tắt và bổ sung các tiện ích hỗ trợ sinh tồn mượt mà');
+    }
+
+    if (features.length > 0) {
+      const joined = features.slice(0, 2).join(', kết hợp ');
+      return `Mod giúp ${joined} cho thế giới Minecraft của bạn.`;
+    }
+    return 'Mod mở rộng tính năng, bổ sung nội dung và cải thiện trải nghiệm lối chơi trong thế giới Minecraft.';
+  }
 
   const cardsHtml = state.modAccumulatedHits.map((item) => {
     const dl = item.downloads > 1000000 ? `${(item.downloads / 1000000).toFixed(1)}M tải` : `${Math.max(1, Math.round(item.downloads / 1000))}K tải`;
-    const tags = (item.categories || [])
-      .slice(0, 3)
-      .map((c) => {
-        const key = String(c || '').toLowerCase();
-        return `<span class="mod-tag">${TAG_VI_MAP[key] || c}</span>`;
-      })
+    const activeLoaderKey = String(state.selectedCore || 'fabric').toLowerCase();
+    const rawCats = (item.categories || []).map((c) => String(c || '').toLowerCase()).filter((c) => c && !HIDDEN_RETRO_TAGS.has(c));
+    const loaderCats = rawCats.filter((c) => ['fabric', 'forge', 'quilt', 'neoforge', 'iris', 'optifine'].includes(c));
+    const featureCats = rawCats.filter((c) => !['fabric', 'forge', 'quilt', 'neoforge', 'iris', 'optifine'].includes(c));
+    const pickedLoader = loaderCats.includes(activeLoaderKey) ? [activeLoaderKey] : loaderCats.slice(0, 1);
+    const orderedCats = [...pickedLoader, ...featureCats, ...loaderCats.filter((c) => c !== activeLoaderKey)].slice(0, 3);
+    const tags = orderedCats
+      .map((key) => `<span class="mod-tag">${TAG_VI_MAP[key] || key}</span>`)
       .join('');
     const slugLower = (item.slug || '').toLowerCase();
     const matchedLocal = localItems.find((li) => {
@@ -502,6 +798,10 @@ async function loadModrinthStore(append = false) {
     const btnTitle = isInstalledOtherVer
       ? `Đang có bản ${isInstalledOtherVer} trong máy — Bấm để tự động tải và đổi sang bản ${activeVer}`
       : `Tự động chọn và cài đặt bản chuẩn cho Minecraft ${activeVer} (${state.selectedCore.toUpperCase()})`;
+    const viDesc = getVietnameseModExplanation(item, state.activeModStoreType);
+    const fullTooltip = item.description
+      ? `${viDesc}\n\n[Mô tả gốc Modrinth]: ${item.description}`.replace(/"/g, '&quot;')
+      : viDesc.replace(/"/g, '&quot;');
     return `<div class="mod-card">
       <div class="mod-card-top">
         <img class="mod-icon" src="${item.iconUrl || ''}" alt="" />
@@ -510,7 +810,7 @@ async function loadModrinthStore(append = false) {
           <div class="mod-meta">bởi <strong>${item.author || 'Creator'}</strong> • ${dl}</div>
         </div>
       </div>
-      <div class="mod-desc" title="${(item.description || '').replace(/"/g, '&quot;')}">${item.description || 'Gói nội dung mở rộng chính thức từ kho Modrinth.'}</div>
+      <div class="mod-desc" title="${fullTooltip}">${viDesc}</div>
       <div class="mod-card-foot">
         <div class="mod-tags">${tags}</div>
         <button class="btn-install-mod ${isInstalledExact ? 'installed' : ''}" data-slug="${item.slug}" title="${btnTitle}">${btnText}</button>

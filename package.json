@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.8.0",
-  "description": "Aether Craft v29.8 PRO - Smart Auto-Version Mod Matching & Instant Multi-Version Mod Switcher",
+  "version": "29.9.0",
+  "description": "Aether Craft v29.9 PRO - 100% Vietnamese Mod, Shader & Resource Pack Explanations",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

@@ -519,7 +519,7 @@ async function searchModrinth({
     downloads: h.downloads,
     follows: h.follows || 0,
     author: h.author,
-    categories: (h.categories || []).slice(0, 4)
+    categories: (h.categories || []).slice(0, 12)
   }));
   hits.totalHits = res.total_hits || hits.length;
   return hits;
