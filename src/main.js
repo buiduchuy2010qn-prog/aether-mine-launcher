@@ -24,15 +24,13 @@ const {
 const {
   loginWithMicrosoftModal,
   authenticateMicrosoftFromRefreshToken,
-  generateOfflineUUID
-} = require('./microsoft-auth');
-const {
+  generateOfflineUUID,
   registerCloudAccount,
   loginCloudAccount,
   changeCloudUsername,
   syncCloudCosmetics,
   loginCloudViaBrowser
-} = require('./aether-cloud-auth');
+} = require('./microsoft-auth');
 
 app.commandLine.appendSwitch('js-flags', '--expose-gc');
 // Background throttling enabled for 0% idle CPU/GPU
@@ -542,7 +540,6 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/preload.js',
         'src/launcher-engine.js',
         'src/microsoft-auth.js',
-        'src/aether-cloud-auth.js',
         'src/ui/index.html',
         'src/ui/styles.css',
         'src/ui/renderer.js',
