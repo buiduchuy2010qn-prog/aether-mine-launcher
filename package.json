@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "25.0.0",
-  "description": "Aether Craft v9.0 - Ultimate Minecraft Launcher with Setup Wizard & User Consent Dialogs",
+  "version": "26.0.0",
+  "description": "Aether Craft v26.0 PRO - Real 3D Pixel Minecraft Grass Block & Official Core Loader Logos",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

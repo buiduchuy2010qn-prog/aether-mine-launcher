@@ -137,65 +137,47 @@ function buildCapeDataUrl(type) {
   ctx.fillStyle = p.bg1;
   ctx.fillRect(5, 7, 2, 2);
 
-  // 2) ELYTRA WING UV REGION (x: 22..46, y: 0..22 — Box UV u=22, v=0, w=10, h=20, d=2)
-  // Sculpted 10x20 Minecraft Elytra curved wing silhouette (dx=0 outer edge .. dx=9 inner spine)
-  const wingRows = [
-    '..RRRRRRR.',
-    '.RR11111RR',
-    'RR1122211R',
-    'R1122B221R',
-    'R122BIB21R',
-    'R12BIIIB1R',
-    'R122BIB21R',
-    'R1222B221R',
-    'R12233211R',
-    'R1223321R.',
-    'R1233211R.',
-    'R123B21R..',
-    'R123211R..',
-    'R13B21R...',
-    'R13211R...',
-    'R1321R....',
-    '.R131R....',
-    '.R11R.....',
-    '..RRR.....',
-    '...R......'
+  // 2) OFFICIAL MOJANG 1.21.11 ELYTRA PIXEL MAP (assets/minecraft/textures/entity/equipment/wings/elytra.png)
+  // In Mojang's official elytra.png, x = 22..33 is 100% transparent and the entire curved wing shell
+  // lives at x = 34..45, y = 0..21 so the 3D mesh renders as a razor-sharp single wing plane.
+  const OFFICIAL_ELYTRA_MAP = [
+    [143,143,143,143,143,143,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0],
+    [81,81,77,81,81,81,81,77,0,0,0,0],
+    [81,81,77,77,81,81,81,81,81,0,0,0],
+    [0,81,77,77,81,81,81,81,81,77,0,0],
+    [0,81,77,77,81,81,81,81,81,81,0,0],
+    [0,81,77,81,77,81,81,81,92,92,0,0],
+    [0,81,77,81,81,77,86,92,92,92,111,0],
+    [0,86,77,81,81,86,86,86,92,102,111,0],
+    [0,86,86,86,92,92,92,92,86,102,102,0],
+    [0,92,86,92,86,92,92,102,111,111,120,0],
+    [0,0,92,102,102,102,111,111,111,111,120,143],
+    [0,0,102,111,111,111,102,111,111,120,127,143],
+    [0,0,102,111,111,111,111,102,120,120,127,143],
+    [0,0,111,111,120,127,127,127,127,127,120,136],
+    [0,0,120,127,120,120,127,127,127,127,127,143],
+    [0,0,0,120,127,127,120,120,120,127,143,143],
+    [0,0,0,120,120,127,127,127,127,136,136,136],
+    [0,0,0,136,143,136,143,143,143,143,143,143],
+    [0,0,0,0,143,143,136,136,136,143,143,143],
+    [0,0,0,0,136,143,143,143,143,136,136,136],
+    [0,0,0,0,0,136,136,143,143,143,143,143]
   ];
-  const colorMap = {
-    R: p.rim,
-    '1': p.bg1,
-    '2': p.bg2,
-    '3': p.shade,
-    B: p.border,
-    I: p.icon
-  };
 
-  for (let dy = 0; dy < 20; dy++) {
-    const row = wingRows[dy];
-    for (let dx = 0; dx < 10; dx++) {
-      const ch = row[dx];
-      const col = colorMap[ch];
-      if (!col) continue;
-      ctx.fillStyle = col;
-      // Front (+z) wing face: x = 24..34, y = 2..22
-      ctx.fillRect(24 + dx, 2 + dy, 1, 1);
-      // Back (-z) wing face (mirrored horizontally so 3D silhouette matches front face): x = 36..46, y = 2..22
-      ctx.fillRect(36 + (9 - dx), 2 + dy, 1, 1);
-    }
-    // Outer side edge (-x face, x: 22..24) only where outer rim (dx <= 1) is solid
-    if (row[0] !== '.') {
-      ctx.fillStyle = p.rim;
-      ctx.fillRect(22, 2 + dy, 2, 1);
-    }
-    // Inner spine edge (+x face, x: 34..36) only where upper inner spine (dx === 9) is solid
-    if (row[9] !== '.') {
-      ctx.fillStyle = p.rim;
-      ctx.fillRect(34, 2 + dy, 2, 1);
+  for (let dy = 0; dy < 22; dy++) {
+    const row = OFFICIAL_ELYTRA_MAP[dy];
+    for (let dx = 0; dx < 12; dx++) {
+      const val = row[dx];
+      if (!val) continue;
+      if (val <= 81) ctx.fillStyle = p.rim;
+      else if (val <= 92) ctx.fillStyle = p.bg1;
+      else if (val <= 111) ctx.fillStyle = p.shade;
+      else if (val <= 127) ctx.fillStyle = p.bg2;
+      else ctx.fillStyle = p.border;
+      ctx.fillRect(34 + dx, dy, 1, 1);
     }
   }
-  // Top shoulder edge (+y face, x: 24..34, y: 0..2)
-  ctx.fillStyle = p.rim;
-  ctx.fillRect(26, 0, 7, 2);
 
   return c.toDataURL('image/png');
 }

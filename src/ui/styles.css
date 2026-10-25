@@ -2693,3 +2693,74 @@ html[data-theme="cherry"] {
   gap: 6px !important;
   padding-bottom: 4px !important;
 }
+
+/* v26.0 REAL 3D PIXEL GRASS BLOCK & OFFICIAL CORE LOADER LOGOS */
+.brand-grass-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+}
+
+.badge-grass-img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  margin-right: 5px;
+  vertical-align: -3px;
+}
+
+.core-real-logo {
+  width: 24px !important;
+  height: 24px !important;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.4));
+  transition: transform 0.16s ease;
+}
+
+.core-real-logo.pixel-art {
+  image-rendering: pixelated;
+}
+
+.core-real-logo.rounded-tile {
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.core-tab-btn:hover .core-real-logo,
+.core-tab-btn.active .core-real-logo {
+  transform: scale(1.1);
+}
+
+#dockActiveIconWrap {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-grass-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+}
+
+.dock-core-mini-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  background: #0f172a;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  padding: 1px;
+  object-fit: contain;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+}

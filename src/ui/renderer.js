@@ -175,6 +175,16 @@ function updateSummaryUI() {
   document.getElementById('sideRamText').textContent = ram;
   document.getElementById('dockVersionTitle').textContent = `Minecraft ${ver}`;
   document.getElementById('dockCoreSubtitle').textContent = `Core: ${coreUpper} • RAM: ${ram}`;
+  const dockMiniBadge = document.getElementById('dockCoreMiniBadge');
+  const activeCoreImg = document.querySelector(`.core-tab-btn[data-core="${state.selectedCore}"] img`);
+  if (dockMiniBadge && activeCoreImg) {
+    if (state.selectedCore === 'vanilla') {
+      dockMiniBadge.style.display = 'none';
+    } else {
+      dockMiniBadge.src = activeCoreImg.src;
+      dockMiniBadge.style.display = 'block';
+    }
+  }
   const srvSuffix = state.serverIp ? ` • ${state.serverIp}` : '';
   document.getElementById('launchBtnSub').textContent = `${ver} • ${coreUpper}${srvSuffix}`;
   const isInst = isVersionInstalledOnDisk(ver);
@@ -331,12 +341,13 @@ function renderVersionOptions() {
 function renderFullVersionTable(query = '') {
   const container = document.getElementById('fullVersionsList');
   if (!container) return;
+  const grassSrc = document.getElementById('dockGrassImg')?.src || '';
   const q = query.trim().toLowerCase();
   const list = state.versions.filter((v) => !q || v.id.toLowerCase().includes(q)).slice(0, 120);
   container.innerHTML = list.map((v) => {
     const dateStr = v.releaseTime ? new Date(v.releaseTime).toLocaleDateString('vi-VN') : '';
     const inst = isVersionInstalledOnDisk(v.id);
-    return `<div class="ver-row-card ${v.id === state.selectedVersion ? 'active' : ''}" data-ver="${v.id}"><div><strong>Minecraft ${v.id}</strong><div style="font-size:10px;color:var(--text-muted);">${dateStr}</div></div><span style="color:${inst ? '#16a34a' : 'var(--text-muted)'};font-weight:700;">${inst ? '✓ Đã tải' : v.type.toUpperCase()}</span></div>`;
+    return `<div class="ver-row-card ${v.id === state.selectedVersion ? 'active' : ''}" data-ver="${v.id}"><div style="display:flex;align-items:center;gap:8px;">${grassSrc ? `<img src="${grassSrc}" style="width:22px;height:22px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;" draggable="false"/>` : ''}<div><strong>Minecraft ${v.id}</strong><div style="font-size:10px;color:var(--text-muted);">${dateStr}</div></div></div><span style="color:${inst ? '#16a34a' : 'var(--text-muted)'};font-weight:700;">${inst ? '✓ Đã tải' : v.type.toUpperCase()}</span></div>`;
   }).join('');
   container.querySelectorAll('.ver-row-card').forEach((card) => {
     card.onclick = async () => {
