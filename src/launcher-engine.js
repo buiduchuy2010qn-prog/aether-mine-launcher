@@ -344,14 +344,19 @@ async function fetchLoaderVersions(mcVersion, loaderType) {
 
   if (loaderType === 'fabric') {
     try {
-      const list = await fetchJson(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(mcVersion)}`);
-      return list.slice(0, 12).map((item) => ({
-        version: item.loader.version,
-        stable: item.loader.stable !== false
-      }));
-    } catch (_) {
-      return [];
-    }
+      const list = await fetchJson(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(mcVersion)}?limit=12`);
+      if (Array.isArray(list) && list.length > 0) {
+        return list.slice(0, 12).map((item) => ({
+          version: item.loader.version,
+          stable: item.loader.stable !== false
+        }));
+      }
+    } catch (_) {}
+    return [
+      { version: '0.20.1', stable: true },
+      { version: '0.18.4', stable: true },
+      { version: '0.16.10', stable: true }
+    ];
   }
 
   if (loaderType === 'quilt') {
@@ -1170,24 +1175,35 @@ async function launchMinecraft(config, callbacks = {}) {
   }
 
   let authorization;
-  if (authMode === 'microsoft' && msProfile && msProfile.accessToken) {
-    callbacks.onStatus?.(`Đang xác thực tài khoản Bản Quyền Microsoft (${msProfile.name})...`);
+  if (authMode === 'microsoft' && msProfile && msProfile.name) {
+    callbacks.onStatus?.(`Đang xác thực tài khoản Microsoft (${msProfile.displayName || msProfile.name})...`);
     let activeProfile = msProfile;
-    if (msProfile.refreshToken && typeof msAuth.authenticateMicrosoftFromRefreshToken === 'function') {
+    if (msProfile.isOfficialLicense && msProfile.refreshToken && typeof msAuth.authenticateMicrosoftFromRefreshToken === 'function') {
       try {
         activeProfile = await msAuth.authenticateMicrosoftFromRefreshToken(msProfile.refreshToken);
       } catch (_) {
         activeProfile = msProfile;
       }
     }
-    authorization = {
-      access_token: activeProfile.accessToken,
-      client_token: activeProfile.uuid,
-      uuid: activeProfile.uuid,
-      name: activeProfile.name,
-      user_properties: '{}',
-      meta: { type: 'msa', demo: false }
-    };
+    if (activeProfile.isOfficialLicense && activeProfile.accessToken) {
+      authorization = {
+        access_token: activeProfile.accessToken,
+        client_token: activeProfile.uuid,
+        uuid: activeProfile.uuid,
+        name: activeProfile.name,
+        user_properties: '{}',
+        meta: { type: 'msa', demo: false }
+      };
+    } else {
+      const cleanName = (activeProfile.name || username || 'Player').replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16) || 'Player';
+      authorization = buildOfflineAuthFallback(cleanName, skinModel);
+      if (crackSkinSync) {
+        configureCrackSkinSupport(rootDir);
+      }
+      if (skinDataUrl) {
+        syncActive3DSkinIntoGame(rootDir, cleanName, skinDataUrl, mcVersion);
+      }
+    }
   } else {
     const cleanName = (username || 'Player').trim().slice(0, 16) || 'Player';
     callbacks.onStatus?.(`Đang đồng bộ Skin 3D & khởi tạo tài khoản "${cleanName}"...`);

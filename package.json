@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.4.0",
-  "description": "Aether Craft v30.4 PRO - Side-by-Side Core & Account/Character Name Cards in Compact Window Mode",
+  "version": "30.5.0",
+  "description": "Aether Craft v30.5 PRO - Instant Microsoft Account Picker Login & Loader Build Fix",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

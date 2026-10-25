@@ -474,13 +474,18 @@ function setAuthModeUI(mode) {
   if (mode === 'microsoft' && state.msProfile?.name) {
     document.getElementById('msNotLoggedBox').classList.add('hidden');
     document.getElementById('msLoggedBox').classList.remove('hidden');
-    document.getElementById('msProfileName').textContent = state.msProfile.name;
+    document.getElementById('msProfileName').textContent = `✓ ${state.msProfile.displayName || state.msProfile.name}`;
+    const uuidTag = document.getElementById('uuidPreviewTag');
+    if (uuidTag && state.msProfile.uuid) uuidTag.textContent = `UUID: ${state.msProfile.uuid.slice(0, 8)}...`;
+    update3DNameTag(state.msProfile.name);
     loadCharacterSkin(state.msProfile.name);
   } else if (mode === 'microsoft') {
     document.getElementById('msNotLoggedBox').classList.remove('hidden');
     document.getElementById('msLoggedBox').classList.add('hidden');
     loadCharacterSkin(state.selectedSkinPreset || state.username || 'StevePlayer');
   } else {
+    updateCrackUuidPreview(state.username);
+    update3DNameTag(state.username);
     loadCharacterSkin(state.selectedSkinPreset || state.username || 'StevePlayer');
   }
   updateSummaryUI(); saveCurrentConfig();
@@ -676,6 +681,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.wt-model-btn').forEach((b) => b.classList.toggle('active', b.dataset.model === state.skinModel));
   document.querySelectorAll('.core-tab-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.core === state.selectedCore));
   setAuthModeUI(state.authMode);
+  refreshLoaderBuilds();
 
   document.getElementById('btnMin').onclick = () => window.aetherAPI.minimize();
   document.getElementById('btnMax').onclick = () => window.aetherAPI.maximize();
@@ -1015,12 +1021,29 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btnMsLogin').onclick = async () => {
     const btn = document.getElementById('btnMsLogin');
-    btn.disabled = true; btn.querySelector('span').textContent = 'Đang mở Microsoft OAuth2...';
+    const stEl = document.getElementById('statusText');
+    btn.disabled = true;
+    btn.querySelector('span').textContent = 'Đang mở cửa sổ Microsoft...';
+    if (stEl) stEl.textContent = '⏳ Hãy chọn tài khoản Microsoft của bạn trong cửa sổ đăng nhập...';
     const res = await window.aetherAPI.loginMicrosoft();
-    btn.disabled = false; btn.querySelector('span').textContent = 'Đăng Nhập Microsoft OAuth2';
-    if (res.ok && res.profile) { state.msProfile = res.profile; setAuthModeUI('microsoft'); }
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Đăng Nhập Tài Khoản Microsoft OAuth2';
+    if (res?.ok && res.profile) {
+      state.msProfile = res.profile;
+      setAuthModeUI('microsoft');
+      saveCurrentConfig();
+      if (stEl) stEl.textContent = `✓ Đã đăng nhập Microsoft thành công: ${res.profile.displayName || res.profile.name}!`;
+    } else if (res?.error) {
+      if (stEl) stEl.textContent = `⚠ ${res.error}`;
+    }
   };
-  document.getElementById('btnMsLogout').onclick = () => { state.msProfile = null; setAuthModeUI('microsoft'); saveCurrentConfig(); };
+  document.getElementById('btnMsLogout').onclick = () => {
+    state.msProfile = null;
+    setAuthModeUI('microsoft');
+    saveCurrentConfig();
+    const stEl = document.getElementById('statusText');
+    if (stEl) stEl.textContent = 'Đã đăng xuất tài khoản Microsoft.';
+  };
 
   document.querySelectorAll('.srv-pill').forEach((pill) => { pill.onclick = () => setServerIpEverywhere(pill.dataset.srv); });
   if (document.getElementById('quickServerInput')) document.getElementById('quickServerInput').oninput = (e) => setServerIpEverywhere(e.target.value);

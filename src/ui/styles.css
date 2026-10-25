@@ -4819,11 +4819,56 @@ html[data-theme="cherry"] {
   display: block !important;
 }
 
+.version-selectors-row .vs-col {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
 .version-selectors-row .ver-label-bar {
   min-height: 24px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+}
+
+.version-selectors-row .vtype-group {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 3px !important;
+  flex-shrink: 0 !important;
+}
+
+.version-selectors-row .vtype-btn {
+  padding: 2px 6px !important;
+  font-size: 10.5px !important;
+  white-space: nowrap !important;
+}
+
+#msLoggedBox.ms-logged-inline {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  border-radius: 9px !important;
+  background: rgba(22, 163, 74, 0.12) !important;
+  border: 1.5px solid rgba(22, 163, 74, 0.4) !important;
+}
+
+#msLoggedBox.ms-logged-inline.hidden {
+  display: none !important;
+}
+
+#msProfileName {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: var(--accent) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .modrinth-grid {
