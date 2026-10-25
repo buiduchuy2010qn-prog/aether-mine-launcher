@@ -33,21 +33,37 @@ function update3DNameTag(_nameStr) {
 
 async function applyCapeToViewer(capeType) {
   state.capeType = capeType || 'none';
+  if (state.capeType === 'none' && state.backEquipment === 'elytra') {
+    state.backEquipment = 'cape';
+  }
   document.querySelectorAll('#capeSelectorBar .cape-chip').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.cape === state.capeType);
   });
   const btnElytra = document.getElementById('btnToggleElytra');
   if (btnElytra) btnElytra.classList.toggle('active', state.backEquipment === 'elytra');
   if (!skinViewer) return;
-  const effectiveType = (state.backEquipment === 'elytra' && state.capeType === 'none') ? 'diamond' : state.capeType;
+  const effectiveType = (state.backEquipment === 'elytra' && state.capeType === 'none') ? 'mojang' : state.capeType;
   const capeUrl = buildCapeDataUrl(effectiveType);
   try {
     if (capeUrl) {
       await skinViewer.loadCape(capeUrl, { backEquipment: state.backEquipment || 'cape' });
+      if (state.backEquipment === 'elytra' && skinViewer.playerObject?.elytra) {
+        skinViewer.playerObject.elytra.leftWing.rotation.z = 0.44;
+        skinViewer.playerObject.elytra.leftWing.rotation.y = 0.14;
+        skinViewer.playerObject.elytra.updateRightWing();
+      }
     } else {
       skinViewer.loadCape(null);
     }
+    skinViewer.renderPaused = false;
     skinViewer.render();
+    setTimeout(() => {
+      const wrap = document.getElementById('webglStageWrap');
+      if (skinViewer && !skinViewer.autoRotate && !wrap?.matches(':hover')) {
+        skinViewer.render();
+        skinViewer.renderPaused = true;
+      }
+    }, 2200);
   } catch (_) {}
 }
 
@@ -520,13 +536,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const btnElytra = document.getElementById('btnToggleElytra');
   if (btnElytra) {
-    btnElytra.onclick = () => {
+    btnElytra.onclick = async () => {
       state.backEquipment = state.backEquipment === 'elytra' ? 'cape' : 'elytra';
-      if (state.backEquipment === 'elytra' && state.capeType === 'none') state.capeType = 'diamond';
-      applyCapeToViewer(state.capeType);
+      if (state.backEquipment === 'elytra' && state.capeType === 'none') state.capeType = 'mojang';
+      if (skinViewer?.playerObject) {
+        skinViewer.playerObject.rotation.y = state.backEquipment === 'elytra' ? Math.PI * 0.78 : 0;
+      }
+      await applyCapeToViewer(state.capeType);
       document.getElementById('statusText').textContent = state.backEquipment === 'elytra'
-        ? '🪽 Đã đeo Cánh cứng Elytra 3D lên lưng nhân vật!'
-        : '🧣 Đã chuyển sang chế độ Áo choàng (Cape 3D).';
+        ? '✓ Đã đeo Cánh cứng Elytra 3D (Xoay lưng 3/4 để xem trọn bộ cánh)!'
+        : '✓ Đã chuyển sang chế độ Áo choàng (Cape 3D).';
     };
   }
   let idleGpuTimer = null;
@@ -630,15 +649,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnRot.onclick = () => {
       if (!skinViewer) return;
       skinViewer.autoRotate = !skinViewer.autoRotate;
+      if (skinViewer.autoRotate) skinViewer.renderPaused = false;
       btnRot.classList.toggle('active', skinViewer.autoRotate);
+      scheduleIdleGpuPause(2500);
     };
   }
   const btnCam = document.getElementById('btnResetCam');
   if (btnCam) {
     btnCam.onclick = () => {
       if (!skinViewer) return;
-      skinViewer.camera.position.set(0, 12, 42);
+      skinViewer.camera.position.set(-14, 11, 42);
       if (skinViewer.playerObject) skinViewer.playerObject.rotation.y = 0;
+      skinViewer.renderPaused = false;
+      skinViewer.render();
+      scheduleIdleGpuPause(2000);
     };
   }
   document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {

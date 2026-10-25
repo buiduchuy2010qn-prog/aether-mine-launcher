@@ -104,7 +104,9 @@ ipcMain.on('win:maximize', () => {
 });
 ipcMain.on('win:close', () => {
   cleanupJavaTempAndTrimRam();
-  mainWindow?.close();
+  mainWindow?.destroy();
+  app.quit();
+  app.exit(0);
 });
 
 ipcMain.handle('sys:info', async () => {
@@ -442,7 +444,8 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/ui/index.html',
         'src/ui/styles.css',
         'src/ui/renderer.js',
-        'src/ui/store-features.js'
+        'src/ui/store-features.js',
+        'src/ui/minecraft-logo.png'
       ];
       const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main';
       for (let i = 0; i < filesToSync.length; i++) {

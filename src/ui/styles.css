@@ -2570,18 +2570,49 @@ html[data-theme="cherry"] {
   color: #22c55e !important;
   border: 1px solid #22c55e !important;
 }
-/* ================= V23.0 PRO: AUTHENTIC MINECRAFT 3D WORDMARK, OFFICIAL EMBLEMS & STUDIO ALIGNMENT ================= */
+/* ================= V24.0 PRO: AUTHENTIC MOJANG MINECRAFT 3D WORDMARK, OFFICIAL EMBLEMS & STUDIO ALIGNMENT ================= */
+.titlebar-mc-logo {
+  height: 21px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.55));
+}
+
 .mc-official-logo-wrap {
-  margin: 2px 0 4px 0;
-  display: flex;
+  margin: 4px 0 6px 0;
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
 }
 
-.mc-wordmark-svg {
-  display: block;
+.hero-mc-logo-img {
+  width: 315px;
   max-width: 100%;
   height: auto;
-  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55));
+  display: block;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.85));
+}
+
+.mc-java-edition-plaque {
+  margin-top: -5px;
+  background: linear-gradient(180deg, #3f3b37 0%, #201d1b 100%);
+  border: 1.5px solid #968c84;
+  border-bottom-color: #141210;
+  border-right-color: #4f4944;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 4px 10px rgba(0, 0, 0, 0.85);
+  padding: 2px 18px;
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.mc-java-edition-plaque span {
+  display: block;
+  font-family: 'Segoe UI Black', 'Arial Black', sans-serif;
+  font-size: 9.8px;
+  font-weight: 900;
+  letter-spacing: 3.4px;
+  color: #f4f0ec;
+  text-shadow: 0 1.5px 0 #000000;
 }
 
 .hero-banner-clean {

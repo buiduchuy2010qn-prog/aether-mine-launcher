@@ -106,20 +106,97 @@ function createFallbackSteveSkinDataUrl() {
 }
 function buildCapeDataUrl(type) {
   if (!type || type === 'none') return null;
-  const c = document.createElement('canvas'); c.width = 64; c.height = 32;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 32;
   const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 64, 32);
+
   const palettes = {
-    mojang: { bg1: '#991b1b', bg2: '#dc2626', border: '#fbbf24', icon: '#fef08a' },
-    gold: { bg1: '#78350f', bg2: '#d97706', border: '#fde047', icon: '#fffbeb' },
-    cherry: { bg1: '#9d174d', bg2: '#f472b6', border: '#fbcfe8', icon: '#ffffff' },
-    diamond: { bg1: '#0f172a', bg2: '#0284c7', border: '#38bdf8', icon: '#e0f2fe' }
+    mojang:  { rim: '#450a0a', bg1: '#991b1b', bg2: '#dc2626', shade: '#b91c1c', border: '#fbbf24', icon: '#fef08a' },
+    gold:    { rim: '#451a03', bg1: '#78350f', bg2: '#d97706', shade: '#b45309', border: '#fde047', icon: '#fffbeb' },
+    cherry:  { rim: '#500724', bg1: '#9d174d', bg2: '#f472b6', shade: '#db2777', border: '#fbcfe8', icon: '#ffffff' },
+    diamond: { rim: '#082f49', bg1: '#0f172a', bg2: '#0284c7', shade: '#0369a1', border: '#38bdf8', icon: '#e0f2fe' }
   };
   const p = palettes[type] || palettes.mojang;
-  ctx.fillStyle = p.bg1; ctx.fillRect(0, 0, 24, 20);
-  ctx.fillStyle = p.bg2; ctx.fillRect(1, 1, 10, 16); ctx.fillRect(12, 1, 10, 16);
-  ctx.fillStyle = p.border; ctx.fillRect(1, 1, 10, 1); ctx.fillRect(1, 16, 10, 1); ctx.fillRect(1, 1, 1, 16); ctx.fillRect(10, 1, 1, 16);
-  ctx.fillStyle = p.icon; ctx.fillRect(4, 5, 4, 6); ctx.fillRect(3, 6, 6, 4);
-  ctx.fillStyle = p.bg1; ctx.fillRect(5, 7, 2, 2);
+
+  // 1) CAPE UV REGION (strictly x: 0..22, y: 0..17 so it never bleeds into Elytra UV at x >= 22)
+  ctx.fillStyle = p.bg1;
+  ctx.fillRect(0, 0, 22, 17);
+  ctx.fillStyle = p.bg2;
+  ctx.fillRect(1, 1, 10, 16);
+  ctx.fillRect(12, 1, 10, 16);
+  ctx.fillStyle = p.border;
+  ctx.fillRect(1, 1, 10, 1);
+  ctx.fillRect(1, 16, 10, 1);
+  ctx.fillRect(1, 1, 1, 16);
+  ctx.fillRect(10, 1, 1, 16);
+  ctx.fillStyle = p.icon;
+  ctx.fillRect(4, 5, 4, 6);
+  ctx.fillRect(3, 6, 6, 4);
+  ctx.fillStyle = p.bg1;
+  ctx.fillRect(5, 7, 2, 2);
+
+  // 2) ELYTRA WING UV REGION (x: 22..46, y: 0..22 — Box UV u=22, v=0, w=10, h=20, d=2)
+  // Sculpted 10x20 Minecraft Elytra curved wing silhouette (dx=0 outer edge .. dx=9 inner spine)
+  const wingRows = [
+    '..RRRRRRR.',
+    '.RR11111RR',
+    'RR1122211R',
+    'R1122B221R',
+    'R122BIB21R',
+    'R12BIIIB1R',
+    'R122BIB21R',
+    'R1222B221R',
+    'R12233211R',
+    'R1223321R.',
+    'R1233211R.',
+    'R123B21R..',
+    'R123211R..',
+    'R13B21R...',
+    'R13211R...',
+    'R1321R....',
+    '.R131R....',
+    '.R11R.....',
+    '..RRR.....',
+    '...R......'
+  ];
+  const colorMap = {
+    R: p.rim,
+    '1': p.bg1,
+    '2': p.bg2,
+    '3': p.shade,
+    B: p.border,
+    I: p.icon
+  };
+
+  for (let dy = 0; dy < 20; dy++) {
+    const row = wingRows[dy];
+    for (let dx = 0; dx < 10; dx++) {
+      const ch = row[dx];
+      const col = colorMap[ch];
+      if (!col) continue;
+      ctx.fillStyle = col;
+      // Front (+z) wing face: x = 24..34, y = 2..22
+      ctx.fillRect(24 + dx, 2 + dy, 1, 1);
+      // Back (-z) wing face (mirrored horizontally so 3D silhouette matches front face): x = 36..46, y = 2..22
+      ctx.fillRect(36 + (9 - dx), 2 + dy, 1, 1);
+    }
+    // Outer side edge (-x face, x: 22..24) only where outer rim (dx <= 1) is solid
+    if (row[0] !== '.') {
+      ctx.fillStyle = p.rim;
+      ctx.fillRect(22, 2 + dy, 2, 1);
+    }
+    // Inner spine edge (+x face, x: 34..36) only where upper inner spine (dx === 9) is solid
+    if (row[9] !== '.') {
+      ctx.fillStyle = p.rim;
+      ctx.fillRect(34, 2 + dy, 2, 1);
+    }
+  }
+  // Top shoulder edge (+y face, x: 24..34, y: 0..2)
+  ctx.fillStyle = p.rim;
+  ctx.fillRect(26, 0, 7, 2);
+
   return c.toDataURL('image/png');
 }
 
