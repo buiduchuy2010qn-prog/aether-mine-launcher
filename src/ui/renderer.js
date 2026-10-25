@@ -401,6 +401,67 @@ function syncBoosterCheckboxes() {
     if (hEl) hEl.checked = Boolean(state[key]);
     if (sEl) sEl.checked = Boolean(state[key]);
   });
+  const advText = document.getElementById('advPerfSummaryText');
+  if (advText) {
+    const activeTags = [];
+    if (state.aikarFlags) activeTags.push('Đa nhân G1GC');
+    if (state.hideLauncherOnPlay) activeTags.push('Ngủ đông 0%');
+    if (state.fastSkipHash) activeTags.push('Vào nhanh <1s');
+    advText.textContent = activeTags.length ? activeTags.join(' • ') : 'Chế độ tiêu chuẩn';
+  }
+}
+
+function setLaunchUiState(phase, statusMsg) {
+  const btnLaunch = document.getElementById('btnLaunch');
+  const launchBtnText = document.getElementById('launchBtnText');
+  const btnKill = document.getElementById('btnForceKill');
+  const statusEl = document.getElementById('statusText');
+  const pctEl = document.getElementById('progressPercent');
+  const barEl = document.getElementById('progressBar');
+
+  state.launchPhase = phase;
+  if (phase === 'idle') {
+    state.isLaunching = false;
+    if (btnLaunch) {
+      btnLaunch.disabled = false;
+      btnLaunch.classList.remove('is-starting', 'is-playing');
+    }
+    if (launchBtnText) launchBtnText.textContent = '▶ CHƠI NGAY';
+    if (btnKill) btnKill.classList.add('hidden');
+    if (pctEl) pctEl.textContent = '100%';
+    if (barEl) barEl.style.width = '100%';
+    if (statusMsg && statusEl) statusEl.textContent = statusMsg;
+  } else if (phase === 'starting') {
+    state.isLaunching = true;
+    if (btnLaunch) {
+      btnLaunch.disabled = true;
+      btnLaunch.classList.add('is-starting');
+      btnLaunch.classList.remove('is-playing');
+    }
+    if (launchBtnText) launchBtnText.textContent = '⏳ ĐANG KHỞI ĐỘNG...';
+    if (btnKill) {
+      btnKill.classList.remove('hidden');
+      const sp = btnKill.querySelector('span');
+      if (sp) sp.textContent = '✕ HỦY KHỞI ĐỘNG';
+    }
+    if (statusMsg && statusEl) statusEl.textContent = statusMsg;
+  } else if (phase === 'playing') {
+    state.isLaunching = true;
+    if (btnLaunch) {
+      btnLaunch.disabled = true;
+      btnLaunch.classList.remove('is-starting');
+      btnLaunch.classList.add('is-playing');
+    }
+    if (launchBtnText) launchBtnText.textContent = '🎮 ĐANG TRONG GAME';
+    if (btnKill) {
+      btnKill.classList.remove('hidden');
+      const sp = btnKill.querySelector('span');
+      if (sp) sp.textContent = '⏹ DỪNG GAME NGAY';
+    }
+    if (pctEl) pctEl.textContent = '100%';
+    if (barEl) barEl.style.width = '100%';
+    if (statusEl) statusEl.textContent = statusMsg || '🟢 Đang chơi Minecraft — Ngủ đông 0% GPU';
+  }
 }
 
 function appendLog(line, type = 'normal') {
@@ -821,12 +882,37 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const bindTogglePair = (homeId, setId, key) => {
     const hEl = document.getElementById(homeId), sEl = document.getElementById(setId);
-    if (hEl) hEl.onchange = (e) => { state[key] = e.target.checked; if (sEl) sEl.checked = e.target.checked; saveCurrentConfig(); };
-    if (sEl) sEl.onchange = (e) => { state[key] = e.target.checked; if (hEl) hEl.checked = e.target.checked; saveCurrentConfig(); };
+    if (hEl) hEl.onchange = (e) => { state[key] = e.target.checked; if (sEl) sEl.checked = e.target.checked; syncBoosterCheckboxes(); saveCurrentConfig(); };
+    if (sEl) sEl.onchange = (e) => { state[key] = e.target.checked; if (hEl) hEl.checked = e.target.checked; syncBoosterCheckboxes(); saveCurrentConfig(); };
   };
   bindTogglePair('homeAikarCheck', 'aikarFlagsCheck', 'aikarFlags');
   bindTogglePair('homeHibernateCheck', 'hideLauncherCheck', 'hideLauncherOnPlay');
   bindTogglePair('homeFastSkipCheck', 'fastSkipCheck', 'fastSkipHash');
+
+  const btnToggleAdv = document.getElementById('btnToggleAdvRam');
+  const advRamBody = document.getElementById('homeAdvRamBody');
+  const advToggleText = document.getElementById('advToggleBtnText');
+  if (btnToggleAdv && advRamBody) {
+    btnToggleAdv.onclick = () => {
+      const isHidden = advRamBody.classList.toggle('hidden');
+      btnToggleAdv.classList.toggle('active', !isHidden);
+      if (advToggleText) {
+        advToggleText.textContent = isHidden ? '⚙️ Chỉnh RAM & Tối ưu ▾' : '▲ Thu gọn cấu hình';
+      }
+    };
+  }
+
+  document.querySelectorAll('#wardrobeTabNav .wtab-btn').forEach((btn) => {
+    btn.onclick = () => {
+      const targetTab = btn.dataset.wtab;
+      document.querySelectorAll('#wardrobeTabNav .wtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.wardrobe-toolbar .wtab-panel').forEach((panel) => {
+        const match = panel.id === `wtab-${targetTab}`;
+        panel.classList.toggle('active', match);
+        panel.classList.toggle('hidden', !match);
+      });
+    };
+  });
 
   document.getElementById('javaPathInput').oninput = (e) => { state.javaPath = e.target.value.trim() || 'java'; saveCurrentConfig(); };
   document.getElementById('gameDirInput').oninput = (e) => { state.gameDir = e.target.value.trim(); saveCurrentConfig(); };
@@ -874,11 +960,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btnForceKill').onclick = async () => {
     await window.aetherAPI.forceKillGame();
-    state.isLaunching = false;
-    document.getElementById('btnLaunch').disabled = false;
-    document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
-    document.getElementById('btnForceKill').classList.add('hidden');
-    document.getElementById('statusText').textContent = 'Đã tắt nhanh Minecraft & giải phóng RAM!';
+    setLaunchUiState('idle', 'Đã dừng Minecraft & giải phóng RAM!');
   };
 
   document.getElementById('btnLaunch').onclick = async () => {
@@ -903,10 +985,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         saveCurrentConfig();
       }
     }
-    state.isLaunching = true;
-    const btn = document.getElementById('btnLaunch'); btn.disabled = true;
-    document.getElementById('btnForceKill').classList.remove('hidden');
-    document.getElementById('launchBtnText').textContent = 'ĐANG KHỞI ĐỘNG...';
+    setLaunchUiState('starting', `Đang khởi tạo Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()})...`);
 
     const res = await window.aetherAPI.launchGame({
       authMode: state.authMode, username: state.username, crackSkinSync: state.crackSkinSync,
@@ -917,10 +996,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (!res.ok) {
-      state.isLaunching = false; btn.disabled = false;
-      document.getElementById('btnForceKill').classList.add('hidden');
-      document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
-      document.getElementById('statusText').textContent = `Lỗi: ${res.error}`;
+      setLaunchUiState('idle', `Lỗi khởi động: ${res.error}`);
       appendLog(`Lỗi khởi động: ${res.error}`, 'error');
     }
   };
@@ -951,30 +1027,35 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.aetherAPI.onProgress((p) => {
+    if (state.launchPhase === 'playing') return;
     document.getElementById('progressPercent').textContent = `${p.percent}%`;
     document.getElementById('progressBar').style.width = `${p.percent}%`;
     document.getElementById('statusText').textContent = `Đang tải (${p.type}): ${p.task}/${p.total}`;
   });
-  window.aetherAPI.onStatus((st) => { document.getElementById('statusText').textContent = st; appendLog(st, 'info'); });
-  window.aetherAPI.onLog((line) => appendLog(line));
+  window.aetherAPI.onStatus((st) => {
+    if (state.launchPhase !== 'playing') {
+      document.getElementById('statusText').textContent = st;
+    }
+    appendLog(st, 'info');
+  });
+  window.aetherAPI.onLog((line) => {
+    appendLog(line);
+    if (state.launchPhase === 'starting' && (line.includes('LWJGL') || line.includes('OpenAL initialized') || line.includes('Sound engine started') || line.includes('Created: ') || line.includes('Setting user:'))) {
+      if (skinViewer) skinViewer.renderPaused = true;
+      setLaunchUiState('playing', '🟢 Đang chơi Minecraft — Ngủ đông 0% GPU');
+    }
+  });
   window.aetherAPI.onGameReady(() => {
     if (skinViewer) skinViewer.renderPaused = true;
-    document.getElementById('btnForceKill').classList.remove('hidden');
-    document.getElementById('launchBtnText').textContent = 'ĐANG CHƠI GAME';
-    document.getElementById('statusText').textContent = 'Đang chơi (Ngủ đông 0% GPU)';
+    setLaunchUiState('playing', '🟢 Đang chơi Minecraft — Ngủ đông 0% GPU');
   });
   window.aetherAPI.onClose(async (code) => {
-    state.isLaunching = false;
     if (skinViewer) skinViewer.renderPaused = false;
-    document.getElementById('btnForceKill').classList.add('hidden');
-    const btn = document.getElementById('btnLaunch'); btn.disabled = false;
-    document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
     await refreshInstalledVersions();
     updateSummaryUI();
-    if (code === 0 || code === null || code === undefined) {
-      document.getElementById('statusText').textContent = 'Đã thoát Minecraft mượt mà (Mã: 0)';
-    } else {
-      document.getElementById('statusText').textContent = `Minecraft đã đóng (Mã: ${code}) — Đã giải phóng RAM`;
-    }
+    const exitMsg = (code === 0 || code === null || code === undefined)
+      ? 'Đã thoát Minecraft mượt mà (Mã: 0)'
+      : `Minecraft đã đóng (Mã: ${code}) — Đã giải phóng RAM`;
+    setLaunchUiState('idle', exitMsg);
   });
 });

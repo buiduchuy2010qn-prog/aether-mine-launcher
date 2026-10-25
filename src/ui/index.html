@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v28.2 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v29.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,34 +16,34 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v28.2 PRO</span>
+          <span class="brand-version">v29.0 PRO</span>
         </div>
       </div>
 
       <div class="theme-studio-bar">
         <span class="ts-label">Giao diện:</span>
-        <button class="ts-chip" data-theme-pick="mojang">Mojang Dark</button>
+        <button class="ts-chip" data-theme-pick="mojang">Mojang</button>
         <button class="ts-chip active" data-theme-pick="lunar">Lunar</button>
         <button class="ts-chip" data-theme-pick="modrinth">Modrinth</button>
         <button class="ts-chip" data-theme-pick="feather">Feather</button>
         <button class="ts-chip" data-theme-pick="cherry">Cherry</button>
-        <button class="ts-chip" data-theme-pick="prism">Sáng (Light)</button>
+        <button class="ts-chip" data-theme-pick="prism">Sáng</button>
       </div>
 
       <div class="titlebar-telemetry">
-        <div class="telemetry-pill"><span id="cpuBadge">12 Nhân CPU</span></div>
+        <div class="telemetry-pill hidden"><span id="cpuBadge">12 Nhân CPU</span></div>
         <div class="telemetry-pill telemetry-ram-live" title="Tự động cập nhật dung lượng RAM thực tế mỗi 3 giây">
           <span class="live-dot-green"></span>
           <span id="ramBadge">RAM trống: -- GB</span>
           <div class="ram-mini-track"><div class="ram-mini-fill" id="ramLiveBarFill" style="width: 45%"></div></div>
         </div>
-        <button class="ram-boost-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">Cập nhật App</span>
-        </button>
-        <button class="ram-boost-btn" id="btnTrimRam">
+        <button class="ram-boost-btn" id="btnTrimRam" title="Giải phóng bộ nhớ đệm RAM ngay lập tức">
           <span class="pulse-dot"></span>
           <span id="ramBoostText">Dọn RAM</span>
+        </button>
+        <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          <span id="updateBtnText">Cập nhật App</span>
         </button>
       </div>
 
@@ -264,12 +264,12 @@
                   </div>
                 </div>
 
-                <!-- CARD B: TÀI KHOẢN & BỘ NHỚ RAM -->
+                <!-- CARD B: TÀI KHOẢN & CẤU HÌNH NHANH -->
                 <div class="dsp-block">
                   <div class="dsp-head">
                     <div class="dsp-head-left">
                       <span class="card-dot cyan"></span>
-                      <h3 class="no-wrap-label">TÀI KHOẢN &amp; BỘ NHỚ RAM</h3>
+                      <h3 class="no-wrap-label">TÀI KHOẢN &amp; CẤU HÌNH NHANH</h3>
                     </div>
                     <span class="uuid-tag-mini no-wrap-label" id="uuidPreviewTag">UUID Offline</span>
                   </div>
@@ -322,74 +322,101 @@
                     </div>
                   </div>
 
-                  <!-- COMPACT SINGLE-LINE BOOSTER CHIPS -->
-                  <div class="home-booster-box">
-                    <div class="ver-label-bar">
-                      <label class="field-label no-wrap-label" style="margin:0;">Tăng Tốc Khởi Chạy &amp; Tối Ưu Máy</label>
-                      <span class="field-hint-mini">Khuyên dùng</span>
+                  <!-- COLLAPSIBLE ADVANCED PERFORMANCE & RAM DRAWER -->
+                  <div class="adv-ram-drawer">
+                    <div class="adv-ram-summary-bar">
+                      <div class="ars-left">
+                        <span class="ars-main">⚡ Cấp phát RAM: <strong class="qram-val" id="ramValueDisplay">3 GB</strong></span>
+                        <span class="ars-sub" id="advPerfSummaryText">Đa nhân G1GC • Ngủ đông 0% • Vào nhanh</span>
+                      </div>
+                      <button type="button" class="btn-adv-toggle" id="btnToggleAdvRam" title="Mở hoặc thu gọn bảng chỉnh RAM và tối ưu máy">
+                        <span id="advToggleBtnText">⚙️ Chỉnh RAM &amp; Tối ưu ▾</span>
+                      </button>
                     </div>
-                    <div class="booster-pills-row">
-                      <label class="booster-check-pill" title="Tối ưu đa nhân CPU G1GC và tự động dọn rác RAM">
-                        <input type="checkbox" id="homeAikarCheck" checked />
-                        <span class="no-wrap-label">Đa Nhân G1GC</span>
-                      </label>
-                      <label class="booster-check-pill" title="Tự động ẩn Launcher về 0% GPU khi đang chơi">
-                        <input type="checkbox" id="homeHibernateCheck" checked />
-                        <span class="no-wrap-label">Ngủ Đông 0%</span>
-                      </label>
-                      <label class="booster-check-pill" title="Bỏ qua quét lại 4591 file đã có sẵn để vào game dưới 1 giây">
-                        <input type="checkbox" id="homeFastSkipCheck" checked />
-                        <span class="no-wrap-label">Vào Nhanh &lt;1s</span>
-                      </label>
-                    </div>
-                  </div>
 
-                  <!-- RAM ALLOCATION SLIDER + 1-CLICK PRESETS -->
-                  <div class="ram-inline-box">
-                    <div class="qram-top">
-                      <span class="field-label no-wrap-label" style="margin:0;">Cấp phát RAM: <strong class="qram-val" id="ramValueDisplay">4 GB</strong></span>
-                      <div class="ram-preset-pills" id="ramPresetBar">
-                        <button class="ram-pill-btn" data-ram="2">2G</button>
-                        <button class="ram-pill-btn active" data-ram="3">3G</button>
-                        <button class="ram-pill-btn" data-ram="4">4G</button>
-                        <button class="ram-pill-btn" data-ram="6">6G</button>
-                        <button class="ram-pill-btn" data-ram="8">8G</button>
+                    <div class="adv-ram-body hidden" id="homeAdvRamBody">
+                      <div class="qram-top">
+                        <span class="field-label no-wrap-label" style="margin:0;">Mức RAM nhanh:</span>
+                        <div class="ram-preset-pills" id="ramPresetBar">
+                          <button class="ram-pill-btn" data-ram="2">2 GB</button>
+                          <button class="ram-pill-btn active" data-ram="3">3 GB</button>
+                          <button class="ram-pill-btn" data-ram="4">4 GB</button>
+                          <button class="ram-pill-btn" data-ram="6">6 GB</button>
+                          <button class="ram-pill-btn" data-ram="8">8 GB</button>
+                        </div>
+                      </div>
+                      <input type="range" id="ramSlider" min="2" max="16" step="1" value="3" class="pro-range" />
+
+                      <div class="booster-pills-row">
+                        <label class="booster-check-pill" title="Tối ưu đa nhân CPU G1GC và tự động dọn rác RAM">
+                          <input type="checkbox" id="homeAikarCheck" checked />
+                          <span>Đa Nhân G1GC</span>
+                        </label>
+                        <label class="booster-check-pill" title="Tự động ẩn Launcher về 0% GPU khi đang chơi">
+                          <input type="checkbox" id="homeHibernateCheck" checked />
+                          <span>Ngủ Đông 0%</span>
+                        </label>
+                        <label class="booster-check-pill" title="Bỏ qua quét lại 4591 file đã có sẵn để vào game dưới 1 giây">
+                          <input type="checkbox" id="homeFastSkipCheck" checked />
+                          <span>Vào Nhanh &lt;1s</span>
+                        </label>
                       </div>
                     </div>
-                    <input type="range" id="ramSlider" min="2" max="16" step="1" value="4" class="pro-range" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- RIGHT COLUMN: 3D WEBGL CHARACTER & WARDROBE STUDIO -->
+            <!-- RIGHT COLUMN: SPACIOUS 3D CHARACTER & TABBED WARDROBE STUDIO -->
             <div class="bento-card skin-studio-card">
               <div class="card-head">
                 <div class="card-title-group"><span class="card-dot emerald"></span><h3>NHÂN VẬT 3D</h3></div>
-                <div class="pose-bar">
-                  <button class="pose-btn active" data-pose="walk" title="Đi bộ">Đi</button>
-                  <button class="pose-btn" data-pose="run" title="Chạy nhanh">Chạy</button>
-                  <button class="pose-btn" data-pose="hit" title="Vung tay chiến đấu PvP">Đánh</button>
-                  <button class="pose-btn" data-pose="fly" title="Bay lượn với cánh Elytra">Bay</button>
-                  <button class="pose-btn" data-pose="idle" title="Đứng thở nhẹ">Đứng</button>
+                <div class="wt-model-switch">
+                  <button class="wt-model-btn active" data-model="default" title="Tay Steve 4px">Classic 4px</button>
+                  <button class="wt-model-btn" data-model="slim" title="Tay Alex 3px">Slim 3px</button>
                 </div>
               </div>
+
               <div class="webgl-stage-wrap stage-bg-stars" id="webglStageWrap">
                 <div class="stage-unified-toolbar">
-                  <button class="stage-ctrl-btn active" id="btnStageBgFx" title="Đổi hiệu ứng nền Sân khấu 3D">Sao Đêm</button>
-                  <button class="stage-ctrl-btn" id="btnToggleElytra" title="Đeo thử Cánh cứng Elytra 3D">Cánh Elytra</button>
-                  <button class="stage-ctrl-btn" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">Xoay 360°</button>
-                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện">Chính Diện</button>
+                  <button class="stage-ctrl-btn active" id="btnStageBgFx" title="Đổi hiệu ứng nền Sân khấu 3D">✨ Sao Đêm</button>
+                  <button class="stage-ctrl-btn" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">🔄 Xoay 360°</button>
+                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện">🎯 Chính Diện</button>
                 </div>
                 <div class="starfield-layer"></div>
                 <canvas id="skinViewerCanvas"></canvas>
                 <div class="webgl-floor-glow"></div>
                 <div class="webgl-hint-pill">Kéo chuột xoay 360° • Cuộn để Zoom</div>
               </div>
-              <!-- UPGRADED 3D WARDROBE TOOLBAR -->
+
+              <!-- CLEAN 3-TAB WARDROBE MANAGER (ZERO CRAMPING, ZERO CLIPPING) -->
               <div class="wardrobe-toolbar">
-                <div class="wt-cape-row">
-                  <span class="wt-cape-label">Đổi nhanh Skin 3D mẫu (Tự đồng bộ vào Game):</span>
+                <div class="wtab-nav" id="wardrobeTabNav">
+                  <button type="button" class="wtab-btn active" data-wtab="pose">🎭 Tư Thế</button>
+                  <button type="button" class="wtab-btn" data-wtab="skin">👕 Đổi Skin</button>
+                  <button type="button" class="wtab-btn" data-wtab="cape">🦸 Áo Choàng</button>
+                </div>
+
+                <!-- SUB-TAB 1: TƯ THẾ & CHỤP ẢNH -->
+                <div class="wtab-panel active" id="wtab-pose">
+                  <div class="pose-grid-5">
+                    <button class="pose-btn active" data-pose="walk" title="Đi bộ">Đi bộ</button>
+                    <button class="pose-btn" data-pose="run" title="Chạy nhanh">Chạy</button>
+                    <button class="pose-btn" data-pose="hit" title="Vung tay chiến đấu PvP">Đánh</button>
+                    <button class="pose-btn" data-pose="fly" title="Bay lượn với cánh Elytra">Bay</button>
+                    <button class="pose-btn" data-pose="idle" title="Đứng thở nhẹ">Đứng</button>
+                  </div>
+                  <div class="wt-row-2col">
+                    <button class="wt-snap-btn" id="btnSnap3DSkin" title="Chụp & Lưu ảnh nhân vật 3D nền trong suốt (.PNG)">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-1px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      <span>Chụp Ảnh 3D</span>
+                    </button>
+                    <button class="wt-layer-inline-btn active" id="btnToggleOuterLayer" title="Bật/Tắt lớp giáp & áo khoác nổi 3D bên ngoài">🧥 Lớp Áo 3D: BẬT</button>
+                  </div>
+                </div>
+
+                <!-- SUB-TAB 2: KHO SKIN MẪU & TẢI PNG -->
+                <div class="wtab-panel hidden" id="wtab-skin">
                   <div class="wt-skin-presets" id="skinPresetBar">
                     <button class="skin-preset-chip" data-skinpreset="Technoblade">Techno</button>
                     <button class="skin-preset-chip" data-skinpreset="Dream">Dream</button>
@@ -397,26 +424,14 @@
                     <button class="skin-preset-chip" data-skinpreset="MHF_Alex">Alex</button>
                     <button class="skin-preset-chip" data-skinpreset="MHF_Steve">Steve</button>
                   </div>
-                </div>
-                <div class="wt-row">
-                  <button class="wt-upload-btn" id="btnUploadSkinPng" title="Tải file ảnh Skin .PNG từ máy tính">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-1px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span>Tải Skin (.PNG)</span>
+                  <button class="wt-upload-btn full-width-btn" id="btnUploadSkinPng" title="Tải file ảnh Skin .PNG từ máy tính">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:5px;vertical-align:-1px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Tải File Skin (.PNG) Từ Máy</span>
                   </button>
-                  <button class="wt-snap-btn" id="btnSnap3DSkin" title="Chụp & Lưu ảnh nhân vật 3D nền trong suốt (.PNG)">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-1px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                    <span>Chụp 3D</span>
-                  </button>
-                  <div class="wt-model-switch">
-                    <button class="wt-model-btn active" data-model="default" title="Tay Steve 4px">Classic</button>
-                    <button class="wt-model-btn" data-model="slim" title="Tay Alex 3px">Slim</button>
-                  </div>
                 </div>
-                <div class="wt-cape-row">
-                  <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span class="wt-cape-label">Áo choàng (Cape 3D):</span>
-                    <button class="wt-layer-inline-btn active" id="btnToggleOuterLayer" title="Bật/Tắt lớp giáp & áo khoác nổi 3D bên ngoài">Lớp Áo 3D: BẬT</button>
-                  </div>
+
+                <!-- SUB-TAB 3: ÁO CHOÀNG & CÁNH ELYTRA -->
+                <div class="wtab-panel hidden" id="wtab-cape">
                   <div class="wt-cape-pills" id="capeSelectorBar">
                     <button class="cape-chip active" data-cape="none">Không</button>
                     <button class="cape-chip" data-cape="mojang">Mojang</button>
@@ -424,6 +439,9 @@
                     <button class="cape-chip" data-cape="cherry">Anh Đào</button>
                     <button class="cape-chip" data-cape="diamond">Aether</button>
                   </div>
+                  <button class="wt-upload-btn full-width-btn" id="btnToggleElytra" title="Đeo thử Cánh cứng Elytra 3D">
+                    <span>🪽 Đeo Thử Cánh Cứng Elytra 3D</span>
+                  </button>
                 </div>
               </div>
             </div>

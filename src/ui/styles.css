@@ -3040,14 +3040,148 @@ html[data-theme="cherry"] {
   padding: 5px 11px !important;
 }
 
-.booster-check-pill {
-  font-size: 11.5px !important;
-  padding: 8px 6px !important;
-  border-radius: 8px !important;
-  justify-content: center !important;
+/* ============================================================================
+   v29.0 PRO: SPACIOUS 3D STUDIO, COLLAPSIBLE ADVANCED DRAWER, COLOR HIERARCHY
+   & HERO PLAY FOCAL POINT
+   ============================================================================ */
+
+/* 1. COLOR DISCIPLINE: SUBTLE ACTIVE CONTROLS SO HERO PLAY BUTTON STANDS OUT */
+.vtype-btn.active,
+.pose-btn.active,
+.skin-preset-chip.active,
+.cape-chip.active,
+.ram-pill-btn.active,
+.wt-model-btn.active {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border: 1.5px solid var(--accent) !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
 }
 
-.booster-check-pill .no-wrap-label {
+.core-tab-btn.active {
+  background: linear-gradient(180deg, var(--accent-glow) 0%, rgba(22, 163, 74, 0.05) 100%) !important;
+  color: var(--text-main) !important;
+  border: 2px solid var(--accent) !important;
+  box-shadow: 0 4px 14px var(--accent-glow) !important;
+}
+
+.core-tab-btn.active strong {
+  color: var(--accent) !important;
+}
+
+.core-tab-btn.active span {
+  color: var(--text-muted) !important;
+}
+
+.auth-tab-btn.active {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border: 1.5px solid var(--accent) !important;
+  font-weight: 800 !important;
+}
+
+/* 2. COLLAPSIBLE ADVANCED RAM & BOOSTER DRAWER IN CARD B */
+.adv-ram-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  margin-top: auto;
+}
+
+.adv-ram-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ars-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ars-main {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ars-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.btn-adv-toggle {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-col);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.15s;
+}
+
+.btn-adv-toggle:hover,
+.btn-adv-toggle.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.adv-ram-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--border-col);
+}
+
+.qram-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+}
+
+.qram-val {
+  font-size: 13.5px !important;
+  color: var(--accent) !important;
+}
+
+.ram-pill-btn {
+  font-size: 11.5px !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+}
+
+.booster-pills-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 6px !important;
+}
+
+.booster-check-pill {
+  font-size: 11.5px !important;
+  padding: 7px 6px !important;
+  border-radius: 8px !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+.booster-check-pill span {
   overflow: visible !important;
   text-overflow: unset !important;
 }
@@ -3058,55 +3192,53 @@ html[data-theme="cherry"] {
   flex-shrink: 0 !important;
 }
 
-.qram-top {
-  flex-wrap: nowrap !important;
-  gap: 6px !important;
+/* 3. SPACIOUS RIGHT 3D CHARACTER & 3-TAB WARDROBE STUDIO */
+.main-play-grid {
+  grid-template-columns: minmax(0, 1fr) clamp(322px, 26vw, 358px) !important;
+  gap: 14px !important;
 }
 
-.qram-val {
-  font-size: 13px !important;
-}
-
-.ram-pill-btn {
-  font-size: 11.5px !important;
-  padding: 4px 9px !important;
-}
-
-/* 5. RIGHT 3D CHARACTER & WARDROBE STUDIO */
 .skin-studio-card {
-  padding: 12px 13px !important;
-  gap: 8px !important;
+  padding: 13px 14px !important;
+  gap: 10px !important;
   overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.skin-studio-card .card-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
 }
 
 .skin-studio-card .card-head h3 {
   font-size: 13.5px !important;
+  font-weight: 800 !important;
 }
 
-.skin-studio-card .pose-bar {
-  gap: 3px !important;
-}
-
-.skin-studio-card .pose-btn {
-  font-size: 11px !important;
-  padding: 4px 7px !important;
+.webgl-stage-wrap {
+  flex: 1 !important;
+  min-height: 280px !important;
 }
 
 .stage-unified-toolbar {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  width: calc(100% - 14px) !important;
-  left: 7px !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  width: calc(100% - 16px) !important;
+  left: 8px !important;
   transform: none !important;
-  gap: 4px !important;
-  padding: 4px !important;
+  gap: 6px !important;
+  padding: 5px !important;
 }
 
 .stage-ctrl-btn {
-  font-size: 11px !important;
-  padding: 5px 2px !important;
+  font-size: 11.5px !important;
+  padding: 6px 4px !important;
   text-align: center !important;
   justify-content: center !important;
+  white-space: nowrap !important;
 }
 
 .webgl-hint-pill {
@@ -3114,48 +3246,105 @@ html[data-theme="cherry"] {
   padding: 4px 12px !important;
 }
 
-.wt-cape-label {
-  font-size: 11.5px !important;
-  font-weight: 700 !important;
+/* 3-TAB WARDROBE MANAGER */
+.wardrobe-toolbar {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding: 9px 10px !important;
+  border-radius: 11px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
 }
 
+.wtab-nav {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  background: var(--bg-card);
+  padding: 4px;
+  border-radius: 9px;
+  border: 1px solid var(--border-col);
+}
+
+.wtab-btn {
+  padding: 6px 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.15s;
+}
+
+.wtab-btn:hover {
+  color: var(--text-main);
+}
+
+.wtab-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 800;
+}
+
+.wtab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.pose-grid-5,
 #skinPresetBar,
 #capeSelectorBar {
   display: grid !important;
   grid-template-columns: repeat(5, 1fr) !important;
   width: 100% !important;
-  gap: 4px !important;
+  gap: 5px !important;
 }
 
+.pose-grid-5 .pose-btn,
 .skin-preset-chip,
 .cape-chip {
+  width: 100% !important;
   font-size: 11.5px !important;
-  padding: 5px 2px !important;
-  min-height: 28px !important;
+  padding: 6px 2px !important;
+  min-height: 30px !important;
+  border-radius: 7px !important;
   text-align: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+.wt-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.wt-row-2col > button,
+.full-width-btn {
+  width: 100% !important;
+  height: 34px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
   justify-content: center !important;
 }
 
-.wt-action-btn {
-  font-size: 11.5px !important;
-  height: 30px !important;
-  padding: 0 9px !important;
-}
-
 .wt-model-btn {
-  font-size: 11px !important;
-  padding: 0 8px !important;
+  font-size: 11.5px !important;
+  padding: 0 10px !important;
+  height: 28px !important;
 }
 
-.wt-layer-inline-btn {
-  font-size: 10.5px !important;
-  padding: 3px 8px !important;
-}
-
-/* 6. BOTTOM OFFICIAL DOCK */
+/* 4. BOTTOM OFFICIAL DOCK & HERO PLAY BUTTON FOCAL POINT */
 .mc-official-dock {
-  height: 76px !important;
-  padding: 0 22px !important;
+  height: 78px !important;
+  padding: 0 24px !important;
 }
 
 #dockActiveIconWrap {
@@ -3169,7 +3358,8 @@ html[data-theme="cherry"] {
 }
 
 #dockVersionTitle {
-  font-size: 15px !important;
+  font-size: 15.5px !important;
+  font-weight: 800 !important;
 }
 
 #dockCoreSubtitle {
@@ -3177,16 +3367,46 @@ html[data-theme="cherry"] {
 }
 
 .btn-mc-official-play {
-  min-width: 265px !important;
-  height: 54px !important;
+  min-width: 295px !important;
+  height: 56px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 52%, #15803d 100%) !important;
+  border: 2px solid #4ade80 !important;
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.25) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease !important;
+}
+
+.btn-mc-official-play:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01) !important;
+  filter: brightness(1.06) !important;
+  box-shadow: 0 12px 28px rgba(22, 163, 74, 0.58), inset 0 2px 0 rgba(255, 255, 255, 0.45) !important;
+}
+
+.btn-mc-official-play.is-starting {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%) !important;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35) !important;
+  opacity: 1 !important;
+}
+
+.btn-mc-official-play.is-playing {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.35) !important;
+  opacity: 1 !important;
 }
 
 .mc-play-main {
-  font-size: 19px !important;
+  font-size: 19.5px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.8px !important;
+  color: #ffffff !important;
 }
 
 .mc-play-sub {
   font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
 }
 
 .drs-top {
@@ -3201,4 +3421,5 @@ html[data-theme="cherry"] {
 .drs-account {
   font-size: 12px !important;
 }
+
 

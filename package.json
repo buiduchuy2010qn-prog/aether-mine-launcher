@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "28.2.0",
-  "description": "Aether Craft v28.2 PRO - Anti-Crash DirectMemory Fix, Full RAM Allocation & Studio UI",
+  "version": "29.0.0",
+  "description": "Aether Craft v29.0 PRO - Clean 3-Tab 3D Character Studio, Collapsible Advanced Config, Color Hierarchy & Unified Launch State",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
