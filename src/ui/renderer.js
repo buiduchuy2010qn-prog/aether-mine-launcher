@@ -111,18 +111,21 @@ async function loadCharacterSkin(username) {
   syncSkinPresetButtons(clean);
   update3DNameTag(state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username);
   const res = await window.aetherAPI.fetchSkinBase64(clean);
-  const skinUrl = res?.ok && res.dataUrl ? res.dataUrl : createFallbackSteveSkinDataUrl();
-  currentSkinDataUrl = skinUrl;
-  state.cachedSkinDataUrl = skinUrl;
+  const rawSkinUrl = res?.ok && res.dataUrl ? res.dataUrl : createFallbackSteveSkinDataUrl();
+  const normalized64Url = typeof convertSkinTo64x64DataUrl === 'function'
+    ? await convertSkinTo64x64DataUrl(rawSkinUrl)
+    : rawSkinUrl;
+  currentSkinDataUrl = normalized64Url;
+  state.cachedSkinDataUrl = normalized64Url;
   saveCurrentConfig();
   if (skinViewer) {
     try {
-      await skinViewer.loadSkin(skinUrl, { model: state.skinModel });
+      await skinViewer.loadSkin(normalized64Url, { model: state.skinModel });
       await applyCapeToViewer(state.capeType);
       skinViewer.render();
     } catch (_) {}
   }
-  draw2DAvatarFace(skinUrl);
+  draw2DAvatarFace(normalized64Url);
 }
 
 function setPose(poseName) {
@@ -802,9 +805,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnUploadSkinPng').onclick = async () => {
     const res = await window.aetherAPI.uploadLocalSkin(state.gameDir, state.username);
     if (res?.ok && res.dataUrl) {
-      currentSkinDataUrl = res.dataUrl;
-      if (skinViewer) skinViewer.loadSkin(res.dataUrl, { model: state.skinModel });
-      draw2DAvatarFace(res.dataUrl);
+      const normUrl = typeof convertSkinTo64x64DataUrl === 'function'
+        ? await convertSkinTo64x64DataUrl(res.dataUrl)
+        : res.dataUrl;
+      currentSkinDataUrl = normUrl;
+      state.cachedSkinDataUrl = normUrl;
+      saveCurrentConfig();
+      if (skinViewer) {
+        try {
+          await skinViewer.loadSkin(normUrl, { model: state.skinModel });
+          skinViewer.render();
+        } catch (_) {}
+      }
+      draw2DAvatarFace(normUrl);
       document.getElementById('statusText').textContent = '✓ Đã nạp ảnh Skin (.PNG) lên nhân vật 3D & lưu vào game!';
     }
   };
@@ -1002,12 +1015,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     setLaunchUiState('starting', `Đang khởi tạo Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()})...`);
 
+    const rawActiveSkin = currentSkinDataUrl || state.cachedSkinDataUrl || createFallbackSteveSkinDataUrl();
+    const finalSkinDataUrl = typeof convertSkinTo64x64DataUrl === 'function'
+      ? await convertSkinTo64x64DataUrl(rawActiveSkin)
+      : rawActiveSkin;
+
     const res = await window.aetherAPI.launchGame({
       authMode: state.authMode, username: state.username, crackSkinSync: state.crackSkinSync,
       msProfile: state.msProfile, mcVersion: state.selectedVersion, loaderType: state.selectedCore,
       loaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB, javaPath: state.javaPath,
       gameDir: state.gameDir, useAikarFlags: state.aikarFlags, fastSkipHash: state.fastSkipHash,
-      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores, skinDataUrl: currentSkinDataUrl, winResolution: state.winResolution
+      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores,
+      skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
     });
 
     if (!res.ok) {

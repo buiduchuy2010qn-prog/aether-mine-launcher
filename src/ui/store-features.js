@@ -182,6 +182,58 @@ function buildCapeDataUrl(type) {
   return c.toDataURL('image/png');
 }
 
+function convertSkinTo64x64DataUrl(imgSource) {
+  return new Promise((resolve) => {
+    if (!imgSource) return resolve(createFallbackSteveSkinDataUrl());
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.drawImage(img, 0, 0);
+
+      try {
+        const hatData = ctx.getImageData(32, 0, 32, 16).data;
+        let hasTrans = false;
+        for (let i = 3; i < hatData.length; i += 4) {
+          if (hatData[i] < 250) { hasTrans = true; break; }
+        }
+        if (!hasTrans) ctx.clearRect(32, 0, 32, 16);
+      } catch (_) {}
+
+      if (img.height === 32) {
+        ctx.clearRect(0, 32, 64, 32);
+        const copyFlipped = (sx, sy, sw, sh, dx, dy) => {
+          ctx.save();
+          ctx.translate(dx + sw, dy);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+          ctx.restore();
+        };
+        copyFlipped(4, 16, 4, 4, 20, 48);
+        copyFlipped(8, 16, 4, 4, 24, 48);
+        copyFlipped(0, 20, 4, 12, 24, 52);
+        copyFlipped(4, 20, 4, 12, 20, 52);
+        copyFlipped(8, 20, 4, 12, 16, 52);
+        copyFlipped(12, 20, 4, 12, 28, 52);
+
+        copyFlipped(44, 16, 4, 4, 36, 48);
+        copyFlipped(48, 16, 4, 4, 40, 48);
+        copyFlipped(40, 20, 4, 12, 40, 52);
+        copyFlipped(44, 20, 4, 12, 36, 52);
+        copyFlipped(48, 20, 4, 12, 32, 52);
+        copyFlipped(52, 20, 4, 12, 44, 52);
+      }
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(imgSource);
+    img.src = imgSource;
+  });
+}
+
 function draw2DAvatarFace(imgSource) {
   const canvas = document.getElementById('avatar2dCanvas');
   if (!canvas) return;

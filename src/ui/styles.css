@@ -3725,17 +3725,17 @@ html[data-theme="cherry"] {
 }
 
 /* Active Secondary Pills: Crisp Charcoal in Light Mode, Frosted Slate in Dark Mode */
-[data-theme="prism"] .ts-chip.active,
-[data-theme="prism"] .vtype-btn.active,
-[data-theme="prism"] .auth-tab-btn.active,
-[data-theme="prism"] .ram-pill-btn.active,
-[data-theme="prism"] .wtab-btn.active,
-[data-theme="prism"] .pose-btn.active,
-[data-theme="prism"] .skin-preset-chip.active,
-[data-theme="prism"] .cape-chip.active,
-[data-theme="prism"] .wt-model-btn.active,
-[data-theme="prism"] .qver-chip.active,
-[data-theme="prism"] .acc-chip.active {
+html[data-theme="prism"] .ts-chip.active,
+html[data-theme="prism"] .vtype-btn.active,
+html[data-theme="prism"] .auth-tab-btn.active,
+html[data-theme="prism"] .ram-pill-btn.active,
+html[data-theme="prism"] .wtab-btn.active,
+html[data-theme="prism"] .pose-btn.active,
+html[data-theme="prism"] .skin-preset-chip.active,
+html[data-theme="prism"] .cape-chip.active,
+html[data-theme="prism"] .wt-model-btn.active,
+html[data-theme="prism"] .qver-chip.active,
+html[data-theme="prism"] .acc-chip.active {
   background: #1e293b !important;
   color: #ffffff !important;
   border: 1px solid #0f172a !important;
@@ -3743,26 +3743,39 @@ html[data-theme="cherry"] {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14) !important;
 }
 
-[data-theme="prism"] .qver-chip.active strong,
-[data-theme="prism"] .qver-chip.active .qver-status {
+html[data-theme="prism"] .qver-chip.active strong,
+html[data-theme="prism"] .qver-chip.active .qver-status {
   color: #ffffff !important;
 }
 
-body:not([data-theme="prism"]) .ts-chip.active,
-body:not([data-theme="prism"]) .vtype-btn.active,
-body:not([data-theme="prism"]) .auth-tab-btn.active,
-body:not([data-theme="prism"]) .ram-pill-btn.active,
-body:not([data-theme="prism"]) .wtab-btn.active,
-body:not([data-theme="prism"]) .pose-btn.active,
-body:not([data-theme="prism"]) .skin-preset-chip.active,
-body:not([data-theme="prism"]) .cape-chip.active,
-body:not([data-theme="prism"]) .wt-model-btn.active,
-body:not([data-theme="prism"]) .qver-chip.active,
-body:not([data-theme="prism"]) .acc-chip.active {
+html:not([data-theme="prism"]) .ts-chip.active,
+html:not([data-theme="prism"]) .vtype-btn.active,
+html:not([data-theme="prism"]) .auth-tab-btn.active,
+html:not([data-theme="prism"]) .ram-pill-btn.active,
+html:not([data-theme="prism"]) .wtab-btn.active,
+html:not([data-theme="prism"]) .pose-btn.active,
+html:not([data-theme="prism"]) .skin-preset-chip.active,
+html:not([data-theme="prism"]) .cape-chip.active,
+html:not([data-theme="prism"]) .wt-model-btn.active,
+html:not([data-theme="prism"]) .qver-chip.active,
+html:not([data-theme="prism"]) .acc-chip.active {
   background: rgba(255, 255, 255, 0.14) !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.36) !important;
   font-weight: 700 !important;
+}
+
+.stage-ctrl-btn.active,
+#btnToggleOuterLayer.active {
+  background: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-col) !important;
+}
+
+.stage-unified-toolbar .stage-ctrl-btn.active {
+  background: rgba(15, 23, 42, 0.85) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.55) !important;
 }
 
 /* 4. RESPONSIVE WINDOW ADAPTATION FOR 1366x768 & RESIZABLE WINDOWS */

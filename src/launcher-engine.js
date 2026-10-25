@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { execSync, exec, spawn } = require('child_process');
 const msAuth = require('./microsoft-auth');
 
@@ -16,15 +17,28 @@ let fastSkipEnabled = true;
 let activeMcProcess = null;
 let fastExitTimer = null;
 
-function buildOfflineAuthFallback(username = 'StevePlayer') {
-  if (typeof msAuth.createOfflineAuth === 'function') {
-    return msAuth.createOfflineAuth(username);
-  }
+function buildOfflineAuthFallback(username = 'StevePlayer', skinModel = 'default') {
   const clean = (username || 'StevePlayer').trim().slice(0, 16) || 'StevePlayer';
-  const md5Bytes = crypto.createHash('md5').update(`OfflinePlayer:${clean}`, 'utf8').digest();
-  md5Bytes[6] = (md5Bytes[6] & 0x0f) | 0x30;
-  md5Bytes[8] = (md5Bytes[8] & 0x3f) | 0x80;
-  const hex = md5Bytes.toString('hex');
+  const baseBytes = crypto.createHash('md5').update(`OfflinePlayer:${clean}`, 'utf8').digest();
+  baseBytes[6] = (baseBytes[6] & 0x0f) | 0x30;
+  baseBytes[8] = (baseBytes[8] & 0x3f) | 0x80;
+
+  // Align Java UUID.hashCode() with the chosen 3D model:
+  // In Minecraft 1.19.3-1.21.11+, DefaultPlayerSkin uses Math.floorMod(uuid.hashCode(), 18): 0..8 = SLIM (3px), 9..17 = WIDE (4px).
+  // In Minecraft 1.8-1.19.2, (uuid.hashCode() & 1) == 1 is SLIM (Alex), 0 is WIDE (Steve).
+  const wantSlim = skinModel === 'slim';
+  const origByte15 = baseBytes[15];
+  for (let delta = 0; delta < 256; delta++) {
+    baseBytes[15] = (origByte15 + delta) & 0xff;
+    const hash = (baseBytes.readInt32BE(0) ^ baseBytes.readInt32BE(4) ^ baseBytes.readInt32BE(8) ^ baseBytes.readInt32BE(12)) | 0;
+    const idx18 = ((hash % 18) + 18) % 18;
+    const bit1 = hash & 1;
+    if (wantSlim ? (idx18 < 9 && bit1 === 1) : (idx18 >= 9 && bit1 === 0)) {
+      break;
+    }
+  }
+
+  const hex = baseBytes.toString('hex');
   const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
   return {
     access_token: uuid,
@@ -733,7 +747,146 @@ function configureCrackSkinSupport(gameDir) {
   } catch (_) {}
 }
 
-function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl) {
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32Buffer(buf) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc = CRC32_TABLE[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function buildStandardZipBuffer(entries) {
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  for (const entry of entries) {
+    const nameBuf = Buffer.from(entry.name, 'utf8');
+    const dataBuf = Buffer.isBuffer(entry.data) ? entry.data : Buffer.from(entry.data);
+    const crc = crc32Buffer(dataBuf);
+    const size = dataBuf.length;
+
+    const localHeader = Buffer.alloc(30);
+    localHeader.writeUInt32LE(0x04034b50, 0);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(0, 6);
+    localHeader.writeUInt16LE(0, 8);
+    localHeader.writeUInt16LE(0, 10);
+    localHeader.writeUInt16LE(0, 12);
+    localHeader.writeUInt32LE(crc, 14);
+    localHeader.writeUInt32LE(size, 18);
+    localHeader.writeUInt32LE(size, 22);
+    localHeader.writeUInt16LE(nameBuf.length, 26);
+    localHeader.writeUInt16LE(0, 28);
+
+    localParts.push(localHeader, nameBuf, dataBuf);
+
+    const centralHeader = Buffer.alloc(46);
+    centralHeader.writeUInt32LE(0x02014b50, 0);
+    centralHeader.writeUInt16LE(20, 4);
+    centralHeader.writeUInt16LE(20, 6);
+    centralHeader.writeUInt16LE(0, 8);
+    centralHeader.writeUInt16LE(0, 10);
+    centralHeader.writeUInt16LE(0, 12);
+    centralHeader.writeUInt16LE(0, 14);
+    centralHeader.writeUInt32LE(crc, 16);
+    centralHeader.writeUInt32LE(size, 20);
+    centralHeader.writeUInt32LE(size, 24);
+    centralHeader.writeUInt16LE(nameBuf.length, 28);
+    centralHeader.writeUInt16LE(0, 30);
+    centralHeader.writeUInt16LE(0, 32);
+    centralHeader.writeUInt16LE(0, 34);
+    centralHeader.writeUInt16LE(0, 36);
+    centralHeader.writeUInt32LE(0, 38);
+    centralHeader.writeUInt32LE(offset, 42);
+
+    centralParts.push(centralHeader, nameBuf);
+    offset += 30 + nameBuf.length + size;
+  }
+
+  const centralBuf = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(0, 4);
+  eocd.writeUInt16LE(0, 6);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(centralBuf.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  eocd.writeUInt16LE(0, 20);
+
+  return Buffer.concat([...localParts, centralBuf, eocd]);
+}
+
+function detectResourcePackMeta(rootDir, mcVersion = '1.21.4') {
+  const desc = 'Aether Craft - Dong bo Skin 3D vao Game';
+  try {
+    const jarPath = path.join(rootDir, 'versions', mcVersion, `${mcVersion}.jar`);
+    if (fs.existsSync(jarPath)) {
+      const buf = fs.readFileSync(jarPath);
+      let i = 0;
+      while ((i = buf.indexOf('version.json', i)) !== -1) {
+        if (i >= 46 && buf.readUInt32LE(i - 46) === 0x02014b50 && buf.readUInt16LE(i - 18) === 12) {
+          const compSize = buf.readUInt32LE(i - 26);
+          const localOff = buf.readUInt32LE(i - 4);
+          const nameLen = buf.readUInt16LE(localOff + 26);
+          const extraLen = buf.readUInt16LE(localOff + 28);
+          const raw = zlib.inflateRawSync(buf.subarray(localOff + 30 + nameLen + extraLen, localOff + 30 + nameLen + extraLen + compSize));
+          const verJson = JSON.parse(raw.toString('utf8'));
+          if (verJson?.pack_version?.resource_major) {
+            const maj = verJson.pack_version.resource_major;
+            return { pack: { description: desc, min_format: maj, max_format: maj } };
+          }
+          if (typeof verJson?.pack_version?.resource === 'number') {
+            return { pack: { pack_format: verJson.pack_version.resource, description: desc } };
+          }
+          break;
+        }
+        i += 12;
+      }
+    }
+  } catch (_) {}
+
+  const v = String(mcVersion || '1.21.4');
+  if (v.startsWith('1.21.11') || v.startsWith('1.21.10') || v.startsWith('1.21.9') || v.startsWith('26.')) {
+    return { pack: { description: desc, min_format: 65, max_format: 99 } };
+  }
+  let fmt = 46;
+  if (v.startsWith('1.21.6') || v.startsWith('1.21.7') || v.startsWith('1.21.8')) fmt = 64;
+  else if (v.startsWith('1.21.5')) fmt = 55;
+  else if (v.startsWith('1.21.4')) fmt = 46;
+  else if (v.startsWith('1.21.2') || v.startsWith('1.21.3')) fmt = 42;
+  else if (v.startsWith('1.21')) fmt = 34;
+  else if (v.startsWith('1.20.5') || v.startsWith('1.20.6')) fmt = 32;
+  else if (v.startsWith('1.20.3') || v.startsWith('1.20.4')) fmt = 22;
+  else if (v.startsWith('1.20')) fmt = 15;
+  else if (v.startsWith('1.19.4')) fmt = 13;
+  else if (v.startsWith('1.19.3')) fmt = 12;
+  else if (v.startsWith('1.19')) fmt = 9;
+  else if (v.startsWith('1.18')) fmt = 8;
+  else if (v.startsWith('1.17')) fmt = 7;
+  else if (v.startsWith('1.16')) fmt = 6;
+  else if (v.startsWith('1.15')) fmt = 5;
+  else if (v.startsWith('1.13') || v.startsWith('1.14')) fmt = 4;
+  else if (v.startsWith('1.11') || v.startsWith('1.12')) fmt = 3;
+  else if (v.startsWith('1.9') || v.startsWith('1.10')) fmt = 2;
+  else if (v.startsWith('1.8') || v.startsWith('1.7')) fmt = 1;
+  return { pack: { pack_format: fmt, description: desc } };
+}
+
+function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl, mcVersion = '1.21.4') {
   try {
     if (!skinDataUrl || !skinDataUrl.startsWith('data:image/png;base64,')) return;
     const base64Data = skinDataUrl.replace(/^data:image\/png;base64,/, '');
@@ -746,40 +899,53 @@ function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl) {
     fs.writeFileSync(path.join(skinsDir, `${cleanName}.png`), skinBuf);
     configureCrackSkinSupport(rootDir);
 
-    // Also build a lightweight Vanilla ResourcePack so even 0-mod Vanilla displays the active 3D skin in-game!
+    // Build a 100% standard PKZIP ResourcePack with exact version metadata so Vanilla & Fabric/Forge load the active 3D skin!
     const rpDir = path.join(rootDir, 'resourcepacks');
     if (!fs.existsSync(rpDir)) fs.mkdirSync(rpDir, { recursive: true });
-    const zip = new AdmZip();
-    const mcmeta = {
-      pack: {
-        pack_format: 34,
-        supported_formats: [1, 99],
-        description: 'Aether Craft - Dong bo Skin 3D vao Game'
-      }
-    };
-    zip.addFile('pack.mcmeta', Buffer.from(JSON.stringify(mcmeta, null, 2), 'utf8'));
-    zip.addFile('assets/minecraft/textures/entity/steve.png', skinBuf);
-    zip.addFile('assets/minecraft/textures/entity/alex.png', skinBuf);
+    const mcmeta = detectResourcePackMeta(rootDir, mcVersion);
+    const zipEntries = [
+      { name: 'pack.mcmeta', data: Buffer.from(JSON.stringify(mcmeta, null, 2), 'utf8') },
+      { name: 'assets/minecraft/textures/entity/steve.png', data: skinBuf },
+      { name: 'assets/minecraft/textures/entity/alex.png', data: skinBuf }
+    ];
     const defaultActors = ['steve', 'alex', 'ari', 'efe', 'kai', 'makena', 'noor', 'sunny', 'zuri'];
     for (const actor of defaultActors) {
-      zip.addFile(`assets/minecraft/textures/entity/player/wide/${actor}.png`, skinBuf);
-      zip.addFile(`assets/minecraft/textures/entity/player/slim/${actor}.png`, skinBuf);
+      zipEntries.push({ name: `assets/minecraft/textures/entity/player/wide/${actor}.png`, data: skinBuf });
+      zipEntries.push({ name: `assets/minecraft/textures/entity/player/slim/${actor}.png`, data: skinBuf });
     }
     const rpZipPath = path.join(rpDir, 'AetherSkinSync.zip');
-    zip.writeZip(rpZipPath);
+    fs.writeFileSync(rpZipPath, buildStandardZipBuffer(zipEntries));
 
-    // Ensure AetherSkinSync.zip is enabled in options.txt
+    // Ensure "file/AetherSkinSync.zip" is enabled at highest priority in options.txt (handling Windows CRLF \r\n)
     const optsPath = path.join(rootDir, 'options.txt');
     let optsContent = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
-    if (optsContent.includes('resourcePacks:')) {
-      optsContent = optsContent.replace(/^resourcePacks:\[(.*)\]$/m, (full, inner) => {
-        if (inner.includes('AetherSkinSync.zip')) return full;
-        const trimmed = inner.trim();
-        return trimmed ? `resourcePacks:[${trimmed},"file/AetherSkinSync.zip"]` : `resourcePacks:["vanilla","file/AetherSkinSync.zip"]`;
+    const packId = 'file/AetherSkinSync.zip';
+    if (/^resourcePacks:\[.*?\]\r?$/m.test(optsContent)) {
+      optsContent = optsContent.replace(/^resourcePacks:\[(.*?)\](\r?)$/m, (_full, inner, cr) => {
+        let items = [];
+        try {
+          items = JSON.parse(`[${inner}]`);
+        } catch (_) {
+          items = inner.split(',').map((s) => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+        }
+        if (!items.includes('vanilla')) items.unshift('vanilla');
+        items = items.filter((item) => item !== packId && item !== 'AetherSkinSync.zip');
+        items.push(packId);
+        return `resourcePacks:${JSON.stringify(items)}${cr}`;
       });
     } else {
-      optsContent += (optsContent.endsWith('\n') || !optsContent ? '' : '\n') + 'resourcePacks:["vanilla","file/AetherSkinSync.zip"]\n';
+      const nl = optsContent.includes('\r\n') ? '\r\n' : '\n';
+      optsContent += (optsContent.endsWith('\n') || !optsContent ? '' : nl) + `resourcePacks:["vanilla","${packId}"]${nl}`;
     }
+    // Remove from incompatibleResourcePacks if present
+    optsContent = optsContent.replace(/^incompatibleResourcePacks:\[(.*?)\](\r?)$/m, (_full, inner, cr) => {
+      try {
+        const items = JSON.parse(`[${inner}]`).filter((item) => item !== packId && item !== 'AetherSkinSync.zip');
+        return `incompatibleResourcePacks:${JSON.stringify(items)}${cr}`;
+      } catch (_) {
+        return `incompatibleResourcePacks:[]${cr}`;
+      }
+    });
     fs.writeFileSync(optsPath, optsContent, 'utf8');
   } catch (_) {}
 }
@@ -798,7 +964,9 @@ async function launchMinecraft(config, callbacks = {}) {
     useAikarFlags = true,
     fastSkipHash = true,
     serverIp = '',
-    cpuCores = os.cpus().length
+    cpuCores = os.cpus().length,
+    skinDataUrl = '',
+    skinModel = 'default'
   } = config;
 
   fastSkipEnabled = Boolean(fastSkipHash);
@@ -829,10 +997,13 @@ async function launchMinecraft(config, callbacks = {}) {
     };
   } else {
     const cleanName = (username || 'Player').trim().slice(0, 16) || 'Player';
-    callbacks.onStatus?.(`Đang khởi tạo chế độ Crack / Offline (UUID v3) cho "${cleanName}"...`);
-    authorization = buildOfflineAuthFallback(cleanName);
+    callbacks.onStatus?.(`Đang đồng bộ Skin 3D & khởi tạo tài khoản "${cleanName}"...`);
+    authorization = buildOfflineAuthFallback(cleanName, skinModel);
     if (crackSkinSync) {
       configureCrackSkinSupport(rootDir);
+    }
+    if (skinDataUrl) {
+      syncActive3DSkinIntoGame(rootDir, cleanName, skinDataUrl, mcVersion);
     }
   }
 
