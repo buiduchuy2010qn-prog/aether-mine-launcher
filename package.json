@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "26.0.0",
-  "description": "Aether Craft v26.0 PRO - Real 3D Pixel Minecraft Grass Block & Official Core Loader Logos",
+  "version": "26.1.0",
+  "description": "Aether Craft v26.1 PRO - Java 21 JVM Fix & Real 3D Pixel Minecraft Grass Block",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

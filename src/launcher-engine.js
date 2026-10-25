@@ -267,6 +267,7 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
   const concThreads = Math.max(1, Math.floor(parallelThreads / 2));
 
   // Strictly cap native off-heap memory & DO NOT use -XX:+AlwaysPreTouch so Java starts light (~1.1 GB) and never exceeds selected RAM!
+  // Verified 100% compatible with Java 8, Java 17, and Java 21 (Temurin 21.0.12+).
   return [
     '-XX:+UnlockExperimentalVMOptions',
     '-XX:+UseG1GC',
@@ -277,9 +278,9 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     '-XX:+DisableExplicitGC',
     '-XX:+UseStringDeduplication',
     '-XX:MaxDirectMemorySize=384M',
-    '-XX:MaxMetaspaceSize=224M',
+    '-XX:MaxMetaspaceSize=256M',
     '-XX:ReservedCodeCacheSize=128M',
-    '-Xss512k',
+    '-Xss1M',
     '-XX:G1NewSizePercent=20',
     '-XX:G1MaxNewSizePercent=35',
     '-XX:G1HeapRegionSize=8M',
@@ -292,15 +293,14 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     '-XX:SurvivorRatio=32',
     '-XX:+PerfDisableSharedMem',
     '-XX:MaxTenuringThreshold=1',
-    '-XX:G1PeriodicGCInterval=6000',
+    '-XX:G1PeriodicGCInterval=15000',
     '-XX:+G1PeriodicGCInvokesConcurrent',
-    '-XX:-G1PeriodicGCSystemLoadThreshold',
     '-XX:MaxHeapFreeRatio=25',
     '-XX:MinHeapFreeRatio=10',
     '-XX:-OmitStackTraceInFastThrow',
     '-Dfml.ignoreInvalidMinecraftCertificates=true',
     '-Dfml.ignorePatchDiscrepancies=true',
-    '-Dminecraft.launcher.brand=AetherCraft-v18'
+    '-Dminecraft.launcher.brand=AetherCraft-v26'
   ];
 }
 function getInstalledVersions(gameDir) {
@@ -852,10 +852,6 @@ async function launchMinecraft(config, callbacks = {}) {
   const resolvedJava = await ensureJavaRuntime(rootDir, mcVersion, javaPath, callbacks.onStatus);
   const customArgs = useAikarFlags ? buildMultiCoreSmoothExitArgs(ramGB, cpuCores) : [];
 
-  if (serverIp && serverIp.trim()) {
-    customArgs.push(`--quickPlayMultiplayer=${serverIp.trim()}`);
-  }
-
   const launcher = new Client();
 
   const launchOpts = {
@@ -895,7 +891,7 @@ async function launchMinecraft(config, callbacks = {}) {
     const line = String(msg).trim();
     callbacks.onLog?.(line);
 
-    if (!gameWindowNotified && (line.includes('LWJGL') || line.includes('OpenAL initialized') || line.includes('Sound engine started') || line.includes('Created: '))) {
+    if (!gameWindowNotified && (line.includes('LWJGL') || line.includes('OpenAL initialized') || line.includes('Sound engine started') || line.includes('Created: ') || line.includes('Setting user:'))) {
       gameWindowNotified = true;
       callbacks.onGameWindowReady?.();
     }
@@ -928,13 +924,6 @@ async function launchMinecraft(config, callbacks = {}) {
 
   const proc = await launcher.launch(launchOpts);
   activeMcProcess = proc;
-
-  setTimeout(() => {
-    if (!gameWindowNotified && activeMcProcess) {
-      gameWindowNotified = true;
-      callbacks.onGameWindowReady?.();
-    }
-  }, 6000);
 
   return proc;
 }

@@ -324,8 +324,10 @@ ipcMain.handle('mc:force-kill', async () => {
 
 ipcMain.handle('mc:launch', async (_e, config) => {
   try {
+    try { delete require.cache[require.resolve('./launcher-engine')]; } catch (_) {}
+    const freshEngine = require('./launcher-engine');
     hideOnLaunchSetting = config.hideLauncherOnPlay !== false;
-    await launchMinecraft(config, {
+    await freshEngine.launchMinecraft(config, {
       onProgress: (p) => mainWindow?.webContents.send('mc:progress', p),
       onLog: (line) => mainWindow?.webContents.send('mc:log', line),
       onStatus: (st) => mainWindow?.webContents.send('mc:status', st),
