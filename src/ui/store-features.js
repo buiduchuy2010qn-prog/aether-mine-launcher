@@ -409,8 +409,17 @@ async function loadModrinthStore(append = false) {
       if (!cRes.agreed) return;
       btn.disabled = true; btn.textContent = '⏳ Đang tải...';
       const r = await window.aetherAPI.installModrinth({ slug: btn.dataset.slug, projectType: state.activeModStoreType, mcVersion: state.selectedVersion, loaderType: state.selectedCore, gameDir: state.gameDir });
-      if (r?.ok) { btn.textContent = '✓ Đã Cài'; btn.classList.add('installed'); await refreshLocalAddonsCount(); }
-      else { btn.textContent = '⚠ Lỗi'; btn.disabled = false; }
+      if (r?.ok) {
+        btn.textContent = `✓ Đã Cài (${state.selectedVersion})`;
+        btn.classList.add('installed');
+        document.getElementById('statusText').textContent = `✓ Đã cài ${r.fileName} kèm thư viện tương thích cho Minecraft ${state.selectedVersion}!`;
+        await refreshLocalAddonsCount();
+      } else {
+        btn.textContent = '⚠ Khác phiên bản';
+        btn.title = r?.error || 'Không tương thích phiên bản đang chọn';
+        btn.disabled = false;
+        if (r?.error) document.getElementById('statusText').textContent = `⚠ ${r.error}`;
+      }
     };
   });
 }

@@ -497,7 +497,7 @@ async function searchModrinth({
   return hits;
 }
 
-function removeConflictingModJars(modsFolder, slug) {
+function removeConflictingModJars(modsFolder, slug, newFilename = '') {
   if (!fs.existsSync(modsFolder)) return;
   const prefixMap = {
     'fabric-api': ['fabric-api-'],
@@ -509,58 +509,91 @@ function removeConflictingModJars(modsFolder, slug) {
     'iris': ['iris-'],
     'embeddium': ['embeddium-']
   };
-  const prefixes = prefixMap[slug.toLowerCase()] || [`${slug.toLowerCase()}-`];
+  const prefixes = new Set(prefixMap[slug.toLowerCase()] || [`${slug.toLowerCase()}-`]);
+  if (newFilename) {
+    const stemMatch = newFilename.toLowerCase().match(/^([a-z0-9_]+[-_])/);
+    if (stemMatch && stemMatch[1].length >= 4) prefixes.add(stemMatch[1]);
+  }
   try {
     for (const file of fs.readdirSync(modsFolder)) {
+      if (file === newFilename) continue;
       const lower = file.toLowerCase();
-      if (prefixes.some((p) => lower.startsWith(p))) {
+      if (Array.from(prefixes).some((p) => lower.startsWith(p))) {
         try { fs.unlinkSync(path.join(modsFolder, file)); } catch (_) {}
       }
     }
   } catch (_) {}
 }
 
-async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.11', loaderType = 'fabric', gameDir }, onStatus) {
+async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.11', loaderType = 'fabric', gameDir, _isDep = false }, onStatus) {
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
   const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
   const targetFolder = path.join(rootDir, folderMap[projectType] || 'mods');
   if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
 
   const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  const loaderMatches = (loaders) => {
+    if (projectType !== 'mod') return true;
+    if (!Array.isArray(loaders)) return false;
+    if (loaders.includes(effectiveLoader)) return true;
+    if (effectiveLoader === 'quilt' && loaders.includes('fabric')) return true;
+    if (effectiveLoader === 'forge' && loaders.includes('neoforge')) return true;
+    return false;
+  };
+
   const allVersions = await fetchJson(`https://api.modrinth.com/v2/project/${encodeURIComponent(slug)}/version`);
   if (!Array.isArray(allVersions) || allVersions.length === 0) {
     throw new Error(`Không tìm thấy dữ liệu cho "${slug}".`);
   }
 
-  // 1. Strict match on both mcVersion and loader
+  // 1. Strict match on EXACT mcVersion + compatible Core Loader
   let matched = allVersions.filter((v) => {
     const gvOk = Array.isArray(v.game_versions) && v.game_versions.includes(mcVersion);
-    const ldOk = projectType !== 'mod' || (Array.isArray(v.loaders) && v.loaders.includes(effectiveLoader));
-    return gvOk && ldOk;
+    return gvOk && loaderMatches(v.loaders);
   });
 
-  // 2. If mcVersion is a snapshot/RC (e.g. 1.21.8-rc1), match same major.minor family (e.g. 1.21.x), NEVER jump to 26.x!
+  // 2. Fallback within the SAME major.minor family (e.g. 1.21.x) + compatible Core Loader
   if (matched.length === 0) {
-    const baseParts = mcVersion.split('-')[0].split('.');
+    const baseParts = String(mcVersion).split('-')[0].split('.');
     const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
     matched = allVersions.filter((v) => {
       const gvOk = Array.isArray(v.game_versions) && v.game_versions.some((g) => g === familyPrefix || g.startsWith(`${familyPrefix}.`));
-      const ldOk = projectType !== 'mod' || (Array.isArray(v.loaders) && v.loaders.includes(effectiveLoader));
-      return gvOk && ldOk;
+      return gvOk && loaderMatches(v.loaders);
     });
   }
 
+  // 3. For Shaders & ResourcePacks (version-agnostic), allow fallback; for Mods, NEVER install an incompatible era .jar that would crash the game!
   if (matched.length === 0) {
-    matched = allVersions.filter((v) => projectType !== 'mod' || (Array.isArray(v.loaders) && (v.loaders.includes(effectiveLoader) || (effectiveLoader === 'forge' && v.loaders.includes('neoforge')) || (effectiveLoader === 'quilt' && v.loaders.includes('fabric')))));
-  }
-  if (matched.length === 0) {
-    matched = allVersions;
+    if (projectType !== 'mod') {
+      matched = allVersions;
+    } else {
+      const supportedVers = Array.from(new Set(allVersions.flatMap((v) => v.game_versions || []).filter((g) => /^\d+\.\d+/.test(g)))).slice(0, 5).join(', ');
+      throw new Error(`Mod "${slug}" chưa hỗ trợ bản ${mcVersion} (${effectiveLoader.toUpperCase()}). Các bản hỗ trợ: ${supportedVers || 'Khác'}`);
+    }
   }
 
   const chosen = matched[0];
   const fileObj = chosen.files.find((f) => f.primary) || chosen.files[0];
   if (!fileObj || !fileObj.url) {
     throw new Error(`Gói "${slug}" không có file tải hợp lệ.`);
+  }
+
+  // 4. Auto-install required dependencies (e.g. Fabric API, Cloth Config, Architectury) matching the exact mcVersion & loader!
+  if (projectType === 'mod' && !_isDep && Array.isArray(chosen.dependencies)) {
+    const reqDeps = chosen.dependencies.filter((d) => d.dependency_type === 'required' && d.project_id);
+    for (const dep of reqDeps) {
+      try {
+        onStatus?.(`Đang kiểm tra thư viện đi kèm bắt buộc cho ${slug}...`);
+        await installModrinthProject({
+          slug: dep.project_id,
+          projectType: 'mod',
+          mcVersion,
+          loaderType: effectiveLoader,
+          gameDir: rootDir,
+          _isDep: true
+        }, onStatus);
+      } catch (_) {}
+    }
   }
 
   const destPath = path.join(targetFolder, fileObj.filename);
@@ -570,10 +603,10 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   }
 
   if (projectType === 'mod') {
-    removeConflictingModJars(targetFolder, slug);
+    removeConflictingModJars(targetFolder, slug, fileObj.filename);
   }
 
-  onStatus?.(`Đang tải ${fileObj.filename} (chuẩn ${mcVersion})...`);
+  onStatus?.(`Đang tải ${fileObj.filename} (chuẩn ${mcVersion} • ${effectiveLoader.toUpperCase()})...`);
   await downloadFile(fileObj.url, destPath);
   return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath };
 }
