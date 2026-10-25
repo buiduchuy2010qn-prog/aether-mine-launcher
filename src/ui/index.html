@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v29.4 PRO</span>
+          <span class="brand-version">v29.5 PRO</span>
         </div>
       </div>
 
@@ -39,7 +39,7 @@
         </button>
         <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">v29.4.0</span>
+          <span id="updateBtnText">v29.5.0</span>
         </button>
       </div>
 
@@ -327,24 +327,23 @@
                     </div>
                   </div>
 
-                  <!-- BALANCED PERFORMANCE & RAM SECTION (OPEN BY DEFAULT SO NO EMPTY GAP) -->
+                  <!-- BALANCED PERFORMANCE & RAM SECTION (STACKED: DESCRIPTION -> PRESETS -> SLIDER -> PILLS) -->
                   <div class="adv-ram-drawer">
-                    <div class="adv-ram-summary-bar">
-                      <div class="ars-left">
-                        <span class="ars-main">⚡ Bộ nhớ RAM cấp phát: <strong class="qram-val" id="ramValueDisplay">3 GB</strong></span>
-                        <span class="ars-sub" id="advPerfSummaryText">Đa nhân G1GC • Ngủ đông 0% • Vào nhanh</span>
-                      </div>
-                      <div class="ram-preset-pills" id="ramPresetBar">
-                        <button class="ram-pill-btn" data-ram="2">2G</button>
-                        <button class="ram-pill-btn active" data-ram="3">3G</button>
-                        <button class="ram-pill-btn" data-ram="4">4G</button>
-                        <button class="ram-pill-btn" data-ram="6">6G</button>
-                        <button class="ram-pill-btn" data-ram="8">8G</button>
-                      </div>
+                    <div class="adv-ram-top-row">
+                      <span class="ars-main no-wrap-label">⚡ Bộ nhớ RAM cấp phát: <strong class="qram-val" id="ramValueDisplay">4 GB</strong></span>
+                      <span class="ars-sub no-wrap-label" id="advPerfSummaryText">Đa nhân G1GC • Tối ưu</span>
+                    </div>
+
+                    <div class="ram-preset-pills" id="ramPresetBar">
+                      <button class="ram-pill-btn" data-ram="2">2 GB</button>
+                      <button class="ram-pill-btn" data-ram="3">3 GB</button>
+                      <button class="ram-pill-btn active" data-ram="4">4 GB</button>
+                      <button class="ram-pill-btn" data-ram="6">6 GB</button>
+                      <button class="ram-pill-btn" data-ram="8">8 GB</button>
                     </div>
 
                     <div class="adv-ram-body" id="homeAdvRamBody">
-                      <input type="range" id="ramSlider" min="2" max="16" step="1" value="3" class="pro-range" />
+                      <input type="range" id="ramSlider" min="2" max="16" step="1" value="4" class="pro-range" />
 
                       <div class="booster-pills-row">
                         <label class="booster-check-pill" title="Tối ưu đa nhân CPU G1GC và tự động dọn rác RAM">

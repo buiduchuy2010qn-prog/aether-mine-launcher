@@ -277,7 +277,7 @@ function renderQuickVersionGrid() {
   if (!grid) return;
   grid.innerHTML = POPULAR_VERSIONS.map((v) => {
     const installed = isVersionInstalledOnDisk(v), active = state.selectedVersion === v ? 'active' : '';
-    return `<button class="qver-chip ${active}" data-qver="${v}"><strong>${v}</strong><span class="qver-status ${installed ? 'ready' : 'cloud'}">${installed ? '✓ Đã tải' : '☁ Sẵn sàng'}</span></button>`;
+    return `<button class="qver-chip ${active}" data-qver="${v}"><strong>${v}</strong><span class="qver-status ${installed ? 'ready' : 'cloud'}">${installed ? '✓ Đã cài' : '⬇ Tải về'}</span></button>`;
   }).join('');
   grid.querySelectorAll('.qver-chip').forEach((btn) => {
     btn.onclick = async () => {
@@ -414,11 +414,8 @@ function syncBoosterCheckboxes() {
   });
   const advText = document.getElementById('advPerfSummaryText');
   if (advText) {
-    const activeTags = [];
-    if (state.aikarFlags) activeTags.push('Đa nhân G1GC');
-    if (state.hideLauncherOnPlay) activeTags.push('Ngủ đông 0%');
-    if (state.fastSkipHash) activeTags.push('Vào nhanh <1s');
-    advText.textContent = activeTags.length ? activeTags.join(' • ') : 'Chế độ tiêu chuẩn';
+    const count = [state.aikarFlags, state.hideLauncherOnPlay, state.fastSkipHash].filter(Boolean).length;
+    advText.textContent = count > 0 ? `✓ Đang bật ${count}/3 tối ưu` : 'Chế độ tiêu chuẩn';
   }
 }
 

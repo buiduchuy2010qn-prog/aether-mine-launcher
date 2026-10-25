@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.4.0",
-  "description": "Aether Craft v29.4 PRO - Real 3D Skin In-Game Sync (64x64 Converter, PKZIP Pack Builder & 1.21.11 Pack Meta)",
+  "version": "29.5.0",
+  "description": "Aether Craft v29.5 PRO - High-Contrast Active Buttons, 4-Row Stacked RAM Section & 3D Skin In-Game Sync",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
