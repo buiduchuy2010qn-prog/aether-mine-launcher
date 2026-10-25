@@ -537,24 +537,27 @@ async function openLauncherMigrateModal() {
       return;
     }
     if (!selectedMigrateSourcePath || !list.some((x) => x.path === selectedMigrateSourcePath)) {
-      selectedMigrateSourcePath = list[0].path;
+      const firstExternal = list.find((x) => !x.isSharedRoot);
+      selectedMigrateSourcePath = (firstExternal || list[0]).path;
     }
     listEl.innerHTML = list.map((it) => {
       const active = it.path === selectedMigrateSourcePath;
-      const accText = it.accounts?.length ? ` • 👤 Tên cũ: ${it.accounts.slice(0, 4).join(', ')}` : '';
+      const accText = it.accounts?.length ? ` • 👤 Tên cũ: <strong>${it.accounts.slice(0, 4).join(', ')}</strong>` : '';
+      const metaText = it.detectedVersion ? ` • 🎯 Bản: <strong>${it.detectedVersion} ${(it.detectedCore || '').toUpperCase()}</strong>` : '';
+      const cfgText = it.configsCount ? ` • ⚙️ <strong>${it.configsCount}</strong> Config` : '';
       const sharedBadge = it.isSharedRoot
-        ? '<span style="color:#10b981;font-weight:800;font-size:10.5px;">✓ Đang dùng chung .minecraft</span>'
-        : '<span style="color:var(--accent);font-weight:800;font-size:10.5px;">📥 Có thể chép sang</span>';
-      return `<div class="addon-row migrate-source-card" data-migpath="${it.path}" style="cursor:pointer;border:1.5px solid ${active ? 'var(--accent)' : 'var(--border-col)'};background:${active ? 'var(--accent-glow)' : 'var(--bg-input)'};padding:10px 12px;border-radius:9px;">
-        <div style="display:flex;flex-direction:column;gap:3px;">
+        ? '<span style="color:#10b981;font-weight:800;font-size:11.5px;">✓ Đang dùng chung .minecraft</span>'
+        : '<span style="color:var(--accent);font-weight:800;font-size:11.5px;">📥 Có thể chép sang</span>';
+      return `<div class="addon-row migrate-source-card" data-migpath="${it.path}" style="cursor:pointer;border:1.8px solid ${active ? 'var(--accent)' : 'var(--border-col)'};background:${active ? 'var(--accent-glow)' : 'var(--bg-input)'};padding:12px 14px;border-radius:10px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <strong style="font-size:12.5px;color:var(--text-main);">${it.launcherName} — ${it.instanceName}</strong>
+            <strong style="font-size:13.5px;color:var(--text-main);">${it.launcherName} — ${it.instanceName}</strong>
             ${sharedBadge}
           </div>
-          <div style="font-size:11px;color:var(--text-muted);">
-            🌍 <strong>${it.worldsCount}</strong> Thế giới • 🧩 <strong>${it.modsCount}</strong> Mods • ✨ <strong>${it.shadersCount + it.packsCount}</strong> Shaders/Packs • 📦 <strong>${it.versionsCount}</strong> Phiên bản${accText}
+          <div style="font-size:12px;color:var(--text-muted);">
+            🌍 <strong>${it.worldsCount}</strong> Thế giới • 🧩 <strong>${it.modsCount}</strong> Mods${cfgText} • ✨ <strong>${it.shadersCount + it.packsCount}</strong> Shaders/Packs${metaText}${accText}
           </div>
-          <div style="font-size:10px;color:var(--text-muted);opacity:0.75;">📂 ${it.path}</div>
+          <div style="font-size:11px;color:var(--text-muted);opacity:0.8;">📂 ${it.path}</div>
         </div>
       </div>`;
     }).join('');
@@ -611,21 +614,48 @@ async function openLauncherMigrateModal() {
 
     if (imp?.ok) {
       const st = imp.stats || {};
-      if (Array.isArray(st.accountsFound) && st.accountsFound.length > 0 && document.getElementById('chkMigrateServers')?.checked) {
-        for (const acc of st.accountsFound) {
-          if (!state.savedAccounts.some((a) => a.toLowerCase() === acc.toLowerCase())) {
-            state.savedAccounts.push(acc);
+      if (document.getElementById('chkMigrateServers')?.checked) {
+        if (Array.isArray(st.accountsFound) && st.accountsFound.length > 0) {
+          for (const acc of st.accountsFound) {
+            if (!state.savedAccounts.some((a) => a.toLowerCase() === acc.toLowerCase())) {
+              state.savedAccounts.push(acc);
+            }
           }
+          if (!imp.isSameDir && st.accountsFound[0]) {
+            state.username = st.accountsFound[0];
+            const uInp = document.getElementById('usernameInput');
+            if (uInp) uInp.value = state.username;
+            if (typeof loadCharacterSkin === 'function') loadCharacterSkin(state.username);
+            if (typeof updateCrackUuidPreview === 'function') updateCrackUuidPreview(state.username);
+          }
+          renderSavedAccounts();
         }
-        renderSavedAccounts();
-        saveCurrentConfig();
+        if (Array.isArray(st.serversFound) && st.serversFound.length > 0) {
+          for (const srv of st.serversFound) {
+            if (!state.favoriteServers.some((s) => s.ip.toLowerCase() === srv.ip.toLowerCase())) {
+              state.favoriteServers.push(srv);
+            }
+          }
+          renderFavoriteServers();
+        }
       }
+      if (st.detectedVersion) {
+        state.selectedVersion = st.detectedVersion;
+        const verSel = document.getElementById('versionSelect');
+        if (verSel) verSel.value = st.detectedVersion;
+      }
+      if (st.detectedCore && typeof setCore === 'function') {
+        setCore(st.detectedCore);
+      } else if (typeof updateSummaryUI === 'function') {
+        updateSummaryUI();
+      }
+      saveCurrentConfig();
       await refreshInstalledVersions();
       await refreshLocalAddonsCount();
       await renderLocalWorlds();
       const msg = imp.isSameDir
         ? `✓ Đã đồng bộ trực tiếp thư mục .minecraft (${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.accountsFound?.length || 0} Tài khoản cũ)!`
-        : `✓ Hoàn tất! Đã chuyển ${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.packsCopied} Shaders/Packs & ${st.accountsFound?.length || 0} Tài khoản sang Aether Craft!`;
+        : `✓ Hoàn tất! Đã chuyển ${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.configsCopied || 0} Config, ${st.packsCopied} Shaders/Packs & ${st.accountsFound?.length || 0} Tài khoản sang Aether Craft!`;
       statusEl.textContent = msg;
       document.getElementById('statusText').textContent = msg;
     } else {

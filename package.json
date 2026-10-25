@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "27.0.0",
-  "description": "Aether Craft v27.0 PRO - 1-Click External Launcher Sync, Java 21 Fix & Real 3D Grass Block",
+  "version": "28.0.0",
+  "description": "Aether Craft v28.0 PRO - Full-Scale Studio UI & Smart 1-Click External Launcher Sync",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

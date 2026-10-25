@@ -975,17 +975,72 @@ function extractSavedUsernamesFromDir(mcDir) {
   return Array.from(names).slice(0, 12);
 }
 
+function detectInstanceMeta(mcDir) {
+  let detectedVersion = '';
+  let detectedCore = '';
+  try {
+    const parentDir = path.dirname(mcDir);
+    // 1. PrismLauncher / MultiMC: mmc-pack.json in parentDir
+    const mmcPack = path.join(parentDir, 'mmc-pack.json');
+    if (fs.existsSync(mmcPack)) {
+      const data = JSON.parse(fs.readFileSync(mmcPack, 'utf8'));
+      for (const comp of data?.components || []) {
+        if (comp.uid === 'net.minecraft' && comp.version) detectedVersion = comp.version;
+        if (comp.uid === 'net.fabricmc.fabric-loader') detectedCore = 'fabric';
+        if (comp.uid === 'org.quiltmc.quilt-loader') detectedCore = 'quilt';
+        if (comp.uid === 'net.minecraftforge' || comp.uid === 'net.neoforged') detectedCore = 'forge';
+      }
+    }
+    // 2. CurseForge: minecraftinstance.json in mcDir
+    const cfJson = path.join(mcDir, 'minecraftinstance.json');
+    if (fs.existsSync(cfJson)) {
+      const data = JSON.parse(fs.readFileSync(cfJson, 'utf8'));
+      if (data?.gameVersion) detectedVersion = data.gameVersion;
+      const ml = String(data?.baseModLoader?.name || '').toLowerCase();
+      if (ml.includes('fabric')) detectedCore = 'fabric';
+      else if (ml.includes('quilt')) detectedCore = 'quilt';
+      else if (ml.includes('forge')) detectedCore = 'forge';
+    }
+  } catch (_) {}
+  return { detectedVersion, detectedCore };
+}
+
+function parseServersDatIps(serversDatPath) {
+  const servers = [];
+  if (!serversDatPath || !fs.existsSync(serversDatPath)) return servers;
+  try {
+    const zlib = require('zlib');
+    let buf = fs.readFileSync(serversDatPath);
+    if (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b) {
+      try { buf = zlib.gunzipSync(buf); } catch (_) {}
+    }
+    const rawStr = buf.toString('latin1');
+    const ipRegex = /\x08\x00\x02ip\x00([\x01-\x40])([a-zA-Z0-9._:-]+)/g;
+    let m;
+    while ((m = ipRegex.exec(rawStr)) !== null) {
+      const len = m[1].charCodeAt(0);
+      const ipCandidate = m[2].slice(0, len).trim();
+      if (ipCandidate && ipCandidate.includes('.') && !servers.some((s) => s.ip === ipCandidate)) {
+        servers.push({ name: ipCandidate.split(':')[0], ip: ipCandidate });
+      }
+    }
+  } catch (_) {}
+  return servers;
+}
+
 function inspectMinecraftInstanceDir(id, launcherName, instanceName, mcDir, targetRoot) {
   if (!mcDir || !fs.existsSync(mcDir)) return null;
   const isSameAsTarget = path.resolve(mcDir).toLowerCase() === path.resolve(targetRoot).toLowerCase();
   const worldsCount = countDirItems(path.join(mcDir, 'saves'), (d) => d.isDirectory());
   const modsCount = countDirItems(path.join(mcDir, 'mods'), (d) => d.isFile() && /\.(jar|disabled)$/i.test(d.name));
+  const configsCount = countDirItems(path.join(mcDir, 'config'));
   const shadersCount = countDirItems(path.join(mcDir, 'shaderpacks'), (d) => d.isFile() && /\.zip$/i.test(d.name));
   const packsCount = countDirItems(path.join(mcDir, 'resourcepacks'), (d) => d.isFile() && /\.zip$/i.test(d.name));
   const versionsCount = countDirItems(path.join(mcDir, 'versions'), (d) => d.isDirectory());
   const hasServersDat = fs.existsSync(path.join(mcDir, 'servers.dat'));
   const hasOptionsTxt = fs.existsSync(path.join(mcDir, 'options.txt'));
   const accounts = extractSavedUsernamesFromDir(mcDir);
+  const { detectedVersion, detectedCore } = detectInstanceMeta(mcDir);
 
   if (worldsCount === 0 && modsCount === 0 && shadersCount === 0 && packsCount === 0 && versionsCount === 0 && accounts.length === 0) {
     return null;
@@ -999,12 +1054,15 @@ function inspectMinecraftInstanceDir(id, launcherName, instanceName, mcDir, targ
     isSharedRoot: isSameAsTarget,
     worldsCount,
     modsCount,
+    configsCount,
     shadersCount,
     packsCount,
     versionsCount,
     hasServersDat,
     hasOptionsTxt,
-    accounts
+    accounts,
+    detectedVersion,
+    detectedCore
   };
 }
 
@@ -1120,29 +1178,53 @@ function importFromExternalLauncher({ sourceDir, targetGameDir, syncWorlds = tru
     : (fs.existsSync(path.join(sourceDir, '.minecraft')) ? path.join(sourceDir, '.minecraft') : sourceDir);
 
   const isSameDir = path.resolve(actualSource).toLowerCase() === path.resolve(targetRoot).toLowerCase();
-  const stats = { worldsCopied: 0, modsCopied: 0, packsCopied: 0, accountsFound: [], serversSynced: false };
+  const { detectedVersion, detectedCore } = detectInstanceMeta(actualSource);
+  const stats = {
+    worldsCopied: 0,
+    modsCopied: 0,
+    configsCopied: 0,
+    packsCopied: 0,
+    accountsFound: [],
+    serversFound: [],
+    serversSynced: false,
+    detectedVersion,
+    detectedCore
+  };
 
   stats.accountsFound = extractSavedUsernamesFromDir(actualSource);
+  stats.serversFound = parseServersDatIps(path.join(actualSource, 'servers.dat'));
 
   if (!isSameDir) {
-    if (syncWorlds && fs.existsSync(path.join(actualSource, 'saves'))) {
-      onStatus?.('Đang đồng bộ Thế giới chơi dở (saves)...');
-      const savesSrc = path.join(actualSource, 'saves');
-      const savesDest = path.join(targetRoot, 'saves');
-      if (!fs.existsSync(savesDest)) fs.mkdirSync(savesDest, { recursive: true });
-      for (const w of fs.readdirSync(savesSrc, { withFileTypes: true })) {
-        if (w.isDirectory()) {
-          const wDest = path.join(savesDest, w.name);
-          if (!fs.existsSync(wDest)) {
+    if (syncWorlds) {
+      if (fs.existsSync(path.join(actualSource, 'saves'))) {
+        onStatus?.('Đang đồng bộ Thế giới chơi dở (saves)...');
+        const savesSrc = path.join(actualSource, 'saves');
+        const savesDest = path.join(targetRoot, 'saves');
+        if (!fs.existsSync(savesDest)) fs.mkdirSync(savesDest, { recursive: true });
+        for (const w of fs.readdirSync(savesSrc, { withFileTypes: true })) {
+          if (w.isDirectory()) {
+            const wDest = path.join(savesDest, w.name);
             copyFolderMergeRecursive(path.join(savesSrc, w.name), wDest);
             stats.worldsCopied++;
           }
         }
       }
+      // Also sync Minimap Waypoints & Screenshots
+      for (const wpFolder of ['XaeroWaypoints', 'XaeroWorldMap', 'journeymap', 'screenshots']) {
+        if (fs.existsSync(path.join(actualSource, wpFolder))) {
+          copyFolderMergeRecursive(path.join(actualSource, wpFolder), path.join(targetRoot, wpFolder));
+        }
+      }
     }
-    if (syncMods && fs.existsSync(path.join(actualSource, 'mods'))) {
-      onStatus?.('Đang đồng bộ gói Mods (.jar)...');
-      stats.modsCopied += copyFolderMergeRecursive(path.join(actualSource, 'mods'), path.join(targetRoot, 'mods'));
+    if (syncMods) {
+      if (fs.existsSync(path.join(actualSource, 'mods'))) {
+        onStatus?.('Đang đồng bộ gói Mods (.jar)...');
+        stats.modsCopied += copyFolderMergeRecursive(path.join(actualSource, 'mods'), path.join(targetRoot, 'mods'));
+      }
+      if (fs.existsSync(path.join(actualSource, 'config'))) {
+        onStatus?.('Đang đồng bộ cấu hình Mod (config/)...');
+        stats.configsCopied += copyFolderMergeRecursive(path.join(actualSource, 'config'), path.join(targetRoot, 'config'));
+      }
     }
     if (syncShadersPacks) {
       if (fs.existsSync(path.join(actualSource, 'shaderpacks'))) {
@@ -1157,18 +1239,26 @@ function importFromExternalLauncher({ sourceDir, targetGameDir, syncWorlds = tru
     if (syncServersOptions) {
       const srvSrc = path.join(actualSource, 'servers.dat');
       const srvDest = path.join(targetRoot, 'servers.dat');
-      if (fs.existsSync(srvSrc) && !fs.existsSync(srvDest)) {
-        try { fs.copyFileSync(srvSrc, srvDest); stats.serversSynced = true; } catch (_) {}
+      if (fs.existsSync(srvSrc)) {
+        try {
+          if (fs.existsSync(srvDest)) fs.copyFileSync(srvDest, `${srvDest}.bak`);
+          fs.copyFileSync(srvSrc, srvDest);
+          stats.serversSynced = true;
+        } catch (_) {}
       }
       const optSrc = path.join(actualSource, 'options.txt');
       const optDest = path.join(targetRoot, 'options.txt');
-      if (fs.existsSync(optSrc) && !fs.existsSync(optDest)) {
-        try { fs.copyFileSync(optSrc, optDest); } catch (_) {}
+      if (fs.existsSync(optSrc)) {
+        try {
+          if (fs.existsSync(optDest)) fs.copyFileSync(optDest, `${optDest}.bak`);
+          fs.copyFileSync(optSrc, optDest);
+        } catch (_) {}
       }
     }
   } else {
     stats.worldsCopied = countDirItems(path.join(targetRoot, 'saves'), (d) => d.isDirectory());
     stats.modsCopied = countDirItems(path.join(targetRoot, 'mods'), (d) => d.isFile() && /\.(jar|disabled)$/i.test(d.name));
+    stats.configsCopied = countDirItems(path.join(targetRoot, 'config'));
     stats.packsCopied = countDirItems(path.join(targetRoot, 'shaderpacks'), (d) => d.isFile()) + countDirItems(path.join(targetRoot, 'resourcepacks'), (d) => d.isFile());
     stats.serversSynced = fs.existsSync(path.join(targetRoot, 'servers.dat'));
   }
