@@ -95,10 +95,10 @@ function createWindow() {
   const winIcon = fs.existsSync(icoPath) ? icoPath : (fs.existsSync(pngPath) ? pngPath : undefined);
 
   mainWindow = new BrowserWindow({
-    width: 1320,
-    height: 820,
-    minWidth: 960,
-    minHeight: 640,
+    width: 1360,
+    height: 840,
+    minWidth: 1020,
+    minHeight: 660,
     frame: false,
     backgroundColor: '#090c14',
     icon: winIcon,

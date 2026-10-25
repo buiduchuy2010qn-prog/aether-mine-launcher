@@ -4830,3 +4830,116 @@ html[data-theme="cherry"] {
   padding-bottom: 24px !important;
 }
 
+/* v30.2 PRO — ZERO-CLIPPING RESPONSIVE LAYOUT WHEN UNMAXIMIZED / RESIZED SMALLER */
+.titlebar .brand-version,
+.titlebar .ts-chip,
+.titlebar .ram-boost-btn,
+.titlebar #ramBadge,
+.titlebar #ramBoostText,
+.titlebar #updateBtnText,
+.wt-model-btn,
+.wtab-btn,
+.pose-btn,
+.wt-layer-inline-btn,
+.wt-snap-btn {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.titlebar .window-controls {
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+}
+
+@media (max-width: 1320px) {
+  .titlebar {
+    padding: 0 10px !important;
+    gap: 6px !important;
+  }
+  .theme-studio-bar {
+    padding: 2px !important;
+    gap: 2px !important;
+  }
+  .ts-chip {
+    padding: 3px 7px !important;
+    font-size: 11px !important;
+  }
+  .titlebar-telemetry {
+    gap: 5px !important;
+  }
+  .ram-mini-track {
+    display: none !important;
+  }
+  .ram-boost-btn {
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+    height: 26px !important;
+  }
+  .sidebar {
+    width: 184px !important;
+    padding: 10px 8px !important;
+  }
+  .nav-item {
+    font-size: 12px !important;
+    padding: 8px 9px !important;
+    white-space: nowrap !important;
+  }
+  .main-play-grid {
+    grid-template-columns: minmax(0, 1fr) 282px !important;
+    gap: 10px !important;
+    height: auto !important;
+  }
+  .tab-panel#tab-play {
+    overflow-y: auto !important;
+    padding-bottom: 12px !important;
+  }
+  /* Stack Card A and Card B vertically so each gets 480px+ full width and zero buttons clip! */
+  .direct-selector-panel {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    height: auto !important;
+  }
+  .dsp-block {
+    height: auto !important;
+  }
+  .hbc-top,
+  .hbc-bottom-row {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  .hbc-quick-actions {
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+  }
+  .banner-cta-btn {
+    padding: 0 9px !important;
+    height: 30px !important;
+    font-size: 11.5px !important;
+  }
+  .wp-chip {
+    padding: 3px 7px !important;
+    font-size: 10.5px !important;
+  }
+  .skin-studio-card {
+    height: auto !important;
+    align-self: start !important;
+  }
+  .webgl-stage-wrap {
+    min-height: 250px !important;
+    max-height: 290px !important;
+  }
+  .mc-official-dock {
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+  .btn-mc-official-play {
+    min-width: 210px !important;
+    padding: 0 20px !important;
+  }
+  #statusText {
+    max-width: 240px !important;
+    font-size: 11.5px !important;
+  }
+}
+
+
