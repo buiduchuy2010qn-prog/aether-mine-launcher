@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.6.0",
-  "description": "Aether Craft v29.6 PRO - Unified 4 Subpages Upgrade (3-Tier Mod Store, 4-Card Settings Bento, Balanced Worlds/Servers & Uniform Versions Grid)",
+  "version": "29.7.0",
+  "description": "Aether Craft v29.7 PRO - 18 Verified Live Vietnam & International Servers with Category Filter",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

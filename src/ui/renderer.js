@@ -1,3 +1,27 @@
+const DEFAULT_FEATURED_SERVERS = [
+  // 🇻🇳 MÁY CHỦ VIỆT NAM NỔI BẬT (HỖ TRỢ CRACK / OFFLINE & BẢN QUYỀN)
+  { name: 'KingMC Network (Việt Nam • BoxPvP / Skyblock)', ip: 'play.kingmc.vn', cat: 'vn' },
+  { name: 'LuckyVN Network (Việt Nam • Sinh Tồn / Skyblock)', ip: 'mc.luckyvn.com', cat: 'vn' },
+  { name: 'GrassMine VN (Việt Nam • Towny / Sinh Tồn)', ip: 'grassmine.vn', cat: 'vn' },
+  { name: 'MineFC Việt Nam (Cụm Server Lâu Đời)', ip: 'minefc.com', cat: 'vn' },
+  { name: 'SuperMC Network (Việt Nam • RPG / Skyblock)', ip: 'supermc.vn', cat: 'vn' },
+  { name: 'AEMine Việt Nam (Sinh Tồn / BoxPvP / Lifesteal)', ip: 'aemine.vn', cat: 'vn' },
+  { name: '3FMC Network (Việt Nam • Sinh Tồn / Skyblock)', ip: 'play.3fmc.com', cat: 'vn' },
+  // 🔓 MÁY CHỦ QUỐC TẾ HỖ TRỢ CRACK / OFFLINE
+  { name: 'MineBerry Network (Crack • BedWars / Survival)', ip: 'play.mineberry.org', cat: 'crack' },
+  { name: 'PikaNetwork (Crack • BedWars / SkyWars / PvP)', ip: 'play.pika-network.net', cat: 'crack' },
+  { name: 'JartexNetwork (Crack • Minigames / Factions)', ip: 'play.jartexnetwork.com', cat: 'crack' },
+  { name: 'ExtremeCraft (Crack • Skyblock / Survival / PvP)', ip: 'play.extremecraft.net', cat: 'crack' },
+  { name: 'Gamster Network (Crack • BedWars / Practice PvP)', ip: 'play.gamster.org', cat: 'crack' },
+  { name: 'BlocksMC Quốc Tế (Crack • BedWars / SkyWars)', ip: 'mc.blocksmc.com', cat: 'crack' },
+  { name: 'Mineland Network (Crack • Creative / Minigames)', ip: 'play.mineland.net', cat: 'crack' },
+  // 👑 MÁY CHỦ QUỐC TẾ BẢN QUYỀN (MICROSOFT PREMIUM)
+  { name: 'Hypixel Official (Bản Quyền • Số 1 Thế Giới)', ip: 'mc.hypixel.net', cat: 'premium' },
+  { name: 'DonutSMP Official (Bản Quyền • Hardcore Lifesteal)', ip: 'donutsmp.net', cat: 'premium' },
+  { name: 'WynnCraft MMORPG (Bản Quyền • Thế Giới Nhập Vai)', ip: 'play.wynncraft.com', cat: 'premium' },
+  { name: '2B2T Official (Bản Quyền • Server Anarchy Cổ Nhất)', ip: '2b2t.org', cat: 'premium' }
+];
+
 const state = {
   theme: 'prism', authMode: 'crack', username: 'StevePlayer',
   savedAccounts: ['StevePlayer', 'Dream', 'Technoblade'],
@@ -6,15 +30,25 @@ const state = {
   ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
   versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', cachedSkinDataUrl: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
-  activeModStoreType: 'mod', activeLocalFolder: 'mods',
-  favoriteServers: [
-    { name: 'LuckyVN Network (Việt Nam)', ip: 'play.luckyvn.com' },
-    { name: '3FMC Network (Sinh Tồn / Skyblock)', ip: 'play.3fmc.com' },
-    { name: 'Hypixel Official', ip: 'mc.hypixel.net' },
-    { name: 'HerobrineVN Server', ip: 'mc.herobrine.org' }
-  ],
+  activeModStoreType: 'mod', activeLocalFolder: 'mods', serverCategoryFilter: 'all',
+  favoriteServers: [...DEFAULT_FEATURED_SERVERS],
   winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false
 };
+
+function syncFeaturedServersIntoState() {
+  const deadIps = new Set(['play.luckyvn.com', 'mc.herobrine.org', 'herobrine.org', 'play.pikachu.vn', 'play.simpmc.vn']);
+  if (state.serverIp === 'play.luckyvn.com') state.serverIp = 'mc.luckyvn.com';
+  const current = Array.isArray(state.favoriteServers) ? state.favoriteServers : [];
+  const cleanedUserCustom = current.filter((s) => {
+    const ipLower = String(s?.ip || '').toLowerCase().trim();
+    if (!ipLower || deadIps.has(ipLower)) return false;
+    return !DEFAULT_FEATURED_SERVERS.some((d) => d.ip.toLowerCase() === ipLower);
+  });
+  state.favoriteServers = [
+    ...cleanedUserCustom.map((s) => ({ ...s, cat: s.cat || 'vn' })),
+    ...DEFAULT_FEATURED_SERVERS
+  ];
+}
 const POPULAR_VERSIONS = ['1.21.11', '1.21.4', '1.21.1', '1.20.4', '1.20.1', '1.16.5'];
 let skinViewer = null, currentSkinDataUrl = null;
 
@@ -591,8 +625,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (saved) {
     Object.assign(state, saved); if ((!state.javaPath || state.javaPath === 'java') && sys.detectedJava && sys.detectedJava !== 'java') state.javaPath = sys.detectedJava;
     if (!Array.isArray(state.savedAccounts) || !state.savedAccounts.length) state.savedAccounts = [state.username || 'StevePlayer'];
-    if (!Array.isArray(state.favoriteServers) || !state.favoriteServers.length) state.favoriteServers = [{ name: 'LuckyVN Network', ip: 'play.luckyvn.com' }, { name: 'Hypixel Official', ip: 'mc.hypixel.net' }];
   }
+  syncFeaturedServersIntoState();
+  saveCurrentConfig();
+
+  document.querySelectorAll('#serverCategoryBar [data-srvcat]').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('#serverCategoryBar [data-srvcat]').forEach((b) => b.classList.toggle('active', b === btn));
+      state.serverCategoryFilter = btn.dataset.srvcat || 'all';
+      renderFavoriteServers();
+    };
+  });
 
   document.getElementById('usernameInput').value = state.username;
   document.getElementById('ramSlider').value = state.ramGB;

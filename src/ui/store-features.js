@@ -551,26 +551,53 @@ function renderFavoriteServers() {
     const clearBtn = document.getElementById('btnClearActiveSrv');
     if (clearBtn) clearBtn.onclick = () => setServerIpEverywhere('');
   }
-  if (!state.favoriteServers || state.favoriteServers.length === 0) {
+
+  const allServers = state.favoriteServers || [];
+  const catFilter = state.serverCategoryFilter || 'all';
+  const filteredWithIdx = allServers
+    .map((srv, idx) => ({ srv, idx }))
+    .filter(({ srv }) => catFilter === 'all' || (srv.cat || 'vn') === catFilter);
+
+  const countBadge = document.getElementById('serversCountBadge');
+  if (countBadge) countBadge.textContent = `${filteredWithIdx.length} Server`;
+
+  const catCounts = {
+    all: allServers.length,
+    vn: allServers.filter((s) => (s.cat || 'vn') === 'vn').length,
+    crack: allServers.filter((s) => s.cat === 'crack').length,
+    premium: allServers.filter((s) => s.cat === 'premium').length
+  };
+  document.querySelectorAll('#serverCategoryBar [data-srvcat]').forEach((btn) => {
+    const c = btn.dataset.srvcat;
+    if (c === 'all') btn.textContent = `Tất cả (${catCounts.all})`;
+    else if (c === 'vn') btn.textContent = `🇻🇳 Việt Nam (${catCounts.vn})`;
+    else if (c === 'crack') btn.textContent = `🔓 Quốc Tế Crack (${catCounts.crack})`;
+    else if (c === 'premium') btn.textContent = `👑 Bản Quyền (${catCounts.premium})`;
+  });
+
+  if (filteredWithIdx.length === 0) {
     container.innerHTML = `<div class="empty-subpage-state">
       <div class="ess-icon">🌐</div>
-      <div class="ess-title">Chưa có máy chủ Multiplayer nào trong danh sách</div>
+      <div class="ess-title">Chưa có máy chủ Multiplayer nào trong danh mục này</div>
       <div class="ess-desc">Nhập tên và địa chỉ IP ở thanh bên trên rồi bấm <strong>+ Thêm Server</strong> để lưu máy chủ yêu thích.</div>
     </div>`;
     return;
   }
-  container.innerHTML = state.favoriteServers.map((srv, idx) => {
+  container.innerHTML = filteredWithIdx.map(({ srv, idx }) => {
     const isSelected = state.serverIp === srv.ip;
     const pingInfo = (state.serverPingCache && state.serverPingCache[srv.ip]) || null;
     const latencyTag = pingInfo?.online && pingInfo.latencyMs ? `<span class="srv-latency-tag">${pingInfo.latencyMs}ms</span>` : '';
     const statusHtml = pingInfo
       ? (pingInfo.online
-          ? `<span class="srv-ping-badge online">● ${pingInfo.playersOnline}/${pingInfo.playersMax} người</span>${latencyTag}`
+          ? `<span class="srv-ping-badge online">● ${(pingInfo.playersOnline || 0).toLocaleString('vi-VN')}/${(pingInfo.playersMax || 0).toLocaleString('vi-VN')} người</span>${latencyTag}`
           : `<span class="srv-ping-badge offline">● Ngoại tuyến</span>`)
       : `<span class="srv-ping-badge pending">⏳ Đang kiểm tra...</span>`;
     const iconHtml = pingInfo?.icon
       ? `<img class="srv-icon-img" src="${pingInfo.icon}" alt="" />`
       : `<div class="srv-icon-img srv-icon-fallback">🌐</div>`;
+    const catBadge = srv.cat === 'premium'
+      ? '<span class="srv-cat-pill premium">👑 Bản quyền</span>'
+      : (srv.cat === 'crack' ? '<span class="srv-cat-pill crack">🔓 Crack Quốc Tế</span>' : '<span class="srv-cat-pill vn">🇻🇳 Việt Nam</span>');
     return `<div class="srv-card-row ${isSelected ? 'active' : ''}">
       <div class="srv-card-left">
         ${iconHtml}
@@ -579,7 +606,7 @@ function renderFavoriteServers() {
             <strong class="srv-name-text" title="${srv.name}">${srv.name}</strong>
             ${statusHtml}
           </div>
-          <div class="srv-ip-line">IP: <span>${srv.ip}</span></div>
+          <div class="srv-ip-line">${catBadge} • IP: <span>${srv.ip}</span></div>
         </div>
       </div>
       <div class="srv-card-actions">

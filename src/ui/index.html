@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v29.6 PRO</span>
+          <span class="brand-version">v29.7 PRO</span>
         </div>
       </div>
 
@@ -39,7 +39,7 @@
         </button>
         <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">v29.6.0</span>
+          <span id="updateBtnText">v29.7.0</span>
         </button>
       </div>
 
@@ -582,15 +582,22 @@
                 <div class="dsp-head-left">
                   <span class="card-dot cyan"></span>
                   <h3>MÁY CHỦ MULTIPLAYER YÊU THÍCH</h3>
+                  <span class="installed-count-tag" id="serversCountBadge">18 Server</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span class="field-hint-mini" id="activeServerBadge">Chế độ: Vào Menu chính</span>
                   <button class="vtype-btn" id="btnPingAllServers" title="Kiểm tra trạng thái Online & số người chơi">📡 Ping</button>
                 </div>
               </div>
+              <div class="srv-category-bar" id="serverCategoryBar">
+                <button class="vtype-btn active" data-srvcat="all">Tất cả</button>
+                <button class="vtype-btn" data-srvcat="vn">🇻🇳 Server Việt Nam</button>
+                <button class="vtype-btn" data-srvcat="crack">🔓 Quốc Tế (Crack)</button>
+                <button class="vtype-btn" data-srvcat="premium">👑 Bản Quyền</button>
+              </div>
               <div class="add-server-bar">
-                <input type="text" id="newServerNameInput" class="pro-input" placeholder="Tên máy chủ (vd: LuckyVN)..." style="flex:0.9;" />
-                <input type="text" id="newServerIpInput" class="pro-input" placeholder="Địa chỉ IP (vd: play.luckyvn.com)..." style="flex:1.1;" />
+                <input type="text" id="newServerNameInput" class="pro-input" placeholder="Tên máy chủ (vd: KingMC, LuckyVN)..." style="flex:0.9;" />
+                <input type="text" id="newServerIpInput" class="pro-input" placeholder="Địa chỉ IP (vd: play.kingmc.vn)..." style="flex:1.1;" />
                 <button class="btn-sync-skin" id="btnAddServer">+ Thêm Server</button>
               </div>
               <div class="worlds-list-wrap" id="favoriteServersList"></div>
