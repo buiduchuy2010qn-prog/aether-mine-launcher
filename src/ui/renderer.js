@@ -196,7 +196,7 @@ function updateSummaryUI() {
     vDesc.textContent = isInst ? 'Sẵn sàng vào thẳng game ngay lập tức (< 1 giây)' : 'Sẵn sàng tải tự động từ máy chủ Mojang khi bấm CHƠI NGAY';
   }
   const bannerPill = document.getElementById('bannerActivePill');
-  if (bannerPill) bannerPill.textContent = `Đang chọn: Minecraft ${ver} • ${coreUpper} • ${ram} RAM`;
+  if (bannerPill) bannerPill.textContent = `${ver} • ${coreUpper} • ${ram} RAM`;
   const bannerSub = document.getElementById('bannerSubStatus');
   if (bannerSub) bannerSub.textContent = isInst
     ? `Phiên bản Minecraft ${ver} (${coreUpper}) đã cài sẵn trên máy — Bấm CHƠI NGAY để vào thẳng game!`
@@ -874,6 +874,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btnForceKill').onclick = async () => {
     await window.aetherAPI.forceKillGame();
+    state.isLaunching = false;
+    document.getElementById('btnLaunch').disabled = false;
+    document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
     document.getElementById('btnForceKill').classList.add('hidden');
     document.getElementById('statusText').textContent = 'Đã tắt nhanh Minecraft & giải phóng RAM!';
   };
@@ -957,7 +960,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.aetherAPI.onGameReady(() => {
     if (skinViewer) skinViewer.renderPaused = true;
     document.getElementById('btnForceKill').classList.remove('hidden');
-    document.getElementById('statusText').textContent = 'Đang chơi (Launcher ngủ đông 0% GPU)';
+    document.getElementById('launchBtnText').textContent = 'ĐANG CHƠI GAME';
+    document.getElementById('statusText').textContent = 'Đang chơi (Ngủ đông 0% GPU)';
   });
   window.aetherAPI.onClose(async (code) => {
     state.isLaunching = false;

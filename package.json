@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "28.0.0",
-  "description": "Aether Craft v28.0 PRO - Full-Scale Studio UI & Smart 1-Click External Launcher Sync",
+  "version": "28.1.0",
+  "description": "Aether Craft v28.1 PRO - Perfect Zero-Overflow Full-Scale Studio UI & Smart 1-Click Sync",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
