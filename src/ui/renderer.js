@@ -26,16 +26,9 @@ function syncSkinPresetButtons(activeName) {
   });
 }
 
-function update3DNameTag(nameStr) {
-  if (!skinViewer || !window.skinview3d) return;
-  const clean = (nameStr || state.username || 'StevePlayer').trim() || 'StevePlayer';
-  try {
-    skinViewer.nameTag = new window.skinview3d.NameTagObject(clean, {
-      textStyle: '#ffffff',
-      backgroundStyle: 'rgba(15, 23, 42, 0.62)',
-      height: 3.0
-    });
-  } catch (_) {}
+function update3DNameTag(_nameStr) {
+  if (!skinViewer) return;
+  skinViewer.nameTag = null;
 }
 
 async function applyCapeToViewer(capeType) {
@@ -169,7 +162,7 @@ function updateSummaryUI() {
     vDesc.textContent = isInst ? 'Sẵn sàng vào thẳng game ngay lập tức (< 1 giây)' : 'Sẵn sàng tải tự động từ máy chủ Mojang khi bấm CHƠI NGAY';
   }
   const bannerPill = document.getElementById('bannerActivePill');
-  if (bannerPill) bannerPill.textContent = `⚡ Đang chọn: Minecraft ${ver} • ${coreUpper} • ${ram} RAM`;
+  if (bannerPill) bannerPill.textContent = `Đang chọn: Minecraft ${ver} • ${coreUpper} • ${ram} RAM`;
   const bannerSub = document.getElementById('bannerSubStatus');
   if (bannerSub) bannerSub.textContent = isInst
     ? `Phiên bản Minecraft ${ver} (${coreUpper}) đã cài sẵn trên máy — Bấm CHƠI NGAY để vào thẳng game!`
@@ -177,13 +170,13 @@ function updateSummaryUI() {
     const editionTag = document.getElementById('hbcEditionTag');
   const heroBanner = document.getElementById('heroBanner');
   if (editionTag && heroBanner) {
-    let wpUrl = 'https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png';
+    let wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
     let eraTitle = '🌲 THE GARDEN AWAKENS & WILDERNESS • 1.21+';
     if (ver.startsWith('26.') || ver.includes('w')) {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
       eraTitle = '🔥 SNAPSHOT & VIBRANT VISUALS • ' + ver;
     } else if (ver === '1.21.11' || ver === '1.21.10' || ver === '1.21.9') {
-      wpUrl = 'https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png';
+      wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
       eraTitle = '🌲 WILDERNESS & PALE GARDEN • ' + ver;
     } else if (ver.startsWith('1.21')) {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
@@ -561,7 +554,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnOuter) {
     btnOuter.onclick = () => {
       state.outerLayerVisible = !state.outerLayerVisible;
-      btnOuter.classList.toggle('active', state.outerLayerVisible);
+      btnOuter.classList.toggle('active', state.outerLayerVisible); btnOuter.textContent = state.outerLayerVisible ? 'Lớp Áo 3D: BẬT' : 'Lớp Áo 3D: TẮT';
       if (skinViewer?.playerObject?.skin) {
         skinViewer.playerObject.skin.setOuterLayerVisible(state.outerLayerVisible);
         skinViewer.render();

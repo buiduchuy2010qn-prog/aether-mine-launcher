@@ -153,7 +153,7 @@ function draw2DAvatarFace(imgSource) {
       }
 
       // Check if head (8,8,8,8) is a single solid color (like Dream's neon green skin)
-      const faceData = octx.getImageData(8, 8, 8, 8).data;
+      const faceData = octx.getImageData(8, 8, 8, 6).data;
       const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
       let solidHead = true;
       for (let i = 0; i < faceData.length; i += 4) {

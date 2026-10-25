@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="prism">
+<html lang="vi" data-theme="lunar">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v22.0 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v23.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -12,39 +12,52 @@
     <header class="titlebar">
       <div class="titlebar-brand">
         <div class="brand-cube-svg">
-          <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
-            <polygon points="16,2 30,9 16,16 2,9" fill="#4ade80" />
-            <polygon points="2,9 16,16 16,30 2,23" fill="#92400e" />
-            <polygon points="30,9 16,16 16,30 30,23" fill="#78350f" />
-            <polygon points="2,9 16,16 16,19 2,12" fill="#22c55e" />
-            <polygon points="30,9 16,16 16,19 30,12" fill="#16a34a" />
+          <!-- REAL PIXEL-SHADED 3D MINECRAFT GRASS BLOCK ICON -->
+          <svg viewBox="0 0 64 64" width="26" height="26" fill="none">
+            <!-- Top Grass Face -->
+            <polygon points="32,4 60,18 32,32 4,18" fill="#5da632" />
+            <polygon points="32,7 54,18 32,29 10,18" fill="#6ab839" />
+            <polygon points="32,11 45,18 32,25 19,18" fill="#78c945" />
+            <!-- Left Dirt Face + Grass Overhang -->
+            <polygon points="4,18 32,32 32,60 4,46" fill="#865934" />
+            <polygon points="4,18 32,32 32,39 25,36 25,40 18,36 18,33 11,30 11,34 4,30" fill="#5da632" />
+            <polygon points="10,38 16,41 16,47 10,44" fill="#6b4423" />
+            <polygon points="20,45 26,48 26,54 20,51" fill="#9c6b43" />
+            <!-- Right Dirt Face + Shaded Grass Overhang -->
+            <polygon points="60,18 32,32 32,60 60,46" fill="#654124" />
+            <polygon points="60,18 32,32 32,39 39,36 39,40 46,36 46,33 53,30 53,34 60,30" fill="#468323" />
+            <polygon points="40,42 46,39 46,45 40,48" fill="#4e3119" />
+            <polygon points="48,47 54,44 54,50 48,53" fill="#79502e" />
+            <!-- Crisp Outer Cube Rim -->
+            <polygon points="32,4 60,18 60,46 32,60 4,46 4,18" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" fill="none" />
           </svg>
         </div>
         <div class="brand-titles">
           <span class="brand-name">MINECRAFT LAUNCHER</span>
-          <span class="brand-version">v22.0 PRO</span>
+          <span class="brand-version">v23.0 PRO</span>
         </div>
       </div>
 
       <div class="theme-studio-bar">
         <span class="ts-label">Giao diện:</span>
         <button class="ts-chip" data-theme-pick="mojang">Mojang Dark</button>
-        <button class="ts-chip" data-theme-pick="lunar">Lunar</button>
+        <button class="ts-chip active" data-theme-pick="lunar">Lunar</button>
         <button class="ts-chip" data-theme-pick="modrinth">Modrinth</button>
         <button class="ts-chip" data-theme-pick="feather">Feather</button>
-        <button class="ts-chip" data-theme-pick="cherry">🌸 Cherry</button>
-        <button class="ts-chip active" data-theme-pick="prism">Sáng (Light)</button>
+        <button class="ts-chip" data-theme-pick="cherry">Cherry</button>
+        <button class="ts-chip" data-theme-pick="prism">Sáng (Light)</button>
       </div>
 
       <div class="titlebar-telemetry">
         <div class="telemetry-pill"><span id="cpuBadge">12 Nhân CPU</span></div>
-        <div class="telemetry-pill telemetry-ram-live" title=" Tự động cập nhật dung lượng RAM thực tế mỗi 3 giây">
+        <div class="telemetry-pill telemetry-ram-live" title="Tự động cập nhật dung lượng RAM thực tế mỗi 3 giây">
           <span class="live-dot-green"></span>
           <span id="ramBadge">RAM trống: -- GB</span>
           <div class="ram-mini-track"><div class="ram-mini-fill" id="ramLiveBarFill" style="width: 45%"></div></div>
         </div>
         <button class="ram-boost-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
-          <span id="updateBtnText">🔄 Cập nhật App</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          <span id="updateBtnText">Cập nhật App</span>
         </button>
         <button class="ram-boost-btn" id="btnTrimRam">
           <span class="pulse-dot"></span>
@@ -123,39 +136,77 @@
           <div class="main-play-grid">
             <!-- LEFT COLUMN: CINEMATIC HERO BANNER + 2 STUDIO CONTROL CARDS -->
             <div class="left-play-col">
-              <!-- OFFICIAL MINECRAFT CINEMATIC BANNER WITH GLASS HUD -->
-              <div class="hero-banner-clean" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png');">
+              <!-- OFFICIAL MINECRAFT CINEMATIC BANNER WITH 3D MINECRAFT WORDMARK LOGO -->
+              <div class="hero-banner-clean" id="heroBanner" style="background-image: url('https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg');">
                 <div class="hbc-overlay"></div>
                 <div class="hbc-content">
                   <div class="hbc-top">
                     <div class="hbc-badges-left">
-                      <span class="mc-badge">MINECRAFT: JAVA EDITION</span>
-                      <span class="mc-live-pill" id="bannerActivePill">⚡ 1.21.11 • FABRIC • 4 GB RAM</span>
+                      <span class="mc-badge">
+                        <svg width="12" height="12" viewBox="0 0 64 64" style="margin-right:5px;vertical-align:-2px;"><polygon points="32,4 60,18 32,32 4,18" fill="#6ab839"/><polygon points="4,18 32,32 32,60 4,46" fill="#865934"/><polygon points="60,18 32,32 32,60 60,46" fill="#654124"/></svg>
+                        MOJANG STUDIOS • OFFICIAL
+                      </span>
+                      <span class="mc-live-pill" id="bannerActivePill">1.21.11 • FABRIC • 4 GB RAM</span>
                     </div>
                     <div class="wallpaper-switcher">
-                      <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">🌲 Rừng Hoang</button>
-                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">⛰️ Thế Giới</button>
-                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg">⚔️ Bản 1.21.11</button>
-                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg">🔥 Lửa Trại</button>
+                      <button class="wp-chip active" data-wp="https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg">Tricky Trials</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg">Vibrant Camp</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png">Overworld</button>
+                      <button class="wp-chip" data-wp="https://launchercontent.mojang.com/v2/images/MinecraftWildernessBoundLauncher700x466.png">Wilderness</button>
                     </div>
                   </div>
 
                   <div class="hbc-bottom-row">
                     <div class="hbc-bottom">
-                      <div class="hbc-edition-tag" id="hbcEditionTag">🌲 THE GARDEN AWAKENS &amp; WILDERNESS • 1.21+</div>
-                      <h1>MINECRAFT: JAVA EDITION</h1>
+                      <div class="hbc-edition-tag" id="hbcEditionTag">MINECRAFT JAVA EDITION • RELEASE</div>
+                      <!-- REAL 3D CHISELED MINECRAFT WORDMARK LOGO -->
+                      <div class="mc-official-logo-wrap">
+                        <svg class="mc-wordmark-svg" viewBox="0 0 520 76" width="350" height="52">
+                          <defs>
+                            <linearGradient id="mcStoneFace" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stop-color="#ffffff" />
+                              <stop offset="45%" stop-color="#d4d8e2" />
+                              <stop offset="100%" stop-color="#9ca3b5" />
+                            </linearGradient>
+                            <linearGradient id="mcGoldSub" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stop-color="#fde047" />
+                              <stop offset="50%" stop-color="#facc15" />
+                              <stop offset="100%" stop-color="#eab308" />
+                            </linearGradient>
+                            <filter id="mc3dExtrude" x="-5%" y="-5%" width="110%" height="125%">
+                              <feDropShadow dx="0" dy="4" stdDeviation="0" flood-color="#272a35" />
+                              <feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="rgba(0,0,0,0.75)" />
+                            </filter>
+                          </defs>
+                          <!-- 3D Extruded Block Title -->
+                          <text x="2" y="46" font-family="'Segoe UI Black', 'Impact', 'Arial Black', sans-serif" font-size="48" font-weight="900" letter-spacing="3.5" fill="url(#mcStoneFace)" stroke="#1e2029" stroke-width="3" paint-order="stroke fill" filter="url(#mc3dExtrude)">MINECRAFT</text>
+                          <!-- Official Sub-banner Bar -->
+                          <rect x="4" y="56" width="168" height="17" rx="3" fill="#181920" stroke="rgba(255,255,255,0.22)" stroke-width="1" />
+                          <text x="88" y="68" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10.5" font-weight="900" letter-spacing="2.8" fill="url(#mcGoldSub)">JAVA EDITION</text>
+                        </svg>
+                      </div>
                       <p id="bannerSubStatus">Phiên bản đã sẵn sàng trên máy — Bấm CHƠI NGAY để vào thẳng thế giới.</p>
                     </div>
                     <div class="hbc-quick-actions">
-                      <button class="banner-cta-btn secondary" id="btnBannerScreenshots" title="Mở thư mục ảnh chụp trong game">📸 Ảnh Chụp</button>
-                      <button class="banner-cta-btn secondary" id="btnBannerWorlds" title="Quản lý thế giới Saves">🌍 Thế Giới</button>
-                      <button class="banner-cta-btn" id="btnGoModStore">🧩 Kho Mod &amp; Shaders</button>
+                      <button class="banner-cta-btn secondary" id="btnBannerScreenshots" title="Mở thư mục ảnh chụp trong game">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <span>Ảnh Chụp</span>
+                      </button>
+                      <button class="banner-cta-btn secondary" id="btnBannerWorlds" title="Quản lý thế giới Saves & Server">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        <span>Thế Giới</span>
+                      </button>
+                      <button class="banner-cta-btn" id="btnGoModStore">
+                        <!-- OFFICIAL MODRINTH LOGO EMBLEM -->
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 15a5 5 0 1 1 5-5 5 5 0 0 1-5 5z"/><path d="M12 7v3m0 4v3m-5-5h3m4 0h3"/></svg>
+                        <span>Kho Modrinth</span>
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- TWO SYMMETRICAL STUDIO CONTROL CARDS (ZERO TEXT WRAPPING, ZERO BLANK GAP) -->
+              <!-- TWO SYMMETRICAL STUDIO CONTROL CARDS -->
               <div class="direct-selector-panel">
                 <!-- CARD A: BỘ KHỞI CHẠY & PHIÊN BẢN MINECRAFT -->
                 <div class="dsp-block">
@@ -166,7 +217,7 @@
                     </div>
                     <div class="dsp-head-right">
                       <span class="installed-count-tag no-wrap-label" id="installedCountLabel">✓ Đã sẵn sàng</span>
-                      <span class="java-auto-badge no-wrap-label" id="javaReqBadge" title="Java chỉ được khởi chạy khi bạn bấm nút CHƠI NGAY">☕ Dùng Java 21 khi vào Game</span>
+                      <span class="java-auto-badge no-wrap-label" id="javaReqBadge" title="Java chỉ được khởi chạy khi bạn bấm nút CHƠI NGAY">Java 21 Auto</span>
                     </div>
                   </div>
 
@@ -176,28 +227,56 @@
                       <span class="field-hint-mini">Tự động nhận diện thư viện</span>
                     </div>
                     <div class="core-selector-bar">
+                      <!-- VANILLA: REAL 3D GRASS BLOCK -->
                       <button class="core-tab-btn" data-core="vanilla">
-                        <svg class="core-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        <svg class="core-svg-icon" viewBox="0 0 64 64" width="20" height="20">
+                          <polygon points="32,4 60,18 32,32 4,18" fill="#6ab839"/>
+                          <polygon points="4,18 32,32 32,60 4,46" fill="#865934"/>
+                          <polygon points="4,18 32,32 32,39 4,25" fill="#5da632"/>
+                          <polygon points="60,18 32,32 32,60 60,46" fill="#654124"/>
+                          <polygon points="60,18 32,32 32,39 60,25" fill="#468323"/>
+                        </svg>
                         <strong>Vanilla</strong>
                         <span>Nguyên bản</span>
                       </button>
+                      <!-- FABRIC: OFFICIAL FABRIC SCROLL/WEAVE EMBLEM -->
                       <button class="core-tab-btn active" data-core="fabric">
-                        <svg class="core-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        <svg class="core-svg-icon" viewBox="0 0 32 32" width="20" height="20" fill="none">
+                          <rect x="4" y="4" width="24" height="24" rx="6" fill="#38342a" stroke="#dbd0b4" stroke-width="2"/>
+                          <path d="M10 11h12M10 16h9M10 21h6" stroke="#dbd0b4" stroke-width="2.6" stroke-linecap="round"/>
+                          <circle cx="22" cy="20" r="2.5" fill="#dbd0b4"/>
+                        </svg>
                         <strong>Fabric</strong>
                         <span>Siêu nhẹ FPS</span>
                       </button>
+                      <!-- FORGE: OFFICIAL MINECRAFT FORGE ANVIL EMBLEM -->
                       <button class="core-tab-btn" data-core="forge">
-                        <svg class="core-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        <svg class="core-svg-icon" viewBox="0 0 32 32" width="20" height="20" fill="none">
+                          <rect x="4" y="4" width="24" height="24" rx="6" fill="#2c1d11" stroke="#f59e0b" stroke-width="2"/>
+                          <path d="M8 11h14l3 3-3 3H11v3h9v3H8v-3h3v-3H8v-6z" fill="#f59e0b"/>
+                        </svg>
                         <strong>Forge</strong>
                         <span>Chuyên Mod</span>
                       </button>
+                      <!-- QUILT: OFFICIAL QUILT DIAMOND PATCHWORK EMBLEM -->
                       <button class="core-tab-btn" data-core="quilt">
-                        <svg class="core-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        <svg class="core-svg-icon" viewBox="0 0 32 32" width="20" height="20" fill="none">
+                          <polygon points="16,3 28,15 16,27 4,15" fill="#2e1065" stroke="#c084fc" stroke-width="2"/>
+                          <polygon points="16,5 26,15 16,15" fill="#ec4899"/>
+                          <polygon points="16,5 16,15 6,15" fill="#a855f7"/>
+                          <polygon points="16,15 26,15 16,25" fill="#6366f1"/>
+                          <polygon points="16,15 16,25 6,15" fill="#38bdf8"/>
+                        </svg>
                         <strong>Quilt</strong>
                         <span>Hiện đại</span>
                       </button>
+                      <!-- LEGACY PVP: PIXEL DIAMOND SWORD -->
                       <button class="core-tab-btn" data-core="legacyfabric">
-                        <svg class="core-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>
+                        <svg class="core-svg-icon" viewBox="0 0 32 32" width="20" height="20" fill="none">
+                          <path d="M22 6l4 4-11 11-4-4L22 6z" fill="#38bdf8" stroke="#bae6fd" stroke-width="1.2"/>
+                          <path d="M8 16l8 8-2 2-8-8 2-2z" fill="#0284c7"/>
+                          <path d="M6 22l4 4-3 3-3-3 2-4z" fill="#a16207"/>
+                        </svg>
                         <strong>Legacy</strong>
                         <span>PvP 1.8 / 1.12</span>
                       </button>
@@ -234,11 +313,14 @@
                       <span class="vrb-badge ready" id="verReadyBadge">✓ Đã cài sẵn trên máy</span>
                       <span class="vrb-desc" id="verReadyDesc">Sẵn sàng vào thẳng game ngay lập tức (&lt; 1 giây)</span>
                     </div>
-                    <button class="vrb-action-btn" id="btnQuickOpenVersions" title="Mở thư mục versions trong .minecraft">📂 Mở Thư Mục</button>
+                    <button class="vrb-action-btn" id="btnQuickOpenVersions" title="Mở thư mục versions trong .minecraft">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="margin-right:4px;vertical-align:-1px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      <span>Mở Thư Mục</span>
+                    </button>
                   </div>
                 </div>
 
-                <!-- CARD B: TÀI KHOẢN & BỘ NHỚ RAM (ZERO TEXT WRAPPING) -->
+                <!-- CARD B: TÀI KHOẢN & BỘ NHỚ RAM -->
                 <div class="dsp-block">
                   <div class="dsp-head">
                     <div class="dsp-head-left">
@@ -249,8 +331,20 @@
                   </div>
 
                   <div class="auth-switcher-row">
-                    <button class="auth-tab-btn active" id="tabBtnCrack">⚡ Tài khoản Offline (Crack)</button>
-                    <button class="auth-tab-btn" id="tabBtnMicrosoft">🛡️ Microsoft Bản Quyền</button>
+                    <button class="auth-tab-btn active" id="tabBtnCrack">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:5px;vertical-align:-2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <span>Tài khoản Offline (Crack)</span>
+                    </button>
+                    <button class="auth-tab-btn" id="tabBtnMicrosoft">
+                      <!-- OFFICIAL MICROSOFT 4-COLOR LOGO -->
+                      <svg width="13" height="13" viewBox="0 0 21 21" style="margin-right:5px;vertical-align:-2px;">
+                        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                      </svg>
+                      <span>Microsoft Bản Quyền</span>
+                    </button>
                   </div>
 
                   <div id="panelCrack" class="auth-input-area">
@@ -268,7 +362,15 @@
 
                   <div id="panelMicrosoft" class="auth-input-area hidden">
                     <div id="msNotLoggedBox">
-                      <button class="btn-ms-oauth" id="btnMsLogin"><span>🔑 Đăng Nhập Tài Khoản Microsoft OAuth2</span></button>
+                      <button class="btn-ms-oauth" id="btnMsLogin">
+                        <svg width="14" height="14" viewBox="0 0 21 21" style="margin-right:6px;vertical-align:-2px;">
+                          <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                          <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                          <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                          <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                        </svg>
+                        <span>Đăng Nhập Tài Khoản Microsoft OAuth2</span>
+                      </button>
                     </div>
                     <div id="msLoggedBox" class="hidden ms-logged-inline">
                       <strong id="msProfileName">Player</strong>
@@ -276,7 +378,7 @@
                     </div>
                   </div>
 
-                  <!-- COMPACT SINGLE-LINE BOOSTER CHIPS (NEVER WRAPS ONTO 3 LINES) -->
+                  <!-- COMPACT SINGLE-LINE BOOSTER CHIPS -->
                   <div class="home-booster-box">
                     <div class="ver-label-bar">
                       <label class="field-label no-wrap-label" style="margin:0;">Tăng Tốc Khởi Chạy &amp; Tối Ưu Máy</label>
@@ -285,15 +387,15 @@
                     <div class="booster-pills-row">
                       <label class="booster-check-pill" title="Tối ưu đa nhân CPU G1GC và tự động dọn rác RAM">
                         <input type="checkbox" id="homeAikarCheck" checked />
-                        <span class="no-wrap-label">⚡ Đa Nhân G1GC</span>
+                        <span class="no-wrap-label">Đa Nhân G1GC</span>
                       </label>
                       <label class="booster-check-pill" title="Tự động ẩn Launcher về 0% GPU khi đang chơi">
                         <input type="checkbox" id="homeHibernateCheck" checked />
-                        <span class="no-wrap-label">❄️ Ngủ Đông 0%</span>
+                        <span class="no-wrap-label">Ngủ Đông 0%</span>
                       </label>
                       <label class="booster-check-pill" title="Bỏ qua quét lại 4591 file đã có sẵn để vào game dưới 1 giây">
                         <input type="checkbox" id="homeFastSkipCheck" checked />
-                        <span class="no-wrap-label">🚀 Vào Nhanh &lt;1s</span>
+                        <span class="no-wrap-label">Vào Nhanh &lt;1s</span>
                       </label>
                     </div>
                   </div>
@@ -323,17 +425,17 @@
                 <div class="pose-bar">
                   <button class="pose-btn active" data-pose="walk" title="Đi bộ">Đi</button>
                   <button class="pose-btn" data-pose="run" title="Chạy nhanh">Chạy</button>
-                  <button class="pose-btn" data-pose="hit" title="Vung tay chiến đấu PvP">⚔️ Đánh</button>
-                  <button class="pose-btn" data-pose="fly" title="Bay lượn với cánh Elytra">🦅 Bay</button>
+                  <button class="pose-btn" data-pose="hit" title="Vung tay chiến đấu PvP">Đánh</button>
+                  <button class="pose-btn" data-pose="fly" title="Bay lượn với cánh Elytra">Bay</button>
                   <button class="pose-btn" data-pose="idle" title="Đứng thở nhẹ">Đứng</button>
                 </div>
               </div>
               <div class="webgl-stage-wrap stage-bg-stars" id="webglStageWrap">
                 <div class="stage-unified-toolbar">
-                  <button class="stage-ctrl-btn active" id="btnStageBgFx" title="Đổi hiệu ứng nền Sân khấu 3D">✨ Sao Đêm</button>
-                  <button class="stage-ctrl-btn" id="btnToggleElytra" title="Đeo thử Cánh cứng Elytra 3D">🪽 Elytra</button>
-                  <button class="stage-ctrl-btn" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">🔄 Xoay</button>
-                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện">🎯 Giữa</button>
+                  <button class="stage-ctrl-btn active" id="btnStageBgFx" title="Đổi hiệu ứng nền Sân khấu 3D">Sao Đêm</button>
+                  <button class="stage-ctrl-btn" id="btnToggleElytra" title="Đeo thử Cánh cứng Elytra 3D">Cánh Elytra</button>
+                  <button class="stage-ctrl-btn" id="btnToggleRotate" title="Bật/Tắt tự động xoay 360°">Xoay 360°</button>
+                  <button class="stage-ctrl-btn" id="btnResetCam" title="Đưa góc nhìn về chính diện">Chính Diện</button>
                 </div>
                 <div class="starfield-layer"></div>
                 <canvas id="skinViewerCanvas"></canvas>
@@ -353,16 +455,24 @@
                   </div>
                 </div>
                 <div class="wt-row">
-                  <button class="wt-upload-btn" id="btnUploadSkinPng" title="Tải file ảnh Skin .PNG từ máy tính">📂 Tải Skin (.PNG)</button>
-                  <button class="wt-snap-btn" id="btnSnap3DSkin" title="Chụp & Lưu ảnh nhân vật 3D nền trong suốt (.PNG)">📸 Chụp 3D</button>
+                  <button class="wt-upload-btn" id="btnUploadSkinPng" title="Tải file ảnh Skin .PNG từ máy tính">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-1px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Tải Skin (.PNG)</span>
+                  </button>
+                  <button class="wt-snap-btn" id="btnSnap3DSkin" title="Chụp & Lưu ảnh nhân vật 3D nền trong suốt (.PNG)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-1px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <span>Chụp 3D</span>
+                  </button>
                   <div class="wt-model-switch">
                     <button class="wt-model-btn active" data-model="default" title="Tay Steve 4px">Classic</button>
                     <button class="wt-model-btn" data-model="slim" title="Tay Alex 3px">Slim</button>
-                    <button class="wt-layer-btn active" id="btnToggleOuterLayer" title="Bật/Tắt lớp áo khoác & mũ 3D bên ngoài">🧥 Áo 3D</button>
                   </div>
                 </div>
                 <div class="wt-cape-row">
-                  <span class="wt-cape-label">Áo choàng (Cape 3D):</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span class="wt-cape-label">Áo choàng (Cape 3D):</span>
+                    <button class="wt-layer-inline-btn active" id="btnToggleOuterLayer" title="Bật/Tắt lớp giáp & áo khoác nổi 3D bên ngoài">Lớp Áo 3D: BẬT</button>
+                  </div>
                   <div class="wt-cape-pills" id="capeSelectorBar">
                     <button class="cape-chip active" data-cape="none">Không</button>
                     <button class="cape-chip" data-cape="mojang">Mojang</button>
@@ -385,18 +495,18 @@
             </div>
             <div class="mods-header-actions">
               <button class="btn-fps-boost-1click" id="btnStoreFpsBoost" title="Tự động tải bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, Iris)">
-                <span>⚡ Cài Trọn Bộ Mod X3 FPS</span>
+                <span>Cài Trọn Bộ Mod X3 FPS</span>
               </button>
-              <button class="btn-sync-skin" id="btnOpenModsFolder">📂 Mở thư mục đang chọn</button>
+              <button class="btn-sync-skin" id="btnOpenModsFolder">Mở thư mục đang chọn</button>
             </div>
           </div>
 
           <div class="mods-control-bar">
             <div class="mods-type-tabs">
-              <button class="mtype-btn active" data-ptype="mod">🧩 Kho Mods (.jar)</button>
-              <button class="mtype-btn" data-ptype="shader">✨ Shaders (Bóng đổ)</button>
-              <button class="mtype-btn" data-ptype="resourcepack">🎨 Resource Packs</button>
-              <button class="mtype-btn" data-ptype="installed">📦 Đã Cài Trong Máy (<span id="localAddonCount">0</span>)</button>
+              <button class="mtype-btn active" data-ptype="mod">Kho Mods (.jar)</button>
+              <button class="mtype-btn" data-ptype="shader">Shaders (Bóng đổ)</button>
+              <button class="mtype-btn" data-ptype="resourcepack">Resource Packs</button>
+              <button class="mtype-btn" data-ptype="installed">Đã Cài Trong Máy (<span id="localAddonCount">0</span>)</button>
             </div>
             <div class="mods-search-box">
               <input type="text" id="modSearchInput" class="pro-input" placeholder="Tìm Mod / Shader (vd: Sodium, Iris, Complementary, Minimap, VoiceChat)..." />
@@ -405,13 +515,13 @@
           </div>
 
           <div class="mods-quick-tags-bar" id="modQuickCategoryBar">
-            <span class="mqt-label">Gợi ý 1-Chạm:</span>
-            <button class="mqt-chip active" data-mcat="" data-mtype="mod">🔥 Phổ biến nhất</button>
-            <button class="mqt-chip" data-mcat="Sodium" data-mtype="mod">⚡ Siêu Tăng FPS (Sodium/Lithium)</button>
-            <button class="mqt-chip" data-mcat="Iris" data-mtype="mod">🌈 Cài Shaders (Iris)</button>
-            <button class="mqt-chip" data-mcat="Complementary" data-mtype="shader">☀️ Bóng đổ Complementary</button>
-            <button class="mqt-chip" data-mcat="Minimap" data-mtype="mod">🗺️ Bản đồ Minimap</button>
-            <button class="mqt-chip" data-mcat="Zoom" data-mtype="mod">🔍 Ống nhòm Zoom &amp; Tiện ích</button>
+            <span class="mqt-label">Bộ lọc nhanh:</span>
+            <button class="mqt-chip active" data-mcat="" data-mtype="mod">Phổ biến nhất</button>
+            <button class="mqt-chip" data-mcat="Sodium" data-mtype="mod">Siêu Tăng FPS (Sodium/Lithium)</button>
+            <button class="mqt-chip" data-mcat="Iris" data-mtype="mod">Cài Shaders (Iris)</button>
+            <button class="mqt-chip" data-mcat="Complementary" data-mtype="shader">Bóng đổ Complementary</button>
+            <button class="mqt-chip" data-mcat="Minimap" data-mtype="mod">Bản đồ Minimap</button>
+            <button class="mqt-chip" data-mcat="Zoom" data-mtype="mod">Ống nhòm Zoom &amp; Tiện ích</button>
           </div>
 
           <!-- ONLINE MODRINTH RESULTS GRID -->
@@ -439,12 +549,12 @@
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot emerald"></span>
-                  <h3>THẾ GIỚI CHƠI ĐƠN (.MINECRAFT/SAVES)</h3>
+                  <h3>THẾ GIỚI CHƠN ĐƠN (.MINECRAFT/SAVES)</h3>
                 </div>
                 <div style="display:flex;gap:6px;">
-                  <button class="btn-sync-skin" id="btnOpenSavesFolder">📂 Mở Saves</button>
-                  <button class="btn-sync-skin" id="btnOpenScreenshots">📸 Ảnh Chụp</button>
-                  <button class="vtype-btn" id="btnRefreshWorlds">🔄 Làm mới</button>
+                  <button class="btn-sync-skin" id="btnOpenSavesFolder">Mở Saves</button>
+                  <button class="btn-sync-skin" id="btnOpenScreenshots">Ảnh Chụp</button>
+                  <button class="vtype-btn" id="btnRefreshWorlds">Làm mới</button>
                 </div>
               </div>
               <div class="worlds-list-wrap" id="localWorldsList"></div>
@@ -459,7 +569,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;">
                   <span class="field-hint-mini" id="activeServerBadge">Chế độ: Bình thường</span>
-                  <button class="vtype-btn" id="btnPingAllServers" title="Kiểm tra trạng thái Online & số người chơi">📡 Ping</button>
+                  <button class="vtype-btn" id="btnPingAllServers" title="Kiểm tra trạng thái Online & số người chơi">Làm mới Ping</button>
                 </div>
               </div>
               <div class="add-server-bar">
@@ -490,23 +600,23 @@
         <section class="tab-panel" id="tab-settings">
           <div class="subtab-header">
             <div>
-              <h2>Cài Đặt Hệ Thống, Đường Dẫn Java &amp; Tối Ưu Tắt Mượt</h2>
-              <p>Tùy chỉnh đường dẫn thực thi Java, thư mục lưu game và tham số tối ưu đa nhân.</p>
+              <h2>Cài Đặt Hệ Thống, Đường Dẫn Java &amp; Độ Phân Giải</h2>
+              <p>Tùy chỉnh đường dẫn thực thi Java, thư mục lưu game, độ phân giải cửa sổ và tham số tối ưu đa nhân.</p>
             </div>
           </div>
 
           <div class="settings-bento">
             <div class="bento-card">
-              <h3>Đường Dẫn Java &amp; Thư Mục Game</h3>
+              <h3>Đường Dẫn Java, Thư Mục &amp; Màn Hình Game</h3>
               <label class="field-label">Đường dẫn Java (`javaw.exe` hoặc `java`)</label>
               <div class="input-with-btn">
                 <input type="text" id="javaPathInput" class="pro-input" />
-                <button class="btn-sync-skin" id="btnAutoDetectJava" title="Tự động quét và điền đường dẫn Java chuẩn trên máy">🔍 Tự Dò Java</button>
+                <button class="btn-sync-skin" id="btnAutoDetectJava" title="Tự động quét và điền đường dẫn Java chuẩn trên máy">Tự Dò Java</button>
               </div>
               <label class="field-label" style="margin-top:12px;">Thư mục dữ liệu Minecraft (`.minecraft`)</label>
               <div class="input-with-btn">
                 <input type="text" id="gameDirInput" class="pro-input" />
-                <button class="btn-sync-skin" id="btnOpenGameDirSettings" title="Mở thư mục .minecraft trong Windows Explorer">📂 Mở Thư Mục</button>
+                <button class="btn-sync-skin" id="btnOpenGameDirSettings" title="Mở thư mục .minecraft trong Windows Explorer">Mở Thư Mục</button>
               </div>
               <label class="field-label" style="margin-top:14px;">Độ Phân Giải Cửa Sổ Game &amp; Toàn Màn Hình</label>
               <div class="res-preset-bar" id="winResolutionBar">
@@ -514,7 +624,7 @@
                 <button class="res-pill-btn active" data-res="1280x720">1280×720 (HD)</button>
                 <button class="res-pill-btn" data-res="1600x900">1600×900 (HD+)</button>
                 <button class="res-pill-btn" data-res="1920x1080">1920×1080 (FHD)</button>
-                <button class="res-pill-btn" data-res="fullscreen">🖥️ Toàn Màn Hình</button>
+                <button class="res-pill-btn" data-res="fullscreen">Toàn Màn Hình</button>
               </div>
             </div>
 
@@ -545,12 +655,12 @@
           <div class="console-header-row">
             <div><h2>Nhật Ký Khởi Động (Console)</h2><p>Theo dõi tiến trình tải thư viện và log của Minecraft.</p></div>
             <div style="display:flex;gap:8px;">
-              <button class="btn-sync-skin" id="btnCopyConsole" style="background:var(--bg-input);color:var(--text-main);border:1px solid var(--border-col);">📋 Sao chép Log</button>
-              <button class="btn-sync-skin" id="btnClearConsole">🗑 Xóa nhật ký</button>
+              <button class="btn-sync-skin" id="btnCopyConsole" style="background:var(--bg-input);color:var(--text-main);border:1px solid var(--border-col);">Sao chép Log</button>
+              <button class="btn-sync-skin" id="btnClearConsole">Xóa nhật ký</button>
             </div>
           </div>
           <div class="console-terminal" id="consoleOutput">
-            <div class="log-entry info">[Aether Craft v22.0] Sẵn sàng khởi chạy.</div>
+            <div class="log-entry info">[Aether Craft v23.0] Sẵn sàng khởi chạy.</div>
           </div>
         </section>
       </main>
@@ -558,13 +668,16 @@
 
     <!-- BOTTOM OFFICIAL LAUNCHER DOCK -->
     <footer class="mc-official-dock">
-      <!-- LEFT: ACTIVE VERSION & CORE DISPLAY -->
+      <!-- LEFT: ACTIVE VERSION & CORE DISPLAY WITH REAL 3D GRASS BLOCK -->
       <div class="dock-active-config">
         <div class="dac-icon">
-          <svg viewBox="0 0 32 32" width="24" height="24">
-            <polygon points="16,2 30,9 16,16 2,9" fill="#4ade80"/>
-            <polygon points="2,9 16,16 16,30 2,23" fill="#92400e"/>
-            <polygon points="30,9 16,16 16,30 30,23" fill="#78350f"/>
+          <svg viewBox="0 0 64 64" width="28" height="28">
+            <polygon points="32,4 60,18 32,32 4,18" fill="#5da632" />
+            <polygon points="32,7 54,18 32,29 10,18" fill="#6ab839" />
+            <polygon points="4,18 32,32 32,60 4,46" fill="#865934" />
+            <polygon points="4,18 32,32 32,39 25,36 25,40 18,36 18,33 11,30 11,34 4,30" fill="#5da632" />
+            <polygon points="60,18 32,32 32,60 60,46" fill="#654124" />
+            <polygon points="60,18 32,32 32,39 39,36 39,40 46,36 46,33 53,30 53,34 60,30" fill="#468323" />
           </svg>
         </div>
         <div class="dac-info">
@@ -573,10 +686,10 @@
         </div>
       </div>
 
-      <!-- CENTER: CHISELED MINECRAFT GREEN PLAY BUTTON -->
+      <!-- CENTER: CHISELED MINECRAFT PLAY BUTTON -->
       <div class="dock-center-play">
         <button class="btn-instant-kill hidden" id="btnForceKill">
-          <span>🛑 TẮT NHANH MINE (0.1s)</span>
+          <span>DỪNG GAME NGAY (0.1s)</span>
         </button>
         <button class="btn-mc-official-play" id="btnLaunch">
           <span class="mc-play-main" id="launchBtnText">CHƠI NGAY</span>
@@ -594,6 +707,7 @@
         <div class="drs-account">Tài khoản: <strong id="dockAccountText">StevePlayer (Crack)</strong></div>
       </div>
     </footer>
+
     <!-- UNIVERSAL USER AGREEMENT / CONFIRMATION MODAL -->
     <div class="modal-backdrop hidden" id="userConfirmModal">
       <div class="modal-dialog-card">
@@ -604,7 +718,7 @@
         <div class="modal-body">
           <p id="modalBodyText">Bạn có đồng ý thực hiện thao tác này không?</p>
           <div class="modal-eula-box hidden" id="modalEulaBox">
-            <strong>📌 Điều khoản &amp; Quyền hoạt động của Aether Craft Launcher:</strong>
+            <strong>Điều khoản &amp; Quyền hoạt động của Aether Craft Launcher:</strong>
             <ul>
               <li>Tự động kết nối máy chủ chính thức của <strong>Mojang Studios</strong> &amp; <strong>Modrinth</strong> để tải phiên bản Minecraft, thư viện Java và gói Mod/Shader bạn chọn.</li>
               <li>Chỉ lưu dữ liệu trong thư mục <code>.minecraft</code>, tự động giải phóng RAM khi đóng game.</li>
@@ -617,8 +731,8 @@
           </label>
         </div>
         <div class="modal-foot">
-          <button class="btn-modal-cancel" id="btnModalCancel">✕ Không Đồng Ý (Hủy)</button>
-          <button class="btn-modal-agree" id="btnModalAgree">✓ Tôi Đồng Ý</button>
+          <button class="btn-modal-cancel" id="btnModalCancel">Không Đồng Ý (Hủy)</button>
+          <button class="btn-modal-agree" id="btnModalAgree">Tôi Đồng Ý</button>
         </div>
       </div>
     </div>
