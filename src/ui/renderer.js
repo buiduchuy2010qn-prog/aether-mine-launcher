@@ -1023,16 +1023,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btnMsLogin');
     const stEl = document.getElementById('statusText');
     btn.disabled = true;
-    btn.querySelector('span').textContent = 'Đang mở cửa sổ Microsoft...';
-    if (stEl) stEl.textContent = '⏳ Hãy chọn tài khoản Microsoft của bạn trong cửa sổ đăng nhập...';
+    btn.querySelector('span').textContent = '🌐 Đang chờ chọn tài khoản trên Trình duyệt...';
+    if (stEl) stEl.textContent = '🌐 Đã mở trình duyệt Web — Hãy bấm chọn tài khoản Microsoft của bạn trên trình duyệt!';
     const res = await window.aetherAPI.loginMicrosoft();
     btn.disabled = false;
-    btn.querySelector('span').textContent = 'Đăng Nhập Tài Khoản Microsoft OAuth2';
+    btn.querySelector('span').textContent = 'Đồng Bộ Tài Khoản Microsoft (Trình Duyệt)';
     if (res?.ok && res.profile) {
       state.msProfile = res.profile;
       setAuthModeUI('microsoft');
       saveCurrentConfig();
-      if (stEl) stEl.textContent = `✓ Đã đăng nhập Microsoft thành công: ${res.profile.displayName || res.profile.name}!`;
+      if (stEl) stEl.textContent = `✓ Đã đồng bộ tài khoản Microsoft: ${res.profile.displayName || res.profile.name}!`;
     } else if (res?.error) {
       if (stEl) stEl.textContent = `⚠ ${res.error}`;
     }

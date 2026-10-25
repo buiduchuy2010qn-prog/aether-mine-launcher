@@ -1,9 +1,12 @@
-const { BrowserWindow } = require('electron');
+const { shell } = require('electron');
+const http = require('http');
 const crypto = require('crypto');
 
-const MS_CLIENT_ID = '00000000402b5328';
-const MS_REDIRECT_URI = 'https://login.live.com/oauth20_desktop.srf';
-const MS_SCOPE = 'service::user.auth.xboxlive.com::MBI_SSL';
+// Public Azure AD v2.0 Native Client ID supporting http://localhost:<port> loopback & XboxLive.signin
+const AZURE_CLIENT_ID = 'c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb';
+const AZURE_SCOPE = 'XboxLive.signin offline_access openid profile email';
+
+let activeAuthServer = null;
 
 function formatUUID(rawId) {
   if (!rawId) return '';
@@ -43,7 +46,6 @@ function sanitizeMcUsername(rawName, emailFallback) {
   if (!candidate || candidate.includes('@')) {
     candidate = emailPrefix || 'MSPlayer';
   }
-  // Remove Vietnamese diacritics so "huy đức" -> "huy_duc"
   candidate = candidate
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -61,6 +63,18 @@ function sanitizeMcUsername(rawName, emailFallback) {
   return candidate.slice(0, 16);
 }
 
+function decodeJwtPayload(jwtToken) {
+  if (!jwtToken || typeof jwtToken !== 'string') return {};
+  try {
+    const parts = jwtToken.split('.');
+    if (parts.length < 2) return {};
+    const jsonStr = Buffer.from(parts[1], 'base64url').toString('utf8');
+    return JSON.parse(jsonStr) || {};
+  } catch (_) {
+    return {};
+  }
+}
+
 function buildFallbackMicrosoftProfile(accountHint = {}, msData = null, xuid = null) {
   const rawName = accountHint.gamertag || accountHint.name || '';
   const email = accountHint.email || '';
@@ -75,7 +89,7 @@ function buildFallbackMicrosoftProfile(accountHint = {}, msData = null, xuid = n
     uuid,
     accessToken: uuid,
     refreshToken: msData?.refresh_token || '',
-    xuid: xuid || msData?.user_id || 'ms-oauth',
+    xuid: xuid || accountHint.sub || 'ms-browser-oauth',
     isOfficialLicense: false,
     expiresAt: Date.now() + 86400 * 1000,
     skinUrl: null
@@ -117,49 +131,42 @@ async function authenticateXboxLiveWithFallback(msAccessToken) {
   throw new Error(`Lỗi xác thực Xbox Live (${lastStatus}).`);
 }
 
-async function authenticateMinecraftChain({ code, refreshToken, accountHint = {} }) {
+async function authenticateMinecraftChain({ code, refreshToken, redirectUri, accountHint = {} }) {
   const tokenParams = new URLSearchParams({
-    client_id: MS_CLIENT_ID,
-    redirect_uri: MS_REDIRECT_URI,
-    scope: MS_SCOPE
+    client_id: AZURE_CLIENT_ID,
+    scope: AZURE_SCOPE
   });
 
   if (code) {
     tokenParams.set('grant_type', 'authorization_code');
     tokenParams.set('code', code);
+    if (redirectUri) tokenParams.set('redirect_uri', redirectUri);
   } else if (refreshToken) {
     tokenParams.set('grant_type', 'refresh_token');
     tokenParams.set('refresh_token', refreshToken);
-  } else if (accountHint && (accountHint.email || accountHint.name)) {
-    return buildFallbackMicrosoftProfile(accountHint);
   } else {
     throw new Error('Thiếu mã xác thực Microsoft (code hoặc refresh_token).');
   }
 
-  let msData;
-  try {
-    const msRes = await fetch('https://login.live.com/oauth20_token.srf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: tokenParams.toString()
-    });
+  const msRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: tokenParams.toString()
+  });
 
-    if (!msRes.ok) {
-      if (accountHint && (accountHint.email || accountHint.name)) {
-        return buildFallbackMicrosoftProfile(accountHint);
-      }
-      const errText = await msRes.text();
-      throw new Error(`Lỗi xác thực Microsoft OAuth (${msRes.status}): ${errText}`);
-    }
-    msData = await msRes.json();
-  } catch (err) {
-    if (accountHint && (accountHint.email || accountHint.name)) {
-      return buildFallbackMicrosoftProfile(accountHint);
-    }
-    throw err;
+  if (!msRes.ok) {
+    const errText = await msRes.text();
+    throw new Error(`Lỗi xác thực Microsoft OAuth (${msRes.status}): ${errText}`);
   }
+  const msData = await msRes.json();
 
-  const mergedHint = { ...accountHint };
+  // Extract verified Microsoft Account Name & Email from OIDC id_token
+  const idClaims = decodeJwtPayload(msData.id_token);
+  const mergedHint = {
+    name: idClaims.name || accountHint.name || '',
+    email: idClaims.email || idClaims.preferred_username || accountHint.email || '',
+    sub: idClaims.sub || idClaims.oid || ''
+  };
 
   try {
     const xblData = await authenticateXboxLiveWithFallback(msData.access_token);
@@ -169,7 +176,7 @@ async function authenticateMinecraftChain({ code, refreshToken, accountHint = {}
       return buildFallbackMicrosoftProfile(mergedHint, msData);
     }
 
-    // Try fetching Xbox Live Gamertag (gtg) so we have the user's Xbox name even if they don't own paid Java Edition
+    // Fetch Xbox Live Gamertag (gtg) if available
     try {
       const xblProfileRes = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
         method: 'POST',
@@ -236,7 +243,6 @@ async function authenticateMinecraftChain({ code, refreshToken, accountHint = {}
     });
 
     if (!profileRes.ok) {
-      // Account signed in to Microsoft/Xbox successfully, but hasn't purchased paid Java Edition on minecraft.net -> seamlessly bridge!
       return buildFallbackMicrosoftProfile(mergedHint, msData, xuid);
     }
 
@@ -260,204 +266,149 @@ async function authenticateMinecraftChain({ code, refreshToken, accountHint = {}
   }
 }
 
+function buildSuccessHtml(profile) {
+  const label = profile ? (profile.displayName || profile.name) : 'Tài khoản Microsoft';
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Đã đồng bộ Aether Craft Launcher</title>
+  <style>
+    body {
+      margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #090d16; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .card {
+      background: #111827; border: 2px solid #22c55e; border-radius: 16px;
+      padding: 32px 38px; text-align: center; max-width: 460px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(34,197,94,0.2);
+    }
+    .badge {
+      width: 56px; height: 56px; border-radius: 50%; background: rgba(34,197,94,0.18);
+      color: #4ade80; font-size: 28px; font-weight: 900; display: inline-flex;
+      align-items: center; justify-content: center; margin-bottom: 14px;
+      border: 2px solid #22c55e;
+    }
+    h2 { margin: 0 0 8px; font-size: 20px; color: #4ade80; }
+    p { margin: 6px 0; font-size: 14px; color: #cbd5e1; line-height: 1.5; }
+    .acc {
+      margin-top: 14px; padding: 10px 16px; background: rgba(34,197,94,0.12);
+      border-radius: 10px; font-weight: 800; color: #fff; font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">✓</div>
+    <h2>Đăng Nhập & Đồng Bộ Thành Công!</h2>
+    <div class="acc">👤 ${label}</div>
+    <p style="margin-top:14px;">Tài khoản của bạn đã được kết nối trực tiếp vào <strong>Aether Craft Launcher</strong>.</p>
+    <p style="font-size:12.5px;opacity:0.75;">Bạn có thể đóng tab trình duyệt này và quay lại Launcher.</p>
+  </div>
+  <script>setTimeout(() => { try { window.close(); } catch(e) {} }, 1800);</script>
+</body>
+</html>`;
+}
+
 function openMicrosoftLoginPopup(parentWindow) {
   return new Promise((resolve, reject) => {
-    const baseAuthUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${MS_CLIENT_ID}&response_type=code&scope=${encodeURIComponent(MS_SCOPE)}&redirect_uri=${encodeURIComponent(MS_REDIRECT_URI)}`;
-    const authUrl = `${baseAuthUrl}&prompt=select_account`;
-
-    const authWin = new BrowserWindow({
-      width: 520,
-      height: 660,
-      parent: parentWindow || undefined,
-      modal: Boolean(parentWindow),
-      title: 'Đăng nhập Tài khoản Microsoft',
-      backgroundColor: '#0f172a',
-      autoHideMenuBar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true
-      }
-    });
+    if (activeAuthServer) {
+      try { activeAuthServer.close(); } catch (_) {}
+      activeAuthServer = null;
+    }
 
     let completed = false;
-    let accountHint = { name: '', email: '' };
-    let pickFallbackTimer = null;
+    let timeoutTimer = null;
 
-    const finishWithProfile = (profile) => {
-      if (completed) return;
-      completed = true;
-      if (pickFallbackTimer) {
-        clearTimeout(pickFallbackTimer);
-        pickFallbackTimer = null;
+    const cleanup = () => {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+        timeoutTimer = null;
       }
-      try {
-        if (!authWin.isDestroyed()) authWin.close();
-      } catch (_) {}
-      resolve(profile);
-    };
-
-    const finishWithError = (err) => {
-      if (completed) return;
-      completed = true;
-      if (pickFallbackTimer) {
-        clearTimeout(pickFallbackTimer);
-        pickFallbackTimer = null;
-      }
-      try {
-        if (!authWin.isDestroyed()) authWin.close();
-      } catch (_) {}
-      reject(err);
-    };
-
-    const handleUrl = async (url) => {
-      if (completed || !url || typeof url !== 'string') return;
-      if (!url.includes('oauth20_desktop.srf')) return;
-
-      let code = null;
-      let error = null;
-      try {
-        const parsed = new URL(url);
-        code = parsed.searchParams.get('code');
-        error = parsed.searchParams.get('error');
-        if (!code && parsed.hash) {
-          const hashParams = new URLSearchParams(parsed.hash.replace(/^#/, ''));
-          code = hashParams.get('code');
-          error = error || hashParams.get('error');
-        }
-      } catch (_) {}
-
-      if (code || error) {
-        if (pickFallbackTimer) {
-          clearTimeout(pickFallbackTimer);
-          pickFallbackTimer = null;
-        }
-        if (error && !code) {
-          if (accountHint.email || accountHint.name) {
-            return finishWithProfile(buildFallbackMicrosoftProfile(accountHint));
-          }
-          return finishWithError(new Error(`Đã hủy hoặc lỗi đăng nhập Microsoft: ${error}`));
-        }
-
-        try {
-          const account = await authenticateMinecraftChain({ code, accountHint });
-          finishWithProfile(account);
-        } catch (err) {
-          if (accountHint.email || accountHint.name) {
-            finishWithProfile(buildFallbackMicrosoftProfile(accountHint));
-          } else {
-            finishWithError(err);
-          }
-        }
+      if (activeAuthServer) {
+        try { activeAuthServer.close(); } catch (_) {}
+        activeAuthServer = null;
       }
     };
 
-    // Intercept at network request level so 302 redirects to oauth20_desktop.srf are caught 100% of the time
-    try {
-      authWin.webContents.session.webRequest.onBeforeRequest(
-        { urls: ['https://login.live.com/oauth20_desktop.srf*'] },
-        (details, callback) => {
-          handleUrl(details.url);
-          callback({ cancel: false });
+    const server = http.createServer(async (req, res) => {
+      try {
+        const reqUrl = new URL(req.url, 'http://localhost');
+        if (reqUrl.pathname === '/favicon.ico') {
+          res.writeHead(204);
+          return res.end();
         }
-      );
-    } catch (_) {}
 
-    authWin.webContents.setWindowOpenHandler(({ url }) => {
-      if (url && url.includes('oauth20_desktop.srf')) {
-        handleUrl(url);
-        return { action: 'deny' };
-      }
-      if (url && /^https?:\/\//i.test(url)) {
-        authWin.loadURL(url);
-      }
-      return { action: 'deny' };
-    });
+        const code = reqUrl.searchParams.get('code');
+        const error = reqUrl.searchParams.get('error');
+        const errorDesc = reqUrl.searchParams.get('error_description');
 
-    authWin.webContents.on('will-navigate', (_, url) => handleUrl(url));
-    authWin.webContents.on('will-redirect', (_, url) => handleUrl(url));
-    authWin.webContents.on('did-redirect-navigation', (_, url) => handleUrl(url));
-    authWin.webContents.on('did-navigate', (_, url) => handleUrl(url));
-    authWin.webContents.on('did-navigate-in-page', (_, url) => handleUrl(url));
+        if (!code && !error) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          return res.end('<h3>Đang chờ xác thực Microsoft...</h3>');
+        }
 
-    // Listen for account picker click signal injected into Microsoft's "Pick an account" screen
-    authWin.webContents.on('page-title-updated', (e, title) => {
-      if (typeof title === 'string' && title.startsWith('AETHER_MS_PICK:')) {
-        e.preventDefault();
-        try {
-          const data = JSON.parse(title.slice('AETHER_MS_PICK:'.length));
-          if (data.email) accountHint.email = data.email;
-          if (data.name) accountHint.name = data.name;
+        if (completed) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          return res.end(buildSuccessHtml(null));
+        }
+        completed = true;
 
-          if (pickFallbackTimer) clearTimeout(pickFallbackTimer);
-          // Trigger direct silent authorization with login_hint (without prompt=select_account)
-          const directHintUrl = `${baseAuthUrl}&login_hint=${encodeURIComponent(accountHint.email || accountHint.name)}`;
-          setTimeout(() => {
-            if (!completed && !authWin.isDestroyed()) {
-              authWin.loadURL(directHintUrl).catch(() => {});
-            }
-          }, 80);
+        const port = server.address()?.port || 25560;
+        const redirectUri = `http://localhost:${port}`;
 
-          // Guaranteed completion within 1.4s even if login.live.com loops on Pick an account
-          pickFallbackTimer = setTimeout(() => {
-            if (!completed && (accountHint.email || accountHint.name)) {
-              finishWithProfile(buildFallbackMicrosoftProfile(accountHint));
-            }
-          }, 1400);
-        } catch (_) {}
+        if (error) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(`<html><body style="background:#090d16;color:#f87171;font-family:sans-serif;text-align:center;padding-top:80px;"><h2>Đã hủy hoặc lỗi đăng nhập: ${error}</h2><p>${errorDesc || ''}</p></body></html>`);
+          cleanup();
+          return reject(new Error(`Đã hủy đăng nhập trên trình duyệt (${error}).`));
+        }
+
+        const profile = await authenticateMinecraftChain({ code, redirectUri });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(buildSuccessHtml(profile));
+
+        cleanup();
+        if (parentWindow && !parentWindow.isDestroyed()) {
+          if (parentWindow.isMinimized()) parentWindow.restore();
+          parentWindow.show();
+          parentWindow.focus();
+        }
+        resolve(profile);
+      } catch (err) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<html><body style="background:#090d16;color:#f87171;font-family:sans-serif;text-align:center;padding-top:80px;"><h2>Lỗi xác thực Microsoft</h2><p>${err.message}</p></body></html>`);
+        cleanup();
+        reject(err);
       }
     });
 
-    const injectAccountPickerHelper = () => {
-      if (completed || authWin.isDestroyed()) return;
-      const script = `
-        (function() {
-          if (window.__aetherMsPickerBound) return;
-          window.__aetherMsPickerBound = true;
+    activeAuthServer = server;
 
-          // Also capture typed email in normal sign-in form
-          document.addEventListener('input', function(ev) {
-            const val = ev.target && ev.target.value ? String(ev.target.value).trim() : '';
-            if (val.includes('@') && val.includes('.')) {
-              window.__aetherTypedEmail = val;
-            }
-          }, true);
+    server.listen(25560, '127.0.0.1', () => {
+      const port = server.address().port;
+      const redirectUri = `http://localhost:${port}`;
+      const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id=${AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(AZURE_SCOPE)}&prompt=select_account`;
+      shell.openExternal(authUrl);
+    });
 
-          document.addEventListener('click', function(ev) {
-            let el = ev.target;
-            while (el && el !== document.body) {
-              const txt = (el.innerText || '').trim();
-              const lines = txt.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
-              const emailLine = lines.find(l => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/.test(l));
-              const isOtherBtn = /use another account|dùng tài khoản khác|back|quay lại|cancel|hủy|terms|privacy/i.test(txt) && lines.length <= 2;
-              if (emailLine && !isOtherBtn && lines.length <= 6) {
-                const nameLine = lines.find(l => l !== emailLine && !/signed in|đã đăng nhập|connected/i.test(l)) || emailLine.split('@')[0];
-                el.style.outline = '2px solid #22c55e';
-                el.style.background = 'rgba(34, 197, 94, 0.14)';
-                document.title = 'AETHER_MS_PICK:' + JSON.stringify({ name: nameLine, email: emailLine });
-                break;
-              }
-              el = el.parentElement;
-            }
-          }, true);
-        })();
-      `;
-      authWin.webContents.executeJavaScript(script).catch(() => {});
-    };
+    server.on('error', () => {
+      // If port 25560 is in use, bind to any free ephemeral port
+      server.listen(0, '127.0.0.1', () => {
+        const port = server.address().port;
+        const redirectUri = `http://localhost:${port}`;
+        const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id=${AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(AZURE_SCOPE)}&prompt=select_account`;
+        shell.openExternal(authUrl);
+      });
+    });
 
-    authWin.webContents.on('dom-ready', injectAccountPickerHelper);
-    authWin.webContents.on('did-finish-load', injectAccountPickerHelper);
-
-    authWin.on('closed', () => {
+    timeoutTimer = setTimeout(() => {
       if (!completed) {
-        if (accountHint.email || accountHint.name) {
-          finishWithProfile(buildFallbackMicrosoftProfile(accountHint));
-        } else {
-          finishWithError(new Error('Đã đóng cửa sổ đăng nhập Microsoft.'));
-        }
+        completed = true;
+        cleanup();
+        reject(new Error('Hết thời gian chờ đăng nhập trên trình duyệt (3 phút).'));
       }
-    });
-
-    authWin.loadURL(authUrl);
+    }, 180000);
   });
 }
 

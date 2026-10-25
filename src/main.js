@@ -454,11 +454,16 @@ function downloadWithProgress(url, destPath, onPct) {
 ipcMain.handle('updater:check', async () => {
   try {
     const currentVersion = app.getVersion();
-    const remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/package.json?t=${Date.now()}`);
+    let refBranch = 'main';
+    try {
+      const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+      if (commitInfo?.sha) refBranch = commitInfo.sha;
+    } catch (_) {}
+    const remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}/package.json?t=${Date.now()}`);
     const latestVersion = remotePkg?.version || currentVersion;
     const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
     const downloadUrl = `https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/download/v7.0.0/AetherCraft-Setup-${latestVersion}.exe`;
-    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl };
+    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch };
   } catch (err) {
     return { ok: false, error: err.message, currentVersion: app.getVersion() };
   }
@@ -470,6 +475,12 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
     const isUnpackedApp = path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
 
     if (isUnpackedApp) {
+      let refBranch = 'main';
+      try {
+        const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+        if (commitInfo?.sha) refBranch = commitInfo.sha;
+      } catch (_) {}
+
       const filesToSync = [
         'package.json',
         'src/main.js',
@@ -484,7 +495,7 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/ui/app-logo.png',
         'src/ui/app-icon.ico'
       ];
-      const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main';
+      const baseRaw = `https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}`;
       for (let i = 0; i < filesToSync.length; i++) {
         const rel = filesToSync[i];
         const buf = await fetchBinaryBuffer(`${baseRaw}/${rel}?t=${Date.now()}`);

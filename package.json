@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.5.0",
-  "description": "Aether Craft v30.5 PRO - Instant Microsoft Account Picker Login & Loader Build Fix",
+  "version": "30.6.0",
+  "description": "Aether Craft v30.6 PRO - 1-Click Default Web Browser Microsoft OAuth2 Sync",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
