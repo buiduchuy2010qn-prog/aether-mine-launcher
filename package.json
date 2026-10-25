@@ -1,6 +1,6 @@
 {
   "name": "aether-craft-launcher",
-  "version": "20.0.0",
+  "version": "21.0.0",
   "description": "Aether Craft v9.0 - Ultimate Minecraft Launcher with Setup Wizard & User Consent Dialogs",
   "main": "src/main.js",
   "scripts": {

@@ -2399,3 +2399,86 @@ body {
   border-color: var(--accent);
   color: var(--text-main);
 }
+/* ================= V21.0 PRO: CHERRY THEME, 3D SNAPSHOT, 2-COL WORLDS & SERVERS HUB ================= */
+html[data-theme="cherry"] {
+  --bg-app: #140a12;
+  --bg-sidebar: #1c0e19;
+  --bg-card: #251221;
+  --bg-input: #170b15;
+  --border-col: rgba(244, 114, 182, 0.24);
+  --text-main: #fdf2f8;
+  --text-muted: #f9a8d4;
+  --accent: #ec4899;
+  --accent-hover: #db2777;
+  --accent-glow: rgba(236, 72, 153, 0.22);
+}
+
+.wt-snap-btn {
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border-col);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.15s;
+}
+.wt-snap-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.worlds-servers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.worlds-col-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.worlds-list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.add-server-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.srv-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.srv-card-row:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.mods-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

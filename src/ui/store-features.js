@@ -311,12 +311,32 @@ async function renderLocalAddonsManager() {
 function renderFavoriteServers() {
   const container = document.getElementById('favoriteServersList');
   if (!container) return;
-  container.innerHTML = state.favoriteServers.map((srv, idx) => `<div class="srv-card-row"><div><strong style="font-size:13px;">🌐 ${srv.name}</strong><div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px;">IP: ${srv.ip}</div></div><div style="display:flex;gap:6px;"><button class="btn-install-mod" data-joinsrv="${srv.ip}">▶ Vào Thẳng Server</button><button class="vtype-btn" data-delsrv="${idx}" style="color:#ef4444;">Xóa</button></div></div>`).join('');
+  const badge = document.getElementById('activeServerBadge');
+  if (badge) {
+    badge.innerHTML = state.serverIp
+      ? `Đang chọn vào thẳng: <strong style="color:var(--accent);">${state.serverIp}</strong> <span id="btnClearActiveSrv" style="cursor:pointer;color:#ef4444;margin-left:4px;" title="Hủy vào thẳng server">[×]</span>`
+      : 'Chế độ: Vào Menu chính bình thường';
+    const clearBtn = document.getElementById('btnClearActiveSrv');
+    if (clearBtn) clearBtn.onclick = () => setServerIpEverywhere('');
+  }
+  container.innerHTML = state.favoriteServers.map((srv, idx) => {
+    const isSelected = state.serverIp === srv.ip;
+    return `<div class="srv-card-row" style="${isSelected ? 'border-color:var(--accent);background:var(--accent-glow);' : ''}"><div><strong style="font-size:12.5px;">🌐 ${srv.name}</strong><div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px;">IP: ${srv.ip}</div></div><div style="display:flex;gap:6px;align-items:center;"><button class="vtype-btn" data-copysrv="${srv.ip}" title="Sao chép IP Server">📋 Copy IP</button><button class="btn-install-mod" data-joinsrv="${srv.ip}">${isSelected ? '✓ Đã Chọn' : '▶ Vào Server'}</button><button class="vtype-btn" data-delsrv="${idx}" style="color:#ef4444;" title="Xóa khỏi danh sách">×</button></div></div>`;
+  }).join('');
+  container.querySelectorAll('[data-copysrv]').forEach((btn) => {
+    btn.onclick = () => {
+      navigator.clipboard?.writeText(btn.dataset.copysrv);
+      const orig = btn.textContent;
+      btn.textContent = '✓ Đã Copy';
+      setTimeout(() => (btn.textContent = orig), 1400);
+    };
+  });
   container.querySelectorAll('[data-joinsrv]').forEach((btn) => {
     btn.onclick = () => {
       setServerIpEverywhere(btn.dataset.joinsrv);
+      renderFavoriteServers();
       document.querySelector('.nav-item[data-tab="play"]').click();
-      document.getElementById('btnLaunch').click();
+      document.getElementById('statusText').textContent = `🌐 Đã chọn vào thẳng Server: ${btn.dataset.joinsrv} — Bấm CHƠI NGAY để kết nối!`;
     };
   });
   container.querySelectorAll('[data-delsrv]').forEach((btn) => {

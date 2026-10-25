@@ -358,11 +358,12 @@ function setAuthModeUI(mode) {
 }
 
 function setServerIpEverywhere(ip) {
-  state.serverIp = '';
+  state.serverIp = (ip || '').trim();
   const qInput = document.getElementById('quickServerInput'), sInput = document.getElementById('serverIpInput');
   if (qInput) qInput.value = state.serverIp;
   if (sInput) sInput.value = state.serverIp;
   document.querySelectorAll('.srv-pill').forEach((p) => p.classList.toggle('active', p.dataset.srv === state.serverIp));
+  if (typeof renderFavoriteServers === 'function') renderFavoriteServers();
   updateSummaryUI(); saveCurrentConfig();
 }
 
@@ -720,6 +721,44 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('crackSkinSyncToggle').onchange = (e) => { state.crackSkinSync = e.target.checked; saveCurrentConfig(); };
   document.getElementById('btnOpenDir').onclick = () => window.aetherAPI.openGameDir(state.gameDir);
   document.getElementById('btnClearConsole').onclick = () => { document.getElementById('consoleOutput').innerHTML = ''; };
+  const btnCopyCon = document.getElementById('btnCopyConsole');
+  if (btnCopyCon) {
+    btnCopyCon.onclick = () => {
+      const text = document.getElementById('consoleOutput')?.innerText || '';
+      navigator.clipboard?.writeText(text);
+      btnCopyCon.textContent = '✓ Đã sao chép!';
+      setTimeout(() => (btnCopyCon.textContent = '📋 Sao chép Log'), 1500);
+    };
+  }
+  const btnAutoJava = document.getElementById('btnAutoDetectJava');
+  if (btnAutoJava) {
+    btnAutoJava.onclick = async () => {
+      const info = await window.aetherAPI.getSystemInfo();
+      if (info?.detectedJava) {
+        state.javaPath = info.detectedJava;
+        document.getElementById('javaPathInput').value = state.javaPath;
+        saveCurrentConfig();
+        btnAutoJava.textContent = '✓ Đã tìm thấy Java!';
+        setTimeout(() => (btnAutoJava.textContent = '🔍 Tự Dò Java'), 1600);
+      }
+    };
+  }
+  const btnOpenDirSet = document.getElementById('btnOpenGameDirSettings');
+  if (btnOpenDirSet) btnOpenDirSet.onclick = () => window.aetherAPI.openGameDir(state.gameDir);
+  const btnSnap3D = document.getElementById('btnSnap3DSkin');
+  if (btnSnap3D) {
+    btnSnap3D.onclick = () => {
+      if (!skinViewer) return;
+      skinViewer.render();
+      const canvas = document.getElementById('skinViewerCanvas');
+      if (!canvas) return;
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `AetherCraft-3D-${state.username || 'Skin'}.png`;
+      a.click();
+      document.getElementById('statusText').textContent = '📸 Đã chụp & tải xuống ảnh Nhân Vật 3D (.PNG nền trong suốt)!';
+    };
+  }
 
   document.getElementById('btnForceKill').onclick = async () => {
     await window.aetherAPI.forceKillGame();
