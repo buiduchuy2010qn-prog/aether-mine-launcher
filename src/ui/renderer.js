@@ -114,11 +114,11 @@ function init3DSkinViewer() {
     pixelRatio: 1,
     preserveDrawingBuffer: true
   });
-  // Crisp 3D directional lighting so cube faces have clear depth shading
-  if (skinViewer.globalLight) skinViewer.globalLight.intensity = 1.65;
+  // Crisp 3D directional lighting so cube faces have clear depth shading and bright whites
+  if (skinViewer.globalLight) skinViewer.globalLight.intensity = 2.6;
   if (skinViewer.cameraLight) {
-    skinViewer.cameraLight.intensity = 1.45;
-    skinViewer.cameraLight.position.set(18, 26, 32);
+    skinViewer.cameraLight.intensity = 1.95;
+    skinViewer.cameraLight.position.set(12, 24, 38);
   }
   skinViewer.camera.position.set(-14, 11, 42);
   skinViewer.zoom = 0.84;
@@ -128,7 +128,16 @@ function init3DSkinViewer() {
   skinViewer.animation.speed = 0.85;
   update3DNameTag(state.username);
   applyCapeToViewer(state.capeType);
-  draw2DAvatarFace(initialSkin);
+  if (typeof convertSkinTo64x64DataUrl === 'function') {
+    convertSkinTo64x64DataUrl(initialSkin).then((normUrl) => {
+      currentSkinDataUrl = normUrl;
+      state.cachedSkinDataUrl = normUrl;
+      skinViewer?.loadSkin(normUrl, { model: state.skinModel }).then(() => skinViewer?.render()).catch(() => {});
+      draw2DAvatarFace(normUrl);
+    });
+  } else {
+    draw2DAvatarFace(initialSkin);
+  }
   const stageWrap = canvas.parentElement;
   if (stageWrap && window.ResizeObserver) {
     const ro = new ResizeObserver(() => {
@@ -238,7 +247,7 @@ function updateSummaryUI() {
   }
   if (!state.isLaunching && (!state.launchPhase || state.launchPhase === 'idle')) {
     const stEl = document.getElementById('statusText');
-    if (stEl) stEl.textContent = `🟢 Sẵn sàng: Minecraft ${ver} (${coreUpper}) • ${ram} RAM`;
+    if (stEl) stEl.textContent = `🟢 Sẵn sàng: Minecraft ${ver} (${coreUpper} • ${ram})`;
   }
   const bannerPill = document.getElementById('bannerActivePill');
   if (bannerPill) bannerPill.textContent = `${ver} • ${coreUpper} • ${ram} RAM`;
@@ -246,30 +255,36 @@ function updateSummaryUI() {
   if (bannerSub) bannerSub.textContent = isInst
     ? `Phiên bản Minecraft ${ver} (${coreUpper}) đã cài sẵn trên máy — Bấm CHƠI NGAY để vào thẳng game!`
     : `Phiên bản Minecraft ${ver} (${coreUpper}) sẵn sàng tải tự động từ Mojang khi bấm CHƠI NGAY.`;
-    const editionTag = document.getElementById('hbcEditionTag');
+  const editionTag = document.getElementById('hbcEditionTag');
   const heroBanner = document.getElementById('heroBanner');
   if (editionTag && heroBanner) {
     let wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
+    let wpLabelMatch = 'Tricky Trials';
     let eraTitle = '🌲 THE GARDEN AWAKENS & WILDERNESS • 1.21+';
     if (ver.startsWith('26.') || ver.includes('w')) {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
+      wpLabelMatch = 'Vibrant Camp';
       eraTitle = '🔥 SNAPSHOT & VIBRANT VISUALS • ' + ver;
     } else if (ver === '1.21.11' || ver === '1.21.10' || ver === '1.21.9') {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
+      wpLabelMatch = 'Wilderness';
       eraTitle = '🌲 WILDERNESS & PALE GARDEN • ' + ver;
     } else if (ver.startsWith('1.21')) {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
+      wpLabelMatch = 'Tricky Trials';
       eraTitle = '⚔️ TRICKY TRIALS UPDATE • ' + ver;
     } else if (ver.startsWith('1.20')) {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png';
+      wpLabelMatch = 'Overworld';
       eraTitle = '🌸 TRAILS & TALES UPDATE • ' + ver;
     } else if (ver.startsWith('1.8') || ver.startsWith('1.12')) {
       wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
+      wpLabelMatch = 'Vibrant Camp';
       eraTitle = '⚔️ HUYỀN THOẠI PVP & MODPACK • ' + ver;
     }
     editionTag.textContent = eraTitle;
     heroBanner.style.backgroundImage = `url('${wpUrl}')`;
-    document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.dataset.wp === wpUrl));
+    document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.textContent.trim() === wpLabelMatch));
   }
   const javaBadge = document.getElementById('javaReqBadge');
   if (javaBadge) javaBadge.textContent = getRecommendedJavaBadge(ver);
@@ -309,8 +324,10 @@ function isVersionInstalledOnDisk(verId) {
 async function refreshInstalledVersions() {
   const res = await window.aetherAPI.getInstalledVersions(state.gameDir);
   state.installedVersions = res?.ok && Array.isArray(res.list) ? res.list : [];
+  const baseInstalled = state.installedVersions.filter((id) => !/^(fabric-loader|quilt-loader|legacy-fabric-loader|neoforge)-/i.test(id) && !id.toLowerCase().includes('-forge-'));
+  const count = baseInstalled.length || state.installedVersions.length;
   const label = document.getElementById('installedCountLabel');
-  if (label) label.textContent = state.installedVersions.length > 0 ? `✓ ${state.installedVersions.length} bản đã cài trong máy` : '☁ Sẵn sàng tải tự động';
+  if (label) label.textContent = count > 0 ? `✓ ${count} bản đã cài trong máy` : '☁ Sẵn sàng tải tự động';
   renderQuickVersionGrid();
 }
 
@@ -375,6 +392,7 @@ async function refreshLoaderBuilds() {
   }
   loaderSelect.innerHTML = res.data.map((item, idx) => `<option value="${item.version}" ${idx === 0 ? 'selected' : ''}>${item.version} ${item.stable ? '(Ổn định)' : ''}</option>`).join('');
   state.selectedLoaderVersion = res.data[0].version;
+  updateSummaryUI();
 }
 
 function renderVersionOptions() {

@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.9.0",
-  "description": "Aether Craft v29.9 PRO - 100% Vietnamese Mod, Shader & Resource Pack Explanations",
+  "version": "30.0.0",
+  "description": "Aether Craft v30.0 PRO - 3D Dream Hoodie Skin Fix, Clean Loader Tags & UI Precision Polish",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

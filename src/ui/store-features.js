@@ -202,6 +202,74 @@ function convertSkinTo64x64DataUrl(imgSource) {
           if (hatData[i] < 250) { hasTrans = true; break; }
         }
         if (!hasTrans) ctx.clearRect(32, 0, 32, 16);
+
+        // If the head face (8,8,8,6) is a solid single color (like Dream's raw Mojang skin where the head is blank and eyes are split onto the arms),
+        // upgrade it into a clean 3D Dream Hoodie + White Smiley Mask skin so 3D, 2D & In-Game look sharp!
+        const faceData = ctx.getImageData(8, 8, 8, 6).data;
+        const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
+        let solidHead = true;
+        for (let i = 0; i < faceData.length; i += 4) {
+          if (Math.abs(faceData[i] - r0) > 12 || Math.abs(faceData[i + 1] - g0) > 12 || Math.abs(faceData[i + 2] - b0) > 12) {
+            solidHead = false;
+            break;
+          }
+        }
+        if (solidHead && g0 > 150) {
+          const fill = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+          ctx.clearRect(0, 0, 64, 64);
+          const greenMain = '#22c55e', greenDark = '#16a34a', greenDeep = '#15803d';
+          // Head base (green hood + white mask on front face 8,8,8,8)
+          fill(8, 0, 8, 8, greenMain);
+          fill(16, 0, 8, 8, greenDeep);
+          fill(0, 8, 32, 8, greenMain);
+          fill(0, 8, 8, 8, greenDark);
+          fill(16, 8, 8, 8, greenDark);
+          fill(9, 9, 6, 6, '#ffffff');
+          fill(10, 10, 1, 2, '#0f172a');
+          fill(13, 10, 1, 2, '#0f172a');
+          fill(10, 13, 4, 1, '#0f172a');
+          fill(9, 12, 1, 1, '#0f172a');
+          fill(14, 12, 1, 1, '#0f172a');
+          // 3D Outer Hood Rim (Hat layer 32..64, 0..16)
+          fill(40, 0, 8, 8, greenDark);
+          fill(32, 8, 8, 8, greenDark);
+          fill(48, 8, 8, 8, greenDark);
+          fill(56, 8, 8, 8, greenDeep);
+          fill(40, 8, 8, 1, greenDark);
+          fill(40, 15, 8, 1, greenDark);
+          fill(40, 8, 1, 8, greenDark);
+          fill(47, 8, 1, 8, greenDark);
+          // Torso (Green Hoodie + white drawstrings + front pocket)
+          fill(20, 16, 8, 4, greenMain);
+          fill(28, 16, 8, 4, greenDeep);
+          fill(16, 20, 24, 12, greenMain);
+          fill(16, 20, 4, 12, greenDark);
+          fill(28, 20, 4, 12, greenDark);
+          fill(22, 20, 4, 1, '#ffffff');
+          fill(22, 21, 1, 3, '#ffffff');
+          fill(25, 21, 1, 3, '#ffffff');
+          fill(21, 27, 6, 4, greenDark);
+          fill(20, 31, 8, 1, greenDeep);
+          // Right Arm (40..56, 16..32) & Left Arm (32..48, 48..64)
+          fill(44, 16, 4, 4, greenMain);
+          fill(48, 16, 4, 4, '#f1c27d');
+          fill(40, 20, 16, 9, greenMain);
+          fill(40, 29, 16, 3, '#f1c27d');
+          fill(36, 48, 4, 4, greenMain);
+          fill(40, 48, 4, 4, '#f1c27d');
+          fill(32, 52, 16, 9, greenMain);
+          fill(32, 61, 16, 3, '#f1c27d');
+          // Right Leg (0..16, 16..32) & Left Leg (16..32, 48..64)
+          fill(4, 16, 4, 4, '#1e293b');
+          fill(8, 16, 4, 4, '#0f172a');
+          fill(0, 20, 16, 10, '#1e293b');
+          fill(0, 30, 16, 2, '#f8fafc');
+          fill(20, 48, 4, 4, '#1e293b');
+          fill(24, 48, 4, 4, '#0f172a');
+          fill(16, 52, 16, 10, '#1e293b');
+          fill(16, 62, 16, 2, '#f8fafc');
+          return resolve(c.toDataURL('image/png'));
+        }
       } catch (_) {}
 
       if (img.height === 32) {
@@ -429,6 +497,10 @@ async function loadModrinthStore(append = false) {
 
   if (totalBadge) {
     totalBadge.textContent = `Hiện ${state.modAccumulatedHits.length} / ${totalHits.toLocaleString('vi-VN')}+ Gói`;
+  }
+  const modSearchInp = document.getElementById('modSearchInput');
+  if (modSearchInp) {
+    modSearchInp.placeholder = `Tìm nhanh trong ${totalHits.toLocaleString('vi-VN')}+ gói phù hợp (vd: Sodium, Iris, Create, Ice and Fire, Xaero)...`;
   }
 
   const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
@@ -766,8 +838,11 @@ async function loadModrinthStore(append = false) {
     const rawCats = (item.categories || []).map((c) => String(c || '').toLowerCase()).filter((c) => c && !HIDDEN_RETRO_TAGS.has(c));
     const loaderCats = rawCats.filter((c) => ['fabric', 'forge', 'quilt', 'neoforge', 'iris', 'optifine'].includes(c));
     const featureCats = rawCats.filter((c) => !['fabric', 'forge', 'quilt', 'neoforge', 'iris', 'optifine'].includes(c));
-    const pickedLoader = loaderCats.includes(activeLoaderKey) ? [activeLoaderKey] : loaderCats.slice(0, 1);
-    const orderedCats = [...pickedLoader, ...featureCats, ...loaderCats.filter((c) => c !== activeLoaderKey)].slice(0, 3);
+    const pickedLoader = state.activeModStoreType === 'mod'
+      ? (loaderCats.includes(activeLoaderKey) ? [activeLoaderKey] : loaderCats.slice(0, 1))
+      : [];
+    // Never show conflicting loader tags (like NeoForge / Forge / Quilt) when filtering by activeLoaderKey (e.g. Fabric)
+    const orderedCats = [...pickedLoader, ...featureCats].slice(0, 3);
     const tags = orderedCats
       .map((key) => `<span class="mod-tag">${TAG_VI_MAP[key] || key}</span>`)
       .join('');

@@ -4809,3 +4809,24 @@ html[data-theme="cherry"] {
     overflow-y: auto !important;
   }
 }
+
+/* v30.0 PRO PRECISION ALIGNMENT & DOCK / MOD GRID FIXES */
+#statusText {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 310px !important;
+  display: block !important;
+}
+
+.version-selectors-row .ver-label-bar {
+  min-height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.modrinth-grid {
+  padding-bottom: 24px !important;
+}
+
