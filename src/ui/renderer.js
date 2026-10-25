@@ -309,7 +309,50 @@ function updateSummaryUI() {
   document.getElementById('dockAccountText').textContent = `${playerName} (${modeLabel})`;
 }
 
-function syncCloudCosmeticsIfActive() {
+let activeToastEl = null;
+let activeToastTimer = null;
+let activeBannerTimer = null;
+
+function showAetherNotification(message, type = 'success', durationMs = 4500) {
+  if (!message) return;
+  const stEl = document.getElementById('statusText');
+  if (stEl) stEl.textContent = message;
+
+  // 1. Update inline banner inside #panelAether
+  const banner = document.getElementById('aetherFeedbackBanner');
+  if (banner) {
+    banner.className = `aether-feedback-banner ${type}`;
+    banner.innerHTML = `<span>${message}</span>`;
+    if (activeBannerTimer) clearTimeout(activeBannerTimer);
+    if (durationMs > 0) {
+      activeBannerTimer = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, durationMs + 1500);
+    }
+  }
+
+  // 2. Show floating Toast notification at top-right of screen
+  if (activeToastEl) {
+    try { activeToastEl.remove(); } catch (_) {}
+    activeToastEl = null;
+  }
+  if (activeToastTimer) clearTimeout(activeToastTimer);
+
+  const toast = document.createElement('div');
+  toast.className = `aether-toast-popup ${type}`;
+  toast.innerHTML = `<span>${message}</span>`;
+  document.body.appendChild(toast);
+  activeToastEl = toast;
+
+  if (durationMs > 0) {
+    activeToastTimer = setTimeout(() => {
+      try { toast.remove(); } catch (_) {}
+      if (activeToastEl === toast) activeToastEl = null;
+    }, durationMs);
+  }
+}
+
+function syncCloudCosmeticsIfActive(notifyMsg = '') {
   if (state.authMode === 'aether' && state.cloudProfile?.accountId && window.aetherAPI?.cloudSyncCosmetics) {
     window.aetherAPI.cloudSyncCosmetics({
       accountId: state.cloudProfile.accountId,
@@ -322,8 +365,11 @@ function syncCloudCosmeticsIfActive() {
       if (res?.ok && res.profile) {
         state.cloudProfile = res.profile;
         saveCurrentConfig();
+        if (notifyMsg) showAetherNotification(notifyMsg, 'success', 3500);
       }
     }).catch(() => {});
+  } else if (notifyMsg) {
+    showAetherNotification(notifyMsg, 'success', 3500);
   }
 }
 
@@ -959,8 +1005,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.selectedSkinPreset = chip.dataset.skinpreset;
       await loadCharacterSkin(chip.dataset.skinpreset);
       saveCurrentConfig();
-      syncCloudCosmeticsIfActive();
-      document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') & lưu đồng bộ theo tài khoản!';
+      syncCloudCosmeticsIfActive(`👕 Đã áp dụng Skin 3D (${chip.textContent}) & đồng bộ lên tài khoản Cloud!`);
     };
   });
 
@@ -979,11 +1024,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.wt-model-btn').forEach((b) => b.classList.toggle('active', b === btn));
       if (skinViewer && currentSkinDataUrl) skinViewer.loadSkin(currentSkinDataUrl, { model: state.skinModel });
       saveCurrentConfig();
-      syncCloudCosmeticsIfActive();
+      syncCloudCosmeticsIfActive(`✓ Đã chuyển kiểu tay sang ${state.skinModel === 'slim' ? 'Slim 3px (Alex)' : 'Classic 4px (Steve)'}!`);
     };
   });
   document.querySelectorAll('#capeSelectorBar .cape-chip').forEach((chip) => {
-    chip.onclick = () => { applyCapeToViewer(chip.dataset.cape); saveCurrentConfig(); syncCloudCosmeticsIfActive(); };
+    chip.onclick = () => {
+      applyCapeToViewer(chip.dataset.cape);
+      saveCurrentConfig();
+      syncCloudCosmeticsIfActive(`🦸 Đã cập nhật Áo choàng (${chip.textContent}) cho nhân vật!`);
+    };
   });
 
   document.getElementById('btnUploadSkinPng').onclick = async () => {
@@ -997,7 +1046,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.cachedSkinDataUrl = normUrl;
       state.selectedSkinPreset = '';
       saveCurrentConfig();
-      syncCloudCosmeticsIfActive();
+      syncCloudCosmeticsIfActive('🎉 Đã tải ảnh Skin (.PNG) lên nhân vật 3D & lưu vào tài khoản Aether Cloud 24/7!');
       if (skinViewer) {
         try {
           await skinViewer.loadSkin(normUrl, { model: state.skinModel });
@@ -1005,7 +1054,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         } catch (_) {}
       }
       draw2DAvatarFace(normUrl);
-      document.getElementById('statusText').textContent = '✓ Đã nạp ảnh Skin (.PNG) lên nhân vật 3D & tự động lưu theo tài khoản Cloud!';
     }
   };
 
@@ -1094,8 +1142,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (profile.skinPreset !== undefined) state.selectedSkinPreset = profile.skinPreset;
     setAuthModeUI('aether');
     saveCurrentConfig();
-    const stEl = document.getElementById('statusText');
-    if (stEl && msg) stEl.textContent = msg;
+    if (msg) showAetherNotification(msg, 'success', 5000);
   };
 
   const btnAetherLogin = document.getElementById('btnAetherLogin');
@@ -1103,17 +1150,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnAetherLogin.onclick = async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
       const password = document.getElementById('aetherPasswordInput')?.value || '';
-      const stEl = document.getElementById('statusText');
       btnAetherLogin.disabled = true;
       btnAetherLogin.textContent = '⏳ Đang kiểm tra...';
-      if (stEl) stEl.textContent = '☁️ Đang kết nối Internet Database 24/7 để xác thực tài khoản Aether Cloud...';
+      showAetherNotification('☁️ Đang kết nối Internet Database 24/7 để đăng nhập...', 'info', 2500);
       const res = await window.aetherAPI.cloudLogin({ loginId, password, customDbUrl: state.customDbUrl });
       btnAetherLogin.disabled = false;
       btnAetherLogin.textContent = '🔑 Đăng Nhập';
       if (res?.ok && res.profile) {
-        applyCloudProfileToUI(res.profile, `✓ Đã đăng nhập Aether Cloud: ${res.profile.mcUsername} (${res.profile.loginId})!`);
+        applyCloudProfileToUI(res.profile, `✅ Đăng nhập thành công! Nhân vật: ${res.profile.mcUsername} (${res.profile.loginId})`);
       } else if (res?.error) {
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
     };
   }
@@ -1123,11 +1169,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnAetherReg.onclick = async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
       const password = document.getElementById('aetherPasswordInput')?.value || '';
-      const stEl = document.getElementById('statusText');
       const suggestedMc = loginId.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16);
       btnAetherReg.disabled = true;
       btnAetherReg.textContent = '⏳ Đang tạo...';
-      if (stEl) stEl.textContent = '☁️ Đang đăng ký tài khoản mới lên Internet Database 24/7...';
+      showAetherNotification('☁️ Đang tạo tài khoản mới trên Internet Database 24/7...', 'info', 2500);
       const res = await window.aetherAPI.cloudRegister({
         loginId,
         password,
@@ -1141,9 +1186,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnAetherReg.disabled = false;
       btnAetherReg.textContent = '✨ Tạo Tài Khoản';
       if (res?.ok && res.profile) {
-        applyCloudProfileToUI(res.profile, `🎉 Đã tạo tài khoản Aether Cloud thành công: ${res.profile.mcUsername}! (Bấm "✏️ Đổi Tên" nếu muốn đổi tên nhân vật)`);
+        applyCloudProfileToUI(res.profile, `🎉 Tạo tài khoản Aether Cloud thành công! Nhân vật: "${res.profile.mcUsername}"`);
       } else if (res?.error) {
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
     };
   }
@@ -1151,17 +1196,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnAetherWeb = document.getElementById('btnAetherBrowserLogin');
   if (btnAetherWeb) {
     btnAetherWeb.onclick = async () => {
-      const stEl = document.getElementById('statusText');
       btnAetherWeb.disabled = true;
       btnAetherWeb.textContent = '🌐 Đang mở Trình duyệt...';
-      if (stEl) stEl.textContent = '🌐 Đã mở trình duyệt — Hãy chọn tài khoản Email bất kỳ để tạo/đăng nhập Aether Cloud miễn phí!';
+      showAetherNotification('🌐 Đã mở trình duyệt — Hãy chọn Email bất kỳ để tạo/đăng nhập Aether Cloud miễn phí!', 'info', 4000);
       const res = await window.aetherAPI.cloudBrowserLogin({ customDbUrl: state.customDbUrl });
       btnAetherWeb.disabled = false;
       btnAetherWeb.textContent = '🌐 Liên Kết Trình Duyệt';
       if (res?.ok && res.profile) {
-        applyCloudProfileToUI(res.profile, `✓ Đã liên kết Aether Cloud qua trình duyệt: ${res.profile.mcUsername} (${res.profile.loginId})!`);
+        applyCloudProfileToUI(res.profile, `✅ Đã liên kết & đăng nhập Aether Cloud: ${res.profile.mcUsername} (${res.profile.loginId})!`);
       } else if (res?.error) {
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
     };
   }
@@ -1179,15 +1223,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnRequestOtp) {
     btnRequestOtp.onclick = async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
-      const stEl = document.getElementById('statusText');
       if (!loginId) {
-        if (stEl) stEl.textContent = '⚠ Vui lòng nhập Tài khoản / Email vào ô bên trên trước khi bấm Nhận Mã OTP!';
+        showAetherNotification('⚠️ Vui lòng nhập Tài khoản / Email vào ô bên trên trước khi bấm Nhận Mã OTP!', 'error', 5000);
         document.getElementById('aetherLoginIdInput')?.focus();
         return;
       }
       btnRequestOtp.disabled = true;
       btnRequestOtp.textContent = '🌐 Đang mở xác thực Email nhận OTP...';
-      if (stEl) stEl.textContent = `📨 Đang mở trình duyệt xác thực chủ sở hữu "${loginId}" để cấp Mã OTP 6 số...`;
+      showAetherNotification(`📨 Đang mở trình duyệt xác thực chủ sở hữu "${loginId}" để cấp Mã OTP 6 số...`, 'info', 4000);
       const res = await window.aetherAPI.cloudRequestOtp({
         loginId,
         customDbUrl: state.customDbUrl
@@ -1195,11 +1238,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnRequestOtp.disabled = false;
       btnRequestOtp.textContent = '✓ Đã cấp Mã OTP trên Trình duyệt (Gửi lại)';
       if (res?.ok) {
-        if (stEl) stEl.textContent = `🔐 Đã cấp Mã OTP 6 số trên trình duyệt cho "${res.loginId}"! Hãy nhập mã 6 số vào ô bên dưới.`;
+        showAetherNotification(`🔐 Đã cấp Mã OTP 6 số trên trình duyệt cho "${res.loginId}"! Hãy nhập mã 6 số vào ô bên dưới.`, 'success', 6000);
         document.getElementById('aetherOtpInput')?.focus();
       } else if (res?.error) {
         btnRequestOtp.textContent = '📨 Bước 1: Nhận Mã OTP 6 Số (Xác Thực Email)';
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
     };
   }
@@ -1210,7 +1253,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
       const otpCode = document.getElementById('aetherOtpInput')?.value.trim() || '';
       const newPassword = document.getElementById('aetherResetNewPassInput')?.value || '';
-      const stEl = document.getElementById('statusText');
       btnConfirmReset.disabled = true;
       btnConfirmReset.textContent = '⏳ Đang kiểm tra OTP...';
       const res = await window.aetherAPI.cloudResetPassword({
@@ -1224,9 +1266,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (res?.ok && res.profile) {
         resetBox?.classList.add('hidden');
         if (btnForgotPass) btnForgotPass.textContent = '🔄 Quên MK?';
-        applyCloudProfileToUI(res.profile, `✓ Đã xác thực OTP & đặt lại mật khẩu mới thành công cho "${res.profile.mcUsername}"!`);
+        applyCloudProfileToUI(res.profile, `✅ Đã xác thực OTP & đặt lại mật khẩu mới thành công cho "${res.profile.mcUsername}"!`);
       } else if (res?.error) {
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
     };
   }
@@ -1271,7 +1313,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!state.cloudProfile?.accountId) return;
       const oldPassword = document.getElementById('aetherOldPassInput')?.value || '';
       const newPassword = document.getElementById('aetherLoggedNewPassInput')?.value || '';
-      const stEl = document.getElementById('statusText');
       btnSavePass.disabled = true;
       btnSavePass.textContent = 'Đang lưu...';
       const res = await window.aetherAPI.cloudChangePassword({
@@ -1284,9 +1325,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnSavePass.textContent = 'Lưu MK';
       if (res?.ok && res.profile) {
         changePassRow?.classList.add('hidden');
-        if (stEl) stEl.textContent = `✓ Đã xác minh mật khẩu cũ & đổi mật khẩu mới cho tài khoản "${res.profile.loginId}"!`;
+        showAetherNotification(`✅ Đã xác minh mật khẩu cũ & đổi mật khẩu mới thành công cho "${res.profile.loginId}"!`, 'success', 5500);
       } else if (res?.error) {
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(res.error, 'error', 5500);
       }
     };
   }
@@ -1296,7 +1337,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnSaveName.onclick = async () => {
       if (!state.cloudProfile?.accountId) return;
       const newMcUsername = document.getElementById('aetherNewNameInput')?.value.trim() || '';
-      const stEl = document.getElementById('statusText');
       btnSaveName.disabled = true;
       btnSaveName.textContent = 'Đang lưu...';
       const res = await window.aetherAPI.cloudChangeUsername({
@@ -1308,9 +1348,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnSaveName.textContent = 'Lưu Tên';
       if (res?.ok && res.profile) {
         renameRow?.classList.add('hidden');
-        applyCloudProfileToUI(res.profile, `✓ Đã đổi tên nhân vật trên Internet Database 24/7 thành "${res.profile.mcUsername}"!`);
+        applyCloudProfileToUI(res.profile, `✅ Đã đổi tên nhân vật trên Cloud Database 24/7 thành "${res.profile.mcUsername}"!`);
       } else if (res?.error) {
-        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+        showAetherNotification(res.error, 'error', 5500);
       }
     };
   }
@@ -1320,10 +1360,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnAetherLogout.onclick = () => {
       state.cloudProfile = null;
       renameRow?.classList.add('hidden');
+      changePassRow?.classList.add('hidden');
       setAuthModeUI('aether');
       saveCurrentConfig();
-      const stEl = document.getElementById('statusText');
-      if (stEl) stEl.textContent = 'Đã đăng xuất khỏi tài khoản Aether Cloud.';
+      showAetherNotification('👋 Đã đăng xuất khỏi tài khoản Aether Cloud.', 'info', 3500);
     };
   }
 

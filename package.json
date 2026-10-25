@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "31.0.0",
-  "description": "Aether Craft v31.0 PRO - Aether Cloud ID 24/7 (6-Digit OTP Password Recovery & Old Password Verification)",
+  "version": "31.1.0",
+  "description": "Aether Craft v31.1 PRO - Aether Cloud ID 24/7 with Instant Toast & Banner Notifications",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
