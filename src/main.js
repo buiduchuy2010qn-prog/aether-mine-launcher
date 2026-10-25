@@ -28,7 +28,7 @@ const {
 } = require('./microsoft-auth');
 
 app.commandLine.appendSwitch('js-flags', '--expose-gc');
-app.commandLine.appendSwitch('disable-background-timer-throttling');
+// Background throttling enabled for 0% idle CPU/GPU
 
 let mainWindow;
 let hideOnLaunchSetting = true;

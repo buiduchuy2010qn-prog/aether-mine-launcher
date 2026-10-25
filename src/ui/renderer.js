@@ -61,6 +61,7 @@ function init3DSkinViewer() {
     width: 265,
     height: 330,
     skin: initialSkin,
+    pixelRatio: 1,
     preserveDrawingBuffer: true
   });
   // Crisp 3D directional lighting so cube faces have clear depth shading
@@ -126,6 +127,13 @@ function setPose(poseName) {
   else skinViewer.animation = new window.skinview3d.IdleAnimation();
   skinViewer.renderPaused = false;
   skinViewer.render();
+  setTimeout(() => {
+    const wrap = document.getElementById('webglStageWrap');
+    if (skinViewer && !skinViewer.autoRotate && !wrap?.matches(':hover')) {
+      skinViewer.render();
+      skinViewer.renderPaused = true;
+    }
+  }, 2500);
 }
 
 function setTheme(themeId) {
@@ -521,18 +529,41 @@ window.addEventListener('DOMContentLoaded', async () => {
         : '🧣 Đã chuyển sang chế độ Áo choàng (Cape 3D).';
     };
   }
-    const stageElForGpu = document.getElementById('webglStageWrap');
+  let idleGpuTimer = null;
+  const scheduleIdleGpuPause = (delayMs = 2200) => {
+    if (idleGpuTimer) clearTimeout(idleGpuTimer);
+    idleGpuTimer = setTimeout(() => {
+      if (skinViewer && !skinViewer.autoRotate && !stageElForGpu?.matches(':hover')) {
+        skinViewer.render();
+        skinViewer.renderPaused = true;
+      }
+    }, delayMs);
+  };
+  const stageElForGpu = document.getElementById('webglStageWrap');
   if (stageElForGpu) {
     stageElForGpu.addEventListener('mouseenter', () => {
+      if (idleGpuTimer) clearTimeout(idleGpuTimer);
       if (skinViewer) skinViewer.renderPaused = false;
     });
+    stageElForGpu.addEventListener('mouseleave', () => {
+      if (skinViewer && !skinViewer.autoRotate) {
+        skinViewer.render();
+        skinViewer.renderPaused = true;
+      }
+    });
   }
+  window.addEventListener('blur', () => {
+    if (skinViewer) {
+      skinViewer.render();
+      skinViewer.renderPaused = true;
+    }
+  });
   document.addEventListener('visibilitychange', () => {
-    if (skinViewer) skinViewer.renderPaused = document.hidden;
+    if (skinViewer && document.hidden) {
+      skinViewer.renderPaused = true;
+    }
   });
-  window.addEventListener('focus', () => {
-    if (skinViewer) skinViewer.renderPaused = false;
-  });
+  scheduleIdleGpuPause(2500);
   const btnStageFx = document.getElementById('btnStageBgFx');
   const stageWrapEl = document.getElementById('webglStageWrap');
   if (btnStageFx && stageWrapEl) {
