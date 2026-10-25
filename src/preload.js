@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   cloudBrowserLogin: (params) => ipcRenderer.invoke('cloud:browser-login', params),
   cloudChangeUsername: (params) => ipcRenderer.invoke('cloud:change-username', params),
   cloudSyncCosmetics: (params) => ipcRenderer.invoke('cloud:sync-cosmetics', params),
+  cloudResetPassword: (params) => ipcRenderer.invoke('cloud:reset-password', params),
   fetchSkinBase64: (username) => ipcRenderer.invoke('skin:fetch-base64', username),
   uploadLocalSkin: (gameDir, username) => ipcRenderer.invoke('skin:upload-local', gameDir, username),
 

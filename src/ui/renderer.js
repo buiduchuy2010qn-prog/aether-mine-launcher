@@ -316,6 +316,7 @@ function syncCloudCosmeticsIfActive() {
       skinModel: state.skinModel,
       capeType: state.capeType,
       skinPreset: state.selectedSkinPreset,
+      skinDataUrl: currentSkinDataUrl || state.cachedSkinDataUrl || '',
       customDbUrl: state.customDbUrl
     }).then((res) => {
       if (res?.ok && res.profile) {
@@ -517,7 +518,16 @@ function setAuthModeUI(mode) {
     const uuidTag = document.getElementById('uuidPreviewTag');
     if (uuidTag && state.cloudProfile.uuid) uuidTag.textContent = `UUID: ${state.cloudProfile.uuid.slice(0, 8)}...`;
     update3DNameTag(state.cloudProfile.mcUsername);
-    loadCharacterSkin(state.cloudProfile.skinPreset || state.selectedSkinPreset || state.cloudProfile.mcUsername);
+    if (state.cloudProfile.skinDataUrl && state.cloudProfile.skinDataUrl.startsWith('data:image/png;base64,')) {
+      currentSkinDataUrl = state.cloudProfile.skinDataUrl;
+      state.cachedSkinDataUrl = state.cloudProfile.skinDataUrl;
+      if (skinViewer) {
+        skinViewer.loadSkin(state.cloudProfile.skinDataUrl, { model: state.skinModel }).then(() => skinViewer.render()).catch(() => {});
+      }
+      draw2DAvatarFace(state.cloudProfile.skinDataUrl);
+    } else {
+      loadCharacterSkin(state.cloudProfile.skinPreset || state.selectedSkinPreset || state.cloudProfile.mcUsername);
+    }
   } else if (mode === 'aether') {
     document.getElementById('aetherNotLoggedBox')?.classList.remove('hidden');
     document.getElementById('aetherLoggedBox')?.classList.add('hidden');
@@ -944,9 +954,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
   document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {
-    chip.onclick = () => {
+    chip.onclick = async () => {
       document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.toggle('active', c === chip));
-      state.selectedSkinPreset = chip.dataset.skinpreset; saveCurrentConfig(); syncCloudCosmeticsIfActive(); loadCharacterSkin(chip.dataset.skinpreset); document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') — Tự động lưu vào Game khi bấm CHƠI NGAY!';
+      state.selectedSkinPreset = chip.dataset.skinpreset;
+      await loadCharacterSkin(chip.dataset.skinpreset);
+      saveCurrentConfig();
+      syncCloudCosmeticsIfActive();
+      document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') & lưu đồng bộ theo tài khoản!';
     };
   });
 
@@ -973,14 +987,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('btnUploadSkinPng').onclick = async () => {
-    const res = await window.aetherAPI.uploadLocalSkin(state.gameDir, state.username);
+    const targetName = (state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username;
+    const res = await window.aetherAPI.uploadLocalSkin(state.gameDir, targetName);
     if (res?.ok && res.dataUrl) {
       const normUrl = typeof convertSkinTo64x64DataUrl === 'function'
         ? await convertSkinTo64x64DataUrl(res.dataUrl)
         : res.dataUrl;
       currentSkinDataUrl = normUrl;
       state.cachedSkinDataUrl = normUrl;
+      state.selectedSkinPreset = '';
       saveCurrentConfig();
+      syncCloudCosmeticsIfActive();
       if (skinViewer) {
         try {
           await skinViewer.loadSkin(normUrl, { model: state.skinModel });
@@ -988,7 +1005,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         } catch (_) {}
       }
       draw2DAvatarFace(normUrl);
-      document.getElementById('statusText').textContent = '✓ Đã nạp ảnh Skin (.PNG) lên nhân vật 3D & lưu vào game!';
+      document.getElementById('statusText').textContent = '✓ Đã nạp ảnh Skin (.PNG) lên nhân vật 3D & tự động lưu theo tài khoản Cloud!';
     }
   };
 
@@ -1118,6 +1135,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         skinModel: state.skinModel,
         capeType: state.capeType,
         skinPreset: state.selectedSkinPreset,
+        skinDataUrl: currentSkinDataUrl || state.cachedSkinDataUrl || '',
         customDbUrl: state.customDbUrl
       });
       btnAetherReg.disabled = false;
@@ -1148,10 +1166,48 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  const btnForgotPass = document.getElementById('btnAetherForgotPass');
+  const resetBox = document.getElementById('aetherResetBox');
+  if (btnForgotPass && resetBox) {
+    btnForgotPass.onclick = () => {
+      const isHidden = resetBox.classList.toggle('hidden');
+      btnForgotPass.textContent = isHidden ? '🔄 Quên MK?' : '✕ Đóng';
+    };
+  }
+
+  const btnConfirmReset = document.getElementById('btnAetherConfirmReset');
+  if (btnConfirmReset) {
+    btnConfirmReset.onclick = async () => {
+      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
+      const verifyMcUsername = document.getElementById('aetherResetVerifyInput')?.value.trim() || '';
+      const newPassword = document.getElementById('aetherResetNewPassInput')?.value || '';
+      const stEl = document.getElementById('statusText');
+      btnConfirmReset.disabled = true;
+      btnConfirmReset.textContent = '⏳ Đang cập nhật mật khẩu...';
+      const res = await window.aetherAPI.cloudResetPassword({
+        loginId,
+        verifyMcUsername,
+        newPassword,
+        customDbUrl: state.customDbUrl
+      });
+      btnConfirmReset.disabled = false;
+      btnConfirmReset.textContent = '✓ Xác Nhận Đổi Mật Khẩu Mới';
+      if (res?.ok && res.profile) {
+        resetBox?.classList.add('hidden');
+        if (btnForgotPass) btnForgotPass.textContent = '🔄 Quên MK?';
+        applyCloudProfileToUI(res.profile, `✓ Đã đặt lại mật khẩu mới và đăng nhập tài khoản "${res.profile.mcUsername}"!`);
+      } else if (res?.error) {
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      }
+    };
+  }
+
   const btnToggleRename = document.getElementById('btnAetherToggleRename');
   const renameRow = document.getElementById('aetherRenameRow');
+  const changePassRow = document.getElementById('aetherChangePassRow');
   if (btnToggleRename && renameRow) {
     btnToggleRename.onclick = () => {
+      changePassRow?.classList.add('hidden');
       const isHidden = renameRow.classList.toggle('hidden');
       if (!isHidden) {
         const inp = document.getElementById('aetherNewNameInput');
@@ -1159,6 +1215,45 @@ window.addEventListener('DOMContentLoaded', async () => {
           inp.value = state.cloudProfile?.mcUsername || '';
           inp.focus();
         }
+      }
+    };
+  }
+
+  const btnTogglePass = document.getElementById('btnAetherTogglePass');
+  if (btnTogglePass && changePassRow) {
+    btnTogglePass.onclick = () => {
+      renameRow?.classList.add('hidden');
+      const isHidden = changePassRow.classList.toggle('hidden');
+      if (!isHidden) {
+        const inp = document.getElementById('aetherLoggedNewPassInput');
+        if (inp) {
+          inp.value = '';
+          inp.focus();
+        }
+      }
+    };
+  }
+
+  const btnSavePass = document.getElementById('btnAetherSavePass');
+  if (btnSavePass) {
+    btnSavePass.onclick = async () => {
+      if (!state.cloudProfile?.accountId) return;
+      const newPassword = document.getElementById('aetherLoggedNewPassInput')?.value || '';
+      const stEl = document.getElementById('statusText');
+      btnSavePass.disabled = true;
+      btnSavePass.textContent = 'Đang lưu...';
+      const res = await window.aetherAPI.cloudResetPassword({
+        accountId: state.cloudProfile.accountId,
+        newPassword,
+        customDbUrl: state.customDbUrl
+      });
+      btnSavePass.disabled = false;
+      btnSavePass.textContent = 'Lưu MK';
+      if (res?.ok && res.profile) {
+        changePassRow?.classList.add('hidden');
+        if (stEl) stEl.textContent = `✓ Đã đổi mật khẩu mới cho tài khoản Aether Cloud "${res.profile.loginId}"!`;
+      } else if (res?.error) {
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
       }
     };
   }

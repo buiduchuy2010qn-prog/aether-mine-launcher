@@ -5199,7 +5199,21 @@ html[data-theme="cherry"] {
 .aether-auth-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+}
+
+.aether-reset-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px dashed var(--accent);
+}
+
+.aether-reset-box.hidden {
+  display: none !important;
 }
 
 .aether-inputs-row {

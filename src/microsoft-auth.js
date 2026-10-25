@@ -600,6 +600,7 @@ function toPublicProfile(userRecord) {
     skinModel: userRecord.skinModel || 'default',
     capeType: userRecord.capeType || 'mojang',
     skinPreset: userRecord.skinPreset || '',
+    skinDataUrl: userRecord.skinDataUrl || '',
     authProvider: userRecord.authProvider || 'password',
     createdAt: userRecord.createdAt,
     updatedAt: userRecord.updatedAt
@@ -613,6 +614,7 @@ async function registerCloudAccount({
   skinModel = 'default',
   capeType = 'mojang',
   skinPreset = '',
+  skinDataUrl = '',
   customDbUrl = ''
 }) {
   const cleanLogin = String(loginId || '').trim().toLowerCase();
@@ -654,6 +656,7 @@ async function registerCloudAccount({
     skinModel: skinModel || 'default',
     capeType: capeType || 'mojang',
     skinPreset: skinPreset || '',
+    skinDataUrl: (typeof skinDataUrl === 'string' && skinDataUrl.length < 35000) ? skinDataUrl : '',
     authProvider: 'password',
     createdAt: now,
     updatedAt: now
@@ -730,7 +733,7 @@ async function changeCloudUsername({ accountId, newMcUsername, customDbUrl = '' 
   return toPublicProfile(user);
 }
 
-async function syncCloudCosmetics({ accountId, skinModel, capeType, skinPreset, customDbUrl = '' }) {
+async function syncCloudCosmetics({ accountId, skinModel, capeType, skinPreset, skinDataUrl, customDbUrl = '' }) {
   if (!accountId) return null;
   const db = await fetchCloudDatabase(customDbUrl);
   const user = db.users[accountId];
@@ -739,8 +742,46 @@ async function syncCloudCosmetics({ accountId, skinModel, capeType, skinPreset, 
   if (skinModel) user.skinModel = skinModel;
   if (capeType) user.capeType = capeType;
   if (typeof skinPreset === 'string') user.skinPreset = skinPreset;
+  if (typeof skinDataUrl === 'string' && skinDataUrl.startsWith('data:image/png;base64,') && skinDataUrl.length < 35000) {
+    user.skinDataUrl = skinDataUrl;
+  }
   user.updatedAt = Date.now();
 
+  await saveCloudDatabase(db, customDbUrl);
+  return toPublicProfile(user);
+}
+
+async function resetCloudPassword({ accountId, loginId, verifyMcUsername, newPassword, customDbUrl = '' }) {
+  if (!newPassword || String(newPassword).length < 4) {
+    throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
+  }
+
+  const db = await fetchCloudDatabase(customDbUrl);
+  let user = null;
+
+  if (accountId && db.users[accountId]) {
+    user = db.users[accountId];
+  } else {
+    const cleanLogin = String(loginId || '').trim().toLowerCase();
+    const cleanVerify = String(verifyMcUsername || '').trim().toLowerCase();
+    if (!cleanLogin) {
+      throw new Error('Vui lòng nhập Tên đăng nhập (hoặc Email) cần lấy lại mật khẩu!');
+    }
+    user = Object.values(db.users).find(
+      (u) =>
+        (u.loginId && u.loginId.toLowerCase() === cleanLogin) ||
+        (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
+    );
+    if (!user) {
+      throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud!`);
+    }
+    if (cleanVerify && user.mcUsername.toLowerCase() !== cleanVerify && user.loginId.toLowerCase() !== cleanVerify) {
+      throw new Error(`Tên nhân vật xác minh "${verifyMcUsername}" không khớp với tài khoản "${user.loginId}"!`);
+    }
+  }
+
+  user.passwordHash = hashPassword(newPassword);
+  user.updatedAt = Date.now();
   await saveCloudDatabase(db, customDbUrl);
   return toPublicProfile(user);
 }
@@ -934,5 +975,6 @@ module.exports = {
   loginCloudAccount,
   changeCloudUsername,
   syncCloudCosmetics,
+  resetCloudPassword,
   loginCloudViaBrowser
 };
