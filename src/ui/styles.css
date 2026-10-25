@@ -2365,3 +2365,37 @@ body {
 .hbc-content {
   padding: 16px 20px !important;
 }
+/* ================= V20.0 PRO: 3D STUDIO LIGHTING, 5 POSES & NAMETAG POLISH ================= */
+.skin-studio-card .card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.skin-studio-card .card-title-group {
+  flex-shrink: 0;
+}
+.skin-studio-card .card-title-group h3 {
+  font-size: 11px !important;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.skin-studio-card .pose-bar {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.skin-studio-card .pose-btn {
+  padding: 3px 6px !important;
+  font-size: 9.8px !important;
+  font-weight: 700;
+  border-radius: 5px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.skin-studio-card .pose-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-main);
+}

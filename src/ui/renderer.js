@@ -5,7 +5,7 @@ const state = {
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
   ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
-  versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
+  versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', cachedSkinDataUrl: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
   activeModStoreType: 'mod', activeLocalFolder: 'mods',
   favoriteServers: [
     { name: 'LuckyVN Network (Việt Nam)', ip: 'play.luckyvn.com' },
@@ -18,7 +18,27 @@ const state = {
 const POPULAR_VERSIONS = ['1.21.11', '1.21.4', '1.21.1', '1.20.4', '1.20.1', '1.19.4', '1.16.5', '1.12.2'];
 let skinViewer = null, currentSkinDataUrl = null;
 
-function applyCapeToViewer(capeType) {
+function syncSkinPresetButtons(activeName) {
+  const target = (activeName || state.selectedSkinPreset || state.username || '').toLowerCase();
+  document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {
+    const p = (chip.dataset.skinpreset || '').toLowerCase();
+    chip.classList.toggle('active', p === target || (p === 'mhf_steve' && target === 'steveplayer'));
+  });
+}
+
+function update3DNameTag(nameStr) {
+  if (!skinViewer || !window.skinview3d) return;
+  const clean = (nameStr || state.username || 'StevePlayer').trim() || 'StevePlayer';
+  try {
+    skinViewer.nameTag = new window.skinview3d.NameTagObject(clean, {
+      textStyle: '#ffffff',
+      backgroundStyle: 'rgba(15, 23, 42, 0.62)',
+      height: 3.0
+    });
+  } catch (_) {}
+}
+
+async function applyCapeToViewer(capeType) {
   state.capeType = capeType || 'none';
   document.querySelectorAll('#capeSelectorBar .cape-chip').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.cape === state.capeType);
@@ -28,30 +48,49 @@ function applyCapeToViewer(capeType) {
   if (!skinViewer) return;
   const effectiveType = (state.backEquipment === 'elytra' && state.capeType === 'none') ? 'diamond' : state.capeType;
   const capeUrl = buildCapeDataUrl(effectiveType);
-  if (capeUrl) {
-    skinViewer.loadCape(capeUrl, { backEquipment: state.backEquipment || 'cape' });
-  } else {
-    skinViewer.loadCape(null);
-  }
+  try {
+    if (capeUrl) {
+      await skinViewer.loadCape(capeUrl, { backEquipment: state.backEquipment || 'cape' });
+    } else {
+      skinViewer.loadCape(null);
+    }
+    skinViewer.render();
+  } catch (_) {}
 }
 
 function init3DSkinViewer() {
   const canvas = document.getElementById('skinViewerCanvas');
   if (!canvas || !window.skinview3d) return;
-  const fallbackUrl = createFallbackSteveSkinDataUrl();
-  currentSkinDataUrl = fallbackUrl;
-  skinViewer = new window.skinview3d.SkinViewer({ canvas, width: 265, height: 330, skin: fallbackUrl });
-  skinViewer.camera.position.set(-12, 12, 42);
-  skinViewer.zoom = 0.86; skinViewer.autoRotate = false; skinViewer.autoRotateSpeed = 0.45;
+  const initialSkin = state.cachedSkinDataUrl || createFallbackSteveSkinDataUrl();
+  currentSkinDataUrl = initialSkin;
+  skinViewer = new window.skinview3d.SkinViewer({
+    canvas,
+    width: 265,
+    height: 330,
+    skin: initialSkin,
+    preserveDrawingBuffer: true
+  });
+  // Crisp 3D directional lighting so cube faces have clear depth shading
+  if (skinViewer.globalLight) skinViewer.globalLight.intensity = 1.65;
+  if (skinViewer.cameraLight) {
+    skinViewer.cameraLight.intensity = 1.45;
+    skinViewer.cameraLight.position.set(18, 26, 32);
+  }
+  skinViewer.camera.position.set(-14, 11, 42);
+  skinViewer.zoom = 0.84;
+  skinViewer.autoRotate = false;
+  skinViewer.autoRotateSpeed = 0.45;
   skinViewer.animation = new window.skinview3d.WalkingAnimation();
   skinViewer.animation.speed = 0.85;
+  update3DNameTag(state.username);
   applyCapeToViewer(state.capeType);
-  draw2DAvatarFace(fallbackUrl);
+  draw2DAvatarFace(initialSkin);
   const stageWrap = canvas.parentElement;
   if (stageWrap && window.ResizeObserver) {
     const ro = new ResizeObserver(() => {
       if (!skinViewer || !stageWrap.clientWidth || !stageWrap.clientHeight) return;
       skinViewer.setSize(Math.max(180, stageWrap.clientWidth - 10), Math.max(180, stageWrap.clientHeight - 16));
+      skinViewer.render();
     });
     ro.observe(stageWrap);
   }
@@ -59,12 +98,19 @@ function init3DSkinViewer() {
 
 async function loadCharacterSkin(username) {
   const clean = (username || 'StevePlayer').trim() || 'StevePlayer';
+  syncSkinPresetButtons(clean);
+  update3DNameTag(state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username);
   const res = await window.aetherAPI.fetchSkinBase64(clean);
   const skinUrl = res?.ok && res.dataUrl ? res.dataUrl : createFallbackSteveSkinDataUrl();
   currentSkinDataUrl = skinUrl;
+  state.cachedSkinDataUrl = skinUrl;
+  saveCurrentConfig();
   if (skinViewer) {
-    skinViewer.loadSkin(skinUrl, { model: state.skinModel });
-    applyCapeToViewer(state.capeType);
+    try {
+      await skinViewer.loadSkin(skinUrl, { model: state.skinModel });
+      await applyCapeToViewer(state.capeType);
+      skinViewer.render();
+    } catch (_) {}
   }
   draw2DAvatarFace(skinUrl);
 }
@@ -74,8 +120,19 @@ function setPose(poseName) {
   document.querySelectorAll('.pose-btn').forEach((b) => b.classList.toggle('active', b.dataset.pose === poseName));
   if (poseName === 'walk') skinViewer.animation = new window.skinview3d.WalkingAnimation();
   else if (poseName === 'run') skinViewer.animation = new window.skinview3d.RunningAnimation();
+  else if (poseName === 'hit') skinViewer.animation = new window.skinview3d.HitAnimation();
+  else if (poseName === 'fly') {
+    if (state.backEquipment !== 'elytra') {
+      state.backEquipment = 'elytra';
+      if (state.capeType === 'none') state.capeType = 'diamond';
+      applyCapeToViewer(state.capeType);
+    }
+    skinViewer.animation = new window.skinview3d.FlyingAnimation();
+  }
   else if (poseName === 'wave') skinViewer.animation = new window.skinview3d.WaveAnimation();
   else skinViewer.animation = new window.skinview3d.IdleAnimation();
+  skinViewer.renderPaused = false;
+  skinViewer.render();
 }
 
 function setTheme(themeId) {
@@ -160,7 +217,7 @@ function saveCurrentConfig() {
     selectedLoaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB,
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
-    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset,
+    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl,
     capeType: state.capeType, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm
   });
 }
@@ -210,7 +267,7 @@ function renderSavedAccounts() {
         renderSavedAccounts(); saveCurrentConfig(); return;
       }
       const chosen = chip.dataset.acc;
-      state.username = chosen;
+      state.username = chosen; state.selectedSkinPreset = '';
       document.getElementById('usernameInput').value = chosen;
       loadCharacterSkin(chosen); updateCrackUuidPreview(chosen); renderSavedAccounts(); updateSummaryUI(); saveCurrentConfig();
     };
@@ -476,8 +533,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (skinViewer) skinViewer.renderPaused = false;
     });
   }
-  window.addEventListener('blur', () => {
-    if (skinViewer && !skinViewer.autoRotate) skinViewer.renderPaused = true;
+  document.addEventListener('visibilitychange', () => {
+    if (skinViewer) skinViewer.renderPaused = document.hidden;
   });
   window.addEventListener('focus', () => {
     if (skinViewer) skinViewer.renderPaused = false;
@@ -628,7 +685,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tabBtnMicrosoft').onclick = () => setAuthModeUI('microsoft');
   document.getElementById('usernameInput').oninput = (e) => {
     state.username = e.target.value.trim() || 'StevePlayer';
-    updateCrackUuidPreview(state.username); updateSummaryUI(); saveCurrentConfig();
+    update3DNameTag(state.username); updateCrackUuidPreview(state.username); updateSummaryUI(); saveCurrentConfig();
   };
   document.getElementById('btnReloadSkin').onclick = () => { state.selectedSkinPreset = ''; saveCurrentConfig(); loadCharacterSkin(state.username); renderSavedAccounts(); };
   document.getElementById('btnSaveAccount').onclick = () => {
