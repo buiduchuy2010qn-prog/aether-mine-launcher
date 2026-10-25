@@ -486,3 +486,20 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
     return { ok: false, error: err.message };
   }
 });
+ipcMain.handle('server:ping', async (_e, serverIp) => {
+  try {
+    const cleanIp = String(serverIp || '').trim();
+    if (!cleanIp) return { ok: false };
+    const data = await fetchJsonSimple(`https://api.mcsrvstat.us/2/${encodeURIComponent(cleanIp)}`);
+    return {
+      ok: true,
+      online: Boolean(data?.online),
+      playersOnline: data?.players?.online ?? 0,
+      playersMax: data?.players?.max ?? 0,
+      version: data?.version || '',
+      icon: data?.icon || null
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});

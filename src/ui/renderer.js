@@ -13,7 +13,7 @@ const state = {
     { name: 'Hypixel Official', ip: 'mc.hypixel.net' },
     { name: 'HerobrineVN Server', ip: 'mc.herobrine.org' }
   ],
-  acceptedEula: false, skipLaunchConfirm: false, isLaunching: false
+  winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false
 };
 const POPULAR_VERSIONS = ['1.21.11', '1.21.4', '1.21.1', '1.20.4', '1.20.1', '1.19.4', '1.16.5', '1.12.2'];
 let skinViewer = null, currentSkinDataUrl = null;
@@ -218,7 +218,7 @@ function saveCurrentConfig() {
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
     hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl,
-    capeType: state.capeType, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm
+    capeType: state.capeType, winResolution: state.winResolution, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm
   });
 }
 
@@ -495,7 +495,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       nav.classList.add('active');
       document.getElementById(`tab-${nav.dataset.tab}`).classList.add('active');
       if (nav.dataset.tab === 'mods') loadModrinthStore();
-      if (nav.dataset.tab === 'worlds') renderLocalWorlds();
+      if (nav.dataset.tab === 'worlds') { renderLocalWorlds(); if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers(); }
     };
   });
   document.getElementById('btnGoModStore').onclick = () => document.querySelector('.nav-item[data-tab="mods"]').click();
@@ -543,13 +543,41 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnStageFx = document.getElementById('btnStageBgFx');
   const stageWrapEl = document.getElementById('webglStageWrap');
   if (btnStageFx && stageWrapEl) {
+    const modes = [
+      { id: 'stars', cls: 'stage-bg-stars', label: '✨ Sao Đêm' },
+      { id: 'aurora', cls: 'stage-bg-aurora', label: '🌈 Cực Quang' },
+      { id: 'daylight', cls: 'stage-bg-daylight', label: '☀️ Ban Ngày' }
+    ];
     btnStageFx.onclick = () => {
-      state.stageStars = !state.stageStars;
-      stageWrapEl.classList.toggle('stage-bg-stars', state.stageStars);
-      btnStageFx.classList.toggle('active', state.stageStars);
-      btnStageFx.textContent = state.stageStars ? '✨ Sao Đêm' : '💡 Đèn Nền';
+      const idx = modes.findIndex((m) => m.id === (state.stageBgMode || 'stars'));
+      const next = modes[(idx + 1) % modes.length];
+      state.stageBgMode = next.id;
+      stageWrapEl.classList.remove('stage-bg-stars', 'stage-bg-aurora', 'stage-bg-daylight');
+      stageWrapEl.classList.add(next.cls);
+      btnStageFx.textContent = next.label;
     };
   }
+  const btnOuter = document.getElementById('btnToggleOuterLayer');
+  if (btnOuter) {
+    btnOuter.onclick = () => {
+      state.outerLayerVisible = !state.outerLayerVisible;
+      btnOuter.classList.toggle('active', state.outerLayerVisible);
+      if (skinViewer?.playerObject?.skin) {
+        skinViewer.playerObject.skin.setOuterLayerVisible(state.outerLayerVisible);
+        skinViewer.render();
+      }
+    };
+  }
+  document.querySelectorAll('#winResolutionBar .res-pill-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.res === (state.winResolution || '1280x720'));
+    btn.onclick = () => {
+      state.winResolution = btn.dataset.res;
+      document.querySelectorAll('#winResolutionBar .res-pill-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      saveCurrentConfig();
+    };
+  });
+  const btnPingAll = document.getElementById('btnPingAllServers');
+  if (btnPingAll) btnPingAll.onclick = () => { if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers(); };
   document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((chip) => {
     chip.onclick = () => {
       document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((c) => c.classList.toggle('active', c === chip));
@@ -798,7 +826,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       msProfile: state.msProfile, mcVersion: state.selectedVersion, loaderType: state.selectedCore,
       loaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB, javaPath: state.javaPath,
       gameDir: state.gameDir, useAikarFlags: state.aikarFlags, fastSkipHash: state.fastSkipHash,
-      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores, skinDataUrl: currentSkinDataUrl
+      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores, skinDataUrl: currentSkinDataUrl, winResolution: state.winResolution
     });
 
     if (!res.ok) {

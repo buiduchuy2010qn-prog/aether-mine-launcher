@@ -271,10 +271,15 @@ async function loadModrinthStore() {
     grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);">Không tìm thấy kết quả phù hợp. Hãy thử từ khóa khác!</div>';
     return;
   }
+  const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
+  const localCheck = await window.aetherAPI.listLocalAddons(state.gameDir, folderMap[state.activeModStoreType] || 'mods');
+  const localNames = (localCheck?.items || []).map((i) => i.cleanName.toLowerCase());
   grid.innerHTML = res.hits.map((item) => {
     const dl = item.downloads > 1000000 ? `${(item.downloads / 1000000).toFixed(1)}M tải` : `${Math.round(item.downloads / 1000)}K tải`;
     const tags = (item.categories || []).map((c) => `<span class="mod-tag">${c}</span>`).join('');
-    return `<div class="mod-card"><div class="mod-card-top"><img class="mod-icon" src="${item.iconUrl || ''}" alt="" /><div><div class="mod-title">${item.title}</div><div class="mod-meta">bởi ${item.author || 'Creator'} • ${dl}</div></div></div><div class="mod-desc">${item.description || ''}</div><div class="mod-card-foot"><div class="mod-tags">${tags}</div><button class="btn-install-mod" data-slug="${item.slug}">⬇ Tải 1-Click</button></div></div>`;
+    const slugLower = (item.slug || '').toLowerCase();
+    const isInstalled = localNames.some((n) => n.includes(slugLower) || n.startsWith(slugLower.split('-')[0] + '-'));
+    return `<div class="mod-card"><div class="mod-card-top"><img class="mod-icon" src="${item.iconUrl || ''}" alt="" /><div><div class="mod-title">${item.title}</div><div class="mod-meta">bởi ${item.author || 'Creator'} • ${dl}</div></div></div><div class="mod-desc">${item.description || ''}</div><div class="mod-card-foot"><div class="mod-tags">${tags}</div><button class="btn-install-mod ${isInstalled ? 'installed' : ''}" data-slug="${item.slug}">${isInstalled ? '✓ Đã Cài Sẵn' : '⬇ Tải 1-Click'}</button></div></div>`;
   }).join('');
   grid.querySelectorAll('.btn-install-mod').forEach((btn) => {
     btn.onclick = async () => {
@@ -321,7 +326,16 @@ function renderFavoriteServers() {
   }
   container.innerHTML = state.favoriteServers.map((srv, idx) => {
     const isSelected = state.serverIp === srv.ip;
-    return `<div class="srv-card-row" style="${isSelected ? 'border-color:var(--accent);background:var(--accent-glow);' : ''}"><div><strong style="font-size:12.5px;">🌐 ${srv.name}</strong><div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px;">IP: ${srv.ip}</div></div><div style="display:flex;gap:6px;align-items:center;"><button class="vtype-btn" data-copysrv="${srv.ip}" title="Sao chép IP Server">📋 Copy IP</button><button class="btn-install-mod" data-joinsrv="${srv.ip}">${isSelected ? '✓ Đã Chọn' : '▶ Vào Server'}</button><button class="vtype-btn" data-delsrv="${idx}" style="color:#ef4444;" title="Xóa khỏi danh sách">×</button></div></div>`;
+    const pingInfo = (state.serverPingCache && state.serverPingCache[srv.ip]) || null;
+    const statusHtml = pingInfo
+      ? (pingInfo.online
+          ? `<span class="srv-ping-badge online">🟢 ${pingInfo.playersOnline}/${pingInfo.playersMax} người</span>`
+          : `<span class="srv-ping-badge offline">🔴 Offline</span>`)
+      : `<span class="srv-ping-badge" style="color:var(--text-muted);">⏳ Đang ping...</span>`;
+    const iconHtml = pingInfo?.icon
+      ? `<img class="srv-icon-img" src="${pingInfo.icon}" alt="" />`
+      : `<div class="srv-icon-img" style="display:grid;place-items:center;font-size:16px;background:var(--bg-card);">🌐</div>`;
+    return `<div class="srv-card-row" style="${isSelected ? 'border-color:var(--accent);background:var(--accent-glow);' : ''}"><div style="display:flex;align-items:center;gap:10px;min-width:0;">${iconHtml}<div style="min-width:0;"><div style="display:flex;align-items:center;flex-wrap:wrap;"><strong style="font-size:12.5px;">${srv.name}</strong>${statusHtml}</div><div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px;">IP: ${srv.ip}</div></div></div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0;"><button class="vtype-btn" data-copysrv="${srv.ip}" title="Sao chép IP Server">📋 Copy</button><button class="btn-install-mod" data-joinsrv="${srv.ip}">${isSelected ? '✓ Đã Chọn' : '▶ Vào Server'}</button><button class="vtype-btn" data-delsrv="${idx}" style="color:#ef4444;" title="Xóa khỏi danh sách">×</button></div></div>`;
   }).join('');
   container.querySelectorAll('[data-copysrv]').forEach((btn) => {
     btn.onclick = () => {
@@ -355,4 +369,19 @@ async function renderLocalWorlds() {
   }
   container.innerHTML = worlds.map((w) => `<div class="world-card-row"><div class="world-left">${w.iconDataUrl ? `<img class="world-icon" src="${w.iconDataUrl}" />` : '<div class="world-icon" style="display:grid;place-items:center;font-size:18px;">🌍</div>'}<div><strong style="font-size:13px;">${w.name}</strong><div style="font-size:10.5px;color:var(--text-muted);">Cập nhật: ${w.lastPlayed}</div></div></div><button class="vtype-btn" data-openworld="${w.path}">📂 Mở Thư Mục</button></div>`).join('');
   container.querySelectorAll('[data-openworld]').forEach((btn) => { btn.onclick = () => window.aetherAPI.openGameDir(btn.dataset.openworld); });
+}
+async function pingAllFavoriteServers() {
+  if (!state.serverPingCache) state.serverPingCache = {};
+  const btn = document.getElementById('btnPingAllServers');
+  if (btn) btn.textContent = '⏳ Đang ping...';
+  await Promise.all(
+    (state.favoriteServers || []).map(async (srv) => {
+      try {
+        const res = await window.aetherAPI.pingServer(srv.ip);
+        if (res?.ok) state.serverPingCache[srv.ip] = res;
+      } catch (_) {}
+    })
+  );
+  if (btn) btn.textContent = '📡 Ping';
+  renderFavoriteServers();
 }

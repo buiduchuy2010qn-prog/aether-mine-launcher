@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v21.0 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v22.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -22,7 +22,7 @@
         </div>
         <div class="brand-titles">
           <span class="brand-name">MINECRAFT LAUNCHER</span>
-          <span class="brand-version">v21.0 PRO</span>
+          <span class="brand-version">v22.0 PRO</span>
         </div>
       </div>
 
@@ -358,6 +358,7 @@
                   <div class="wt-model-switch">
                     <button class="wt-model-btn active" data-model="default" title="Tay Steve 4px">Classic</button>
                     <button class="wt-model-btn" data-model="slim" title="Tay Alex 3px">Slim</button>
+                    <button class="wt-layer-btn active" id="btnToggleOuterLayer" title="Bật/Tắt lớp áo khoác & mũ 3D bên ngoài">🧥 Áo 3D</button>
                   </div>
                 </div>
                 <div class="wt-cape-row">
@@ -454,9 +455,12 @@
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot cyan"></span>
-                  <h3>MÁY CHỦ MULTIPLAYER YÊU THÍCH (VÀO THẲNG 1-CLICK)</h3>
+                  <h3>MÁY CHỦ MULTIPLAYER YÊU THÍCH (LIVE PING &amp; VÀO 1-CLICK)</h3>
                 </div>
-                <span class="field-hint-mini" id="activeServerBadge">Chế độ: Chơi bình thường</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="field-hint-mini" id="activeServerBadge">Chế độ: Bình thường</span>
+                  <button class="vtype-btn" id="btnPingAllServers" title="Kiểm tra trạng thái Online & số người chơi">📡 Ping</button>
+                </div>
               </div>
               <div class="add-server-bar">
                 <input type="text" id="newServerNameInput" class="pro-input" placeholder="Tên máy chủ (vd: LuckyVN)..." style="flex:0.9;" />
@@ -504,6 +508,14 @@
                 <input type="text" id="gameDirInput" class="pro-input" />
                 <button class="btn-sync-skin" id="btnOpenGameDirSettings" title="Mở thư mục .minecraft trong Windows Explorer">📂 Mở Thư Mục</button>
               </div>
+              <label class="field-label" style="margin-top:14px;">Độ Phân Giải Cửa Sổ Game &amp; Toàn Màn Hình</label>
+              <div class="res-preset-bar" id="winResolutionBar">
+                <button class="res-pill-btn" data-res="854x480">854×480 (Nhẹ)</button>
+                <button class="res-pill-btn active" data-res="1280x720">1280×720 (HD)</button>
+                <button class="res-pill-btn" data-res="1600x900">1600×900 (HD+)</button>
+                <button class="res-pill-btn" data-res="1920x1080">1920×1080 (FHD)</button>
+                <button class="res-pill-btn" data-res="fullscreen">🖥️ Toàn Màn Hình</button>
+              </div>
             </div>
 
             <div class="bento-card">
@@ -538,7 +550,7 @@
             </div>
           </div>
           <div class="console-terminal" id="consoleOutput">
-            <div class="log-entry info">[Aether Craft v21.0] Sẵn sàng khởi chạy.</div>
+            <div class="log-entry info">[Aether Craft v22.0] Sẵn sàng khởi chạy.</div>
           </div>
         </section>
       </main>

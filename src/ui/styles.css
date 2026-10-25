@@ -2482,3 +2482,91 @@ html[data-theme="cherry"] {
   align-items: center;
   gap: 8px;
 }
+/* ================= V22.0 PRO: 3D OUTER LAYER, AURORA STAGE, LIVE SERVER PING & RESOLUTION BAR ================= */
+.wt-layer-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9.8px;
+  font-weight: 700;
+  padding: 4px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  border-left: 1px solid var(--border-col);
+  margin-left: 2px;
+}
+.wt-layer-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.webgl-stage-wrap.stage-bg-aurora {
+  background:
+    radial-gradient(circle at 25% 20%, rgba(168, 85, 247, 0.28), transparent 55%),
+    radial-gradient(circle at 80% 70%, rgba(6, 182, 212, 0.28), rgba(9, 12, 24, 0.92)) !important;
+}
+
+.webgl-stage-wrap.stage-bg-daylight {
+  background:
+    radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.24), rgba(56, 189, 248, 0.16) 55%, rgba(15, 23, 42, 0.45)) !important;
+}
+
+.res-preset-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.res-pill-btn {
+  padding: 7px 4px;
+  border-radius: 7px;
+  border: 1px solid var(--border-col);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.15s;
+}
+.res-pill-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-main);
+}
+.res-pill-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.srv-ping-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  margin-left: 6px;
+}
+.srv-ping-badge.online {
+  background: rgba(34, 197, 94, 0.16);
+  color: #22c55e;
+}
+.srv-ping-badge.offline {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.srv-icon-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border-col);
+  flex-shrink: 0;
+}
+.btn-install-mod.installed {
+  background: rgba(34, 197, 94, 0.18) !important;
+  color: #22c55e !important;
+  border: 1px solid #22c55e !important;
+}

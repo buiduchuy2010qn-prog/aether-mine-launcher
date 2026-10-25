@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   toggleLocalAddon: (gameDir, folderType, fileName) => ipcRenderer.invoke('addons:toggle', gameDir, folderType, fileName),
   deleteLocalAddon: (gameDir, folderType, fileName) => ipcRenderer.invoke('addons:delete', gameDir, folderType, fileName),
   listLocalWorlds: (gameDir) => ipcRenderer.invoke('worlds:list', gameDir),
+  pingServer: (ip) => ipcRenderer.invoke('server:ping', ip),
 
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
