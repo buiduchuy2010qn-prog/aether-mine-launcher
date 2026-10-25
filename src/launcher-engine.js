@@ -1153,6 +1153,7 @@ async function launchMinecraft(config, callbacks = {}) {
     username = 'StevePlayer',
     crackSkinSync = true,
     msProfile = null,
+    cloudProfile = null,
     mcVersion = '1.21.4',
     loaderType = 'vanilla',
     loaderVersion = '',
@@ -1203,6 +1204,16 @@ async function launchMinecraft(config, callbacks = {}) {
       if (skinDataUrl) {
         syncActive3DSkinIntoGame(rootDir, cleanName, skinDataUrl, mcVersion);
       }
+    }
+  } else if (authMode === 'aether' && cloudProfile && cloudProfile.mcUsername) {
+    const cleanName = (cloudProfile.mcUsername || username || 'Player').replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16) || 'Player';
+    callbacks.onStatus?.(`Đang xác thực Tài khoản Aether Cloud (${cleanName})...`);
+    authorization = buildOfflineAuthFallback(cleanName, skinModel);
+    if (crackSkinSync) {
+      configureCrackSkinSupport(rootDir);
+    }
+    if (skinDataUrl) {
+      syncActive3DSkinIntoGame(rootDir, cleanName, skinDataUrl, mcVersion);
     }
   } else {
     const cleanName = (username || 'Player').trim().slice(0, 16) || 'Player';

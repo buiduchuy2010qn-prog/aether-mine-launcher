@@ -26,6 +26,13 @@ const {
   authenticateMicrosoftFromRefreshToken,
   generateOfflineUUID
 } = require('./microsoft-auth');
+const {
+  registerCloudAccount,
+  loginCloudAccount,
+  changeCloudUsername,
+  syncCloudCosmetics,
+  loginCloudViaBrowser
+} = require('./aether-cloud-auth');
 
 app.commandLine.appendSwitch('js-flags', '--expose-gc');
 // Background throttling enabled for 0% idle CPU/GPU
@@ -249,6 +256,54 @@ ipcMain.handle('auth:ms-refresh', async (_e, refreshToken) => {
 
 ipcMain.handle('auth:crack-uuid', async (_e, username) => {
   return generateOfflineUUID(username || 'StevePlayer');
+});
+
+ipcMain.handle('cloud:register', async (_e, params) => {
+  try {
+    const profile = await registerCloudAccount(params || {});
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud:login', async (_e, params) => {
+  try {
+    const profile = await loginCloudAccount(params || {});
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud:browser-login', async (_e, params) => {
+  try {
+    const profile = await loginCloudViaBrowser({
+      parentWindow: mainWindow,
+      customDbUrl: params?.customDbUrl
+    });
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud:change-username', async (_e, params) => {
+  try {
+    const profile = await changeCloudUsername(params || {});
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud:sync-cosmetics', async (_e, params) => {
+  try {
+    const profile = await syncCloudCosmetics(params || {});
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 });
 
 ipcMain.handle('mc:versions', async () => {
@@ -487,6 +542,7 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/preload.js',
         'src/launcher-engine.js',
         'src/microsoft-auth.js',
+        'src/aether-cloud-auth.js',
         'src/ui/index.html',
         'src/ui/styles.css',
         'src/ui/renderer.js',

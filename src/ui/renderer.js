@@ -25,7 +25,7 @@ const DEFAULT_FEATURED_SERVERS = [
 const state = {
   theme: 'prism', authMode: 'crack', username: 'StevePlayer',
   savedAccounts: ['StevePlayer', 'Dream', 'Technoblade'],
-  crackSkinSync: true, msProfile: null, selectedVersion: '1.21.4',
+  crackSkinSync: true, msProfile: null, cloudProfile: null, customDbUrl: '', selectedVersion: '1.21.4',
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
   ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
@@ -298,16 +298,38 @@ function updateSummaryUI() {
       : `🎯 Đang tự khớp: ${ver} (${coreUpper})`;
   }
   if (typeof refreshLocalAddonsCount === 'function') refreshLocalAddonsCount();
-  const playerName = state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username;
+  const playerName = (state.authMode === 'microsoft' && state.msProfile?.name)
+    ? state.msProfile.name
+    : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username);
   document.getElementById('sidebarPlayerName').textContent = playerName;
-  document.getElementById('sidebarAuthBadge').textContent = (state.authMode === 'microsoft' && state.msProfile?.name) ? 'BẢN QUYỀN MS' : 'CRACK / OFFLINE';
-  document.getElementById('dockAccountText').textContent = `${playerName} (${state.authMode === 'microsoft' ? 'Microsoft' : 'Crack'})`;
+  document.getElementById('sidebarAuthBadge').textContent = (state.authMode === 'microsoft' && state.msProfile?.name)
+    ? '👑 BẢN QUYỀN MS'
+    : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ AETHER CLOUD' : 'CRACK / OFFLINE');
+  const modeLabel = state.authMode === 'microsoft' ? 'Microsoft' : (state.authMode === 'aether' ? 'Aether Cloud' : 'Crack');
+  document.getElementById('dockAccountText').textContent = `${playerName} (${modeLabel})`;
+}
+
+function syncCloudCosmeticsIfActive() {
+  if (state.authMode === 'aether' && state.cloudProfile?.accountId && window.aetherAPI?.cloudSyncCosmetics) {
+    window.aetherAPI.cloudSyncCosmetics({
+      accountId: state.cloudProfile.accountId,
+      skinModel: state.skinModel,
+      capeType: state.capeType,
+      skinPreset: state.selectedSkinPreset,
+      customDbUrl: state.customDbUrl
+    }).then((res) => {
+      if (res?.ok && res.profile) {
+        state.cloudProfile = res.profile;
+        saveCurrentConfig();
+      }
+    }).catch(() => {});
+  }
 }
 
 function saveCurrentConfig() {
   window.aetherAPI.saveConfig({
     theme: state.theme, authMode: state.authMode, username: state.username,
-    savedAccounts: state.savedAccounts, crackSkinSync: state.crackSkinSync, msProfile: state.msProfile,
+    savedAccounts: state.savedAccounts, crackSkinSync: state.crackSkinSync, msProfile: state.msProfile, cloudProfile: state.cloudProfile, customDbUrl: state.customDbUrl,
     selectedVersion: state.selectedVersion, selectedCore: state.selectedCore,
     selectedLoaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB,
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
@@ -467,10 +489,12 @@ function setCore(coreName) {
 
 function setAuthModeUI(mode) {
   state.authMode = mode;
-  document.getElementById('tabBtnCrack').classList.toggle('active', mode === 'crack');
-  document.getElementById('tabBtnMicrosoft').classList.toggle('active', mode === 'microsoft');
-  document.getElementById('panelCrack').classList.toggle('hidden', mode !== 'crack');
-  document.getElementById('panelMicrosoft').classList.toggle('hidden', mode !== 'microsoft');
+  document.getElementById('tabBtnAether')?.classList.toggle('active', mode === 'aether');
+  document.getElementById('tabBtnCrack')?.classList.toggle('active', mode === 'crack');
+  document.getElementById('tabBtnMicrosoft')?.classList.toggle('active', mode === 'microsoft');
+  document.getElementById('panelAether')?.classList.toggle('hidden', mode !== 'aether');
+  document.getElementById('panelCrack')?.classList.toggle('hidden', mode !== 'crack');
+  document.getElementById('panelMicrosoft')?.classList.toggle('hidden', mode !== 'microsoft');
   if (mode === 'microsoft' && state.msProfile?.name) {
     document.getElementById('msNotLoggedBox').classList.add('hidden');
     document.getElementById('msLoggedBox').classList.remove('hidden');
@@ -482,6 +506,23 @@ function setAuthModeUI(mode) {
   } else if (mode === 'microsoft') {
     document.getElementById('msNotLoggedBox').classList.remove('hidden');
     document.getElementById('msLoggedBox').classList.add('hidden');
+    loadCharacterSkin(state.selectedSkinPreset || state.username || 'StevePlayer');
+  } else if (mode === 'aether' && state.cloudProfile?.mcUsername) {
+    document.getElementById('aetherNotLoggedBox')?.classList.add('hidden');
+    document.getElementById('aetherLoggedBox')?.classList.remove('hidden');
+    const nameLbl = document.getElementById('aetherMcNameLabel');
+    if (nameLbl) nameLbl.textContent = `🛡️ ${state.cloudProfile.mcUsername}`;
+    const idLbl = document.getElementById('aetherLoginIdLabel');
+    if (idLbl) idLbl.textContent = `${state.cloudProfile.loginId} • Cloud 24/7`;
+    const uuidTag = document.getElementById('uuidPreviewTag');
+    if (uuidTag && state.cloudProfile.uuid) uuidTag.textContent = `UUID: ${state.cloudProfile.uuid.slice(0, 8)}...`;
+    update3DNameTag(state.cloudProfile.mcUsername);
+    loadCharacterSkin(state.cloudProfile.skinPreset || state.selectedSkinPreset || state.cloudProfile.mcUsername);
+  } else if (mode === 'aether') {
+    document.getElementById('aetherNotLoggedBox')?.classList.remove('hidden');
+    document.getElementById('aetherLoggedBox')?.classList.add('hidden');
+    const uuidTag = document.getElementById('uuidPreviewTag');
+    if (uuidTag) uuidTag.textContent = 'Cloud DB 24/7';
     loadCharacterSkin(state.selectedSkinPreset || state.username || 'StevePlayer');
   } else {
     updateCrackUuidPreview(state.username);
@@ -905,7 +946,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {
     chip.onclick = () => {
       document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.toggle('active', c === chip));
-      state.selectedSkinPreset = chip.dataset.skinpreset; saveCurrentConfig(); loadCharacterSkin(chip.dataset.skinpreset); document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') — Tự động lưu vào Game khi bấm CHƠI NGAY!';
+      state.selectedSkinPreset = chip.dataset.skinpreset; saveCurrentConfig(); syncCloudCosmeticsIfActive(); loadCharacterSkin(chip.dataset.skinpreset); document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') — Tự động lưu vào Game khi bấm CHƠI NGAY!';
     };
   });
 
@@ -924,10 +965,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.wt-model-btn').forEach((b) => b.classList.toggle('active', b === btn));
       if (skinViewer && currentSkinDataUrl) skinViewer.loadSkin(currentSkinDataUrl, { model: state.skinModel });
       saveCurrentConfig();
+      syncCloudCosmeticsIfActive();
     };
   });
   document.querySelectorAll('#capeSelectorBar .cape-chip').forEach((chip) => {
-    chip.onclick = () => { applyCapeToViewer(chip.dataset.cape); saveCurrentConfig(); };
+    chip.onclick = () => { applyCapeToViewer(chip.dataset.cape); saveCurrentConfig(); syncCloudCosmeticsIfActive(); };
   });
 
   document.getElementById('btnUploadSkinPng').onclick = async () => {
@@ -1011,6 +1053,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateSummaryUI(); saveCurrentConfig();
   };
 
+  const tabBtnAether = document.getElementById('tabBtnAether');
+  if (tabBtnAether) tabBtnAether.onclick = () => setAuthModeUI('aether');
   document.getElementById('tabBtnCrack').onclick = () => setAuthModeUI('crack');
   document.getElementById('tabBtnMicrosoft').onclick = () => setAuthModeUI('microsoft');
   document.getElementById('usernameInput').oninput = (e) => {
@@ -1022,6 +1066,138 @@ window.addEventListener('DOMContentLoaded', async () => {
     const clean = (state.username || 'StevePlayer').trim();
     if (clean && !state.savedAccounts.includes(clean)) { state.savedAccounts.push(clean); renderSavedAccounts(); saveCurrentConfig(); }
   };
+
+  const applyCloudProfileToUI = (profile, msg) => {
+    state.cloudProfile = profile;
+    if (profile.skinModel) {
+      state.skinModel = profile.skinModel;
+      document.querySelectorAll('.wt-model-btn').forEach((b) => b.classList.toggle('active', b.dataset.model === state.skinModel));
+    }
+    if (profile.capeType) applyCapeToViewer(profile.capeType);
+    if (profile.skinPreset !== undefined) state.selectedSkinPreset = profile.skinPreset;
+    setAuthModeUI('aether');
+    saveCurrentConfig();
+    const stEl = document.getElementById('statusText');
+    if (stEl && msg) stEl.textContent = msg;
+  };
+
+  const btnAetherLogin = document.getElementById('btnAetherLogin');
+  if (btnAetherLogin) {
+    btnAetherLogin.onclick = async () => {
+      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
+      const password = document.getElementById('aetherPasswordInput')?.value || '';
+      const stEl = document.getElementById('statusText');
+      btnAetherLogin.disabled = true;
+      btnAetherLogin.textContent = '⏳ Đang kiểm tra...';
+      if (stEl) stEl.textContent = '☁️ Đang kết nối Internet Database 24/7 để xác thực tài khoản Aether Cloud...';
+      const res = await window.aetherAPI.cloudLogin({ loginId, password, customDbUrl: state.customDbUrl });
+      btnAetherLogin.disabled = false;
+      btnAetherLogin.textContent = '🔑 Đăng Nhập';
+      if (res?.ok && res.profile) {
+        applyCloudProfileToUI(res.profile, `✓ Đã đăng nhập Aether Cloud: ${res.profile.mcUsername} (${res.profile.loginId})!`);
+      } else if (res?.error) {
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      }
+    };
+  }
+
+  const btnAetherReg = document.getElementById('btnAetherRegister');
+  if (btnAetherReg) {
+    btnAetherReg.onclick = async () => {
+      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
+      const password = document.getElementById('aetherPasswordInput')?.value || '';
+      const stEl = document.getElementById('statusText');
+      const suggestedMc = loginId.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16);
+      btnAetherReg.disabled = true;
+      btnAetherReg.textContent = '⏳ Đang tạo...';
+      if (stEl) stEl.textContent = '☁️ Đang đăng ký tài khoản mới lên Internet Database 24/7...';
+      const res = await window.aetherAPI.cloudRegister({
+        loginId,
+        password,
+        mcUsername: suggestedMc.length >= 3 ? suggestedMc : (state.username || 'Player'),
+        skinModel: state.skinModel,
+        capeType: state.capeType,
+        skinPreset: state.selectedSkinPreset,
+        customDbUrl: state.customDbUrl
+      });
+      btnAetherReg.disabled = false;
+      btnAetherReg.textContent = '✨ Tạo Tài Khoản';
+      if (res?.ok && res.profile) {
+        applyCloudProfileToUI(res.profile, `🎉 Đã tạo tài khoản Aether Cloud thành công: ${res.profile.mcUsername}! (Bấm "✏️ Đổi Tên" nếu muốn đổi tên nhân vật)`);
+      } else if (res?.error) {
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      }
+    };
+  }
+
+  const btnAetherWeb = document.getElementById('btnAetherBrowserLogin');
+  if (btnAetherWeb) {
+    btnAetherWeb.onclick = async () => {
+      const stEl = document.getElementById('statusText');
+      btnAetherWeb.disabled = true;
+      btnAetherWeb.textContent = '🌐 Đang mở Trình duyệt...';
+      if (stEl) stEl.textContent = '🌐 Đã mở trình duyệt — Hãy chọn tài khoản Email bất kỳ để tạo/đăng nhập Aether Cloud miễn phí!';
+      const res = await window.aetherAPI.cloudBrowserLogin({ customDbUrl: state.customDbUrl });
+      btnAetherWeb.disabled = false;
+      btnAetherWeb.textContent = '🌐 Liên Kết Trình Duyệt';
+      if (res?.ok && res.profile) {
+        applyCloudProfileToUI(res.profile, `✓ Đã liên kết Aether Cloud qua trình duyệt: ${res.profile.mcUsername} (${res.profile.loginId})!`);
+      } else if (res?.error) {
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      }
+    };
+  }
+
+  const btnToggleRename = document.getElementById('btnAetherToggleRename');
+  const renameRow = document.getElementById('aetherRenameRow');
+  if (btnToggleRename && renameRow) {
+    btnToggleRename.onclick = () => {
+      const isHidden = renameRow.classList.toggle('hidden');
+      if (!isHidden) {
+        const inp = document.getElementById('aetherNewNameInput');
+        if (inp) {
+          inp.value = state.cloudProfile?.mcUsername || '';
+          inp.focus();
+        }
+      }
+    };
+  }
+
+  const btnSaveName = document.getElementById('btnAetherSaveName');
+  if (btnSaveName) {
+    btnSaveName.onclick = async () => {
+      if (!state.cloudProfile?.accountId) return;
+      const newMcUsername = document.getElementById('aetherNewNameInput')?.value.trim() || '';
+      const stEl = document.getElementById('statusText');
+      btnSaveName.disabled = true;
+      btnSaveName.textContent = 'Đang lưu...';
+      const res = await window.aetherAPI.cloudChangeUsername({
+        accountId: state.cloudProfile.accountId,
+        newMcUsername,
+        customDbUrl: state.customDbUrl
+      });
+      btnSaveName.disabled = false;
+      btnSaveName.textContent = 'Lưu Tên';
+      if (res?.ok && res.profile) {
+        renameRow?.classList.add('hidden');
+        applyCloudProfileToUI(res.profile, `✓ Đã đổi tên nhân vật trên Internet Database 24/7 thành "${res.profile.mcUsername}"!`);
+      } else if (res?.error) {
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      }
+    };
+  }
+
+  const btnAetherLogout = document.getElementById('btnAetherLogout');
+  if (btnAetherLogout) {
+    btnAetherLogout.onclick = () => {
+      state.cloudProfile = null;
+      renameRow?.classList.add('hidden');
+      setAuthModeUI('aether');
+      saveCurrentConfig();
+      const stEl = document.getElementById('statusText');
+      if (stEl) stEl.textContent = 'Đã đăng xuất khỏi tài khoản Aether Cloud.';
+    };
+  }
 
   document.getElementById('btnMsLogin').onclick = async () => {
     const btn = document.getElementById('btnMsLogin');
@@ -1172,7 +1348,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnLaunch').onclick = async () => {
     if (state.isLaunching) return;
     if (state.authMode === 'microsoft' && !state.msProfile) {
-      document.getElementById('statusText').textContent = 'Vui lòng đăng nhập Microsoft trước!'; return;
+      document.getElementById('statusText').textContent = '⚠ Vui lòng đăng nhập tài khoản Microsoft Bản Quyền trước!'; return;
+    }
+    if (state.authMode === 'aether' && !state.cloudProfile) {
+      document.getElementById('statusText').textContent = '⚠ Vui lòng Đăng nhập hoặc Tạo tài khoản Aether Cloud trước!'; return;
     }
     const isInstalled = isVersionInstalledOnDisk(state.selectedVersion);
     if (!isInstalled || !state.skipLaunchConfirm) {
@@ -1200,7 +1379,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const res = await window.aetherAPI.launchGame({
       authMode: state.authMode, username: state.username, crackSkinSync: state.crackSkinSync,
-      msProfile: state.msProfile, mcVersion: state.selectedVersion, loaderType: state.selectedCore,
+      msProfile: state.msProfile, cloudProfile: state.cloudProfile, mcVersion: state.selectedVersion, loaderType: state.selectedCore,
       loaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB, javaPath: state.javaPath,
       gameDir: state.gameDir, useAikarFlags: state.aikarFlags, fastSkipHash: state.fastSkipHash,
       hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: state.serverIp, cpuCores: state.cpuCores,

@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v30.7 PRO</span>
+          <span class="brand-version">v30.8 PRO</span>
         </div>
       </div>
 
@@ -39,7 +39,7 @@
         </button>
         <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">v30.7.0</span>
+          <span id="updateBtnText">v30.8.0</span>
         </button>
       </div>
 
@@ -279,21 +279,56 @@
                     <span class="uuid-tag-mini no-wrap-label" id="uuidPreviewTag">UUID Offline</span>
                   </div>
 
-                  <div class="auth-switcher-row">
-                    <button class="auth-tab-btn active" id="tabBtnCrack">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:5px;vertical-align:-2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <span>Offline (Crack)</span>
+                  <div class="auth-switcher-row auth-switcher-3col">
+                    <button class="auth-tab-btn" id="tabBtnAether" title="Tài khoản riêng của Aether Craft chạy trên Internet Database 24/7 (Như TLauncher)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-2px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      <span>Aether Cloud</span>
                     </button>
-                    <button class="auth-tab-btn" id="tabBtnMicrosoft">
+                    <button class="auth-tab-btn active" id="tabBtnCrack" title="Chơi nhanh không cần mật khẩu">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:4px;vertical-align:-2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <span>Offline</span>
+                    </button>
+                    <button class="auth-tab-btn" id="tabBtnMicrosoft" title="Tài khoản Microsoft đã mua Minecraft: Java Edition">
                       <!-- OFFICIAL MICROSOFT 4-COLOR LOGO -->
-                      <svg width="13" height="13" viewBox="0 0 21 21" style="margin-right:5px;vertical-align:-2px;">
+                      <svg width="12" height="12" viewBox="0 0 21 21" style="margin-right:4px;vertical-align:-1px;">
                         <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
                         <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
                         <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
                         <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
                       </svg>
-                      <span>Microsoft Bản Quyền</span>
+                      <span>Bản Quyền</span>
                     </button>
+                  </div>
+
+                  <div id="panelAether" class="auth-input-area hidden">
+                    <div id="aetherNotLoggedBox" class="aether-auth-box">
+                      <div class="aether-inputs-row">
+                        <input type="text" id="aetherLoginIdInput" class="pro-input" placeholder="Tài khoản / Email (vd: huy2010)..." />
+                        <input type="password" id="aetherPasswordInput" class="pro-input" placeholder="Mật khẩu (≥4 ký tự)..." />
+                      </div>
+                      <div class="aether-actions-row">
+                        <button class="btn-sync-skin aether-btn-login" id="btnAetherLogin">🔑 Đăng Nhập</button>
+                        <button class="btn-sync-skin aether-btn-reg" id="btnAetherRegister">✨ Tạo Tài Khoản</button>
+                        <button class="btn-sync-skin aether-btn-web" id="btnAetherBrowserLogin" title="Liên kết nhanh bằng tài khoản Email trên trình duyệt (Miễn phí 100%)">🌐 Liên Kết Trình Duyệt</button>
+                      </div>
+                    </div>
+
+                    <div id="aetherLoggedBox" class="hidden aether-logged-wrap">
+                      <div class="ms-logged-inline aether-logged-bar">
+                        <div class="aether-user-meta">
+                          <strong id="aetherMcNameLabel">🛡️ Player</strong>
+                          <span id="aetherLoginIdLabel" class="aether-email-sub">cloud@aether.id</span>
+                        </div>
+                        <div class="aether-logged-btns">
+                          <button class="btn-save-acc-mini" id="btnAetherToggleRename" title="Đổi tên nhân vật trong Game bất cứ lúc nào (lưu trên Internet Database 24/7)">✏️ Đổi Tên</button>
+                          <button class="btn-ms-logout" id="btnAetherLogout">Thoát</button>
+                        </div>
+                      </div>
+                      <div id="aetherRenameRow" class="input-with-btn hidden" style="margin-top:6px;">
+                        <input type="text" id="aetherNewNameInput" class="pro-input" maxlength="16" placeholder="Nhập tên nhân vật mới (3-16 ký tự)..." />
+                        <button class="btn-sync-skin" id="btnAetherSaveName">Lưu Tên</button>
+                      </div>
+                    </div>
                   </div>
 
                   <div id="panelCrack" class="auth-input-area">

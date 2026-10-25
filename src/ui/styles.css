@@ -5180,4 +5180,125 @@ html[data-theme="cherry"] {
   }
 }
 
+/* v30.8 PRO — AETHER CLOUD ID (INTERNET DATABASE 24/7 ACCOUNT SYSTEM) */
+.auth-switcher-row.auth-switcher-3col {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+.auth-switcher-row.auth-switcher-3col .auth-tab-btn {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.aether-auth-box {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.aether-inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.aether-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.25fr;
+  gap: 6px;
+}
+
+.aether-actions-row .btn-sync-skin {
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  height: 32px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.aether-btn-reg {
+  background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+}
+
+.aether-btn-web {
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-col) !important;
+}
+
+.aether-btn-web:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.aether-logged-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding: 8px 11px !important;
+  border-radius: 9px !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.42) !important;
+}
+
+.aether-user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+#aetherMcNameLabel {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aether-email-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aether-logged-btns {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1320px) {
+  .aether-actions-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .aether-btn-web {
+    grid-column: 1 / -1 !important;
+    height: 27px !important;
+    font-size: 10.5px !important;
+  }
+  .aether-actions-row .btn-sync-skin {
+    height: 28px !important;
+    font-size: 10.5px !important;
+  }
+  .aether-logged-bar {
+    padding: 6px 8px !important;
+  }
+}
+
+
 

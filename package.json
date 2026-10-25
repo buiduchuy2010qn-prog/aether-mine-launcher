@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.7.0",
-  "description": "Aether Craft v30.7 PRO - Strict Mojang Java Edition License Check & Browser OAuth2 Sync",
+  "version": "30.8.0",
+  "description": "Aether Craft v30.8 PRO - Aether Cloud ID 24/7 Internet Database Account System + Strict Microsoft License + Offline",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

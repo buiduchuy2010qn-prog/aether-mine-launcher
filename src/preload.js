@@ -21,6 +21,11 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   loginMicrosoft: () => ipcRenderer.invoke('auth:ms-login'),
   refreshMicrosoft: (refreshToken) => ipcRenderer.invoke('auth:ms-refresh', refreshToken),
   getCrackUuid: (username) => ipcRenderer.invoke('auth:crack-uuid', username),
+  cloudRegister: (params) => ipcRenderer.invoke('cloud:register', params),
+  cloudLogin: (params) => ipcRenderer.invoke('cloud:login', params),
+  cloudBrowserLogin: (params) => ipcRenderer.invoke('cloud:browser-login', params),
+  cloudChangeUsername: (params) => ipcRenderer.invoke('cloud:change-username', params),
+  cloudSyncCosmetics: (params) => ipcRenderer.invoke('cloud:sync-cosmetics', params),
   fetchSkinBase64: (username) => ipcRenderer.invoke('skin:fetch-base64', username),
   uploadLocalSkin: (gameDir, username) => ipcRenderer.invoke('skin:upload-local', gameDir, username),
 
