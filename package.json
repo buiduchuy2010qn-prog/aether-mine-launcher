@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.9.0",
-  "description": "Aether Craft v30.9 PRO - Aether Cloud ID 24/7 Internet Database (Password Reset + Custom PNG Skin Cloud Sync)",
+  "version": "31.0.0",
+  "description": "Aether Craft v31.0 PRO - Aether Cloud ID 24/7 (6-Digit OTP Password Recovery & Old Password Verification)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

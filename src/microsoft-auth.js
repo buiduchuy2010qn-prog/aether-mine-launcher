@@ -751,36 +751,220 @@ async function syncCloudCosmetics({ accountId, skinModel, capeType, skinPreset, 
   return toPublicProfile(user);
 }
 
-async function resetCloudPassword({ accountId, loginId, verifyMcUsername, newPassword, customDbUrl = '' }) {
+async function changeCloudPassword({ accountId, oldPassword, newPassword, customDbUrl = '' }) {
+  if (!accountId) {
+    throw new Error('Bạn cần đăng nhập tài khoản Aether Cloud trước!');
+  }
+  if (!oldPassword) {
+    throw new Error('⚠️ Vui lòng nhập Mật khẩu cũ hiện tại để xác minh bảo mật!');
+  }
   if (!newPassword || String(newPassword).length < 4) {
     throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
   }
 
   const db = await fetchCloudDatabase(customDbUrl);
-  let user = null;
+  const user = db.users[accountId];
+  if (!user) {
+    throw new Error('Không tìm thấy hồ sơ tài khoản trên Aether Cloud!');
+  }
 
-  if (accountId && db.users[accountId]) {
-    user = db.users[accountId];
-  } else {
-    const cleanLogin = String(loginId || '').trim().toLowerCase();
-    const cleanVerify = String(verifyMcUsername || '').trim().toLowerCase();
-    if (!cleanLogin) {
-      throw new Error('Vui lòng nhập Tên đăng nhập (hoặc Email) cần lấy lại mật khẩu!');
-    }
-    user = Object.values(db.users).find(
-      (u) =>
-        (u.loginId && u.loginId.toLowerCase() === cleanLogin) ||
-        (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
-    );
-    if (!user) {
-      throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud!`);
-    }
-    if (cleanVerify && user.mcUsername.toLowerCase() !== cleanVerify && user.loginId.toLowerCase() !== cleanVerify) {
-      throw new Error(`Tên nhân vật xác minh "${verifyMcUsername}" không khớp với tài khoản "${user.loginId}"!`);
-    }
+  const oldHash = hashPassword(oldPassword);
+  if (user.passwordHash && user.passwordHash !== oldHash) {
+    throw new Error('⚠️ Mật khẩu cũ không chính xác! Vui lòng nhập đúng mật khẩu hiện tại.');
   }
 
   user.passwordHash = hashPassword(newPassword);
+  user.authProvider = 'password';
+  user.updatedAt = Date.now();
+  await saveCloudDatabase(db, customDbUrl);
+  return toPublicProfile(user);
+}
+
+function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const cleanLogin = String(loginId || '').trim().toLowerCase();
+      if (!cleanLogin) {
+        return reject(new Error('Vui lòng nhập Email hoặc Tên tài khoản ở ô bên trên trước khi bấm Lấy Mã OTP!'));
+      }
+
+      const db = await fetchCloudDatabase(customDbUrl);
+      const user = Object.values(db.users).find(
+        (u) =>
+          (u.loginId && u.loginId.toLowerCase() === cleanLogin) ||
+          (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
+      );
+
+      if (!user) {
+        return reject(new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud Database!`));
+      }
+
+      if (activeBrowserServer) {
+        try { activeBrowserServer.close(); } catch (_) {}
+        activeBrowserServer = null;
+      }
+
+      let completed = false;
+      let timeoutTimer = null;
+
+      const cleanup = () => {
+        if (timeoutTimer) {
+          clearTimeout(timeoutTimer);
+          timeoutTimer = null;
+        }
+        if (activeBrowserServer) {
+          try { activeBrowserServer.close(); } catch (_) {}
+          activeBrowserServer = null;
+        }
+      };
+
+      const focusLauncher = () => {
+        if (parentWindow && !parentWindow.isDestroyed()) {
+          if (parentWindow.isMinimized()) parentWindow.restore();
+          parentWindow.show();
+          parentWindow.focus();
+        }
+      };
+
+      const server = http.createServer(async (req, res) => {
+        try {
+          const reqUrl = new URL(req.url, 'http://localhost');
+          if (reqUrl.pathname === '/favicon.ico') {
+            res.writeHead(204);
+            return res.end();
+          }
+
+          const code = reqUrl.searchParams.get('code');
+          const error = reqUrl.searchParams.get('error');
+          if (!code && !error) {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<h3>Đang xác thực Email để cấp mã OTP...</h3>');
+          }
+          if (completed) {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<h3>Đã cấp mã OTP.</h3>');
+          }
+          completed = true;
+
+          const port = server.address()?.port || 25562;
+          const redirectUri = `http://localhost:${port}`;
+
+          if (error) {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end('<h2>Đã hủy xác thực nhận mã OTP.</h2>');
+            cleanup();
+            focusLauncher();
+            return reject(new Error('Đã hủy xác thực nhận mã OTP trên trình duyệt.'));
+          }
+
+          const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: AZURE_CLIENT_ID,
+              grant_type: 'authorization_code',
+              code,
+              redirect_uri: redirectUri,
+              scope: AZURE_SCOPE
+            }).toString()
+          });
+
+          if (!tokenRes.ok) {
+            throw new Error(`Lỗi xác thực Email trên trình duyệt (${tokenRes.status}).`);
+          }
+
+          const tokenData = await tokenRes.json();
+          const claims = decodeJwtPayload(tokenData.id_token);
+          const verifiedEmail = String(claims.email || claims.preferred_username || '').trim().toLowerCase();
+
+          // If the account's loginId is an email address, strictly verify the signed-in email matches!
+          if (user.loginId.includes('@') && verifiedEmail && verifiedEmail !== user.loginId.toLowerCase()) {
+            throw new Error(`Email bạn chọn trên trình duyệt (${verifiedEmail}) KHÔNG KHỚP với Email đăng ký tài khoản (${user.loginId})!`);
+          }
+
+          const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+          const latestDb = await fetchCloudDatabase(customDbUrl);
+          if (latestDb.users[user.accountId]) {
+            latestDb.users[user.accountId].resetOtpHash = hashPassword(otpCode);
+            latestDb.users[user.accountId].resetOtpExpires = Date.now() + 5 * 60 * 1000;
+            await saveCloudDatabase(latestDb, customDbUrl);
+          }
+
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Mã OTP Khôi Phục Mật Khẩu — Aether Cloud</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',sans-serif}.card{background:#111827;border:2px solid #22c55e;border-radius:16px;padding:32px 38px;text-align:center;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,0.6)}h2{color:#4ade80;margin:0 0 8px}.otp{margin:18px 0;padding:14px 20px;background:rgba(34,197,94,0.15);border:2px dashed #22c55e;border-radius:12px;font-weight:900;font-size:32px;letter-spacing:8px;color:#fff}</style></head><body><div class="card"><h2>🔐 MÃ OTP ĐẶT LẠI MẬT KHẨU</h2><p>Đã xác minh chính chủ tài khoản <strong>${user.loginId}</strong> (${user.mcUsername})</p><div class="otp">${otpCode}</div><p style="font-size:13.5px;color:#cbd5e1;">Hãy nhập mã 6 số này vào ô <strong>Mã OTP 6 số</strong> trên Aether Craft Launcher để đặt mật khẩu mới (Hiệu lực: 5 phút).</p></div></body></html>`);
+
+          cleanup();
+          resolve({ ok: true, loginId: user.loginId, mcUsername: user.mcUsername });
+        } catch (err) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Lỗi Xác Thực OTP</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f87171;font-family:'Segoe UI',sans-serif}.card{background:#111827;border:2px solid #ef4444;border-radius:16px;padding:30px;text-align:center;max-width:460px}</style></head><body><div class="card"><h2>⚠️ Không Thể Cấp Mã OTP</h2><p style="color:#fff;">${err.message}</p></div></body></html>`);
+          cleanup();
+          focusLauncher();
+          reject(err);
+        }
+      });
+
+      activeBrowserServer = server;
+
+      const openOtpAuthUrl = (port) => {
+        const redirectUri = `http://localhost:${port}`;
+        const hintParam = user.loginId.includes('@') ? `&login_hint=${encodeURIComponent(user.loginId)}` : '';
+        const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id=${AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(AZURE_SCOPE)}&prompt=select_account${hintParam}`;
+        shell.openExternal(authUrl);
+      };
+
+      server.listen(25562, '127.0.0.1', () => openOtpAuthUrl(server.address().port));
+      server.on('error', () => {
+        server.listen(0, '127.0.0.1', () => openOtpAuthUrl(server.address().port));
+      });
+
+      timeoutTimer = setTimeout(() => {
+        if (!completed) {
+          completed = true;
+          cleanup();
+          reject(new Error('Hết thời gian chờ xác thực mã OTP trên trình duyệt.'));
+        }
+      }, 180000);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl = '' }) {
+  const cleanLogin = String(loginId || '').trim().toLowerCase();
+  const cleanOtp = String(otpCode || '').trim();
+  if (!cleanLogin) {
+    throw new Error('Vui lòng nhập Tên đăng nhập (hoặc Email) cần đặt lại mật khẩu!');
+  }
+  if (!/^\d{6}$/.test(cleanOtp)) {
+    throw new Error('⚠️ Vui lòng bấm "📨 Nhận Mã OTP" và nhập đúng Mã OTP 6 chữ số!');
+  }
+  if (!newPassword || String(newPassword).length < 4) {
+    throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
+  }
+
+  const db = await fetchCloudDatabase(customDbUrl);
+  const user = Object.values(db.users).find(
+    (u) =>
+      (u.loginId && u.loginId.toLowerCase() === cleanLogin) ||
+      (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
+  );
+  if (!user) {
+    throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud!`);
+  }
+
+  if (!user.resetOtpHash || !user.resetOtpExpires || Date.now() > user.resetOtpExpires) {
+    throw new Error('⚠️ Mã OTP đã hết hạn hoặc chưa được tạo! Hãy bấm nút "📨 Nhận Mã OTP" trước.');
+  }
+
+  if (hashPassword(cleanOtp) !== user.resetOtpHash) {
+    throw new Error('⚠️ Mã OTP 6 số không chính xác! Vui lòng kiểm tra lại.');
+  }
+
+  user.passwordHash = hashPassword(newPassword);
+  delete user.resetOtpHash;
+  delete user.resetOtpExpires;
   user.updatedAt = Date.now();
   await saveCloudDatabase(db, customDbUrl);
   return toPublicProfile(user);
@@ -975,6 +1159,8 @@ module.exports = {
   loginCloudAccount,
   changeCloudUsername,
   syncCloudCosmetics,
+  changeCloudPassword,
+  requestPasswordResetOtp,
   resetCloudPassword,
   loginCloudViaBrowser
 };

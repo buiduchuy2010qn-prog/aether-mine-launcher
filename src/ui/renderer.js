@@ -1175,27 +1175,56 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  const btnRequestOtp = document.getElementById('btnAetherRequestOtp');
+  if (btnRequestOtp) {
+    btnRequestOtp.onclick = async () => {
+      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
+      const stEl = document.getElementById('statusText');
+      if (!loginId) {
+        if (stEl) stEl.textContent = '⚠ Vui lòng nhập Tài khoản / Email vào ô bên trên trước khi bấm Nhận Mã OTP!';
+        document.getElementById('aetherLoginIdInput')?.focus();
+        return;
+      }
+      btnRequestOtp.disabled = true;
+      btnRequestOtp.textContent = '🌐 Đang mở xác thực Email nhận OTP...';
+      if (stEl) stEl.textContent = `📨 Đang mở trình duyệt xác thực chủ sở hữu "${loginId}" để cấp Mã OTP 6 số...`;
+      const res = await window.aetherAPI.cloudRequestOtp({
+        loginId,
+        customDbUrl: state.customDbUrl
+      });
+      btnRequestOtp.disabled = false;
+      btnRequestOtp.textContent = '✓ Đã cấp Mã OTP trên Trình duyệt (Gửi lại)';
+      if (res?.ok) {
+        if (stEl) stEl.textContent = `🔐 Đã cấp Mã OTP 6 số trên trình duyệt cho "${res.loginId}"! Hãy nhập mã 6 số vào ô bên dưới.`;
+        document.getElementById('aetherOtpInput')?.focus();
+      } else if (res?.error) {
+        btnRequestOtp.textContent = '📨 Bước 1: Nhận Mã OTP 6 Số (Xác Thực Email)';
+        if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      }
+    };
+  }
+
   const btnConfirmReset = document.getElementById('btnAetherConfirmReset');
   if (btnConfirmReset) {
     btnConfirmReset.onclick = async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
-      const verifyMcUsername = document.getElementById('aetherResetVerifyInput')?.value.trim() || '';
+      const otpCode = document.getElementById('aetherOtpInput')?.value.trim() || '';
       const newPassword = document.getElementById('aetherResetNewPassInput')?.value || '';
       const stEl = document.getElementById('statusText');
       btnConfirmReset.disabled = true;
-      btnConfirmReset.textContent = '⏳ Đang cập nhật mật khẩu...';
+      btnConfirmReset.textContent = '⏳ Đang kiểm tra OTP...';
       const res = await window.aetherAPI.cloudResetPassword({
         loginId,
-        verifyMcUsername,
+        otpCode,
         newPassword,
         customDbUrl: state.customDbUrl
       });
       btnConfirmReset.disabled = false;
-      btnConfirmReset.textContent = '✓ Xác Nhận Đổi Mật Khẩu Mới';
+      btnConfirmReset.textContent = '✓ Bước 2: Xác Nhận Đặt Lại Mật Khẩu';
       if (res?.ok && res.profile) {
         resetBox?.classList.add('hidden');
         if (btnForgotPass) btnForgotPass.textContent = '🔄 Quên MK?';
-        applyCloudProfileToUI(res.profile, `✓ Đã đặt lại mật khẩu mới và đăng nhập tài khoản "${res.profile.mcUsername}"!`);
+        applyCloudProfileToUI(res.profile, `✓ Đã xác thực OTP & đặt lại mật khẩu mới thành công cho "${res.profile.mcUsername}"!`);
       } else if (res?.error) {
         if (stEl) stEl.textContent = `⚠ ${res.error}`;
       }
@@ -1225,11 +1254,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       renameRow?.classList.add('hidden');
       const isHidden = changePassRow.classList.toggle('hidden');
       if (!isHidden) {
-        const inp = document.getElementById('aetherLoggedNewPassInput');
-        if (inp) {
-          inp.value = '';
-          inp.focus();
+        const oldInp = document.getElementById('aetherOldPassInput');
+        const newInp = document.getElementById('aetherLoggedNewPassInput');
+        if (oldInp) {
+          oldInp.value = '';
+          oldInp.focus();
         }
+        if (newInp) newInp.value = '';
       }
     };
   }
@@ -1238,12 +1269,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnSavePass) {
     btnSavePass.onclick = async () => {
       if (!state.cloudProfile?.accountId) return;
+      const oldPassword = document.getElementById('aetherOldPassInput')?.value || '';
       const newPassword = document.getElementById('aetherLoggedNewPassInput')?.value || '';
       const stEl = document.getElementById('statusText');
       btnSavePass.disabled = true;
       btnSavePass.textContent = 'Đang lưu...';
-      const res = await window.aetherAPI.cloudResetPassword({
+      const res = await window.aetherAPI.cloudChangePassword({
         accountId: state.cloudProfile.accountId,
+        oldPassword,
         newPassword,
         customDbUrl: state.customDbUrl
       });
@@ -1251,7 +1284,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnSavePass.textContent = 'Lưu MK';
       if (res?.ok && res.profile) {
         changePassRow?.classList.add('hidden');
-        if (stEl) stEl.textContent = `✓ Đã đổi mật khẩu mới cho tài khoản Aether Cloud "${res.profile.loginId}"!`;
+        if (stEl) stEl.textContent = `✓ Đã xác minh mật khẩu cũ & đổi mật khẩu mới cho tài khoản "${res.profile.loginId}"!`;
       } else if (res?.error) {
         if (stEl) stEl.textContent = `⚠ ${res.error}`;
       }

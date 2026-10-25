@@ -29,6 +29,8 @@ const {
   loginCloudAccount,
   changeCloudUsername,
   syncCloudCosmetics,
+  changeCloudPassword,
+  requestPasswordResetOtp,
   resetCloudPassword,
   loginCloudViaBrowser
 } = require('./microsoft-auth');
@@ -309,6 +311,28 @@ ipcMain.handle('cloud:reset-password', async (_e, params) => {
   try {
     const profile = await resetCloudPassword(params || {});
     return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud:change-password', async (_e, params) => {
+  try {
+    const profile = await changeCloudPassword(params || {});
+    return { ok: true, profile };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud:request-otp', async (_e, params) => {
+  try {
+    const res = await requestPasswordResetOtp({
+      loginId: params?.loginId,
+      parentWindow: mainWindow,
+      customDbUrl: params?.customDbUrl
+    });
+    return res;
   } catch (err) {
     return { ok: false, error: err.message };
   }

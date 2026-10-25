@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v30.9 PRO</span>
+          <span class="brand-version">v31.0 PRO</span>
         </div>
       </div>
 
@@ -39,7 +39,7 @@
         </button>
         <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">v30.9.0</span>
+          <span id="updateBtnText">v31.0.0</span>
         </button>
       </div>
 
@@ -311,11 +311,12 @@
                         <input type="password" id="aetherPasswordInput" class="pro-input" placeholder="Mật khẩu (≥4 ký tự)..." />
                       </div>
                       <div id="aetherResetBox" class="aether-reset-box hidden">
+                        <button class="btn-sync-skin aether-btn-reg" id="btnAetherRequestOtp" style="height:27px !important;font-size:11px !important;width:100% !important;">📨 Bước 1: Nhận Mã OTP 6 Số (Xác Thực Email)</button>
                         <div class="aether-inputs-row">
-                          <input type="text" id="aetherResetVerifyInput" class="pro-input" placeholder="Tên nhân vật của acc (xác minh)..." />
-                          <input type="password" id="aetherResetNewPassInput" class="pro-input" placeholder="Nhập mật khẩu mới (≥4 ký tự)..." />
+                          <input type="text" id="aetherOtpInput" class="pro-input" maxlength="6" placeholder="Nhập Mã OTP 6 số..." />
+                          <input type="password" id="aetherResetNewPassInput" class="pro-input" placeholder="Mật khẩu mới (≥4 ký tự)..." />
                         </div>
-                        <button class="btn-sync-skin aether-btn-login" id="btnAetherConfirmReset" style="height:28px !important;font-size:11px !important;width:100% !important;">✓ Xác Nhận Đổi Mật Khẩu Mới</button>
+                        <button class="btn-sync-skin aether-btn-login" id="btnAetherConfirmReset" style="height:27px !important;font-size:11px !important;width:100% !important;">✓ Bước 2: Xác Nhận Đặt Lại Mật Khẩu</button>
                       </div>
                       <div class="aether-actions-row">
                         <button class="btn-sync-skin aether-btn-login" id="btnAetherLogin">🔑 Đăng Nhập</button>
@@ -332,17 +333,18 @@
                         </div>
                         <div class="aether-logged-btns">
                           <button class="btn-save-acc-mini" id="btnAetherToggleRename" title="Đổi tên nhân vật trong Game bất cứ lúc nào (lưu trên Internet Database 24/7)">✏️ Đổi Tên</button>
-                          <button class="btn-save-acc-mini" id="btnAetherTogglePass" title="Đổi mật khẩu tài khoản Aether Cloud">🔒 Đổi MK</button>
+                          <button class="btn-save-acc-mini" id="btnAetherTogglePass" title="Đổi mật khẩu tài khoản Aether Cloud (Yêu cầu mật khẩu cũ)">🔒 Đổi MK</button>
                           <button class="btn-ms-logout" id="btnAetherLogout">Thoát</button>
                         </div>
                       </div>
                       <div id="aetherRenameRow" class="input-with-btn hidden" style="margin-top:6px;">
                         <input type="text" id="aetherNewNameInput" class="pro-input" maxlength="16" placeholder="Nhập tên nhân vật mới (3-16 ký tự)..." />
-                        <button class="btn-sync-skin" id="btnAetherSaveName">Lưu Tên</button>
+                        <button class="btn-sync-skin aether-btn-login" id="btnAetherSaveName" style="width:auto !important;padding:0 12px !important;">Lưu Tên</button>
                       </div>
                       <div id="aetherChangePassRow" class="input-with-btn hidden" style="margin-top:6px;">
-                        <input type="password" id="aetherLoggedNewPassInput" class="pro-input" placeholder="Nhập mật khẩu mới (≥4 ký tự)..." />
-                        <button class="btn-sync-skin" id="btnAetherSavePass">Lưu MK</button>
+                        <input type="password" id="aetherOldPassInput" class="pro-input" placeholder="Mật khẩu cũ..." style="flex:1;" />
+                        <input type="password" id="aetherLoggedNewPassInput" class="pro-input" placeholder="Mật khẩu mới (≥4)..." style="flex:1;" />
+                        <button class="btn-sync-skin aether-btn-login" id="btnAetherSavePass" style="width:auto !important;padding:0 12px !important;">Lưu MK</button>
                       </div>
                     </div>
                   </div>
