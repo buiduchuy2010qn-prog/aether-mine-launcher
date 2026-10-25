@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v31.1 PRO</span>
+          <span class="brand-version">v31.2 PRO</span>
         </div>
       </div>
 
@@ -304,22 +304,22 @@
                     <div id="aetherFeedbackBanner" class="aether-feedback-banner hidden"></div>
                     <div id="aetherNotLoggedBox" class="aether-auth-box">
                       <div class="ver-label-bar" style="margin-bottom:1px;">
-                        <label class="field-label no-wrap-label" style="margin:0;">☁️ Tự động lưu Tên &amp; Skin 3D (.PNG) theo Acc</label>
+                        <label class="field-label no-wrap-label" id="aetherFormTitle" style="margin:0;">☁️ Tự động lưu Tên &amp; Skin 3D (.PNG) theo Acc</label>
                         <button class="btn-save-acc-mini" id="btnAetherForgotPass" title="Đặt lại mật khẩu mới khi quên mật khẩu">🔄 Quên MK?</button>
                       </div>
-                      <div class="aether-inputs-row">
+                      <div class="aether-inputs-row" id="aetherTopInputsRow">
                         <input type="text" id="aetherLoginIdInput" class="pro-input" placeholder="Tài khoản / Email (vd: huy2010)..." />
                         <input type="password" id="aetherPasswordInput" class="pro-input" placeholder="Mật khẩu (≥4 ký tự)..." />
                       </div>
                       <div id="aetherResetBox" class="aether-reset-box hidden">
-                        <button class="btn-sync-skin aether-btn-reg" id="btnAetherRequestOtp" style="height:27px !important;font-size:11px !important;width:100% !important;">📨 Bước 1: Nhận Mã OTP 6 Số (Xác Thực Email)</button>
+                        <button class="btn-sync-skin aether-btn-reg" id="btnAetherRequestOtp" style="height:27px !important;font-size:11px !important;width:100% !important;">📨 Bước 1: Nhận Mã OTP 6 Số (Mở Hộp Thư OTP)</button>
                         <div class="aether-inputs-row">
                           <input type="text" id="aetherOtpInput" class="pro-input" maxlength="6" placeholder="Nhập Mã OTP 6 số..." />
                           <input type="password" id="aetherResetNewPassInput" class="pro-input" placeholder="Mật khẩu mới (≥4 ký tự)..." />
                         </div>
                         <button class="btn-sync-skin aether-btn-login" id="btnAetherConfirmReset" style="height:27px !important;font-size:11px !important;width:100% !important;">✓ Bước 2: Xác Nhận Đặt Lại Mật Khẩu</button>
                       </div>
-                      <div class="aether-actions-row">
+                      <div class="aether-actions-row" id="aetherNormalActions">
                         <button class="btn-sync-skin aether-btn-login" id="btnAetherLogin">🔑 Đăng Nhập</button>
                         <button class="btn-sync-skin aether-btn-reg" id="btnAetherRegister">✨ Tạo Tài Khoản</button>
                         <button class="btn-sync-skin aether-btn-web" id="btnAetherBrowserLogin" title="Liên kết nhanh bằng tài khoản Email trên trình duyệt (Miễn phí 100%)">🌐 Liên Kết Trình Duyệt</button>

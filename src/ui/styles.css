@@ -5422,6 +5422,11 @@ html:not([data-theme="prism"]) .aether-feedback-banner.info {
   border-color: #0ea5e9;
 }
 
+.aether-inputs-row.single-col {
+  grid-template-columns: 1fr !important;
+}
+
+
 
 
 

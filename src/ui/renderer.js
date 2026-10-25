@@ -1212,10 +1212,32 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const btnForgotPass = document.getElementById('btnAetherForgotPass');
   const resetBox = document.getElementById('aetherResetBox');
+  const topInputsRow = document.getElementById('aetherTopInputsRow');
+  const normalPassInput = document.getElementById('aetherPasswordInput');
+  const normalActionsRow = document.getElementById('aetherNormalActions');
+  const formTitleLabel = document.getElementById('aetherFormTitle');
+
+  const setForgotPassMode = (isForgot) => {
+    if (!resetBox) return;
+    resetBox.classList.toggle('hidden', !isForgot);
+    if (normalPassInput) normalPassInput.classList.toggle('hidden', isForgot);
+    if (topInputsRow) topInputsRow.classList.toggle('single-col', isForgot);
+    if (normalActionsRow) normalActionsRow.classList.toggle('hidden', isForgot);
+    if (btnForgotPass) btnForgotPass.textContent = isForgot ? '← Quay lại Đăng nhập' : '🔄 Quên MK?';
+    if (formTitleLabel) {
+      formTitleLabel.textContent = isForgot
+        ? '🔐 Khôi phục mật khẩu bằng Mã OTP 6 số'
+        : '☁️ Tự động lưu Tên & Skin 3D (.PNG) theo Acc';
+    }
+  };
+
   if (btnForgotPass && resetBox) {
     btnForgotPass.onclick = () => {
-      const isHidden = resetBox.classList.toggle('hidden');
-      btnForgotPass.textContent = isHidden ? '🔄 Quên MK?' : '✕ Đóng';
+      const willOpen = resetBox.classList.contains('hidden');
+      setForgotPassMode(willOpen);
+      if (willOpen) {
+        document.getElementById('aetherLoginIdInput')?.focus();
+      }
     };
   }
 
@@ -1229,19 +1251,19 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       btnRequestOtp.disabled = true;
-      btnRequestOtp.textContent = '🌐 Đang mở xác thực Email nhận OTP...';
-      showAetherNotification(`📨 Đang mở trình duyệt xác thực chủ sở hữu "${loginId}" để cấp Mã OTP 6 số...`, 'info', 4000);
+      btnRequestOtp.textContent = '⏳ Đang tạo Mã OTP 6 số...';
+      showAetherNotification(`📨 Đang kết nối Cloud Database 24/7 để cấp Mã OTP 6 số cho "${loginId}"...`, 'info', 3000);
       const res = await window.aetherAPI.cloudRequestOtp({
         loginId,
         customDbUrl: state.customDbUrl
       });
       btnRequestOtp.disabled = false;
-      btnRequestOtp.textContent = '✓ Đã cấp Mã OTP trên Trình duyệt (Gửi lại)';
+      btnRequestOtp.textContent = '✓ Đã mở Hộp Thư OTP trên Trình duyệt (Gửi lại)';
       if (res?.ok) {
-        showAetherNotification(`🔐 Đã cấp Mã OTP 6 số trên trình duyệt cho "${res.loginId}"! Hãy nhập mã 6 số vào ô bên dưới.`, 'success', 6000);
+        showAetherNotification(`🔐 Đã cấp Mã OTP 6 số cho "${res.loginId}" trên trình duyệt! Hãy dán mã 6 số vào ô bên dưới.`, 'success', 6500);
         document.getElementById('aetherOtpInput')?.focus();
       } else if (res?.error) {
-        btnRequestOtp.textContent = '📨 Bước 1: Nhận Mã OTP 6 Số (Xác Thực Email)';
+        btnRequestOtp.textContent = '📨 Bước 1: Nhận Mã OTP 6 Số (Mở Hộp Thư OTP)';
         showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
     };
@@ -1264,8 +1286,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnConfirmReset.disabled = false;
       btnConfirmReset.textContent = '✓ Bước 2: Xác Nhận Đặt Lại Mật Khẩu';
       if (res?.ok && res.profile) {
-        resetBox?.classList.add('hidden');
-        if (btnForgotPass) btnForgotPass.textContent = '🔄 Quên MK?';
+        setForgotPassMode(false);
         applyCloudProfileToUI(res.profile, `✅ Đã xác thực OTP & đặt lại mật khẩu mới thành công cho "${res.profile.mcUsername}"!`);
       } else if (res?.error) {
         showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
