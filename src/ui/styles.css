@@ -2670,3 +2670,26 @@ html[data-theme="cherry"] {
   padding: 3px 7px !important;
   font-size: 10px !important;
 }
+
+.mods-sort-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-input);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border-col);
+}
+
+#btnToggleModAllVersions.active {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  border-color: var(--accent) !important;
+}
+
+.mods-quick-tags-bar {
+  display: flex;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding-bottom: 4px !important;
+}

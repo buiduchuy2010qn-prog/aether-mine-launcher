@@ -626,12 +626,29 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((c) => c.classList.toggle('active', c === chip));
       const targetType = chip.dataset.mtype || 'mod';
       state.activeModStoreType = targetType;
+      state.modCategory = chip.dataset.mcat || '';
       document.querySelectorAll('.mtype-btn').forEach((b) => b.classList.toggle('active', b.dataset.ptype === targetType));
       const searchIn = document.getElementById('modSearchInput');
-      if (searchIn) searchIn.value = chip.dataset.mcat || '';
-      loadModrinthStore();
+      if (searchIn) searchIn.value = chip.dataset.mquery || '';
+      loadModrinthStore(false);
     };
   });
+  document.querySelectorAll('#modSortBar [data-msort]').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('#modSortBar [data-msort]').forEach((b) => b.classList.toggle('active', b === btn));
+      state.modSortBy = btn.dataset.msort || 'downloads';
+      loadModrinthStore(false);
+    };
+  });
+  const btnModAllVer = document.getElementById('btnToggleModAllVersions');
+  if (btnModAllVer) {
+    btnModAllVer.onclick = () => {
+      state.modAllVersions = !state.modAllVersions;
+      btnModAllVer.classList.toggle('active', state.modAllVersions);
+      btnModAllVer.textContent = state.modAllVersions ? 'Full Kho (77,600+ Mod): BẬT' : 'Full Kho (Mọi Bản): TẮT';
+      loadModrinthStore(false);
+    };
+  }
   setInterval(async () => {
     if (document.hidden) return;
     try {
@@ -725,11 +742,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.mtype-btn').forEach((btn) => {
     btn.onclick = () => {
       document.querySelectorAll('.mtype-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active'); state.activeModStoreType = btn.dataset.ptype; loadModrinthStore();
+      btn.classList.add('active');
+      state.activeModStoreType = btn.dataset.ptype;
+      state.modCategory = '';
+      const searchIn = document.getElementById('modSearchInput');
+      if (searchIn) searchIn.value = '';
+      document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((c, idx) => c.classList.toggle('active', idx === 0 && state.activeModStoreType === 'mod'));
+      loadModrinthStore(false);
     };
   });
-  document.getElementById('btnSearchModrinth').onclick = () => loadModrinthStore();
-  document.getElementById('modSearchInput').onkeydown = (e) => { if (e.key === 'Enter') loadModrinthStore(); };
+  document.getElementById('btnSearchModrinth').onclick = () => loadModrinthStore(false);
+  document.getElementById('modSearchInput').onkeydown = (e) => { if (e.key === 'Enter') loadModrinthStore(false); };
   document.querySelectorAll('[data-localfolder]').forEach((btn) => {
     btn.onclick = () => {
       document.querySelectorAll('[data-localfolder]').forEach((b) => b.classList.remove('active'));

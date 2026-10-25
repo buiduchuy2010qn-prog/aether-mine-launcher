@@ -333,31 +333,89 @@ async function refreshLocalAddonsCount() {
   }
 }
 
-async function loadModrinthStore() {
+async function loadModrinthStore(append = false) {
   const grid = document.getElementById('modrinthResultsGrid');
   const localWrap = document.getElementById('localAddonsWrap');
+  const totalBadge = document.getElementById('modTotalCounterBadge');
   if (state.activeModStoreType === 'installed') {
-    grid.classList.add('hidden'); localWrap.classList.remove('hidden');
-    await renderLocalAddonsManager(); return;
-  }
-  localWrap.classList.add('hidden'); grid.classList.remove('hidden');
-  grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);font-weight:700;">⏳ Đang tải kho dữ liệu từ Modrinth Official...</div>';
-  const query = document.getElementById('modSearchInput')?.value.trim() || '';
-  const res = await window.aetherAPI.searchModrinth({ query, projectType: state.activeModStoreType, mcVersion: state.selectedVersion, loaderType: state.selectedCore });
-  if (!res?.ok || !res.hits?.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);">Không tìm thấy kết quả phù hợp. Hãy thử từ khóa khác!</div>';
+    grid.classList.add('hidden');
+    localWrap.classList.remove('hidden');
+    if (totalBadge) totalBadge.textContent = 'Quản lý trong máy';
+    await renderLocalAddonsManager();
     return;
   }
+  localWrap.classList.add('hidden');
+  grid.classList.remove('hidden');
+
+  const pageSize = 48;
+  if (!append) {
+    state.modOffset = 0;
+    state.modAccumulatedHits = [];
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);font-weight:700;">⏳ Đang tải kho dữ liệu Full Mod từ Modrinth Official...</div>';
+  } else {
+    const oldMoreBtn = document.getElementById('btnLoadMoreMods');
+    if (oldMoreBtn) {
+      oldMoreBtn.disabled = true;
+      oldMoreBtn.textContent = '⏳ Đang tải thêm 48 gói tiếp theo...';
+    }
+  }
+
+  const query = document.getElementById('modSearchInput')?.value.trim() || '';
+  const res = await window.aetherAPI.searchModrinth({
+    query,
+    projectType: state.activeModStoreType,
+    mcVersion: state.selectedVersion,
+    loaderType: state.selectedCore,
+    category: state.modCategory || '',
+    sortBy: state.modSortBy || 'downloads',
+    offset: state.modOffset || 0,
+    limit: pageSize,
+    allVersions: Boolean(state.modAllVersions)
+  });
+
+  if (!res?.ok || (!res.hits?.length && !append)) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);">Không tìm thấy kết quả phù hợp. Hãy bấm nút <strong>"Full Kho (Mọi Bản)"</strong> ở góc phải hoặc thử từ khóa khác!</div>';
+    if (totalBadge) totalBadge.textContent = '0 kết quả';
+    return;
+  }
+
+  const newHits = res.hits || [];
+  const totalHits = res.totalHits || newHits.length;
+  state.modAccumulatedHits = append ? [...(state.modAccumulatedHits || []), ...newHits] : newHits;
+  state.modOffset = state.modAccumulatedHits.length;
+
+  if (totalBadge) {
+    totalBadge.textContent = `Hiện ${state.modAccumulatedHits.length} / ${totalHits.toLocaleString('vi-VN')}+ Gói`;
+  }
+
   const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
   const localCheck = await window.aetherAPI.listLocalAddons(state.gameDir, folderMap[state.activeModStoreType] || 'mods');
   const localNames = (localCheck?.items || []).map((i) => i.cleanName.toLowerCase());
-  grid.innerHTML = res.hits.map((item) => {
-    const dl = item.downloads > 1000000 ? `${(item.downloads / 1000000).toFixed(1)}M tải` : `${Math.round(item.downloads / 1000)}K tải`;
+
+  const cardsHtml = state.modAccumulatedHits.map((item) => {
+    const dl = item.downloads > 1000000 ? `${(item.downloads / 1000000).toFixed(1)}M tải` : `${Math.max(1, Math.round(item.downloads / 1000))}K tải`;
     const tags = (item.categories || []).map((c) => `<span class="mod-tag">${c}</span>`).join('');
     const slugLower = (item.slug || '').toLowerCase();
     const isInstalled = localNames.some((n) => n.includes(slugLower) || n.startsWith(slugLower.split('-')[0] + '-'));
     return `<div class="mod-card"><div class="mod-card-top"><img class="mod-icon" src="${item.iconUrl || ''}" alt="" /><div><div class="mod-title">${item.title}</div><div class="mod-meta">bởi ${item.author || 'Creator'} • ${dl}</div></div></div><div class="mod-desc">${item.description || ''}</div><div class="mod-card-foot"><div class="mod-tags">${tags}</div><button class="btn-install-mod ${isInstalled ? 'installed' : ''}" data-slug="${item.slug}">${isInstalled ? '✓ Đã Cài Sẵn' : '⬇ Tải 1-Click'}</button></div></div>`;
   }).join('');
+
+  const hasMore = state.modAccumulatedHits.length < totalHits && newHits.length > 0;
+  const loadMoreHtml = hasMore
+    ? `<div style="grid-column:1/-1;display:flex;justify-content:center;padding:14px 0 22px 0;">
+         <button id="btnLoadMoreMods" class="btn-fps-boost-1click" style="padding:10px 28px;font-size:13px;">
+           ➕ Xem Thêm 48 Gói Tiếp Theo (Đang hiện ${state.modAccumulatedHits.length} / ${totalHits.toLocaleString('vi-VN')}+ gói trên Modrinth)
+         </button>
+       </div>`
+    : '';
+
+  grid.innerHTML = cardsHtml + loadMoreHtml;
+
+  const btnMore = document.getElementById('btnLoadMoreMods');
+  if (btnMore) {
+    btnMore.onclick = () => loadModrinthStore(true);
+  }
+
   grid.querySelectorAll('.btn-install-mod').forEach((btn) => {
     btn.onclick = async () => {
       const cRes = await askUserAgreement({
@@ -369,7 +427,7 @@ async function loadModrinthStore() {
       if (!cRes.agreed) return;
       btn.disabled = true; btn.textContent = '⏳ Đang tải...';
       const r = await window.aetherAPI.installModrinth({ slug: btn.dataset.slug, projectType: state.activeModStoreType, mcVersion: state.selectedVersion, loaderType: state.selectedCore, gameDir: state.gameDir });
-      if (r?.ok) { btn.textContent = '✓ Đã Cài'; await refreshLocalAddonsCount(); }
+      if (r?.ok) { btn.textContent = '✓ Đã Cài'; btn.classList.add('installed'); await refreshLocalAddonsCount(); }
       else { btn.textContent = '⚠ Lỗi'; btn.disabled = false; }
     };
   });

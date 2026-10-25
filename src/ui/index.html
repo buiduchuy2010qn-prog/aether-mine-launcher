@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v23.0 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v25.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -23,7 +23,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v24.0 PRO</span>
+          <span class="brand-version">v25.0 PRO</span>
         </div>
       </div>
 
@@ -461,14 +461,18 @@
           </div>
         </section>
 
-        <!-- TAB 2: KHO MOD, SHADER & RESOURCE PACK (MODRINTH API V2) -->
+        <!-- TAB 2: KHO MOD, SHADER & RESOURCE PACK (MODRINTH API V2 - FULL 77,000+ MODS) -->
         <section class="tab-panel" id="tab-mods">
           <div class="mods-tab-header">
             <div>
-              <h2>Kho Tải Mod, Shader &amp; Resource Pack 1-Click (Modrinth Official)</h2>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <h2>Kho Tải Mod, Shader &amp; Resource Pack 1-Click (Full Modrinth)</h2>
+                <span class="installed-count-tag" id="modTotalCounterBadge">77,600+ Gói</span>
+              </div>
               <p>Tự động lọc và tải thẳng vào đúng thư mục phiên bản <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong> trên máy bạn.</p>
             </div>
             <div class="mods-header-actions">
+              <button class="btn-sync-skin" id="btnToggleModAllVersions" title="Bật để mở khóa toàn bộ 77,600+ Mod của mọi phiên bản trên Modrinth">Full Kho (Mọi Bản): TẮT</button>
               <button class="btn-fps-boost-1click" id="btnStoreFpsBoost" title="Tự động tải bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, Iris)">
                 <span>Cài Trọn Bộ Mod X3 FPS</span>
               </button>
@@ -483,20 +487,38 @@
               <button class="mtype-btn" data-ptype="resourcepack">Resource Packs</button>
               <button class="mtype-btn" data-ptype="installed">Đã Cài Trong Máy (<span id="localAddonCount">0</span>)</button>
             </div>
+            <div class="mods-sort-group" id="modSortBar">
+              <button class="vtype-btn active" data-msort="downloads" title="Sắp xếp theo lượt tải nhiều nhất">Tải nhiều</button>
+              <button class="vtype-btn" data-msort="follows" title="Sắp xếp theo lượt yêu thích">Yêu thích</button>
+              <button class="vtype-btn" data-msort="updated" title="Sắp xếp theo mới cập nhật">Mới cập nhật</button>
+              <button class="vtype-btn" data-msort="newest" title="Sắp xếp theo mới ra mắt">Mới nhất</button>
+            </div>
             <div class="mods-search-box">
-              <input type="text" id="modSearchInput" class="pro-input" placeholder="Tìm Mod / Shader (vd: Sodium, Iris, Complementary, Minimap, VoiceChat)..." />
+              <input type="text" id="modSearchInput" class="pro-input" placeholder="Tìm trong 77,600+ Mod / Shader (vd: Create, Ice and Fire, Origins, Sodium, Xaero)..." />
               <button class="btn-sync-skin" id="btnSearchModrinth">Tìm kiếm</button>
             </div>
           </div>
 
           <div class="mods-quick-tags-bar" id="modQuickCategoryBar">
-            <span class="mqt-label">Bộ lọc nhanh:</span>
-            <button class="mqt-chip active" data-mcat="" data-mtype="mod">Phổ biến nhất</button>
-            <button class="mqt-chip" data-mcat="Sodium" data-mtype="mod">Siêu Tăng FPS (Sodium/Lithium)</button>
-            <button class="mqt-chip" data-mcat="Iris" data-mtype="mod">Cài Shaders (Iris)</button>
-            <button class="mqt-chip" data-mcat="Complementary" data-mtype="shader">Bóng đổ Complementary</button>
-            <button class="mqt-chip" data-mcat="Minimap" data-mtype="mod">Bản đồ Minimap</button>
-            <button class="mqt-chip" data-mcat="Zoom" data-mtype="mod">Ống nhòm Zoom &amp; Tiện ích</button>
+            <span class="mqt-label">Danh mục Full Mod:</span>
+            <button class="mqt-chip active" data-mcat="" data-mquery="" data-mtype="mod">Tất Cả Mod</button>
+            <button class="mqt-chip" data-mcat="optimization" data-mquery="" data-mtype="mod">Tối Ưu &amp; Tăng FPS</button>
+            <button class="mqt-chip" data-mcat="combat" data-mquery="" data-mtype="mod">Vũ Khí, Giáp &amp; PvP</button>
+            <button class="mqt-chip" data-mcat="mobs" data-mquery="" data-mtype="mod">Boss, Rồng &amp; Sinh Vật</button>
+            <button class="mqt-chip" data-mcat="worldgen" data-mquery="" data-mtype="mod">Thế Giới, Biome &amp; Hầm Ngục</button>
+            <button class="mqt-chip" data-mcat="adventure" data-mquery="" data-mtype="mod">Phiêu Lưu &amp; RPG</button>
+            <button class="mqt-chip" data-mcat="technology" data-mquery="" data-mtype="mod">Công Nghệ &amp; Máy Móc (Create)</button>
+            <button class="mqt-chip" data-mcat="magic" data-mquery="" data-mtype="mod">Phép Thuật &amp; Kỹ Năng</button>
+            <button class="mqt-chip" data-mcat="storage" data-mquery="" data-mtype="mod">Ba Lô, Rương &amp; Kho Đồ</button>
+            <button class="mqt-chip" data-mcat="food" data-mquery="" data-mtype="mod">Nông Trại &amp; Nấu Ăn</button>
+            <button class="mqt-chip" data-mcat="decoration" data-mquery="" data-mtype="mod">Nội Thất &amp; Trang Trí</button>
+            <button class="mqt-chip" data-mcat="transportation" data-mquery="" data-mtype="mod">Xe Cộ, Máy Bay &amp; Tàu</button>
+            <button class="mqt-chip" data-mcat="" data-mquery="Xaero JourneyMap Minimap" data-mtype="mod">Bản Đồ Minimap</button>
+            <button class="mqt-chip" data-mcat="" data-mquery="Simple Voice Chat Emotecraft Skin Layers" data-mtype="mod">Voice Chat &amp; 3D Skin</button>
+            <button class="mqt-chip" data-mcat="" data-mquery="JEI Roughly Enough Items EMI Jade" data-mtype="mod">Xem Công Thức (JEI/REI)</button>
+            <button class="mqt-chip" data-mcat="utility" data-mquery="" data-mtype="mod">Tiện Ích &amp; Zoom</button>
+            <button class="mqt-chip" data-mcat="library" data-mquery="" data-mtype="mod">Thư Viện (Fabric API/GeckoLib)</button>
+            <button class="mqt-chip" data-mcat="" data-mquery="" data-mtype="shader">Top Shaders Bóng Đổ</button>
           </div>
 
           <!-- ONLINE MODRINTH RESULTS GRID -->

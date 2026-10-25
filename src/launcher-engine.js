@@ -435,27 +435,66 @@ async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVer
   return null;
 }
 
-async function searchModrinth({ query = '', projectType = 'mod', mcVersion = '1.21.4', loaderType = 'fabric' }) {
+async function searchModrinth({
+  query = '',
+  projectType = 'mod',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  category = '',
+  sortBy = 'downloads',
+  offset = 0,
+  limit = 48,
+  allVersions = false
+}) {
   const facets = [[`project_type:${projectType}`]];
-  if (mcVersion) {
-    facets.push([`versions:${mcVersion}`]);
+  if (mcVersion && !allVersions) {
+    const baseParts = String(mcVersion).split('-')[0].split('.');
+    const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
+    const verGroup = new Set([mcVersion]);
+    if (familyPrefix === '1.21') {
+      ['1.21.11', '1.21.5', '1.21.4', '1.21.3', '1.21.1', '1.21'].forEach((v) => verGroup.add(v));
+    } else if (familyPrefix === '1.20') {
+      ['1.20.6', '1.20.4', '1.20.2', '1.20.1', '1.20'].forEach((v) => verGroup.add(v));
+    } else if (familyPrefix === '1.19') {
+      ['1.19.4', '1.19.2', '1.19'].forEach((v) => verGroup.add(v));
+    } else if (familyPrefix === '1.18') {
+      ['1.18.2', '1.18.1', '1.18'].forEach((v) => verGroup.add(v));
+    } else if (familyPrefix === '1.16') {
+      ['1.16.5', '1.16.4', '1.16.1'].forEach((v) => verGroup.add(v));
+    }
+    facets.push(Array.from(verGroup).map((v) => `versions:${v}`));
   }
-  if (projectType === 'mod') {
+  if (projectType === 'mod' && !allVersions) {
     const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
-    facets.push([`categories:${effectiveLoader}`]);
+    if (effectiveLoader === 'quilt') {
+      facets.push(['categories:quilt', 'categories:fabric']);
+    } else if (effectiveLoader === 'forge') {
+      facets.push(['categories:forge', 'categories:neoforge']);
+    } else {
+      facets.push([`categories:${effectiveLoader}`]);
+    }
   }
-  const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&limit=18&index=downloads&facets=${encodeURIComponent(JSON.stringify(facets))}`;
+  if (category && category.trim()) {
+    facets.push([`categories:${category.trim()}`]);
+  }
+  const safeLimit = Math.max(12, Math.min(60, Number(limit) || 48));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const safeSort = ['downloads', 'follows', 'updated', 'newest', 'relevance'].includes(sortBy) ? sortBy : 'downloads';
+  const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&limit=${safeLimit}&offset=${safeOffset}&index=${safeSort}&facets=${encodeURIComponent(JSON.stringify(facets))}`;
   const res = await fetchJson(url);
-  return (res.hits || []).map((h) => ({
+  const hits = (res.hits || []).map((h) => ({
     projectId: h.project_id,
     slug: h.slug,
     title: h.title,
     description: h.description,
     iconUrl: h.icon_url,
     downloads: h.downloads,
+    follows: h.follows || 0,
     author: h.author,
     categories: (h.categories || []).slice(0, 4)
   }));
+  hits.totalHits = res.total_hits || hits.length;
+  return hits;
 }
 
 function removeConflictingModJars(modsFolder, slug) {
@@ -512,7 +551,10 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   }
 
   if (matched.length === 0) {
-    throw new Error(`Gói "${slug}" chưa có bản tương thích với Minecraft ${mcVersion}.`);
+    matched = allVersions.filter((v) => projectType !== 'mod' || (Array.isArray(v.loaders) && (v.loaders.includes(effectiveLoader) || (effectiveLoader === 'forge' && v.loaders.includes('neoforge')) || (effectiveLoader === 'quilt' && v.loaders.includes('fabric')))));
+  }
+  if (matched.length === 0) {
+    matched = allVersions;
   }
 
   const chosen = matched[0];

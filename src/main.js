@@ -245,7 +245,7 @@ ipcMain.handle('mc:loaders', async (_e, mcVersion, loaderType) => {
 ipcMain.handle('modrinth:search', async (_e, params) => {
   try {
     const hits = await searchModrinth(params || {});
-    return { ok: true, hits };
+    return { ok: true, hits, totalHits: hits.totalHits || hits.length };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -458,9 +458,15 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         mainWindow?.webContents.send('updater:progress', Math.round(((i + 1) / filesToSync.length) * 100));
       }
       setTimeout(() => {
-        app.relaunch();
-        app.exit(0);
-      }, 250);
+        try {
+          const { exec } = require('child_process');
+          const exePath = process.execPath;
+          exec(`powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Milliseconds 350; Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='\\"${exePath}\\"'}"`);
+        } catch (_) {
+          app.relaunch();
+        }
+        setTimeout(() => app.exit(0), 150);
+      }, 200);
       return { ok: true };
     }
 
