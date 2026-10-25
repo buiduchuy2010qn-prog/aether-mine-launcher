@@ -215,17 +215,19 @@ async function ensureJavaRuntime(gameDir, mcVersion, requestedJavaPath, onStatus
 }
 
 function cleanupJavaTempAndTrimRam() {
-  try {
-    const tmp = os.tmpdir();
-    const entries = fs.readdirSync(tmp);
-    for (const name of entries) {
-      if (name.startsWith('jna-') || name.startsWith('hsperfdata_')) {
-        try {
-          fs.rmSync(path.join(tmp, name), { recursive: true, force: true });
-        } catch (_) {}
+  if (!activeMcProcess && !global.__activeMcProcess) {
+    try {
+      const tmp = os.tmpdir();
+      const entries = fs.readdirSync(tmp);
+      for (const name of entries) {
+        if (name.startsWith('jna-') || name.startsWith('hsperfdata_')) {
+          try {
+            fs.rmSync(path.join(tmp, name), { recursive: true, force: true });
+          } catch (_) {}
+        }
       }
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
 
   if (process.platform === 'win32') {
     const psCmd = `powershell -NoProfile -WindowStyle Hidden -Command "$sig='[DllImport(\\"psapi.dll\\")]public static extern bool EmptyWorkingSet(IntPtr h);';$t=Add-Type -MemberDefinition $sig -Name WS -Namespace Win32 -PassThru -ErrorAction SilentlyContinue;Get-Process -Id ${process.pid} -ErrorAction SilentlyContinue | ForEach-Object { $t::EmptyWorkingSet($_.Handle) | Out-Null }"`;
@@ -238,9 +240,11 @@ function forceKillMinecraft() {
     clearTimeout(fastExitTimer);
     fastExitTimer = null;
   }
-  if (activeMcProcess && activeMcProcess.pid) {
-    const pid = activeMcProcess.pid;
+  const proc = activeMcProcess || global.__activeMcProcess;
+  if (proc && proc.pid) {
+    const pid = proc.pid;
     activeMcProcess = null;
+    global.__activeMcProcess = null;
     if (process.platform === 'win32') {
       try {
         execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore' });
@@ -266,7 +270,7 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
   const parallelThreads = Math.max(2, Math.min(8, cpuCores));
   const concThreads = Math.max(1, Math.floor(parallelThreads / 2));
 
-  // Strictly cap native off-heap memory & DO NOT use -XX:+AlwaysPreTouch so Java starts light (~1.1 GB) and never exceeds selected RAM!
+  // Do NOT artificially cap MaxDirectMemorySize or MaxMetaspaceSize so LWJGL/OpenGL chunk UBOs and ResourcePack reloads never crash!
   // Verified 100% compatible with Java 8, Java 17, and Java 21 (Temurin 21.0.12+).
   return [
     '-XX:+UnlockExperimentalVMOptions',
@@ -274,33 +278,25 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     `-XX:ParallelGCThreads=${parallelThreads}`,
     `-XX:ConcGCThreads=${concThreads}`,
     '-XX:+ParallelRefProcEnabled',
-    '-XX:MaxGCPauseMillis=35',
+    '-XX:MaxGCPauseMillis=50',
     '-XX:+DisableExplicitGC',
     '-XX:+UseStringDeduplication',
-    '-XX:MaxDirectMemorySize=384M',
-    '-XX:MaxMetaspaceSize=256M',
-    '-XX:ReservedCodeCacheSize=128M',
-    '-Xss1M',
     '-XX:G1NewSizePercent=20',
-    '-XX:G1MaxNewSizePercent=35',
-    '-XX:G1HeapRegionSize=8M',
-    '-XX:G1ReservePercent=10',
+    '-XX:G1MaxNewSizePercent=40',
+    '-XX:G1HeapRegionSize=16M',
+    '-XX:G1ReservePercent=15',
     '-XX:G1HeapWastePercent=5',
     '-XX:G1MixedGCCountTarget=4',
-    '-XX:InitiatingHeapOccupancyPercent=20',
-    '-XX:G1MixedGCLiveThresholdPercent=85',
+    '-XX:InitiatingHeapOccupancyPercent=15',
+    '-XX:G1MixedGCLiveThresholdPercent=90',
     '-XX:G1RSetUpdatingPauseTimePercent=5',
     '-XX:SurvivorRatio=32',
     '-XX:+PerfDisableSharedMem',
     '-XX:MaxTenuringThreshold=1',
-    '-XX:G1PeriodicGCInterval=15000',
-    '-XX:+G1PeriodicGCInvokesConcurrent',
-    '-XX:MaxHeapFreeRatio=25',
-    '-XX:MinHeapFreeRatio=10',
     '-XX:-OmitStackTraceInFastThrow',
     '-Dfml.ignoreInvalidMinecraftCertificates=true',
     '-Dfml.ignorePatchDiscrepancies=true',
-    '-Dminecraft.launcher.brand=AetherCraft-v26'
+    '-Dminecraft.launcher.brand=AetherCraft-v28'
   ];
 }
 function getInstalledVersions(gameDir) {
@@ -862,8 +858,8 @@ async function launchMinecraft(config, callbacks = {}) {
       type: mcVersion.includes('w') || mcVersion.includes('pre') || mcVersion.includes('rc') ? 'snapshot' : 'release'
     },
     memory: {
-      max: `${Math.max(1024, Math.round(ramGB * 1024 - 700))}M`,
-      min: '256M'
+      max: `${Math.max(1024, Math.round(ramGB * 1024))}M`,
+      min: '512M'
     },
     javaPath: resolvedJava === 'java' ? undefined : resolvedJava,
     customArgs,
@@ -896,11 +892,11 @@ async function launchMinecraft(config, callbacks = {}) {
       callbacks.onGameWindowReady?.();
     }
 
-    if (line.includes('Stopping!') || line.includes('SoundSystem shutting down') || line.includes('ThreadedAnvilChunkStorage: All dimensions are saved')) {
+    if (line.includes('Render thread/INFO]: Stopping!')) {
       if (!fastExitTimer) {
         fastExitTimer = setTimeout(() => {
           forceKillMinecraft();
-        }, 650);
+        }, 4500);
       }
     }
   });
@@ -916,6 +912,7 @@ async function launchMinecraft(config, callbacks = {}) {
       fastExitTimer = null;
     }
     activeMcProcess = null;
+    global.__activeMcProcess = null;
     cleanupJavaTempAndTrimRam();
     callbacks.onClose?.(code);
   });
@@ -924,6 +921,7 @@ async function launchMinecraft(config, callbacks = {}) {
 
   const proc = await launcher.launch(launchOpts);
   activeMcProcess = proc;
+  global.__activeMcProcess = proc;
 
   return proc;
 }

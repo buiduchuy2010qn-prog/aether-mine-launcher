@@ -970,7 +970,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btnLaunch'); btn.disabled = false;
     document.getElementById('launchBtnText').textContent = 'CHƠI NGAY';
     await refreshInstalledVersions();
-  updateSummaryUI();
-    document.getElementById('statusText').textContent = `Đã thoát Minecraft mượt mà (Mã: ${code})`;
+    updateSummaryUI();
+    if (code === 0 || code === null || code === undefined) {
+      document.getElementById('statusText').textContent = 'Đã thoát Minecraft mượt mà (Mã: 0)';
+    } else {
+      document.getElementById('statusText').textContent = `Minecraft đã đóng (Mã: ${code}) — Đã giải phóng RAM`;
+    }
   });
 });

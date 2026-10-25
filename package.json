@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "28.1.0",
-  "description": "Aether Craft v28.1 PRO - Perfect Zero-Overflow Full-Scale Studio UI & Smart 1-Click Sync",
+  "version": "28.2.0",
+  "description": "Aether Craft v28.2 PRO - Anti-Crash DirectMemory Fix, Full RAM Allocation & Studio UI",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
