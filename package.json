@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.2.0",
-  "description": "Aether Craft v30.2 PRO - Responsive Unmaximized Window Layout (Zero Clipping at Small Window Sizes)",
+  "version": "30.3.0",
+  "description": "Aether Craft v30.3 PRO - Perfect Banner, Sidebar & 3D Toolbar in Compact Window Mode",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
