@@ -15,7 +15,7 @@ const state = {
   ],
   winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false
 };
-const POPULAR_VERSIONS = ['1.21.11', '1.21.4', '1.21.1', '1.20.4', '1.20.1', '1.19.4', '1.16.5', '1.12.2'];
+const POPULAR_VERSIONS = ['1.21.11', '1.21.4', '1.21.1', '1.20.4', '1.20.1', '1.16.5'];
 let skinViewer = null, currentSkinDataUrl = null;
 
 function syncSkinPresetButtons(activeName) {
@@ -170,11 +170,15 @@ function getRecommendedJavaBadge(mcVer) {
 
 function updateSummaryUI() {
   const coreUpper = state.selectedCore.toUpperCase(), ver = state.selectedVersion, ram = `${state.ramGB} GB`;
+  const ldrTag = (state.selectedCore !== 'vanilla' && state.selectedLoaderVersion) ? ` ${state.selectedLoaderVersion}` : '';
   document.getElementById('sideVerText').textContent = ver;
   document.getElementById('sideCoreText').textContent = coreUpper;
   document.getElementById('sideRamText').textContent = ram;
   document.getElementById('dockVersionTitle').textContent = `Minecraft ${ver}`;
-  document.getElementById('dockCoreSubtitle').textContent = `Core: ${coreUpper} • RAM: ${ram}`;
+  document.getElementById('dockCoreSubtitle').textContent = `Core: ${coreUpper}${ldrTag} • RAM: ${ram}`;
+  document.querySelectorAll('#ramPresetBar .ram-pill-btn').forEach((b) => {
+    b.classList.toggle('active', parseInt(b.dataset.ram, 10) === state.ramGB);
+  });
   const dockMiniBadge = document.getElementById('dockCoreMiniBadge');
   const activeCoreImg = document.querySelector(`.core-tab-btn[data-core="${state.selectedCore}"] img`);
   if (dockMiniBadge && activeCoreImg) {
@@ -194,6 +198,10 @@ function updateSummaryUI() {
     vBadge.className = 'vrb-badge ' + (isInst ? 'ready' : 'cloud');
     vBadge.textContent = isInst ? ('✓ Đã cài sẵn trên máy (' + ver + ')') : ('☁ Chưa tải trên máy (' + ver + ')');
     vDesc.textContent = isInst ? 'Sẵn sàng vào thẳng game ngay lập tức (< 1 giây)' : 'Sẵn sàng tải tự động từ máy chủ Mojang khi bấm CHƠI NGAY';
+  }
+  if (!state.isLaunching && (!state.launchPhase || state.launchPhase === 'idle')) {
+    const stEl = document.getElementById('statusText');
+    if (stEl) stEl.textContent = `🟢 Sẵn sàng: Minecraft ${ver} (${coreUpper}) • ${ram} RAM`;
   }
   const bannerPill = document.getElementById('bannerActivePill');
   if (bannerPill) bannerPill.textContent = `${ver} • ${coreUpper} • ${ram} RAM`;
@@ -266,7 +274,7 @@ function renderQuickVersionGrid() {
   if (!grid) return;
   grid.innerHTML = POPULAR_VERSIONS.map((v) => {
     const installed = isVersionInstalledOnDisk(v), active = state.selectedVersion === v ? 'active' : '';
-    return `<button class="qver-chip ${active}" data-qver="${v}"><span>${v}</span><span class="qver-status ${installed ? 'ready' : 'cloud'}">${installed ? '✓ Đã tải' : '☁ Sẵn sàng'}</span></button>`;
+    return `<button class="qver-chip ${active}" data-qver="${v}"><strong>${v}</strong><span class="qver-status ${installed ? 'ready' : 'cloud'}">${installed ? '✓ Đã tải' : '☁ Sẵn sàng'}</span></button>`;
   }).join('');
   grid.querySelectorAll('.qver-chip').forEach((btn) => {
     btn.onclick = async () => {
@@ -814,7 +822,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.selectedVersion = e.target.value; renderQuickVersionGrid();
     await refreshLoaderBuilds(); updateSummaryUI(); saveCurrentConfig();
   };
-  document.getElementById('loaderVersionSelect').onchange = (e) => { state.selectedLoaderVersion = e.target.value; saveCurrentConfig(); };
+  document.getElementById('loaderVersionSelect').onchange = (e) => { state.selectedLoaderVersion = e.target.value; updateSummaryUI(); saveCurrentConfig(); };
   document.getElementById('versionSearchInput').oninput = (e) => renderFullVersionTable(e.target.value);
 
   const bFps1 = document.getElementById('btnOneClickFpsBoost'); if (bFps1) bFps1.onclick = (e) => runOneClickFpsBoost(e.currentTarget);

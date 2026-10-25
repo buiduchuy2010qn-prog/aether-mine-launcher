@@ -3593,3 +3593,249 @@ html[data-theme="cherry"] {
 #progressPercent.hidden {
   display: none !important;
 }
+
+/* ============================================================================
+   v29.3 PRO: SYMMETRICAL CARD A & B HEIGHTS, ENHANCED SUBTITLE CONTRAST,
+   NEUTRAL SLATE SECONDARY CONTROLS & 1366x768 RESPONSIVE ADAPTATION
+   ============================================================================ */
+
+/* 1. SYMMETRICAL CARD A & CARD B (ZERO EMPTY BOTTOM SPACE IN CARD A) */
+.dsp-block {
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 15px 17px !important;
+}
+
+.quick-ver-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#quickVersionGrid {
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 6px !important;
+}
+
+.qver-chip {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  padding: 6px 4px !important;
+  border-radius: 8px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  color: var(--text-main) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.qver-chip strong {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+}
+
+.qver-chip .qver-status {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+}
+
+.qver-chip .qver-status.ready {
+  color: #16a34a !important;
+  font-weight: 700 !important;
+}
+
+.version-ready-bar {
+  margin-top: auto !important;
+  padding: 10px 14px !important;
+}
+
+/* 2. HIGHER READABILITY & CONTRAST FOR SUBTITLES & DESCRIPTIONS */
+.core-tab-btn span {
+  font-size: 11.8px !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+  opacity: 0.82 !important;
+}
+
+.core-tab-btn.active span {
+  color: var(--accent) !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+}
+
+.field-hint-mini,
+.ars-sub {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+  opacity: 0.78 !important;
+}
+
+.vrb-badge {
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+}
+
+.vrb-desc {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+  opacity: 0.86 !important;
+}
+
+/* 3. NEUTRAL SLATE SECONDARY CONTROLS (NO GREEN BORDER OVERLOAD) */
+.brand-version,
+.java-auto-badge,
+.uuid-tag-mini,
+.ram-clean-tag {
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-col) !important;
+  font-weight: 700 !important;
+}
+
+.btn-sync-skin,
+.btn-save-acc-mini,
+.wt-upload-btn,
+#btnSnap3DSkin,
+.vrb-action-btn,
+.update-top-btn {
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-col) !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+.btn-sync-skin:hover,
+.btn-save-acc-mini:hover,
+.wt-upload-btn:hover,
+#btnSnap3DSkin:hover,
+.vrb-action-btn:hover,
+.update-top-btn:hover {
+  background: var(--bg-card-hover) !important;
+  border-color: var(--text-muted) !important;
+  color: var(--text-main) !important;
+}
+
+/* Active Secondary Pills: Crisp Charcoal in Light Mode, Frosted Slate in Dark Mode */
+[data-theme="prism"] .ts-chip.active,
+[data-theme="prism"] .vtype-btn.active,
+[data-theme="prism"] .auth-tab-btn.active,
+[data-theme="prism"] .ram-pill-btn.active,
+[data-theme="prism"] .wtab-btn.active,
+[data-theme="prism"] .pose-btn.active,
+[data-theme="prism"] .skin-preset-chip.active,
+[data-theme="prism"] .cape-chip.active,
+[data-theme="prism"] .wt-model-btn.active,
+[data-theme="prism"] .qver-chip.active,
+[data-theme="prism"] .acc-chip.active {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border: 1px solid #0f172a !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14) !important;
+}
+
+[data-theme="prism"] .qver-chip.active strong,
+[data-theme="prism"] .qver-chip.active .qver-status {
+  color: #ffffff !important;
+}
+
+body:not([data-theme="prism"]) .ts-chip.active,
+body:not([data-theme="prism"]) .vtype-btn.active,
+body:not([data-theme="prism"]) .auth-tab-btn.active,
+body:not([data-theme="prism"]) .ram-pill-btn.active,
+body:not([data-theme="prism"]) .wtab-btn.active,
+body:not([data-theme="prism"]) .pose-btn.active,
+body:not([data-theme="prism"]) .skin-preset-chip.active,
+body:not([data-theme="prism"]) .cape-chip.active,
+body:not([data-theme="prism"]) .wt-model-btn.active,
+body:not([data-theme="prism"]) .qver-chip.active,
+body:not([data-theme="prism"]) .acc-chip.active {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.36) !important;
+  font-weight: 700 !important;
+}
+
+/* 4. RESPONSIVE WINDOW ADAPTATION FOR 1366x768 & RESIZABLE WINDOWS */
+@media (max-width: 1440px) {
+  .sidebar {
+    width: 204px !important;
+    padding: 11px 9px !important;
+  }
+  .main-play-grid {
+    grid-template-columns: minmax(0, 1fr) 312px !important;
+    gap: 11px !important;
+  }
+  .direct-selector-panel {
+    gap: 11px !important;
+  }
+  .dsp-block {
+    padding: 12px 14px !important;
+    gap: 8px !important;
+  }
+  .core-tab-btn {
+    min-height: 74px !important;
+    padding: 8px 4px !important;
+  }
+  .core-tab-btn strong {
+    font-size: 12.5px !important;
+  }
+  .core-tab-btn span {
+    font-size: 11px !important;
+  }
+  .qver-chip {
+    padding: 5px 2px !important;
+  }
+  .qver-chip strong {
+    font-size: 11.5px !important;
+  }
+}
+
+@media (max-height: 820px) {
+  .hero-banner-compact {
+    min-height: 136px !important;
+    max-height: 148px !important;
+    padding: 11px 16px !important;
+  }
+  .hero-mc-logo-img {
+    height: 38px !important;
+  }
+  .core-tab-btn {
+    min-height: 68px !important;
+    padding: 6px 4px !important;
+  }
+  .core-real-logo {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .pro-select,
+  .pro-input,
+  .btn-sync-skin {
+    height: 35px !important;
+  }
+  .auth-tab-btn {
+    height: 32px !important;
+  }
+  .webgl-stage-wrap {
+    min-height: 205px !important;
+  }
+  .mc-official-dock {
+    height: 68px !important;
+  }
+  .btn-mc-official-play {
+    height: 48px !important;
+    min-width: 255px !important;
+  }
+  .tab-panel#tab-play {
+    overflow-y: auto !important;
+  }
+}

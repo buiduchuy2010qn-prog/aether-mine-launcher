@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.2.0",
-  "description": "Aether Craft v29.2 PRO - Balanced Studio Layout, Strict Color Hierarchy & Clean Ready Status",
+  "version": "29.3.0",
+  "description": "Aether Craft v29.3 PRO - Symmetrical Studio Cards, Neutral Slate Hierarchy & 1366x768 Responsive Polish",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
