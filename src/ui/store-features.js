@@ -31,17 +31,79 @@ function askUserAgreement({ title, message, showEula = false, showDontAsk = fals
   });
 }
 function createFallbackSteveSkinDataUrl() {
-  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#c68642'; ctx.fillRect(0, 0, 64, 32);
-  ctx.fillStyle = '#4a2f1b'; ctx.fillRect(8, 0, 16, 8); ctx.fillRect(8, 8, 8, 3);
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(9, 12, 2, 1); ctx.fillRect(13, 12, 2, 1);
-  ctx.fillStyle = '#3b5998'; ctx.fillRect(10, 12, 1, 1); ctx.fillRect(12, 12, 1, 1);
-  ctx.fillStyle = '#0ea5e9'; ctx.fillRect(16, 20, 24, 12);
-  ctx.fillStyle = '#1e3a8a'; ctx.fillRect(0, 20, 16, 12);
+  ctx.clearRect(0, 0, 64, 64);
+
+  const fill = (x, y, w, h, col) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+  };
+
+  // --- HEAD (x:0..32, y:0..16) ---
+  fill(8, 0, 8, 8, '#3d2718');   // Top of head (hair)
+  fill(16, 0, 8, 8, '#9c6e54');  // Bottom of head (neck/chin)
+  fill(0, 8, 32, 8, '#b9856a');  // All 4 sides of head base skin
+  // Hair on Front (8,8), Right (0,8), Left (16,8), Back (24,8)
+  fill(8, 8, 8, 2, '#3d2718');
+  fill(8, 10, 1, 1, '#3d2718');
+  fill(15, 10, 1, 1, '#3d2718');
+  fill(0, 8, 8, 3, '#3d2718');
+  fill(0, 11, 3, 2, '#3d2718');
+  fill(16, 8, 8, 3, '#3d2718');
+  fill(21, 11, 3, 2, '#3d2718');
+  fill(24, 8, 8, 6, '#3d2718');
+  // Face details (Front: x=8..16, y=8..16)
+  fill(9, 11, 2, 1, '#8c5d43');  // Left eyebrow
+  fill(13, 11, 2, 1, '#8c5d43'); // Right eyebrow
+  fill(9, 12, 2, 1, '#ffffff');  // Left eye white
+  fill(13, 12, 2, 1, '#ffffff'); // Right eye white
+  fill(10, 12, 1, 1, '#4338ca'); // Left pupil
+  fill(13, 12, 1, 1, '#4338ca'); // Right pupil
+  fill(11, 13, 2, 1, '#9c6e54'); // Nose
+  fill(10, 14, 4, 1, '#5c3824'); // Mouth / goatee top
+  fill(11, 15, 2, 1, '#5c3824'); // Goatee bottom
+
+  // --- TORSO (x:16..40, y:16..32) ---
+  fill(20, 16, 8, 4, '#0891b2');  // Top shoulder
+  fill(28, 16, 8, 4, '#0e7490');  // Bottom waist
+  fill(16, 20, 24, 12, '#06b6d4'); // All 4 torso faces (cyan shirt)
+  fill(20, 20, 8, 12, '#0891b2');  // Front chest shading
+  fill(22, 20, 4, 2, '#b9856a');   // Neck V-opening
+  fill(23, 22, 2, 1, '#9c6e54');
+
+  // --- RIGHT ARM (x:40..56, y:16..32) ---
+  fill(44, 16, 4, 4, '#0891b2');   // Top sleeve
+  fill(48, 16, 4, 4, '#9c6e54');   // Bottom hand
+  fill(40, 20, 16, 4, '#06b6d4');  // Upper sleeve all sides
+  fill(40, 24, 16, 8, '#b9856a');  // Lower arm skin all sides
+  fill(44, 24, 4, 8, '#ad7a5e');   // Front arm shading
+
+  // --- LEFT ARM (64x64 format: x:32..48, y:48..64) ---
+  fill(36, 48, 4, 4, '#0891b2');   // Top sleeve
+  fill(40, 48, 4, 4, '#9c6e54');   // Bottom hand
+  fill(32, 52, 16, 4, '#06b6d4');  // Upper sleeve all sides
+  fill(32, 56, 16, 8, '#b9856a');  // Lower arm skin all sides
+  fill(36, 56, 4, 8, '#ad7a5e');   // Front arm shading
+
+  // --- RIGHT LEG (x:0..16, y:16..32) ---
+  fill(4, 16, 4, 4, '#312e81');    // Top hip
+  fill(8, 16, 4, 4, '#334155');    // Bottom shoe sole
+  fill(0, 20, 16, 10, '#3730a3');  // Indigo pants all sides
+  fill(4, 20, 4, 10, '#4338ca');   // Front leg highlight
+  fill(0, 30, 16, 2, '#475569');   // Gray shoes
+
+  // --- LEFT LEG (64x64 format: x:16..32, y:48..64) ---
+  fill(20, 48, 4, 4, '#312e81');   // Top hip
+  fill(24, 48, 4, 4, '#334155');   // Bottom shoe sole
+  fill(16, 52, 16, 10, '#3730a3'); // Indigo pants all sides
+  fill(20, 52, 4, 10, '#4338ca');  // Front leg highlight
+  fill(16, 62, 16, 2, '#475569');  // Gray shoes
+
   return c.toDataURL('image/png');
 }
-
 function buildCapeDataUrl(type) {
   if (!type || type === 'none') return null;
   const c = document.createElement('canvas'); c.width = 64; c.height = 32;

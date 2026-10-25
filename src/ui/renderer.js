@@ -5,7 +5,7 @@ const state = {
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
   ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
-  versions: [], installedVersions: [], skinModel: 'default', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
+  versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
   activeModStoreType: 'mod', activeLocalFolder: 'mods',
   favoriteServers: [
     { name: 'LuckyVN Network (Việt Nam)', ip: 'play.luckyvn.com' },
@@ -41,7 +41,7 @@ function init3DSkinViewer() {
   const fallbackUrl = createFallbackSteveSkinDataUrl();
   currentSkinDataUrl = fallbackUrl;
   skinViewer = new window.skinview3d.SkinViewer({ canvas, width: 265, height: 330, skin: fallbackUrl });
-  skinViewer.camera.position.set(18, 12, 38);
+  skinViewer.camera.position.set(-12, 12, 42);
   skinViewer.zoom = 0.86; skinViewer.autoRotate = false; skinViewer.autoRotateSpeed = 0.45;
   skinViewer.animation = new window.skinview3d.WalkingAnimation();
   skinViewer.animation.speed = 0.85;
@@ -160,7 +160,7 @@ function saveCurrentConfig() {
     selectedLoaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB,
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
-    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel,
+    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset,
     capeType: state.capeType, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm
   });
 }
@@ -293,7 +293,10 @@ function setAuthModeUI(mode) {
   } else if (mode === 'microsoft') {
     document.getElementById('msNotLoggedBox').classList.remove('hidden');
     document.getElementById('msLoggedBox').classList.add('hidden');
-  } else loadCharacterSkin(state.username);
+    loadCharacterSkin(state.selectedSkinPreset || state.username || 'StevePlayer');
+  } else {
+    loadCharacterSkin(state.selectedSkinPreset || state.username || 'StevePlayer');
+  }
   updateSummaryUI(); saveCurrentConfig();
 }
 
@@ -531,7 +534,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((chip) => {
     chip.onclick = () => {
       document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.toggle('active', c === chip));
-      loadCharacterSkin(chip.dataset.skinpreset); document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') — Tự động lưu vào Game khi bấm CHƠI NGAY!';
+      state.selectedSkinPreset = chip.dataset.skinpreset; saveCurrentConfig(); loadCharacterSkin(chip.dataset.skinpreset); document.getElementById('statusText').textContent = '✓ Đã áp dụng Skin 3D (' + chip.textContent + ') — Tự động lưu vào Game khi bấm CHƠI NGAY!';
     };
   });
 
@@ -627,7 +630,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.username = e.target.value.trim() || 'StevePlayer';
     updateCrackUuidPreview(state.username); updateSummaryUI(); saveCurrentConfig();
   };
-  document.getElementById('btnReloadSkin').onclick = () => { loadCharacterSkin(state.username); renderSavedAccounts(); };
+  document.getElementById('btnReloadSkin').onclick = () => { state.selectedSkinPreset = ''; saveCurrentConfig(); loadCharacterSkin(state.username); renderSavedAccounts(); };
   document.getElementById('btnSaveAccount').onclick = () => {
     const clean = (state.username || 'StevePlayer').trim();
     if (clean && !state.savedAccounts.includes(clean)) { state.savedAccounts.push(clean); renderSavedAccounts(); saveCurrentConfig(); }
