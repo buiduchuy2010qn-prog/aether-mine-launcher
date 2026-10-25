@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v29.2 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v29.6 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v29.5 PRO</span>
+          <span class="brand-version">v29.6 PRO</span>
         </div>
       </div>
 
@@ -39,7 +39,7 @@
         </button>
         <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">v29.5.0</span>
+          <span id="updateBtnText">v29.6.0</span>
         </button>
       </div>
 
@@ -446,64 +446,84 @@
           </div>
         </section>
 
-        <!-- TAB 2: KHO MOD, SHADER & RESOURCE PACK (MODRINTH API V2 - FULL 77,000+ MODS) -->
+        <!-- TAB 2: KHO MOD, SHADER & RESOURCE PACK (3-TIER STUDIO ARCHITECTURE) -->
         <section class="tab-panel" id="tab-mods">
           <div class="mods-tab-header">
-            <div>
+            <div class="subpage-title-block">
               <div style="display:flex;align-items:center;gap:10px;">
-                <h2>Kho Tải Mod, Shader &amp; Resource Pack 1-Click (Full Modrinth)</h2>
+                <h2>Kho Tải Mod, Shader &amp; Resource Pack (Modrinth Official)</h2>
                 <span class="installed-count-tag" id="modTotalCounterBadge">77,600+ Gói</span>
               </div>
-              <p>Tự động lọc và tải thẳng vào đúng thư mục phiên bản <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong> trên máy bạn.</p>
+              <p>Tự động lọc và cài đặt thẳng vào thư mục phiên bản <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong> trên máy bạn.</p>
             </div>
             <div class="mods-header-actions">
-              <button class="btn-sync-skin" id="btnToggleModAllVersions" title="Bật để mở khóa toàn bộ 77,600+ Mod của mọi phiên bản trên Modrinth">Full Kho (Mọi Bản): TẮT</button>
               <button class="btn-fps-boost-1click" id="btnStoreFpsBoost" title="Tự động tải bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, Iris)">
-                <span>Cài Trọn Bộ Mod X3 FPS</span>
+                <span>⚡ Cài Trọn Bộ Mod X3 FPS</span>
               </button>
-              <button class="btn-sync-skin" id="btnOpenModsFolder">Mở thư mục đang chọn</button>
+              <button class="btn-sync-skin" id="btnOpenModsFolder">📂 Mở Thư Mục</button>
             </div>
           </div>
 
-          <div class="mods-control-bar">
-            <div class="mods-type-tabs">
-              <button class="mtype-btn active" data-ptype="mod">Kho Mods (.jar)</button>
-              <button class="mtype-btn" data-ptype="shader">Shaders (Bóng đổ)</button>
-              <button class="mtype-btn" data-ptype="resourcepack">Resource Packs</button>
-              <button class="mtype-btn" data-ptype="installed">Đã Cài Trong Máy (<span id="localAddonCount">0</span>)</button>
+          <div class="mods-filter-tiers">
+            <!-- TẦNG 1: LOẠI NỘI DUNG -->
+            <div class="mods-tier-row mods-tier-1">
+              <div class="mods-type-tabs">
+                <button class="mtype-btn active" data-ptype="mod">🧩 Mod (.jar)</button>
+                <button class="mtype-btn" data-ptype="shader">✨ Shader (Bóng đổ)</button>
+                <button class="mtype-btn" data-ptype="resourcepack">🎨 Resource Pack</button>
+                <button class="mtype-btn" data-ptype="installed">📦 Đã Cài (<span id="localAddonCount">0</span>)</button>
+              </div>
+              <button class="btn-sync-skin compat-filter-btn" id="btnToggleModAllVersions" title="Chuyển giữa lọc theo đúng phiên bản đang chọn hoặc hiện toàn bộ kho Modrinth">
+                🎯 Lọc theo bản đang chọn
+              </button>
             </div>
-            <div class="mods-sort-group" id="modSortBar">
-              <button class="vtype-btn active" data-msort="downloads" title="Sắp xếp theo lượt tải nhiều nhất">Tải nhiều</button>
-              <button class="vtype-btn" data-msort="follows" title="Sắp xếp theo lượt yêu thích">Yêu thích</button>
-              <button class="vtype-btn" data-msort="updated" title="Sắp xếp theo mới cập nhật">Mới cập nhật</button>
-              <button class="vtype-btn" data-msort="newest" title="Sắp xếp theo mới ra mắt">Mới nhất</button>
-            </div>
-            <div class="mods-search-box">
-              <input type="text" id="modSearchInput" class="pro-input" placeholder="Tìm trong 77,600+ Mod / Shader (vd: Create, Ice and Fire, Origins, Sodium, Xaero)..." />
-              <button class="btn-sync-skin" id="btnSearchModrinth">Tìm kiếm</button>
-            </div>
-          </div>
 
-          <div class="mods-quick-tags-bar" id="modQuickCategoryBar">
-            <span class="mqt-label">Danh mục Full Mod:</span>
-            <button class="mqt-chip active" data-mcat="" data-mquery="" data-mtype="mod">Tất Cả Mod</button>
-            <button class="mqt-chip" data-mcat="optimization" data-mquery="" data-mtype="mod">Tối Ưu &amp; Tăng FPS</button>
-            <button class="mqt-chip" data-mcat="combat" data-mquery="" data-mtype="mod">Vũ Khí, Giáp &amp; PvP</button>
-            <button class="mqt-chip" data-mcat="mobs" data-mquery="" data-mtype="mod">Boss, Rồng &amp; Sinh Vật</button>
-            <button class="mqt-chip" data-mcat="worldgen" data-mquery="" data-mtype="mod">Thế Giới, Biome &amp; Hầm Ngục</button>
-            <button class="mqt-chip" data-mcat="adventure" data-mquery="" data-mtype="mod">Phiêu Lưu &amp; RPG</button>
-            <button class="mqt-chip" data-mcat="technology" data-mquery="" data-mtype="mod">Công Nghệ &amp; Máy Móc (Create)</button>
-            <button class="mqt-chip" data-mcat="magic" data-mquery="" data-mtype="mod">Phép Thuật &amp; Kỹ Năng</button>
-            <button class="mqt-chip" data-mcat="storage" data-mquery="" data-mtype="mod">Ba Lô, Rương &amp; Kho Đồ</button>
-            <button class="mqt-chip" data-mcat="food" data-mquery="" data-mtype="mod">Nông Trại &amp; Nấu Ăn</button>
-            <button class="mqt-chip" data-mcat="decoration" data-mquery="" data-mtype="mod">Nội Thất &amp; Trang Trí</button>
-            <button class="mqt-chip" data-mcat="transportation" data-mquery="" data-mtype="mod">Xe Cộ, Máy Bay &amp; Tàu</button>
-            <button class="mqt-chip" data-mcat="" data-mquery="Xaero JourneyMap Minimap" data-mtype="mod">Bản Đồ Minimap</button>
-            <button class="mqt-chip" data-mcat="" data-mquery="Simple Voice Chat Emotecraft Skin Layers" data-mtype="mod">Voice Chat &amp; 3D Skin</button>
-            <button class="mqt-chip" data-mcat="" data-mquery="JEI Roughly Enough Items EMI Jade" data-mtype="mod">Xem Công Thức (JEI/REI)</button>
-            <button class="mqt-chip" data-mcat="utility" data-mquery="" data-mtype="mod">Tiện Ích &amp; Zoom</button>
-            <button class="mqt-chip" data-mcat="library" data-mquery="" data-mtype="mod">Thư Viện (Fabric API/GeckoLib)</button>
-            <button class="mqt-chip" data-mcat="" data-mquery="" data-mtype="shader">Top Shaders Bóng Đổ</button>
+            <!-- TẦNG 2: TÌM KIẾM RỘNG & SẮP XẾP -->
+            <div class="mods-tier-row mods-tier-2">
+              <div class="mods-search-box">
+                <input type="text" id="modSearchInput" class="pro-input" placeholder="Tìm nhanh trong 77,600+ gói (vd: Sodium, Iris, Create, Ice and Fire, Xaero)..." />
+                <button class="btn-sync-skin" id="btnSearchModrinth">🔍 Tìm kiếm</button>
+              </div>
+              <div class="mods-sort-group" id="modSortBar">
+                <button class="vtype-btn active" data-msort="downloads" title="Sắp xếp theo lượt tải nhiều nhất">Tải nhiều nhất</button>
+                <button class="vtype-btn" data-msort="follows" title="Sắp xếp theo lượt yêu thích">Yêu thích</button>
+                <button class="vtype-btn" data-msort="updated" title="Sắp xếp theo mới cập nhật">Mới cập nhật</button>
+                <button class="vtype-btn" data-msort="newest" title="Sắp xếp theo mới ra mắt">Mới nhất</button>
+              </div>
+            </div>
+
+            <!-- TẦNG 3: DANH MỤC (1 HÀNG CHÍNH + BỘ LỌC MỞ RỘNG) -->
+            <div class="mods-tier-3" id="modQuickCategoryBar">
+              <div class="mods-cat-primary-row">
+                <span class="mqt-label">Danh mục:</span>
+                <div class="mods-cat-primary-chips">
+                  <button class="mqt-chip active" data-mcat="" data-mquery="" data-mtype="mod">Tất Cả</button>
+                  <button class="mqt-chip" data-mcat="optimization" data-mquery="" data-mtype="mod">⚡ Tối Ưu FPS</button>
+                  <button class="mqt-chip" data-mcat="combat" data-mquery="" data-mtype="mod">⚔️ Vũ Khí &amp; PvP</button>
+                  <button class="mqt-chip" data-mcat="mobs" data-mquery="" data-mtype="mod">🐉 Boss &amp; Sinh Vật</button>
+                  <button class="mqt-chip" data-mcat="worldgen" data-mquery="" data-mtype="mod">🌍 Thế Giới &amp; Biome</button>
+                  <button class="mqt-chip" data-mcat="technology" data-mquery="" data-mtype="mod">⚙️ Công Nghệ (Create)</button>
+                  <button class="mqt-chip" data-mcat="" data-mquery="Xaero JourneyMap Minimap" data-mtype="mod">🗺️ Bản Đồ Minimap</button>
+                  <button class="mqt-chip" data-mcat="" data-mquery="JEI Roughly Enough Items EMI Jade" data-mtype="mod">📖 Công Thức (JEI)</button>
+                </div>
+                <button type="button" class="mqt-more-btn" id="btnToggleMoreModCats" title="Mở rộng toàn bộ danh mục phụ">
+                  + Bộ lọc khác (10) ▾
+                </button>
+              </div>
+
+              <div class="mods-cat-secondary-drawer hidden" id="modMoreCatsDrawer">
+                <button class="mqt-chip" data-mcat="adventure" data-mquery="" data-mtype="mod">🏰 Phiêu Lưu &amp; RPG</button>
+                <button class="mqt-chip" data-mcat="magic" data-mquery="" data-mtype="mod">🔮 Phép Thuật &amp; Kỹ Năng</button>
+                <button class="mqt-chip" data-mcat="storage" data-mquery="" data-mtype="mod">🎒 Ba Lô, Rương &amp; Kho Đồ</button>
+                <button class="mqt-chip" data-mcat="food" data-mquery="" data-mtype="mod">🌾 Nông Trại &amp; Nấu Ăn</button>
+                <button class="mqt-chip" data-mcat="decoration" data-mquery="" data-mtype="mod">🪑 Nội Thất &amp; Trang Trí</button>
+                <button class="mqt-chip" data-mcat="transportation" data-mquery="" data-mtype="mod">✈️ Xe Cộ, Máy Bay &amp; Tàu</button>
+                <button class="mqt-chip" data-mcat="" data-mquery="Simple Voice Chat Emotecraft Skin Layers" data-mtype="mod">🎙️ Voice Chat &amp; 3D Skin</button>
+                <button class="mqt-chip" data-mcat="utility" data-mquery="" data-mtype="mod">🔭 Tiện Ích &amp; Zoom</button>
+                <button class="mqt-chip" data-mcat="library" data-mquery="" data-mtype="mod">📚 Thư Viện (Fabric API/GeckoLib)</button>
+                <button class="mqt-chip" data-mcat="" data-mquery="" data-mtype="shader">✨ Top Shaders Bóng Đổ</button>
+              </div>
+            </div>
           </div>
 
           <!-- ONLINE MODRINTH RESULTS GRID -->
@@ -512,7 +532,7 @@
           <!-- INSTALLED ADDONS MANAGER -->
           <div class="local-addons-wrap hidden" id="localAddonsWrap">
             <div class="local-addons-toolbar">
-              <span>Quản lý các file đã tải trong máy (Bật/Tắt nhanh không cần xóa file):</span>
+              <span>Quản lý các gói đã cài trên máy (Bật/Tắt nhanh mà không cần xóa file):</span>
               <div class="vtype-group">
                 <button class="vtype-btn active" data-localfolder="mods">Thư mục mods</button>
                 <button class="vtype-btn" data-localfolder="shaderpacks">Thư mục shaderpacks</button>
@@ -525,21 +545,35 @@
 
         <!-- TAB 3: QUẢN LÝ THẾ GIỚI CHƠI ĐƠN (SAVES) & SERVER MULTIPLAYER -->
         <section class="tab-panel" id="tab-worlds">
+          <div class="subtab-header">
+            <div class="subpage-title-block">
+              <h2>Quản Lý Thế Giới Chơi Đơn &amp; Máy Chủ Multiplayer</h2>
+              <p>Mở nhanh bản đồ trong máy, kiểm tra ping trực tuyến và kết nối thẳng vào Server chỉ với 1-Click.</p>
+            </div>
+          </div>
+
           <div class="worlds-servers-grid">
             <!-- LEFT: SINGLEPLAYER WORLDS -->
             <div class="bento-card worlds-col-card">
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot emerald"></span>
-                  <h3>THẾ GIỚI CHƠN ĐƠN (.MINECRAFT/SAVES)</h3>
+                  <h3>THẾ GIỚI CHƠI ĐƠN (.MINECRAFT/SAVES)</h3>
+                  <span class="installed-count-tag" id="worldsCountBadge">0 Map</span>
                 </div>
                 <div style="display:flex;gap:6px;">
-                  <button class="btn-sync-skin" id="btnOpenSavesFolder">Mở Saves</button>
-                  <button class="btn-sync-skin" id="btnOpenScreenshots">Ảnh Chụp</button>
-                  <button class="vtype-btn" id="btnRefreshWorlds">Làm mới</button>
+                  <button class="btn-sync-skin" id="btnOpenSavesFolder">📂 Mở Saves</button>
+                  <button class="btn-sync-skin" id="btnOpenScreenshots">🖼️ Ảnh Chụp</button>
+                  <button class="vtype-btn" id="btnRefreshWorlds">🔄 Làm mới</button>
                 </div>
               </div>
               <div class="worlds-list-wrap" id="localWorldsList"></div>
+              <div class="subpage-tip-box">
+                <div class="stb-icon">💡</div>
+                <div class="stb-text">
+                  <strong>Mẹo quản lý Thế giới chơi đơn:</strong> Mọi bản đồ trong thư mục <code>.minecraft/saves</code> đều được tự động hiển thị kèm ảnh đại diện. Bạn có thể bấm nút <strong>Đồng Bộ Cũ</strong> trên Trang chủ để chuyển toàn bộ Map từ Launcher khác sang.
+                </div>
+              </div>
             </div>
 
             <!-- RIGHT: FAVORITE MULTIPLAYER SERVERS (1-CLICK DIRECT JOIN) -->
@@ -547,11 +581,11 @@
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot cyan"></span>
-                  <h3>MÁY CHỦ MULTIPLAYER YÊU THÍCH (LIVE PING &amp; VÀO 1-CLICK)</h3>
+                  <h3>MÁY CHỦ MULTIPLAYER YÊU THÍCH</h3>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span class="field-hint-mini" id="activeServerBadge">Chế độ: Bình thường</span>
-                  <button class="vtype-btn" id="btnPingAllServers" title="Kiểm tra trạng thái Online & số người chơi">Làm mới Ping</button>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="field-hint-mini" id="activeServerBadge">Chế độ: Vào Menu chính</span>
+                  <button class="vtype-btn" id="btnPingAllServers" title="Kiểm tra trạng thái Online & số người chơi">📡 Ping</button>
                 </div>
               </div>
               <div class="add-server-bar">
@@ -560,6 +594,12 @@
                 <button class="btn-sync-skin" id="btnAddServer">+ Thêm Server</button>
               </div>
               <div class="worlds-list-wrap" id="favoriteServersList"></div>
+              <div class="subpage-tip-box">
+                <div class="stb-icon">⚡</div>
+                <div class="stb-text">
+                  <strong>Kết nối thẳng 1-Click:</strong> Khi bấm <strong>▶ Tham gia</strong> trên bất kỳ máy chủ nào, Launcher sẽ tự động vào thẳng Server đó ngay khi Minecraft khởi động xong.
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -567,40 +607,90 @@
         <!-- TAB 4: DANH SÁCH ĐẦY ĐỦ CÁC PHIÊN BẢN -->
         <section class="tab-panel" id="tab-versions">
           <div class="versions-tab-header">
-            <div>
-              <h2>Danh Sách Phiên Bản Minecraft (Từ Mojang Official)</h2>
-              <p>Tìm kiếm và bấm chọn bất kỳ phiên bản nào bên dưới để nạp vào màn hình chính.</p>
+            <div class="subpage-title-block">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <h2>Danh Sách Phiên Bản Minecraft (Mojang Official)</h2>
+                <span class="installed-count-tag" id="fullVerCountBadge">Tất cả bản</span>
+              </div>
+              <p>Lọc theo loại phiên bản hoặc tìm kiếm nhanh và bấm chọn để nạp ngay vào Trang chủ.</p>
             </div>
             <div class="versions-search-controls">
-              <input type="text" id="versionSearchInput" class="pro-input" placeholder="Tìm phiên bản (vd: 1.21.4, 1.16.5, 1.12.2, 1.8.9)..." style="width:280px;" />
+              <div class="vtype-group" id="fullVerFilterBar">
+                <button class="vtype-btn active" data-vfilter="all">Tất cả</button>
+                <button class="vtype-btn" data-vfilter="release">Chính thức</button>
+                <button class="vtype-btn" data-vfilter="snapshot">Snapshot</button>
+                <button class="vtype-btn" data-vfilter="installed">✓ Đã cài</button>
+              </div>
+              <input type="text" id="versionSearchInput" class="pro-input" placeholder="Tìm phiên bản (vd: 1.21.4, 1.20.1, 1.16.5, 1.8.9)..." style="width:270px;" />
             </div>
           </div>
           <div class="versions-table-wrap" id="fullVersionsList"></div>
         </section>
 
-        <!-- TAB 5: CÀI ĐẶT RAM, JAVA & TẮT MƯỢT -->
+        <!-- TAB 5: CÀI ĐẶT RAM, JAVA, HIỂN THỊ & TỐI ƯU HỆ THỐNG (4-CARD STUDIO GRID) -->
         <section class="tab-panel" id="tab-settings">
           <div class="subtab-header">
-            <div>
-              <h2>Cài Đặt Hệ Thống, Đường Dẫn Java &amp; Độ Phân Giải</h2>
-              <p>Tùy chỉnh đường dẫn thực thi Java, thư mục lưu game, độ phân giải cửa sổ và tham số tối ưu đa nhân.</p>
+            <div class="subpage-title-block">
+              <h2>Cài Đặt Hệ Thống, Java, Thư Mục &amp; Tối Ưu Hiệu Năng</h2>
+              <p>Quản lý môi trường Java Runtime, thư mục lưu trữ dữ liệu game, độ phân giải hiển thị và bộ tăng tốc đa nhân.</p>
             </div>
           </div>
 
-          <div class="settings-bento">
-            <div class="bento-card">
-              <h3>Đường Dẫn Java, Thư Mục &amp; Màn Hình Game</h3>
-              <label class="field-label">Đường dẫn Java (`javaw.exe` hoặc `java`)</label>
-              <div class="input-with-btn">
-                <input type="text" id="javaPathInput" class="pro-input" />
-                <button class="btn-sync-skin" id="btnAutoDetectJava" title="Tự động quét và điền đường dẫn Java chuẩn trên máy">Tự Dò Java</button>
+          <div class="settings-bento-4">
+            <!-- THẺ 1: MÔI TRƯỜNG JAVA RUNTIME -->
+            <div class="bento-card settings-card-unit">
+              <div class="dsp-head">
+                <div class="dsp-head-left">
+                  <span class="card-dot emerald"></span>
+                  <h3>MÔI TRƯỜNG JAVA RUNTIME (JDK / JRE)</h3>
+                </div>
+                <span class="installed-count-tag" id="settingsJavaBadge">Java 21 • Tự động</span>
               </div>
-              <label class="field-label" style="margin-top:12px;">Thư mục dữ liệu Minecraft (`.minecraft`)</label>
+              <p class="settings-card-desc">Đường dẫn tệp thực thi <code>javaw.exe</code> dùng để khởi chạy máy ảo Minecraft.</p>
               <div class="input-with-btn">
-                <input type="text" id="gameDirInput" class="pro-input" />
-                <button class="btn-sync-skin" id="btnOpenGameDirSettings" title="Mở thư mục .minecraft trong Windows Explorer">Mở Thư Mục</button>
+                <input type="text" id="javaPathInput" class="pro-input path-ellipsis-input" title="Đường dẫn Java đang sử dụng" />
+                <button class="btn-sync-skin" id="btnCopyJavaPath" title="Sao chép đường dẫn Java">📋 Sao chép</button>
+                <button class="btn-sync-skin" id="btnAutoDetectJava" title="Tự động quét và chọn bản Java chuẩn trên máy">🔍 Tự Dò Java</button>
               </div>
-              <label class="field-label" style="margin-top:14px;">Độ Phân Giải Cửa Sổ Game &amp; Toàn Màn Hình</label>
+              <div class="settings-info-pills">
+                <div class="sip-item"><span>☕ Bản 1.20.5 – 1.21.11+:</span> <strong>JDK 21 (64-bit)</strong></div>
+                <div class="sip-item"><span>☕ Bản 1.17 – 1.20.4:</span> <strong>JDK 17 • ≤1.16.5: JRE 8</strong></div>
+              </div>
+            </div>
+
+            <!-- THẺ 2: THƯ MỤC DỮ LIỆU GAME (.MINECRAFT) -->
+            <div class="bento-card settings-card-unit">
+              <div class="dsp-head">
+                <div class="dsp-head-left">
+                  <span class="card-dot cyan"></span>
+                  <h3>THƯ MỤC DỮ LIỆU GAME (.MINECRAFT)</h3>
+                </div>
+                <span class="installed-count-tag">Lưu trữ cục bộ</span>
+              </div>
+              <p class="settings-card-desc">Nơi lưu trữ toàn bộ Phiên bản, Thế giới chơi đơn, Mods, Shaders và Resource Packs.</p>
+              <div class="input-with-btn">
+                <input type="text" id="gameDirInput" class="pro-input path-ellipsis-input" title="Thư mục dữ liệu .minecraft" />
+                <button class="btn-sync-skin" id="btnCopyGameDir" title="Sao chép đường dẫn thư mục game">📋 Sao chép</button>
+                <button class="btn-sync-skin" id="btnOpenGameDirSettings" title="Mở thư mục .minecraft trong Windows Explorer">📂 Mở Thư Mục</button>
+              </div>
+              <div class="settings-subfolder-grid">
+                <button class="vtype-btn" data-opensub="mods">🧩 Mở thư mục Mods</button>
+                <button class="vtype-btn" data-opensub="shaderpacks">✨ Mở Shaderpacks</button>
+                <button class="vtype-btn" data-opensub="resourcepacks">🎨 Mở Resourcepacks</button>
+                <button class="vtype-btn" data-opensub="logs">📄 Xem file Logs</button>
+              </div>
+            </div>
+
+            <!-- THẺ 3: HIỂN THỊ, ĐỘ PHÂN GIẢI & ĐỒNG BỘ -->
+            <div class="bento-card settings-card-unit">
+              <div class="dsp-head">
+                <div class="dsp-head-left">
+                  <span class="card-dot emerald"></span>
+                  <h3>HIỂN THỊ CỬA SỔ GAME &amp; TIỆN ÍCH HỆ THỐNG</h3>
+                </div>
+                <span class="installed-count-tag" id="settingsResBadge">1280×720 (HD)</span>
+              </div>
+              <p class="settings-card-desc">Chọn kích thước cửa sổ mặc định khi mở Minecraft hoặc chế độ Toàn màn hình.</p>
               <div class="res-preset-bar" id="winResolutionBar">
                 <button class="res-pill-btn" data-res="854x480">854×480 (Nhẹ)</button>
                 <button class="res-pill-btn active" data-res="1280x720">1280×720 (HD)</button>
@@ -608,26 +698,53 @@
                 <button class="res-pill-btn" data-res="1920x1080">1920×1080 (FHD)</button>
                 <button class="res-pill-btn" data-res="fullscreen">Toàn Màn Hình</button>
               </div>
+              <div class="settings-utility-bar">
+                <div class="sub-info">
+                  <span>Đồng bộ Map, Mod &amp; Tài khoản từ TLauncher / CurseForge / Prism:</span>
+                </div>
+                <button class="btn-sync-skin" id="btnSettingsMigrate">🔄 Mở Trình Đồng Bộ</button>
+              </div>
             </div>
 
-            <div class="bento-card">
-              <h3>Tùy Chọn Tối Ưu Hiệu Năng</h3>
-              <label class="toggle-line" style="margin-top:10px;">
-                <input type="checkbox" id="hideLauncherCheck" checked />
-                <span><strong>Ngủ đông Launcher khi chơi (0% GPU) &amp; Tắt Mine siêu mượt (&lt;0.2s):</strong> Tự tạm dừng 3D WebGL khi game mở và giải phóng `javaw.exe` ngay khi đóng game.</span>
-              </label>
-              <label class="toggle-line" style="margin-top:14px;">
-                <input type="checkbox" id="fastSkipCheck" checked />
-                <span><strong>Fast-Skip SHA1 Verification:</strong> Bỏ qua kiểm tra lại file tài nguyên đã tải để vào game dưới 1 giây.</span>
-              </label>
-              <label class="toggle-line" style="margin-top:14px;">
-                <input type="checkbox" id="aikarFlagsCheck" checked />
-                <span><strong>Dynamic Low-Commit Heap (`-Xms512M` + Periodic G1GC):</strong> Tự trả RAM trống về Windows mỗi 15 giây, chống tràn Pagefile gây đơ máy.</span>
-              </label>
-              <label class="toggle-line" style="margin-top:14px;">
-                <input type="checkbox" id="crackSkinSyncToggle" checked />
-                <span><strong>CustomSkinLoader Auto-Config:</strong> Tự động đồng bộ Skin (Online &amp; File PNG) trong chế độ Crack / Offline.</span>
-              </label>
+            <!-- THẺ 4: TỐI ƯU HIỆU NĂNG & ĐA NHÂN -->
+            <div class="bento-card settings-card-unit">
+              <div class="dsp-head">
+                <div class="dsp-head-left">
+                  <span class="card-dot cyan"></span>
+                  <h3>TỐI ƯU HIỆU NĂNG &amp; ĐA NHÂN JVM</h3>
+                </div>
+                <span class="installed-count-tag">Khuyên bật cả 4</span>
+              </div>
+              <div class="settings-opt-list">
+                <label class="settings-opt-item">
+                  <input type="checkbox" id="hideLauncherCheck" checked />
+                  <div class="soi-body">
+                    <strong>Ngủ đông Launcher khi chơi (0% GPU) &amp; Tắt nhanh (&lt;0.2s)</strong>
+                    <span>Tự động tạm dừng 3D WebGL khi vào game và giải phóng tiến trình javaw.exe ngay khi đóng.</span>
+                  </div>
+                </label>
+                <label class="settings-opt-item">
+                  <input type="checkbox" id="fastSkipCheck" checked />
+                  <div class="soi-body">
+                    <strong>Vào game siêu tốc (Fast-Skip SHA1 Verification)</strong>
+                    <span>Bỏ qua kiểm tra lặp lại hàng nghìn file tài nguyên đã có sẵn để vào game dưới 1 giây.</span>
+                  </div>
+                </label>
+                <label class="settings-opt-item">
+                  <input type="checkbox" id="aikarFlagsCheck" checked />
+                  <div class="soi-body">
+                    <strong>Tối ưu bộ nhớ G1GC (Dynamic Low-Commit Heap)</strong>
+                    <span>Tự động thu hồi và trả RAM trống về Windows mỗi 15 giây, chống tràn Pagefile gây đơ máy.</span>
+                  </div>
+                </label>
+                <label class="settings-opt-item">
+                  <input type="checkbox" id="crackSkinSyncToggle" checked />
+                  <div class="soi-body">
+                    <strong>Đồng bộ Skin 3D vào Game (Offline &amp; ResourcePack)</strong>
+                    <span>Tự động nạp Skin 3D đang chọn trên Launcher vào thẳng nhân vật trong chế độ Offline / Crack.</span>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
         </section>

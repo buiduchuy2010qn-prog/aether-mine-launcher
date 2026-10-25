@@ -354,11 +354,41 @@ function renderFullVersionTable(query = '') {
   if (!container) return;
   const grassSrc = document.getElementById('dockGrassImg')?.src || '';
   const q = query.trim().toLowerCase();
-  const list = state.versions.filter((v) => !q || v.id.toLowerCase().includes(q)).slice(0, 120);
+  const vf = state.fullVersionFilter || 'all';
+
+  const filtered = state.versions.filter((v) => {
+    if (q && !v.id.toLowerCase().includes(q)) return false;
+    if (vf === 'installed') return isVersionInstalledOnDisk(v.id);
+    if (vf === 'release') return v.type === 'release';
+    if (vf === 'snapshot') return v.type === 'snapshot';
+    return true;
+  });
+
+  const countBadge = document.getElementById('fullVerCountBadge');
+  if (countBadge) countBadge.textContent = `${filtered.length} bản`;
+
+  const list = filtered.slice(0, 150);
+  if (!list.length) {
+    container.innerHTML = `<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-muted);font-weight:700;">Không tìm thấy phiên bản nào khớp với bộ lọc hiện tại.</div>`;
+    return;
+  }
+
   container.innerHTML = list.map((v) => {
-    const dateStr = v.releaseTime ? new Date(v.releaseTime).toLocaleDateString('vi-VN') : '';
+    const dateStr = v.releaseTime ? new Date(v.releaseTime).toLocaleDateString('vi-VN') : 'Chính thức';
     const inst = isVersionInstalledOnDisk(v.id);
-    return `<div class="ver-row-card ${v.id === state.selectedVersion ? 'active' : ''}" data-ver="${v.id}"><div style="display:flex;align-items:center;gap:8px;">${grassSrc ? `<img src="${grassSrc}" style="width:22px;height:22px;object-fit:contain;image-rendering:pixelated;flex-shrink:0;" draggable="false"/>` : ''}<div><strong>Minecraft ${v.id}</strong><div style="font-size:10px;color:var(--text-muted);">${dateStr}</div></div></div><span style="color:${inst ? '#16a34a' : 'var(--text-muted)'};font-weight:700;">${inst ? '✓ Đã tải' : v.type.toUpperCase()}</span></div>`;
+    const displayName = v.id.length > 11 ? v.id : `Minecraft ${v.id}`;
+    const badgeClass = inst ? 'installed' : (v.type === 'release' ? 'release' : 'snapshot');
+    const badgeLabel = inst ? '✓ Đã cài' : (v.type === 'release' ? 'Release' : (v.type === 'snapshot' ? 'Snapshot' : 'Legacy'));
+    return `<div class="ver-row-card ${v.id === state.selectedVersion ? 'active' : ''}" data-ver="${v.id}" title="Minecraft ${v.id} (${dateStr})">
+      <div class="ver-card-left">
+        ${grassSrc ? `<img src="${grassSrc}" class="ver-card-icon" draggable="false"/>` : ''}
+        <div class="ver-card-text">
+          <strong class="ver-card-name">${displayName}</strong>
+          <div class="ver-card-date">${dateStr}</div>
+        </div>
+      </div>
+      <span class="ver-type-badge ${badgeClass}">${badgeLabel}</span>
+    </div>`;
   }).join('');
   container.querySelectorAll('.ver-row-card').forEach((card) => {
     card.onclick = async () => {
@@ -701,10 +731,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
   document.querySelectorAll('#winResolutionBar .res-pill-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.res === (state.winResolution || '1280x720'));
+    const isAct = btn.dataset.res === (state.winResolution || '1280x720');
+    btn.classList.toggle('active', isAct);
+    if (isAct) {
+      const resBadge = document.getElementById('settingsResBadge');
+      if (resBadge) resBadge.textContent = btn.textContent;
+    }
     btn.onclick = () => {
       state.winResolution = btn.dataset.res;
       document.querySelectorAll('#winResolutionBar .res-pill-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      const resBadge = document.getElementById('settingsResBadge');
+      if (resBadge) resBadge.textContent = btn.textContent;
       saveCurrentConfig();
     };
   });
@@ -722,6 +759,22 @@ window.addEventListener('DOMContentLoaded', async () => {
       loadModrinthStore(false);
     };
   });
+  const btnMoreModCats = document.getElementById('btnToggleMoreModCats');
+  const moreCatsDrawer = document.getElementById('modMoreCatsDrawer');
+  if (btnMoreModCats && moreCatsDrawer) {
+    btnMoreModCats.onclick = () => {
+      const isHidden = moreCatsDrawer.classList.toggle('hidden');
+      btnMoreModCats.classList.toggle('active', !isHidden);
+      btnMoreModCats.textContent = isHidden ? '+ Bộ lọc khác (10) ▾' : '▲ Thu gọn bộ lọc';
+    };
+  }
+  document.querySelectorAll('#fullVerFilterBar [data-vfilter]').forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll('#fullVerFilterBar [data-vfilter]').forEach((b) => b.classList.toggle('active', b === btn));
+      state.fullVersionFilter = btn.dataset.vfilter || 'all';
+      renderFullVersionTable(document.getElementById('versionSearchInput')?.value || '');
+    };
+  });
   document.querySelectorAll('#modSortBar [data-msort]').forEach((btn) => {
     btn.onclick = () => {
       document.querySelectorAll('#modSortBar [data-msort]').forEach((b) => b.classList.toggle('active', b === btn));
@@ -734,7 +787,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnModAllVer.onclick = () => {
       state.modAllVersions = !state.modAllVersions;
       btnModAllVer.classList.toggle('active', state.modAllVersions);
-      btnModAllVer.textContent = state.modAllVersions ? 'Full Kho (77,600+ Mod): BẬT' : 'Full Kho (Mọi Bản): TẮT';
+      btnModAllVer.textContent = state.modAllVersions ? '🌐 Đang mở mọi phiên bản' : '🎯 Lọc theo bản đang chọn';
       loadModrinthStore(false);
     };
   }
@@ -968,6 +1021,29 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   const btnOpenDirSet = document.getElementById('btnOpenGameDirSettings');
   if (btnOpenDirSet) btnOpenDirSet.onclick = () => window.aetherAPI.openGameDir(state.gameDir);
+  const btnCopyJava = document.getElementById('btnCopyJavaPath');
+  if (btnCopyJava) {
+    btnCopyJava.onclick = () => {
+      navigator.clipboard?.writeText(state.javaPath || '');
+      btnCopyJava.textContent = '✓ Đã chép';
+      setTimeout(() => (btnCopyJava.textContent = '📋 Sao chép'), 1400);
+    };
+  }
+  const btnCopyGDir = document.getElementById('btnCopyGameDir');
+  if (btnCopyGDir) {
+    btnCopyGDir.onclick = () => {
+      navigator.clipboard?.writeText(state.gameDir || '');
+      btnCopyGDir.textContent = '✓ Đã chép';
+      setTimeout(() => (btnCopyGDir.textContent = '📋 Sao chép'), 1400);
+    };
+  }
+  document.querySelectorAll('[data-opensub]').forEach((btn) => {
+    btn.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, btn.dataset.opensub);
+  });
+  const btnSetMig = document.getElementById('btnSettingsMigrate');
+  if (btnSetMig && typeof openLauncherMigrateModal === 'function') {
+    btnSetMig.onclick = () => openLauncherMigrateModal();
+  }
   const btnSnap3D = document.getElementById('btnSnap3DSkin');
   if (btnSnap3D) {
     btnSnap3D.onclick = () => {

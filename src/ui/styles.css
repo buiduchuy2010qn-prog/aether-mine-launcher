@@ -3799,6 +3799,11 @@ html[data-theme="cherry"] {
 .cape-chip.active,
 .wt-model-btn.active,
 .acc-chip.active,
+.mtype-btn.active,
+.mqt-chip.active,
+.mqt-more-btn.active,
+.res-pill-btn.active,
+#btnToggleModAllVersions.active,
 #btnToggleOuterLayer.active {
   background: var(--accent-glow) !important;
   color: var(--accent) !important;
@@ -3811,6 +3816,893 @@ html[data-theme="cherry"] {
   background: rgba(15, 23, 42, 0.85) !important;
   color: #4ade80 !important;
   border: 1px solid rgba(74, 222, 128, 0.55) !important;
+}
+
+/* ============================================================================
+   v29.6 PRO: UNIFIED SUBPAGES ARCHITECTURE (MOD STORE 3-TIER FILTER,
+   4-CARD SETTINGS BENTO, NATURAL-HEIGHT WORLDS/SERVERS & UNIFORM VERSIONS GRID)
+   ============================================================================ */
+
+/* 0. UNIFIED SUBPAGE HEADERS & TYPOGRAPHY HIERARCHY */
+.mods-tab-header,
+.versions-tab-header,
+.subtab-header,
+.console-header-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 14px !important;
+  margin-bottom: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.subpage-title-block h2,
+.console-header-row h2 {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  letter-spacing: -0.2px !important;
+  line-height: 1.25 !important;
+}
+
+.subpage-title-block p,
+.console-header-row p {
+  font-size: 12.5px !important;
+  color: var(--text-muted) !important;
+  margin-top: 3px !important;
+  line-height: 1.4 !important;
+}
+
+/* 1. TAB 2: KHO MOD, SHADER & RESOURCE PACK — 3-TIER FILTER & UNIFORM CARDS */
+.mods-filter-tiers {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-col) !important;
+  border-radius: 12px !important;
+  padding: 11px 14px !important;
+  margin-bottom: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.mods-tier-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.mods-type-tabs {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+}
+
+.mtype-btn {
+  height: 35px !important;
+  padding: 0 13px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border-col) !important;
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.mtype-btn:hover {
+  border-color: var(--accent) !important;
+}
+
+.compat-filter-btn {
+  height: 35px !important;
+  padding: 0 13px !important;
+  font-size: 12px !important;
+  border-radius: 8px !important;
+}
+
+.mods-tier-2 .mods-search-box {
+  flex: 1 !important;
+  max-width: none !important;
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.mods-tier-2 .mods-search-box .pro-input {
+  height: 36px !important;
+  font-size: 12.5px !important;
+}
+
+.mods-tier-2 .mods-search-box .btn-sync-skin {
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 12.5px !important;
+}
+
+.mods-sort-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background: var(--bg-input) !important;
+  padding: 3px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border-col) !important;
+  flex-shrink: 0 !important;
+}
+
+.mods-sort-group .vtype-btn {
+  height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 11.5px !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  white-space: nowrap !important;
+}
+
+.mods-tier-3 {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding-top: 6px !important;
+  border-top: 1px dashed var(--border-col) !important;
+}
+
+.mods-cat-primary-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.mqt-label {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: var(--text-muted) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.mods-cat-primary-chips {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 1 !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+.mods-cat-primary-chips::-webkit-scrollbar {
+  display: none !important;
+}
+
+.mqt-chip {
+  height: 30px !important;
+  padding: 0 11px !important;
+  border-radius: 99px !important;
+  border: 1px solid var(--border-col) !important;
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.mqt-chip:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.mqt-more-btn {
+  height: 30px !important;
+  padding: 0 11px !important;
+  border-radius: 8px !important;
+  border: 1px dashed var(--border-col) !important;
+  background: var(--bg-input) !important;
+  color: var(--text-muted) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.mqt-more-btn:hover {
+  border-color: var(--accent) !important;
+  color: var(--text-main) !important;
+}
+
+.mods-cat-secondary-drawer {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding-top: 6px !important;
+  border-top: 1px solid var(--border-col) !important;
+}
+
+.mods-cat-secondary-drawer.hidden {
+  display: none !important;
+}
+
+/* UNIFORM MOD CARDS IN 3-COLUMN GRID */
+.modrinth-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-rows: 1fr !important;
+  gap: 11px !important;
+  padding-right: 4px !important;
+  align-content: start !important;
+}
+
+.mod-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-col) !important;
+  border-radius: 12px !important;
+  padding: 13px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  height: 100% !important;
+  min-height: 152px !important;
+}
+
+.mod-card-top {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  min-width: 0 !important;
+}
+
+.mod-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 9px !important;
+  border: 1px solid var(--border-col) !important;
+}
+
+.mod-head-info {
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.mod-title {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.mod-meta {
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  margin-top: 2px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.mod-meta strong {
+  color: var(--text-main) !important;
+  font-weight: 700 !important;
+}
+
+.mod-desc {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.42 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  min-height: 2.84em !important;
+  max-height: 2.84em !important;
+}
+
+.mod-card-foot {
+  margin-top: auto !important;
+  padding-top: 9px !important;
+  border-top: 1px solid var(--border-col) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.mod-tags {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+.mod-tag {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  padding: 3px 7px !important;
+  border-radius: 5px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  color: var(--text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.btn-install-mod {
+  height: 31px !important;
+  padding: 0 12px !important;
+  border-radius: 7px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-install-mod.installed {
+  background: rgba(22, 163, 74, 0.14) !important;
+  color: #16a34a !important;
+  border: 1.5px solid rgba(22, 163, 74, 0.45) !important;
+}
+
+/* 2. TAB 5: CÀI ĐẶT HỆ THỐNG — 4-CARD BALANCED BENTO GRID */
+#tab-settings {
+  overflow-y: auto !important;
+}
+
+.settings-bento-4 {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  max-width: 1220px !important;
+  align-items: stretch !important;
+}
+
+.settings-card-unit {
+  padding: 16px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 11px !important;
+  justify-content: space-between !important;
+}
+
+.settings-card-desc {
+  font-size: 12.5px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.4 !important;
+  margin: 0 !important;
+}
+
+.path-ellipsis-input {
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  font-family: Consolas, 'Segoe UI', monospace !important;
+  font-size: 12px !important;
+}
+
+.settings-info-pills {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+  margin-top: auto !important;
+}
+
+.sip-item {
+  padding: 8px 11px !important;
+  border-radius: 8px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+}
+
+.sip-item strong {
+  color: var(--text-main) !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.settings-subfolder-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 7px !important;
+  margin-top: auto !important;
+}
+
+.settings-subfolder-grid .vtype-btn {
+  height: 34px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  color: var(--text-main) !important;
+  white-space: nowrap !important;
+}
+
+.settings-subfolder-grid .vtype-btn:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.settings-utility-bar {
+  margin-top: auto !important;
+  padding: 10px 13px !important;
+  border-radius: 9px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.settings-utility-bar .sub-info span {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+}
+
+.settings-opt-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.settings-opt-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 9px 12px !important;
+  border-radius: 9px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  cursor: pointer !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.settings-opt-item:hover {
+  border-color: var(--accent) !important;
+}
+
+.settings-opt-item input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  margin-top: 2px !important;
+  accent-color: var(--accent) !important;
+  flex-shrink: 0 !important;
+}
+
+.soi-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.soi-body strong {
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+}
+
+.soi-body span {
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.35 !important;
+}
+
+/* 3. TAB 3: THẾ GIỚI & SERVER — NATURAL CARD HEIGHTS & CLEAN SERVER ACTIONS */
+#tab-worlds {
+  overflow-y: auto !important;
+}
+
+.worlds-servers-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  height: auto !important;
+  align-items: start !important;
+}
+
+.worlds-col-card {
+  height: auto !important;
+  max-height: calc(100vh - 200px) !important;
+  padding: 15px 17px !important;
+  gap: 11px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.worlds-list-wrap {
+  flex: 0 1 auto !important;
+  max-height: calc(100vh - 365px) !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.srv-card-row,
+.world-card-row {
+  padding: 11px 13px !important;
+  border-radius: 10px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.srv-card-row.active {
+  border: 1.5px solid var(--accent) !important;
+  background: var(--accent-glow) !important;
+}
+
+.srv-card-left,
+.world-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.srv-icon-img,
+.world-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+  object-fit: cover !important;
+  border: 1px solid var(--border-col) !important;
+  flex-shrink: 0 !important;
+}
+
+.srv-icon-fallback,
+.world-icon-fallback {
+  display: grid !important;
+  place-items: center !important;
+  font-size: 19px !important;
+  background: var(--bg-card) !important;
+}
+
+.srv-card-meta,
+.world-meta-col {
+  min-width: 0 !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+.srv-title-line {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  flex-wrap: nowrap !important;
+}
+
+.srv-name-text,
+.world-title-text {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.srv-ping-badge {
+  margin-left: 0 !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
+  border-radius: 99px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.srv-ping-badge.online {
+  background: rgba(22, 163, 74, 0.15) !important;
+  color: #16a34a !important;
+}
+
+.srv-ping-badge.offline {
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: #ef4444 !important;
+}
+
+.srv-ping-badge.pending {
+  background: var(--bg-card) !important;
+  color: var(--text-muted) !important;
+}
+
+.srv-latency-tag {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  color: var(--text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.srv-ip-line,
+.world-sub-text {
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  font-weight: 600 !important;
+}
+
+.srv-ip-line span {
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+}
+
+.srv-card-actions,
+.world-card-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  flex-shrink: 0 !important;
+}
+
+.srv-secondary-btns {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.srv-icon-btn {
+  width: 31px !important;
+  height: 31px !important;
+  border-radius: 7px !important;
+  border: 1px solid var(--border-col) !important;
+  background: var(--bg-card) !important;
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: grid !important;
+  place-items: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.srv-icon-btn:hover {
+  border-color: var(--text-muted) !important;
+  color: var(--text-main) !important;
+}
+
+.srv-icon-btn.danger:hover {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #ef4444 !important;
+}
+
+.subpage-tip-box {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 10px 13px !important;
+  border-radius: 9px !important;
+  background: var(--bg-input) !important;
+  border: 1px dashed var(--border-col) !important;
+  margin-top: 2px !important;
+}
+
+.stb-icon {
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  flex-shrink: 0 !important;
+}
+
+.stb-text {
+  font-size: 11.5px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.4 !important;
+}
+
+.stb-text strong {
+  color: var(--text-main) !important;
+}
+
+.empty-subpage-state {
+  padding: 22px 16px !important;
+  border-radius: 10px !important;
+  background: var(--bg-input) !important;
+  border: 1px dashed var(--border-col) !important;
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.ess-icon {
+  font-size: 26px !important;
+}
+
+.ess-title {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+}
+
+.ess-desc {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  max-width: 420px !important;
+  line-height: 1.4 !important;
+}
+
+.ess-actions {
+  display: flex !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+}
+
+.ess-actions .vtype-btn {
+  height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+/* 4. TAB 4: DANH SÁCH PHIÊN BẢN — UNIFORM 5-COLUMN GRID & BADGES */
+.versions-search-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+#fullVerFilterBar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background: var(--bg-card) !important;
+  padding: 4px !important;
+  border-radius: 9px !important;
+  border: 1px solid var(--border-col) !important;
+}
+
+#fullVerFilterBar .vtype-btn {
+  height: 30px !important;
+  padding: 0 11px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  white-space: nowrap !important;
+}
+
+.versions-table-wrap {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  padding: 12px !important;
+  align-content: start !important;
+}
+
+.ver-row-card {
+  height: 62px !important;
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  transition: all 0.14s ease !important;
+}
+
+.ver-row-card:hover {
+  border-color: var(--accent) !important;
+  transform: translateY(-1px) !important;
+}
+
+.ver-row-card.active {
+  background: var(--accent-glow) !important;
+  border: 1.5px solid var(--accent) !important;
+}
+
+.ver-card-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.ver-card-icon {
+  width: 26px !important;
+  height: 26px !important;
+  object-fit: contain !important;
+  border-radius: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+.ver-card-text {
+  min-width: 0 !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.ver-card-name {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+}
+
+.ver-row-card.active .ver-card-name {
+  color: var(--accent) !important;
+}
+
+.ver-card-date {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  white-space: nowrap !important;
+}
+
+.ver-type-badge {
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.ver-type-badge.installed {
+  background: rgba(22, 163, 74, 0.16) !important;
+  color: #16a34a !important;
+  border: 1px solid rgba(22, 163, 74, 0.35) !important;
+}
+
+.ver-type-badge.release {
+  background: rgba(14, 165, 233, 0.14) !important;
+  color: #0284c7 !important;
+}
+
+.ver-type-badge.snapshot {
+  background: rgba(100, 116, 139, 0.15) !important;
+  color: var(--text-muted) !important;
+}
+
+/* 5. SUBPAGES RESPONSIVE ADAPTATION */
+@media (max-width: 1400px) {
+  .versions-table-wrap {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 1160px) {
+  .versions-table-wrap {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .modrinth-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 
 /* 4. RESPONSIVE WINDOW ADAPTATION FOR 1366x768 & RESIZABLE WINDOWS */

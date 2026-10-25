@@ -426,12 +426,61 @@ async function loadModrinthStore(append = false) {
   const localCheck = await window.aetherAPI.listLocalAddons(state.gameDir, folderMap[state.activeModStoreType] || 'mods');
   const localNames = (localCheck?.items || []).map((i) => i.cleanName.toLowerCase());
 
+  const TAG_VI_MAP = {
+    fabric: 'Fabric',
+    forge: 'Forge',
+    quilt: 'Quilt',
+    neoforge: 'NeoForge',
+    optimization: 'Tối ưu FPS',
+    library: 'Thư viện',
+    utility: 'Tiện ích',
+    decoration: 'Trang trí',
+    adventure: 'Phiêu lưu',
+    worldgen: 'Thế giới',
+    combat: 'Chiến đấu',
+    equipment: 'Trang bị',
+    magic: 'Phép thuật',
+    technology: 'Công nghệ',
+    storage: 'Kho đồ',
+    food: 'Nông trại',
+    mobs: 'Sinh vật',
+    transportation: 'Phương tiện',
+    management: 'Quản lý',
+    'game-mechanics': 'Cơ chế',
+    social: 'Cộng đồng',
+    cursed: 'Giải trí',
+    minigame: 'Minigame',
+    atmosphere: 'Hiệu ứng',
+    realistic: 'Chân thực',
+    fantasy: 'Huyền ảo',
+    ' vanilla-like': 'Chuẩn gốc'
+  };
+
   const cardsHtml = state.modAccumulatedHits.map((item) => {
     const dl = item.downloads > 1000000 ? `${(item.downloads / 1000000).toFixed(1)}M tải` : `${Math.max(1, Math.round(item.downloads / 1000))}K tải`;
-    const tags = (item.categories || []).map((c) => `<span class="mod-tag">${c}</span>`).join('');
+    const tags = (item.categories || [])
+      .slice(0, 3)
+      .map((c) => {
+        const key = String(c || '').toLowerCase();
+        return `<span class="mod-tag">${TAG_VI_MAP[key] || c}</span>`;
+      })
+      .join('');
     const slugLower = (item.slug || '').toLowerCase();
     const isInstalled = localNames.some((n) => n.includes(slugLower) || n.startsWith(slugLower.split('-')[0] + '-'));
-    return `<div class="mod-card"><div class="mod-card-top"><img class="mod-icon" src="${item.iconUrl || ''}" alt="" /><div><div class="mod-title">${item.title}</div><div class="mod-meta">bởi ${item.author || 'Creator'} • ${dl}</div></div></div><div class="mod-desc">${item.description || ''}</div><div class="mod-card-foot"><div class="mod-tags">${tags}</div><button class="btn-install-mod ${isInstalled ? 'installed' : ''}" data-slug="${item.slug}">${isInstalled ? '✓ Đã Cài Sẵn' : '⬇ Tải 1-Click'}</button></div></div>`;
+    return `<div class="mod-card">
+      <div class="mod-card-top">
+        <img class="mod-icon" src="${item.iconUrl || ''}" alt="" />
+        <div class="mod-head-info">
+          <div class="mod-title" title="${item.title}">${item.title}</div>
+          <div class="mod-meta">bởi <strong>${item.author || 'Creator'}</strong> • ${dl}</div>
+        </div>
+      </div>
+      <div class="mod-desc" title="${(item.description || '').replace(/"/g, '&quot;')}">${item.description || 'Gói nội dung mở rộng chính thức từ kho Modrinth.'}</div>
+      <div class="mod-card-foot">
+        <div class="mod-tags">${tags}</div>
+        <button class="btn-install-mod ${isInstalled ? 'installed' : ''}" data-slug="${item.slug}">${isInstalled ? '✓ Đã Cài Sẵn' : '⬇ Tải 1-Click'}</button>
+      </div>
+    </div>`;
   }).join('');
 
   const hasMore = state.modAccumulatedHits.length < totalHits && newHits.length > 0;
@@ -497,29 +546,57 @@ function renderFavoriteServers() {
   const badge = document.getElementById('activeServerBadge');
   if (badge) {
     badge.innerHTML = state.serverIp
-      ? `Đang chọn vào thẳng: <strong style="color:var(--accent);">${state.serverIp}</strong> <span id="btnClearActiveSrv" style="cursor:pointer;color:#ef4444;margin-left:4px;" title="Hủy vào thẳng server">[×]</span>`
-      : 'Chế độ: Vào Menu chính bình thường';
+      ? `Vào thẳng: <strong style="color:var(--accent);">${state.serverIp}</strong> <span id="btnClearActiveSrv" style="cursor:pointer;color:#ef4444;margin-left:4px;font-weight:800;" title="Hủy vào thẳng server">[✕]</span>`
+      : 'Chế độ: Vào Menu chính';
     const clearBtn = document.getElementById('btnClearActiveSrv');
     if (clearBtn) clearBtn.onclick = () => setServerIpEverywhere('');
+  }
+  if (!state.favoriteServers || state.favoriteServers.length === 0) {
+    container.innerHTML = `<div class="empty-subpage-state">
+      <div class="ess-icon">🌐</div>
+      <div class="ess-title">Chưa có máy chủ Multiplayer nào trong danh sách</div>
+      <div class="ess-desc">Nhập tên và địa chỉ IP ở thanh bên trên rồi bấm <strong>+ Thêm Server</strong> để lưu máy chủ yêu thích.</div>
+    </div>`;
+    return;
   }
   container.innerHTML = state.favoriteServers.map((srv, idx) => {
     const isSelected = state.serverIp === srv.ip;
     const pingInfo = (state.serverPingCache && state.serverPingCache[srv.ip]) || null;
+    const latencyTag = pingInfo?.online && pingInfo.latencyMs ? `<span class="srv-latency-tag">${pingInfo.latencyMs}ms</span>` : '';
     const statusHtml = pingInfo
       ? (pingInfo.online
-          ? `<span class="srv-ping-badge online">🟢 ${pingInfo.playersOnline}/${pingInfo.playersMax} người</span>`
-          : `<span class="srv-ping-badge offline">🔴 Offline</span>`)
-      : `<span class="srv-ping-badge" style="color:var(--text-muted);">⏳ Đang ping...</span>`;
+          ? `<span class="srv-ping-badge online">● ${pingInfo.playersOnline}/${pingInfo.playersMax} người</span>${latencyTag}`
+          : `<span class="srv-ping-badge offline">● Ngoại tuyến</span>`)
+      : `<span class="srv-ping-badge pending">⏳ Đang kiểm tra...</span>`;
     const iconHtml = pingInfo?.icon
       ? `<img class="srv-icon-img" src="${pingInfo.icon}" alt="" />`
-      : `<div class="srv-icon-img" style="display:grid;place-items:center;font-size:16px;background:var(--bg-card);">🌐</div>`;
-    return `<div class="srv-card-row" style="${isSelected ? 'border-color:var(--accent);background:var(--accent-glow);' : ''}"><div style="display:flex;align-items:center;gap:10px;min-width:0;">${iconHtml}<div style="min-width:0;"><div style="display:flex;align-items:center;flex-wrap:wrap;"><strong style="font-size:12.5px;">${srv.name}</strong>${statusHtml}</div><div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px;">IP: ${srv.ip}</div></div></div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0;"><button class="vtype-btn" data-copysrv="${srv.ip}" title="Sao chép IP Server">📋 Copy</button><button class="btn-install-mod" data-joinsrv="${srv.ip}">${isSelected ? '✓ Đã Chọn' : '▶ Vào Server'}</button><button class="vtype-btn" data-delsrv="${idx}" style="color:#ef4444;" title="Xóa khỏi danh sách">×</button></div></div>`;
+      : `<div class="srv-icon-img srv-icon-fallback">🌐</div>`;
+    return `<div class="srv-card-row ${isSelected ? 'active' : ''}">
+      <div class="srv-card-left">
+        ${iconHtml}
+        <div class="srv-card-meta">
+          <div class="srv-title-line">
+            <strong class="srv-name-text" title="${srv.name}">${srv.name}</strong>
+            ${statusHtml}
+          </div>
+          <div class="srv-ip-line">IP: <span>${srv.ip}</span></div>
+        </div>
+      </div>
+      <div class="srv-card-actions">
+        <button class="btn-install-mod ${isSelected ? 'installed' : ''}" data-joinsrv="${srv.ip}">${isSelected ? '✓ Đang chọn' : '▶ Tham gia'}</button>
+        <div class="srv-secondary-btns">
+          <button class="srv-icon-btn" data-copysrv="${srv.ip}" title="Sao chép địa chỉ IP: ${srv.ip}">📋</button>
+          <button class="srv-icon-btn danger" data-delsrv="${idx}" title="Xóa máy chủ khỏi danh sách">✕</button>
+        </div>
+      </div>
+    </div>`;
   }).join('');
   container.querySelectorAll('[data-copysrv]').forEach((btn) => {
     btn.onclick = () => {
       navigator.clipboard?.writeText(btn.dataset.copysrv);
       const orig = btn.textContent;
-      btn.textContent = '✓ Đã Copy';
+      btn.textContent = '✓';
+      document.getElementById('statusText').textContent = `📋 Đã sao chép địa chỉ IP: ${btn.dataset.copysrv}`;
       setTimeout(() => (btn.textContent = orig), 1400);
     };
   });
@@ -541,11 +618,36 @@ async function renderLocalWorlds() {
   if (!container) return;
   const res = await window.aetherAPI.listLocalWorlds(state.gameDir);
   const worlds = res?.worlds || [];
+  const countBadge = document.getElementById('worldsCountBadge');
+  if (countBadge) countBadge.textContent = `${worlds.length} Map`;
   if (worlds.length === 0) {
-    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">Chưa có thế giới chơi đơn nào trong <code>.minecraft/saves</code>.</div>';
+    container.innerHTML = `<div class="empty-subpage-state">
+      <div class="ess-icon">🌍</div>
+      <div class="ess-title">Chưa có thế giới chơi đơn nào trong <code>.minecraft/saves</code></div>
+      <div class="ess-desc">Khi bạn tạo Thế giới mới trong game hoặc đồng bộ từ Launcher cũ, bản đồ sẽ tự động xuất hiện tại đây.</div>
+      <div class="ess-actions">
+        <button class="vtype-btn" id="btnEmptyOpenSaves">📂 Mở thư mục Saves</button>
+        <button class="vtype-btn active" id="btnEmptyMigrateWorlds">🔄 Đồng bộ Map từ Launcher cũ</button>
+      </div>
+    </div>`;
+    const bSaves = document.getElementById('btnEmptyOpenSaves');
+    if (bSaves) bSaves.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'saves');
+    const bMig = document.getElementById('btnEmptyMigrateWorlds');
+    if (bMig && typeof openLauncherMigrateModal === 'function') bMig.onclick = () => openLauncherMigrateModal();
     return;
   }
-  container.innerHTML = worlds.map((w) => `<div class="world-card-row"><div class="world-left">${w.iconDataUrl ? `<img class="world-icon" src="${w.iconDataUrl}" />` : '<div class="world-icon" style="display:grid;place-items:center;font-size:18px;">🌍</div>'}<div><strong style="font-size:13px;">${w.name}</strong><div style="font-size:10.5px;color:var(--text-muted);">Cập nhật: ${w.lastPlayed}</div></div></div><button class="vtype-btn" data-openworld="${w.path}">📂 Mở Thư Mục</button></div>`).join('');
+  container.innerHTML = worlds.map((w) => `<div class="world-card-row">
+    <div class="world-left">
+      ${w.iconDataUrl ? `<img class="world-icon" src="${w.iconDataUrl}" alt="" />` : '<div class="world-icon world-icon-fallback">🌍</div>'}
+      <div class="world-meta-col">
+        <strong class="world-title-text" title="${w.name}">${w.name}</strong>
+        <div class="world-sub-text">🕒 Lần chơi cuối: ${w.lastPlayed}</div>
+      </div>
+    </div>
+    <div class="world-card-actions">
+      <button class="vtype-btn" data-openworld="${w.path}" title="Mở thư mục bản đồ này trong Windows Explorer">📂 Mở Thư Mục</button>
+    </div>
+  </div>`).join('');
   container.querySelectorAll('[data-openworld]').forEach((btn) => { btn.onclick = () => window.aetherAPI.openGameDir(btn.dataset.openworld); });
 }
 async function pingAllFavoriteServers() {
