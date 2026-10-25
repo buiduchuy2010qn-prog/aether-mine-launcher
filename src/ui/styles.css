@@ -3423,3 +3423,20 @@ html[data-theme="cherry"] {
 }
 
 
+
+/* v29.1 PRO: HIGH-RES 3D "M" APP LOGO STYLING */
+.brand-grass-img {
+  width: 34px !important;
+  height: 34px !important;
+  image-rendering: auto !important;
+  border-radius: 8px !important;
+  filter: drop-shadow(0 2px 6px rgba(34, 197, 94, 0.35)) !important;
+}
+
+.dock-grass-img {
+  width: 44px !important;
+  height: 44px !important;
+  image-rendering: auto !important;
+  border-radius: 10px !important;
+  filter: drop-shadow(0 3px 8px rgba(34, 197, 94, 0.4)) !important;
+}

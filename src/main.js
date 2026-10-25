@@ -64,7 +64,36 @@ function fetchBinaryBuffer(url, redirects = 3) {
   });
 }
 
+async function ensureAppIconSyncedAndApplied() {
+  try {
+    const uiDir = path.join(__dirname, 'ui');
+    const icoPath = path.join(uiDir, 'app-icon.ico');
+    const pngPath = path.join(uiDir, 'app-logo.png');
+    const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/src/ui';
+    if (!fs.existsSync(icoPath)) {
+      const buf = await fetchBinaryBuffer(`${baseRaw}/app-icon.ico?t=${Date.now()}`);
+      fs.writeFileSync(icoPath, buf);
+    }
+    if (!fs.existsSync(pngPath)) {
+      const buf = await fetchBinaryBuffer(`${baseRaw}/app-logo.png?t=${Date.now()}`);
+      fs.writeFileSync(pngPath, buf);
+    }
+    if (mainWindow && !mainWindow.isDestroyed() && fs.existsSync(icoPath)) {
+      mainWindow.setIcon(icoPath);
+    }
+    if (process.platform === 'win32' && fs.existsSync(icoPath)) {
+      const { exec } = require('child_process');
+      const psUpdateShortcuts = `powershell -NoProfile -WindowStyle Hidden -Command "$ws = New-Object -ComObject WScript.Shell; @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs')) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*Aether*' -Recurse -File -Include '*.lnk' -ErrorAction SilentlyContinue } | ForEach-Object { try { $s = $ws.CreateShortcut($_.FullName); $s.IconLocation = '${icoPath.replace(/'/g, "''")},0'; $s.Save() } catch {} }"`;
+      exec(psUpdateShortcuts, () => {});
+    }
+  } catch (_) {}
+}
+
 function createWindow() {
+  const icoPath = path.join(__dirname, 'ui', 'app-icon.ico');
+  const pngPath = path.join(__dirname, 'ui', 'app-logo.png');
+  const winIcon = fs.existsSync(icoPath) ? icoPath : (fs.existsSync(pngPath) ? pngPath : undefined);
+
   mainWindow = new BrowserWindow({
     width: 1320,
     height: 820,
@@ -72,6 +101,7 @@ function createWindow() {
     minHeight: 640,
     frame: false,
     backgroundColor: '#090c14',
+    icon: winIcon,
     show: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -82,7 +112,10 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'ui', 'index.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    ensureAppIconSyncedAndApplied();
+  });
 }
 
 app.whenReady().then(() => {
@@ -447,7 +480,9 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/ui/styles.css',
         'src/ui/renderer.js',
         'src/ui/store-features.js',
-        'src/ui/minecraft-logo.png'
+        'src/ui/minecraft-logo.png',
+        'src/ui/app-logo.png',
+        'src/ui/app-icon.ico'
       ];
       const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main';
       for (let i = 0; i < filesToSync.length; i++) {

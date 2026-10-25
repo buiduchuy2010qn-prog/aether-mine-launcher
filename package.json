@@ -1,13 +1,20 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.0.0",
-  "description": "Aether Craft v29.0 PRO - Clean 3-Tab 3D Character Studio, Collapsible Advanced Config, Color Hierarchy & Unified Launch State",
+  "version": "29.1.0",
+  "description": "Aether Craft v29.1 PRO - Official 3D M App Logo, Spacious 3-Tab 3D Studio & Anti-Crash Engine",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "dist:win": "electron-builder --win nsis portable --publish never"
   },
-  "keywords": ["minecraft", "launcher", "modrinth", "fabric", "forge", "quilt"],
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "modrinth",
+    "fabric",
+    "forge",
+    "quilt"
+  ],
   "author": "buiduchuy2010qn-prog",
   "license": "MIT",
   "dependencies": {
@@ -30,10 +37,14 @@
       "LICENSE.rtf"
     ],
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ],
+      "icon": "src/ui/app-icon.ico"
     },
     "nsis": {
-      "oneClick": false, "unicode": true,
+      "oneClick": false,
+      "unicode": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "license": "LICENSE.rtf",
