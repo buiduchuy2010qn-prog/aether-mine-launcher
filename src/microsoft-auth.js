@@ -40,29 +40,6 @@ function createOfflineAuth(username = 'StevePlayer') {
   };
 }
 
-function sanitizeMcUsername(rawName, emailFallback) {
-  const emailPrefix = emailFallback ? String(emailFallback).split('@')[0] : '';
-  let candidate = String(rawName || '').trim();
-  if (!candidate || candidate.includes('@')) {
-    candidate = emailPrefix || 'MSPlayer';
-  }
-  candidate = candidate
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .replace(/\s+/g, '_')
-    .replace(/[^a-zA-Z0-9_]/g, '');
-
-  if (candidate.length < 3 && emailPrefix) {
-    candidate = emailPrefix.replace(/[^a-zA-Z0-9_]/g, '');
-  }
-  if (candidate.length < 3) {
-    candidate = 'MSPlayer';
-  }
-  return candidate.slice(0, 16);
-}
-
 function decodeJwtPayload(jwtToken) {
   if (!jwtToken || typeof jwtToken !== 'string') return {};
   try {
@@ -73,27 +50,6 @@ function decodeJwtPayload(jwtToken) {
   } catch (_) {
     return {};
   }
-}
-
-function buildFallbackMicrosoftProfile(accountHint = {}, msData = null, xuid = null) {
-  const rawName = accountHint.gamertag || accountHint.name || '';
-  const email = accountHint.email || '';
-  const mcName = sanitizeMcUsername(rawName, email);
-  const uuid = generateOfflineUUID(mcName);
-  const displayName = email ? `${mcName} (${email})` : (rawName ? `${mcName} (${rawName})` : mcName);
-
-  return {
-    name: mcName,
-    displayName,
-    email,
-    uuid,
-    accessToken: uuid,
-    refreshToken: msData?.refresh_token || '',
-    xuid: xuid || accountHint.sub || 'ms-browser-oauth',
-    isOfficialLicense: false,
-    expiresAt: Date.now() + 86400 * 1000,
-    skinUrl: null
-  };
 }
 
 async function authenticateXboxLiveWithFallback(msAccessToken) {
@@ -128,10 +84,10 @@ async function authenticateXboxLiveWithFallback(msAccessToken) {
       }
     } catch (_) {}
   }
-  throw new Error(`Lỗi xác thực Xbox Live (${lastStatus}).`);
+  throw new Error(`Lỗi xác thực Xbox Live (HTTP ${lastStatus}).`);
 }
 
-async function authenticateMinecraftChain({ code, refreshToken, redirectUri, accountHint = {} }) {
+async function authenticateMinecraftChain({ code, refreshToken, redirectUri }) {
   const tokenParams = new URLSearchParams({
     client_id: AZURE_CLIENT_ID,
     scope: AZURE_SCOPE
@@ -160,110 +116,103 @@ async function authenticateMinecraftChain({ code, refreshToken, redirectUri, acc
   }
   const msData = await msRes.json();
 
-  // Extract verified Microsoft Account Name & Email from OIDC id_token
+  // Extract verified Microsoft Account Name & Email from OIDC id_token for clear error reporting
   const idClaims = decodeJwtPayload(msData.id_token);
-  const mergedHint = {
-    name: idClaims.name || accountHint.name || '',
-    email: idClaims.email || idClaims.preferred_username || accountHint.email || '',
-    sub: idClaims.sub || idClaims.oid || ''
-  };
+  const msName = idClaims.name || '';
+  const msEmail = idClaims.email || idClaims.preferred_username || '';
+  const accountLabel = msName && msEmail
+    ? `${msName} (${msEmail})`
+    : (msEmail || msName || 'Microsoft của bạn');
 
-  try {
-    const xblData = await authenticateXboxLiveWithFallback(msData.access_token);
-    const xblToken = xblData.Token;
-    const uhs = xblData.DisplayClaims?.xui?.[0]?.uhs;
-    if (!xblToken || !uhs) {
-      return buildFallbackMicrosoftProfile(mergedHint, msData);
-    }
-
-    // Fetch Xbox Live Gamertag (gtg) if available
-    try {
-      const xblProfileRes = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          Properties: { SandboxId: 'RETAIL', UserTokens: [xblToken] },
-          RelyingParty: 'http://xboxlive.com',
-          TokenType: 'JWT'
-        })
-      });
-      if (xblProfileRes.ok) {
-        const xblProfileData = await xblProfileRes.json();
-        const gtg = xblProfileData.DisplayClaims?.xui?.[0]?.gtg;
-        if (gtg) mergedHint.gamertag = gtg;
-      }
-    } catch (_) {}
-
-    const xstsRes = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        Properties: {
-          SandboxId: 'RETAIL',
-          UserTokens: [xblToken]
-        },
-        RelyingParty: 'rp://api.minecraftservices.com/',
-        TokenType: 'JWT'
-      })
-    });
-
-    if (!xstsRes.ok) {
-      return buildFallbackMicrosoftProfile(mergedHint, msData);
-    }
-
-    const xstsData = await xstsRes.json();
-    const xstsToken = xstsData.Token;
-    const xuid = xstsData.DisplayClaims?.xui?.[0]?.xid || uhs;
-
-    const mcLoginRes = await fetch('https://api.minecraftservices.com/authentication/login_with_xbox', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        identityToken: `XBL3.0 x=${uhs};${xstsToken}`
-      })
-    });
-
-    if (!mcLoginRes.ok) {
-      return buildFallbackMicrosoftProfile(mergedHint, msData, xuid);
-    }
-
-    const mcLoginData = await mcLoginRes.json();
-    const mcAccessToken = mcLoginData.access_token;
-
-    const profileRes = await fetch('https://api.minecraftservices.com/minecraft/profile', {
-      headers: {
-        'Authorization': `Bearer ${mcAccessToken}`
-      }
-    });
-
-    if (!profileRes.ok) {
-      return buildFallbackMicrosoftProfile(mergedHint, msData, xuid);
-    }
-
-    const profileData = await profileRes.json();
-    const formattedUuid = formatUUID(profileData.id);
-
-    return {
-      name: profileData.name,
-      displayName: mergedHint.email ? `${profileData.name} (${mergedHint.email})` : profileData.name,
-      email: mergedHint.email || '',
-      uuid: formattedUuid,
-      accessToken: mcAccessToken,
-      refreshToken: msData.refresh_token,
-      xuid: xuid,
-      isOfficialLicense: true,
-      expiresAt: Date.now() + ((mcLoginData.expires_in || 86400) * 1000) - 60000,
-      skinUrl: profileData.skins?.[0]?.url || null
-    };
-  } catch (_) {
-    return buildFallbackMicrosoftProfile(mergedHint, msData);
+  const xblData = await authenticateXboxLiveWithFallback(msData.access_token);
+  const xblToken = xblData.Token;
+  const uhs = xblData.DisplayClaims?.xui?.[0]?.uhs;
+  if (!xblToken || !uhs) {
+    throw new Error(`Không lấy được mã Xbox Live (uhs) cho tài khoản ${accountLabel}.`);
   }
+
+  const xstsRes = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      Properties: {
+        SandboxId: 'RETAIL',
+        UserTokens: [xblToken]
+      },
+      RelyingParty: 'rp://api.minecraftservices.com/',
+      TokenType: 'JWT'
+    })
+  });
+
+  if (!xstsRes.ok) {
+    const xstsErr = await xstsRes.json().catch(() => ({}));
+    if (xstsErr.XErr === 2148916233) {
+      throw new Error(`Tài khoản Microsoft "${accountLabel}" chưa tạo hồ sơ Xbox Live và chưa sở hữu bản quyền Minecraft: Java Edition! Vui lòng chuyển sang tab "Offline (Crack)" để chơi miễn phí.`);
+    }
+    if (xstsErr.XErr === 2148916238) {
+      throw new Error(`Tài khoản Microsoft "${accountLabel}" dưới 18 tuổi cần được người lớn thêm vào nhóm Gia đình (Microsoft Family) trước khi đăng nhập.`);
+    }
+    throw new Error(`Lỗi xác thực Xbox XSTS (${xstsRes.status}) cho tài khoản ${accountLabel}.`);
+  }
+
+  const xstsData = await xstsRes.json();
+  const xstsToken = xstsData.Token;
+  const xuid = xstsData.DisplayClaims?.xui?.[0]?.xid || uhs;
+
+  const mcLoginRes = await fetch('https://api.minecraftservices.com/authentication/login_with_xbox', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      identityToken: `XBL3.0 x=${uhs};${xstsToken}`
+    })
+  });
+
+  if (!mcLoginRes.ok) {
+    throw new Error(`Không thể kết nối máy chủ Mojang Minecraft Services (${mcLoginRes.status}) cho tài khoản ${accountLabel}.`);
+  }
+
+  const mcLoginData = await mcLoginRes.json();
+  const mcAccessToken = mcLoginData.access_token;
+
+  // STRICT MOJANG JAVA EDITION OWNERSHIP CHECK
+  const profileRes = await fetch('https://api.minecraftservices.com/minecraft/profile', {
+    headers: {
+      'Authorization': `Bearer ${mcAccessToken}`
+    }
+  });
+
+  if (profileRes.status === 404) {
+    throw new Error(`Tài khoản Microsoft "${accountLabel}" CHƯA MUA bản quyền Minecraft: Java Edition trên hệ thống Mojang (minecraft.net)! Chỉ tài khoản đã mua game (hoặc có gói Xbox Game Pass PC) mới đăng nhập được mục Bản Quyền. Bạn hãy chọn tab "Offline (Crack)" bên cạnh để chơi miễn phí nhé!`);
+  }
+  if (!profileRes.ok) {
+    throw new Error(`Tài khoản Microsoft "${accountLabel}" không có hồ sơ Minecraft bản quyền hợp lệ (Mã lỗi: ${profileRes.status}).`);
+  }
+
+  const profileData = await profileRes.json();
+  if (!profileData || !profileData.id || !profileData.name) {
+    throw new Error(`Tài khoản Microsoft "${accountLabel}" chưa kích hoạt nhân vật Minecraft: Java Edition bản quyền!`);
+  }
+
+  const formattedUuid = formatUUID(profileData.id);
+
+  return {
+    name: profileData.name,
+    displayName: msEmail ? `${profileData.name} (${msEmail})` : profileData.name,
+    email: msEmail,
+    uuid: formattedUuid,
+    accessToken: mcAccessToken,
+    refreshToken: msData.refresh_token,
+    xuid: xuid,
+    isOfficialLicense: true,
+    expiresAt: Date.now() + ((mcLoginData.expires_in || 86400) * 1000) - 60000,
+    skinUrl: profileData.skins?.[0]?.url || null
+  };
 }
 
 function buildSuccessHtml(profile) {
@@ -272,7 +221,7 @@ function buildSuccessHtml(profile) {
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <title>Đã đồng bộ Aether Craft Launcher</title>
+  <title>Đã xác thực Bản Quyền — Aether Craft Launcher</title>
   <style>
     body {
       margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -280,7 +229,7 @@ function buildSuccessHtml(profile) {
     }
     .card {
       background: #111827; border: 2px solid #22c55e; border-radius: 16px;
-      padding: 32px 38px; text-align: center; max-width: 460px;
+      padding: 32px 38px; text-align: center; max-width: 480px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(34,197,94,0.2);
     }
     .badge {
@@ -300,12 +249,53 @@ function buildSuccessHtml(profile) {
 <body>
   <div class="card">
     <div class="badge">✓</div>
-    <h2>Đăng Nhập & Đồng Bộ Thành Công!</h2>
-    <div class="acc">👤 ${label}</div>
-    <p style="margin-top:14px;">Tài khoản của bạn đã được kết nối trực tiếp vào <strong>Aether Craft Launcher</strong>.</p>
+    <h2>Xác Thực Bản Quyền Minecraft Thành Công!</h2>
+    <div class="acc">👑 ${label}</div>
+    <p style="margin-top:14px;">Đã kiểm tra giấy phép Mojang hợp lệ và đồng bộ vào <strong>Aether Craft Launcher</strong>.</p>
     <p style="font-size:12.5px;opacity:0.75;">Bạn có thể đóng tab trình duyệt này và quay lại Launcher.</p>
   </div>
   <script>setTimeout(() => { try { window.close(); } catch(e) {} }, 1800);</script>
+</body>
+</html>`;
+}
+
+function buildErrorHtml(errorMsg) {
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chưa Có Bản Quyền Minecraft — Aether Craft Launcher</title>
+  <style>
+    body {
+      margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #090d16; color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .card {
+      background: #111827; border: 2px solid #ef4444; border-radius: 16px;
+      padding: 32px 38px; text-align: center; max-width: 520px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(239,68,68,0.2);
+    }
+    .badge {
+      width: 56px; height: 56px; border-radius: 50%; background: rgba(239,68,68,0.18);
+      color: #f87171; font-size: 28px; font-weight: 900; display: inline-flex;
+      align-items: center; justify-content: center; margin-bottom: 14px;
+      border: 2px solid #ef4444;
+    }
+    h2 { margin: 0 0 10px; font-size: 20px; color: #f87171; }
+    p { margin: 8px 0; font-size: 14px; color: #e2e8f0; line-height: 1.55; }
+    .hint {
+      margin-top: 16px; padding: 12px 16px; background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.4); border-radius: 10px; color: #fde68a; font-size: 13.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">✕</div>
+    <h2>Tài Khoản Chưa Có Bản Quyền Minecraft!</h2>
+    <p>${errorMsg}</p>
+    <div class="hint">💡 Quay lại <strong>Aether Craft Launcher</strong> và chọn tab <strong>"Offline (Crack)"</strong> để chơi miễn phí với mọi tính năng Skin 3D & Modrinth!</div>
+  </div>
 </body>
 </html>`;
 }
@@ -331,6 +321,14 @@ function openMicrosoftLoginPopup(parentWindow) {
       }
     };
 
+    const focusLauncherWindow = () => {
+      if (parentWindow && !parentWindow.isDestroyed()) {
+        if (parentWindow.isMinimized()) parentWindow.restore();
+        parentWindow.show();
+        parentWindow.focus();
+      }
+    };
+
     const server = http.createServer(async (req, res) => {
       try {
         const reqUrl = new URL(req.url, 'http://localhost');
@@ -350,7 +348,7 @@ function openMicrosoftLoginPopup(parentWindow) {
 
         if (completed) {
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          return res.end(buildSuccessHtml(null));
+          return res.end('<h3>Đã xử lý phiên đăng nhập.</h3>');
         }
         completed = true;
 
@@ -358,10 +356,12 @@ function openMicrosoftLoginPopup(parentWindow) {
         const redirectUri = `http://localhost:${port}`;
 
         if (error) {
+          const msg = `Đã hủy hoặc từ chối đăng nhập trên trình duyệt (${errorDesc || error}).`;
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          res.end(`<html><body style="background:#090d16;color:#f87171;font-family:sans-serif;text-align:center;padding-top:80px;"><h2>Đã hủy hoặc lỗi đăng nhập: ${error}</h2><p>${errorDesc || ''}</p></body></html>`);
+          res.end(buildErrorHtml(msg));
           cleanup();
-          return reject(new Error(`Đã hủy đăng nhập trên trình duyệt (${error}).`));
+          focusLauncherWindow();
+          return reject(new Error(msg));
         }
 
         const profile = await authenticateMinecraftChain({ code, redirectUri });
@@ -369,16 +369,13 @@ function openMicrosoftLoginPopup(parentWindow) {
         res.end(buildSuccessHtml(profile));
 
         cleanup();
-        if (parentWindow && !parentWindow.isDestroyed()) {
-          if (parentWindow.isMinimized()) parentWindow.restore();
-          parentWindow.show();
-          parentWindow.focus();
-        }
+        focusLauncherWindow();
         resolve(profile);
       } catch (err) {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<html><body style="background:#090d16;color:#f87171;font-family:sans-serif;text-align:center;padding-top:80px;"><h2>Lỗi xác thực Microsoft</h2><p>${err.message}</p></body></html>`);
+        res.end(buildErrorHtml(err.message));
         cleanup();
+        focusLauncherWindow();
         reject(err);
       }
     });
@@ -393,7 +390,6 @@ function openMicrosoftLoginPopup(parentWindow) {
     });
 
     server.on('error', () => {
-      // If port 25560 is in use, bind to any free ephemeral port
       server.listen(0, '127.0.0.1', () => {
         const port = server.address().port;
         const redirectUri = `http://localhost:${port}`;

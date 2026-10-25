@@ -656,6 +656,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (saved) {
     Object.assign(state, saved); if ((!state.javaPath || state.javaPath === 'java') && sys.detectedJava && sys.detectedJava !== 'java') state.javaPath = sys.detectedJava;
     if (!Array.isArray(state.savedAccounts) || !state.savedAccounts.length) state.savedAccounts = [state.username || 'StevePlayer'];
+    if (state.msProfile && state.msProfile.isOfficialLicense === false) {
+      state.msProfile = null;
+      state.authMode = 'crack';
+    }
   }
   syncFeaturedServersIntoState();
   saveCurrentConfig();
@@ -1023,8 +1027,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('btnMsLogin');
     const stEl = document.getElementById('statusText');
     btn.disabled = true;
-    btn.querySelector('span').textContent = '🌐 Đang chờ chọn tài khoản trên Trình duyệt...';
-    if (stEl) stEl.textContent = '🌐 Đã mở trình duyệt Web — Hãy bấm chọn tài khoản Microsoft của bạn trên trình duyệt!';
+    btn.querySelector('span').textContent = '🌐 Đang kiểm tra Bản Quyền trên Trình duyệt...';
+    if (stEl) stEl.textContent = '🌐 Đã mở trình duyệt Web — Hãy chọn tài khoản Microsoft có Bản Quyền Minecraft của bạn!';
     const res = await window.aetherAPI.loginMicrosoft();
     btn.disabled = false;
     btn.querySelector('span').textContent = 'Đồng Bộ Tài Khoản Microsoft (Trình Duyệt)';
@@ -1032,9 +1036,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.msProfile = res.profile;
       setAuthModeUI('microsoft');
       saveCurrentConfig();
-      if (stEl) stEl.textContent = `✓ Đã đồng bộ tài khoản Microsoft: ${res.profile.displayName || res.profile.name}!`;
+      if (stEl) stEl.textContent = `✓ Đã xác thực Bản Quyền Microsoft: ${res.profile.displayName || res.profile.name}!`;
     } else if (res?.error) {
       if (stEl) stEl.textContent = `⚠ ${res.error}`;
+      const ask = await askUserAgreement({
+        title: '⚠️ Tài Khoản Chưa Sở Hữu Bản Quyền Minecraft: Java Edition!',
+        message: res.error,
+        agreeText: '⚡ Chuyển sang Chế độ Offline (Crack) miễn phí',
+        cancelText: 'Đóng'
+      });
+      if (ask?.agreed) {
+        setAuthModeUI('crack');
+        saveCurrentConfig();
+      }
     }
   };
   document.getElementById('btnMsLogout').onclick = () => {
