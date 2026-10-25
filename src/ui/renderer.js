@@ -275,6 +275,14 @@ function updateSummaryUI() {
   if (javaBadge) javaBadge.textContent = getRecommendedJavaBadge(ver);
   const storeLabel = document.getElementById('modStoreVerLabel');
   if (storeLabel) storeLabel.textContent = `${ver} (${coreUpper})`;
+  const btnModAllVer = document.getElementById('btnToggleModAllVersions');
+  if (btnModAllVer) {
+    btnModAllVer.classList.toggle('active', !state.modAllVersions);
+    btnModAllVer.textContent = state.modAllVersions
+      ? `🌐 Mọi phiên bản (Bấm để khớp ${ver})`
+      : `🎯 Đang tự khớp: ${ver} (${coreUpper})`;
+  }
+  if (typeof refreshLocalAddonsCount === 'function') refreshLocalAddonsCount();
   const playerName = state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username;
   document.getElementById('sidebarPlayerName').textContent = playerName;
   document.getElementById('sidebarAuthBadge').textContent = (state.authMode === 'microsoft' && state.msProfile?.name) ? 'BẢN QUYỀN MS' : 'CRACK / OFFLINE';
@@ -829,8 +837,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnModAllVer) {
     btnModAllVer.onclick = () => {
       state.modAllVersions = !state.modAllVersions;
-      btnModAllVer.classList.toggle('active', state.modAllVersions);
-      btnModAllVer.textContent = state.modAllVersions ? '🌐 Đang mở mọi phiên bản' : '🎯 Lọc theo bản đang chọn';
+      updateSummaryUI();
       loadModrinthStore(false);
     };
   }

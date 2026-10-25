@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.7.0",
-  "description": "Aether Craft v29.7 PRO - 18 Verified Live Vietnam & International Servers with Category Filter",
+  "version": "29.8.0",
+  "description": "Aether Craft v29.8 PRO - Smart Auto-Version Mod Matching & Instant Multi-Version Mod Switcher",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

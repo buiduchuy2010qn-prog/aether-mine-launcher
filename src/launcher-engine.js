@@ -456,42 +456,60 @@ async function searchModrinth({
   limit = 48,
   allVersions = false
 }) {
-  const facets = [[`project_type:${projectType}`]];
-  if (mcVersion && !allVersions) {
-    const baseParts = String(mcVersion).split('-')[0].split('.');
-    const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
-    const verGroup = new Set([mcVersion]);
-    if (familyPrefix === '1.21') {
-      ['1.21.11', '1.21.5', '1.21.4', '1.21.3', '1.21.1', '1.21'].forEach((v) => verGroup.add(v));
-    } else if (familyPrefix === '1.20') {
-      ['1.20.6', '1.20.4', '1.20.2', '1.20.1', '1.20'].forEach((v) => verGroup.add(v));
-    } else if (familyPrefix === '1.19') {
-      ['1.19.4', '1.19.2', '1.19'].forEach((v) => verGroup.add(v));
-    } else if (familyPrefix === '1.18') {
-      ['1.18.2', '1.18.1', '1.18'].forEach((v) => verGroup.add(v));
-    } else if (familyPrefix === '1.16') {
-      ['1.16.5', '1.16.4', '1.16.1'].forEach((v) => verGroup.add(v));
+  const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  const buildFacets = (strictExactVer) => {
+    const f = [[`project_type:${projectType}`]];
+    if (mcVersion && !allVersions) {
+      if (strictExactVer && projectType === 'mod') {
+        f.push([`versions:${mcVersion}`]);
+      } else {
+        const baseParts = String(mcVersion).split('-')[0].split('.');
+        const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
+        const verGroup = new Set([mcVersion]);
+        if (familyPrefix === '1.21') {
+          ['1.21.11', '1.21.5', '1.21.4', '1.21.3', '1.21.1', '1.21'].forEach((v) => verGroup.add(v));
+        } else if (familyPrefix === '1.20') {
+          ['1.20.6', '1.20.4', '1.20.2', '1.20.1', '1.20'].forEach((v) => verGroup.add(v));
+        } else if (familyPrefix === '1.19') {
+          ['1.19.4', '1.19.2', '1.19'].forEach((v) => verGroup.add(v));
+        } else if (familyPrefix === '1.18') {
+          ['1.18.2', '1.18.1', '1.18'].forEach((v) => verGroup.add(v));
+        } else if (familyPrefix === '1.16') {
+          ['1.16.5', '1.16.4', '1.16.1'].forEach((v) => verGroup.add(v));
+        }
+        f.push(Array.from(verGroup).map((v) => `versions:${v}`));
+      }
     }
-    facets.push(Array.from(verGroup).map((v) => `versions:${v}`));
-  }
-  if (projectType === 'mod' && !allVersions) {
-    const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
-    if (effectiveLoader === 'quilt') {
-      facets.push(['categories:quilt', 'categories:fabric']);
-    } else if (effectiveLoader === 'forge') {
-      facets.push(['categories:forge', 'categories:neoforge']);
-    } else {
-      facets.push([`categories:${effectiveLoader}`]);
+    if (projectType === 'mod' && !allVersions) {
+      if (effectiveLoader === 'quilt') {
+        f.push(['categories:quilt', 'categories:fabric']);
+      } else if (effectiveLoader === 'forge') {
+        f.push(['categories:forge', 'categories:neoforge']);
+      } else {
+        f.push([`categories:${effectiveLoader}`]);
+      }
     }
-  }
-  if (category && category.trim()) {
-    facets.push([`categories:${category.trim()}`]);
-  }
+    if (category && category.trim()) {
+      f.push([`categories:${category.trim()}`]);
+    }
+    return f;
+  };
+
   const safeLimit = Math.max(12, Math.min(60, Number(limit) || 48));
   const safeOffset = Math.max(0, Number(offset) || 0);
   const safeSort = ['downloads', 'follows', 'updated', 'newest', 'relevance'].includes(sortBy) ? sortBy : 'downloads';
-  const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&limit=${safeLimit}&offset=${safeOffset}&index=${safeSort}&facets=${encodeURIComponent(JSON.stringify(facets))}`;
-  const res = await fetchJson(url);
+
+  let facets = buildFacets(true);
+  let url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&limit=${safeLimit}&offset=${safeOffset}&index=${safeSort}&facets=${encodeURIComponent(JSON.stringify(facets))}`;
+  let res = await fetchJson(url);
+
+  // Fallback to minor version family only if strict exact version returned 0 hits (e.g. brand-new snapshot)
+  if ((!res?.hits || res.hits.length === 0) && mcVersion && !allVersions && projectType === 'mod' && safeOffset === 0) {
+    facets = buildFacets(false);
+    url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(query)}&limit=${safeLimit}&offset=${safeOffset}&index=${safeSort}&facets=${encodeURIComponent(JSON.stringify(facets))}`;
+    res = await fetchJson(url);
+  }
+
   const hits = (res.hits || []).map((h) => ({
     projectId: h.project_id,
     slug: h.slug,
@@ -507,29 +525,83 @@ async function searchModrinth({
   return hits;
 }
 
-function removeConflictingModJars(modsFolder, slug, newFilename = '') {
+const KNOWN_MOD_SLUG_PREFIXES = {
+  'fabric-api': ['fabric-api-'],
+  'sodium': ['sodium-'],
+  'lithium': ['lithium-'],
+  'ferrite-core': ['ferritecore-'],
+  'entityculling': ['entityculling-'],
+  'immediatelyfast': ['immediatelyfast-'],
+  'iris': ['iris-'],
+  'embeddium': ['embeddium-'],
+  'modmenu': ['modmenu-'],
+  'cloth-config': ['cloth-config-'],
+  'continuity': ['continuity-'],
+  'appleskin': ['appleskin-'],
+  'SodiumExtra': ['sodium-extra-'],
+  'reeses-sodium-options': ['reeses_sodium_options-', 'reeses-sodium-options-'],
+  'lambdynamiclights': ['lambdynamiclights-'],
+  'zoomify': ['zoomify-'],
+  'wi-zoom': ['wi-zoom-', 'wizoom-'],
+  'xaeros-minimap': ['xaeros_minimap_', 'xaeros-minimap-'],
+  'xaeros-world-map': ['xaerosworldmap_', 'xaeros-world-map-'],
+  'jei': ['jei-'],
+  'rei': ['roughlyenoughitems-'],
+  'emi': ['emi-'],
+  'jade': ['jade-']
+};
+
+function extractMcVerFromFilename(fileName = '') {
+  const clean = String(fileName).replace(/\.disabled$/i, '');
+  const m = clean.match(/(?:mc|[+_-])(1\.\d+(?:\.\d+)?)(?=[+_-]|\.jar$|$)/i);
+  return m ? m[1] : '';
+}
+
+function readModsMetaManifest(modsFolder) {
+  const metaPath = path.join(modsFolder, '.aether-mods-meta.json');
+  try {
+    if (fs.existsSync(metaPath)) {
+      return JSON.parse(fs.readFileSync(metaPath, 'utf8')) || {};
+    }
+  } catch (_) {}
+  return {};
+}
+
+function writeModsMetaManifest(modsFolder, metaObj) {
+  const metaPath = path.join(modsFolder, '.aether-mods-meta.json');
+  try {
+    fs.writeFileSync(metaPath, JSON.stringify(metaObj, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVersion = '') {
   if (!fs.existsSync(modsFolder)) return;
-  const prefixMap = {
-    'fabric-api': ['fabric-api-'],
-    'sodium': ['sodium-'],
-    'lithium': ['lithium-'],
-    'ferrite-core': ['ferritecore-'],
-    'entityculling': ['entityculling-'],
-    'immediatelyfast': ['immediatelyfast-'],
-    'iris': ['iris-'],
-    'embeddium': ['embeddium-']
-  };
-  const prefixes = new Set(prefixMap[slug.toLowerCase()] || [`${slug.toLowerCase()}-`]);
+  const prefixes = new Set(KNOWN_MOD_SLUG_PREFIXES[slug.toLowerCase()] || [`${slug.toLowerCase()}-`]);
   if (newFilename) {
     const stemMatch = newFilename.toLowerCase().match(/^([a-z0-9_]+[-_])/);
     if (stemMatch && stemMatch[1].length >= 4) prefixes.add(stemMatch[1]);
   }
+  const meta = readModsMetaManifest(modsFolder);
   try {
     for (const file of fs.readdirSync(modsFolder)) {
-      if (file === newFilename) continue;
+      if (file === newFilename || file === `${newFilename}.disabled` || file.startsWith('.')) continue;
+      if (!/\.jar$/i.test(file)) continue;
       const lower = file.toLowerCase();
-      if (Array.from(prefixes).some((p) => lower.startsWith(p))) {
-        try { fs.unlinkSync(path.join(modsFolder, file)); } catch (_) {}
+      const metaEntry = meta[file];
+      const isSameMod = (metaEntry && metaEntry.slug && metaEntry.slug.toLowerCase() === slug.toLowerCase()) ||
+        Array.from(prefixes).some((p) => lower.startsWith(p));
+      if (isSameMod) {
+        const fileVer = metaEntry?.mcVersion || extractMcVerFromFilename(file);
+        // If the existing .jar is for a DIFFERENT MC version, cache it as .jar.disabled so switching back later is instant!
+        if (fileVer && targetMcVersion && fileVer !== targetMcVersion) {
+          try {
+            fs.renameSync(path.join(modsFolder, file), path.join(modsFolder, `${file}.disabled`));
+          } catch (_) {}
+        } else {
+          try {
+            fs.unlinkSync(path.join(modsFolder, file));
+          } catch (_) {}
+        }
       }
     }
   } catch (_) {}
@@ -607,13 +679,33 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   }
 
   const destPath = path.join(targetFolder, fileObj.filename);
+  const disabledPath = `${destPath}.disabled`;
+
+  if (projectType === 'mod') {
+    removeConflictingModJars(targetFolder, slug, fileObj.filename, mcVersion);
+    const meta = readModsMetaManifest(targetFolder);
+    meta[fileObj.filename] = {
+      slug,
+      mcVersion,
+      gameVersions: Array.isArray(chosen.game_versions) ? chosen.game_versions : [mcVersion],
+      loader: effectiveLoader,
+      updatedAt: Date.now()
+    };
+    writeModsMetaManifest(targetFolder, meta);
+  }
+
+  // If the exact file was previously cached as .jar.disabled, re-enable it immediately without re-downloading!
+  if (!fs.existsSync(destPath) && fs.existsSync(disabledPath) && fs.statSync(disabledPath).size > 1024) {
+    try {
+      fs.renameSync(disabledPath, destPath);
+      onStatus?.(`✓ Đã kích hoạt ngay ${fileObj.filename} (chuẩn ${mcVersion}) có sẵn trong máy!`);
+      return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true };
+    } catch (_) {}
+  }
+
   if (fs.existsSync(destPath) && fs.statSync(destPath).size > 1024) {
     onStatus?.(`✓ Gói ${fileObj.filename} đã cài sẵn trên máy, bỏ qua tải lại.`);
     return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true };
-  }
-
-  if (projectType === 'mod') {
-    removeConflictingModJars(targetFolder, slug, fileObj.filename);
   }
 
   onStatus?.(`Đang tải ${fileObj.filename} (chuẩn ${mcVersion} • ${effectiveLoader.toUpperCase()})...`);
@@ -622,7 +714,102 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
 }
 
 async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) {
-  return;
+  if (!loaderType || loaderType === 'vanilla') return;
+  const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
+  const modsFolder = path.join(rootDir, 'mods');
+  if (!fs.existsSync(modsFolder)) return;
+
+  const effectiveLoader = loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  const meta = readModsMetaManifest(modsFolder);
+  let files = [];
+  try {
+    files = fs.readdirSync(modsFolder).filter((f) => /\.jar(\.disabled)?$/i.test(f));
+  } catch (_) {
+    return;
+  }
+  if (files.length === 0) return;
+
+  const isFileCompatibleWithVersion = (cleanFileName) => {
+    const mEntry = meta[cleanFileName];
+    if (mEntry && Array.isArray(mEntry.gameVersions) && mEntry.gameVersions.length > 0) {
+      if (mEntry.loader && mEntry.loader !== effectiveLoader && !(effectiveLoader === 'quilt' && mEntry.loader === 'fabric')) {
+        return false;
+      }
+      return mEntry.gameVersions.includes(mcVersion);
+    }
+    const explicitVer = extractMcVerFromFilename(cleanFileName);
+    if (explicitVer) {
+      return explicitVer === mcVersion;
+    }
+    // Version-agnostic or unknown filename without version tag -> assume compatible
+    return true;
+  };
+
+  const inferSlugFromFilename = (cleanFileName) => {
+    if (meta[cleanFileName]?.slug) return meta[cleanFileName].slug;
+    const lower = cleanFileName.toLowerCase();
+    for (const [slug, prefixes] of Object.entries(KNOWN_MOD_SLUG_PREFIXES)) {
+      if (prefixes.some((p) => lower.startsWith(p))) return slug;
+    }
+    return '';
+  };
+
+  // Step 1: Re-enable any cached .jar.disabled files that strictly match the target mcVersion
+  for (const f of files) {
+    if (!f.toLowerCase().endsWith('.disabled')) continue;
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const mEntry = meta[cleanName];
+    const explicitVer = mEntry?.mcVersion || extractMcVerFromFilename(cleanName);
+    if ((mEntry?.gameVersions?.includes(mcVersion)) || (explicitVer && explicitVer === mcVersion)) {
+      const enabledPath = path.join(modsFolder, cleanName);
+      const disabledPath = path.join(modsFolder, f);
+      if (!fs.existsSync(enabledPath)) {
+        try {
+          fs.renameSync(disabledPath, enabledPath);
+        } catch (_) {}
+      }
+    }
+  }
+
+  // Refresh file list after Step 1
+  try {
+    files = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+  } catch (_) {
+    return;
+  }
+
+  // Step 2: Check enabled .jar files for version mismatch; disable incompatible ones and auto-fetch matching build if known
+  const slugsToAutoFetch = new Set();
+  for (const f of files) {
+    if (!isFileCompatibleWithVersion(f)) {
+      const slug = inferSlugFromFilename(f);
+      try {
+        fs.renameSync(path.join(modsFolder, f), path.join(modsFolder, `${f}.disabled`));
+      } catch (_) {}
+      if (slug) slugsToAutoFetch.add(slug);
+    }
+  }
+
+  // Step 3: For any disabled mod whose slug is known, check if an enabled .jar for that slug already exists; if not, auto-install for mcVersion!
+  if (slugsToAutoFetch.size > 0) {
+    const activeFilesNow = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+    for (const slug of slugsToAutoFetch) {
+      const alreadyActive = activeFilesNow.some((f) => inferSlugFromFilename(f).toLowerCase() === slug.toLowerCase());
+      if (!alreadyActive) {
+        try {
+          onStatus?.(`🔄 Tự động đồng bộ Mod "${slug}" sang đúng phiên bản ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
+          await installModrinthProject({
+            slug,
+            projectType: 'mod',
+            mcVersion,
+            loaderType: effectiveLoader,
+            gameDir: rootDir,
+            _isDep: true
+          }, onStatus);
+        } catch (_) {}
+      }
+    }
+  }
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const effectiveLoader = loaderType === 'forge' ? 'forge' : 'fabric';
@@ -654,19 +841,25 @@ function listLocalAddons(gameDir, folderType = 'mods') {
   const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
   const dir = path.join(rootDir, safeFolder);
   if (!fs.existsSync(dir)) return [];
+  const meta = safeFolder === 'mods' ? readModsMetaManifest(dir) : {};
   try {
     return fs
       .readdirSync(dir)
       .filter((f) => /\.(jar|zip)(\.disabled)?$/i.test(f))
       .map((f) => {
         const full = path.join(dir, f);
+        const cleanName = f.replace(/\.disabled$/i, '');
+        const mEntry = meta[cleanName] || null;
         let sizeKB = 0;
         try { sizeKB = Math.round(fs.statSync(full).size / 1024); } catch (_) {}
         return {
           name: f,
-          cleanName: f.replace(/\.disabled$/i, ''),
+          cleanName,
           enabled: !f.toLowerCase().endsWith('.disabled'),
-          sizeKB
+          sizeKB,
+          slug: mEntry?.slug || '',
+          mcVersion: mEntry?.mcVersion || extractMcVerFromFilename(cleanName) || '',
+          gameVersions: Array.isArray(mEntry?.gameVersions) ? mEntry.gameVersions : []
         };
       });
   } catch (_) {

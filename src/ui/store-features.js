@@ -336,7 +336,16 @@ async function refreshLocalAddonsCount() {
   if (tabCountEl) tabCountEl.textContent = items.length;
 
   // Check if core FPS Boost pack is already installed for current selectedVersion
-  const lowerNames = enabledItems.map((i) => i.cleanName.toLowerCase());
+  const activeVer = state.selectedVersion || '1.21.4';
+  const itemMatchesActiveVer = (item) => {
+    if (Array.isArray(item.gameVersions) && item.gameVersions.length > 0) {
+      return item.gameVersions.includes(activeVer);
+    }
+    if (item.mcVersion) return item.mcVersion === activeVer;
+    return true;
+  };
+  const compatEnabled = enabledItems.filter(itemMatchesActiveVer);
+  const lowerNames = compatEnabled.map((i) => i.cleanName.toLowerCase());
   const hasSodium = lowerNames.some((n) => n.startsWith('sodium-') || n.startsWith('embeddium-'));
   const hasLithium = lowerNames.some((n) => n.startsWith('lithium-') || n.startsWith('ferritecore-'));
   const btnHomeFps = document.getElementById('btnOneClickFpsBoost');
@@ -345,23 +354,23 @@ async function refreshLocalAddonsCount() {
 
   if (hasSodium && hasLithium) {
     if (btnHomeFps) {
-      btnHomeFps.innerHTML = '<span>✓ Đã Cài Sẵn X3 FPS</span>';
+      btnHomeFps.innerHTML = `<span>✓ Đã Cài X3 FPS (${activeVer})</span>`;
       btnHomeFps.dataset.alreadyInstalled = 'true';
     }
     if (btnStoreFps) {
-      btnStoreFps.innerHTML = '<span>✓ Đã Cài Sẵn Bộ X3 FPS</span>';
+      btnStoreFps.innerHTML = `<span>✓ Đã Cài Sẵn Bộ X3 FPS (${activeVer})</span>`;
       btnStoreFps.dataset.alreadyInstalled = 'true';
     }
     if (descEl) {
-      descEl.textContent = `✓ Bộ Mod X3 FPS (${enabledItems.length} Mod: Sodium, Lithium, Iris...) đã cài sẵn trong máy — Bấm CHƠI NGAY để vào game!`;
+      descEl.textContent = `✓ Bộ Mod X3 FPS (${compatEnabled.length} Mod chuẩn ${activeVer}: Sodium, Lithium, Iris...) đã cài sẵn — Bấm CHƠI NGAY để vào game!`;
     }
   } else {
     if (btnHomeFps) {
-      btnHomeFps.innerHTML = '<span>⚡ Cài Gói X3 FPS</span>';
+      btnHomeFps.innerHTML = `<span>⚡ Cài X3 FPS (${activeVer})</span>`;
       btnHomeFps.dataset.alreadyInstalled = 'false';
     }
     if (btnStoreFps) {
-      btnStoreFps.innerHTML = '<span>⚡ Cài Trọn Bộ Mod X3 FPS</span>';
+      btnStoreFps.innerHTML = `<span>⚡ Cài Trọn Bộ X3 FPS (${activeVer})</span>`;
       btnStoreFps.dataset.alreadyInstalled = 'false';
     }
   }
@@ -424,7 +433,8 @@ async function loadModrinthStore(append = false) {
 
   const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
   const localCheck = await window.aetherAPI.listLocalAddons(state.gameDir, folderMap[state.activeModStoreType] || 'mods');
-  const localNames = (localCheck?.items || []).map((i) => i.cleanName.toLowerCase());
+  const localItems = (localCheck?.items || []).filter((i) => i.enabled);
+  const activeVer = state.selectedVersion || '1.21.4';
 
   const TAG_VI_MAP = {
     fabric: 'Fabric',
@@ -466,7 +476,32 @@ async function loadModrinthStore(append = false) {
       })
       .join('');
     const slugLower = (item.slug || '').toLowerCase();
-    const isInstalled = localNames.some((n) => n.includes(slugLower) || n.startsWith(slugLower.split('-')[0] + '-'));
+    const matchedLocal = localItems.find((li) => {
+      if (li.slug && li.slug.toLowerCase() === slugLower) return true;
+      const n = li.cleanName.toLowerCase();
+      return n.includes(slugLower) || n.startsWith(slugLower.split('-')[0] + '-');
+    });
+    let isInstalledExact = false;
+    let isInstalledOtherVer = '';
+    if (matchedLocal) {
+      if (state.activeModStoreType !== 'mod') {
+        isInstalledExact = true;
+      } else if (Array.isArray(matchedLocal.gameVersions) && matchedLocal.gameVersions.length > 0) {
+        if (matchedLocal.gameVersions.includes(activeVer)) isInstalledExact = true;
+        else isInstalledOtherVer = matchedLocal.mcVersion || matchedLocal.gameVersions[0] || 'khác';
+      } else if (matchedLocal.mcVersion) {
+        if (matchedLocal.mcVersion === activeVer) isInstalledExact = true;
+        else isInstalledOtherVer = matchedLocal.mcVersion;
+      } else {
+        isInstalledExact = true;
+      }
+    }
+    const btnText = isInstalledExact
+      ? `✓ Đã Cài (${activeVer})`
+      : (isInstalledOtherVer ? `🔄 Đổi sang ${activeVer}` : `⬇ Tải (${activeVer})`);
+    const btnTitle = isInstalledOtherVer
+      ? `Đang có bản ${isInstalledOtherVer} trong máy — Bấm để tự động tải và đổi sang bản ${activeVer}`
+      : `Tự động chọn và cài đặt bản chuẩn cho Minecraft ${activeVer} (${state.selectedCore.toUpperCase()})`;
     return `<div class="mod-card">
       <div class="mod-card-top">
         <img class="mod-icon" src="${item.iconUrl || ''}" alt="" />
@@ -478,7 +513,7 @@ async function loadModrinthStore(append = false) {
       <div class="mod-desc" title="${(item.description || '').replace(/"/g, '&quot;')}">${item.description || 'Gói nội dung mở rộng chính thức từ kho Modrinth.'}</div>
       <div class="mod-card-foot">
         <div class="mod-tags">${tags}</div>
-        <button class="btn-install-mod ${isInstalled ? 'installed' : ''}" data-slug="${item.slug}">${isInstalled ? '✓ Đã Cài Sẵn' : '⬇ Tải 1-Click'}</button>
+        <button class="btn-install-mod ${isInstalledExact ? 'installed' : ''}" data-slug="${item.slug}" title="${btnTitle}">${btnText}</button>
       </div>
     </div>`;
   }).join('');
@@ -502,8 +537,8 @@ async function loadModrinthStore(append = false) {
   grid.querySelectorAll('.btn-install-mod').forEach((btn) => {
     btn.onclick = async () => {
       const cRes = await askUserAgreement({
-        title: '📥 Xác Nhận Tải & Cài Đặt',
-        message: `Bạn có đồng ý tải và cài đặt gói "${btn.dataset.slug}" cho phiên bản Minecraft ${state.selectedVersion} vào máy không?`,
+        title: '📥 Xác Nhận Tải & Cài Đặt Tự Khớp Phiên Bản',
+        message: `Bạn có đồng ý tự động tải và cài đặt gói "${btn.dataset.slug}" chuẩn phiên bản Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()}) kèm thư viện đi kèm vào máy không?`,
         agreeText: '✓ Đồng Ý Tải Về',
         cancelText: '✕ Không, Hủy'
       });
@@ -513,6 +548,7 @@ async function loadModrinthStore(append = false) {
       if (r?.ok) {
         btn.textContent = `✓ Đã Cài (${state.selectedVersion})`;
         btn.classList.add('installed');
+        btn.disabled = false;
         document.getElementById('statusText').textContent = `✓ Đã cài ${r.fileName} kèm thư viện tương thích cho Minecraft ${state.selectedVersion}!`;
         await refreshLocalAddonsCount();
       } else {
@@ -535,7 +571,13 @@ async function renderLocalAddonsManager() {
     listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);">Chưa có file nào trong thư mục <strong>${state.activeLocalFolder}</strong>.</div>`;
     return;
   }
-  listEl.innerHTML = items.map((item) => `<div class="addon-row"><div><strong style="font-size:12.5px;${item.enabled ? '' : 'text-decoration:line-through;opacity:0.6;'}">${item.cleanName}</strong><span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${item.sizeKB} KB • ${item.enabled ? 'Đang Bật' : 'Đã Tắt'}</span></div><div style="display:flex;gap:6px;"><button class="vtype-btn ${item.enabled ? 'active' : ''}" data-toggle="${item.name}">${item.enabled ? 'Đang Bật' : 'Bật Lại'}</button><button class="vtype-btn" style="color:#ef4444;" data-del="${item.name}">Xóa</button></div></div>`).join('');
+  const activeVer = state.selectedVersion || '1.21.4';
+  listEl.innerHTML = items.map((item) => {
+    const verTag = item.mcVersion
+      ? `<span style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:8px;${item.mcVersion === activeVer || (item.gameVersions || []).includes(activeVer) ? 'background:rgba(16,185,129,0.14);color:#10b981;' : 'background:rgba(245,158,11,0.15);color:#f59e0b;'}">MC ${item.mcVersion}</span>`
+      : '';
+    return `<div class="addon-row"><div><strong style="font-size:12.5px;${item.enabled ? '' : 'text-decoration:line-through;opacity:0.6;'}">${item.cleanName}</strong>${verTag}<span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${item.sizeKB} KB • ${item.enabled ? 'Đang Bật' : 'Đã Tắt (Tự cất)'}</span></div><div style="display:flex;gap:6px;"><button class="vtype-btn ${item.enabled ? 'active' : ''}" data-toggle="${item.name}">${item.enabled ? 'Đang Bật' : 'Bật Lại'}</button><button class="vtype-btn" style="color:#ef4444;" data-del="${item.name}">Xóa</button></div></div>`;
+  }).join('');
   listEl.querySelectorAll('[data-toggle]').forEach((b) => { b.onclick = async () => { await window.aetherAPI.toggleLocalAddon(state.gameDir, state.activeLocalFolder, b.dataset.toggle); await renderLocalAddonsManager(); }; });
   listEl.querySelectorAll('[data-del]').forEach((b) => { b.onclick = async () => { await window.aetherAPI.deleteLocalAddon(state.gameDir, state.activeLocalFolder, b.dataset.del); await renderLocalAddonsManager(); }; });
 }
