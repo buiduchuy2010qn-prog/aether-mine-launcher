@@ -960,92 +960,57 @@ function loginCloudViaBrowser({ parentWindow, customDbUrl = '' }) {
           return res.end();
         }
 
-        const code = reqUrl.searchParams.get('code');
-        const error = reqUrl.searchParams.get('error');
-        if (!code && !error) {
+        const action = reqUrl.searchParams.get('action');
+        if (!action) {
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          return res.end('<h3>Đang đồng bộ Aether Cloud ID...</h3>');
+          return res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Cổng Tài Khoản Aether Cloud 24/7 — Như TLauncher</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',system-ui,sans-serif}.card{background:#111827;border:2px solid #06b6d4;border-radius:18px;padding:32px 38px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(6,182,212,0.16);color:#22d3ee;font-weight:800;font-size:12px;margin-bottom:10px}h2{color:#22d3ee;margin:0 0 6px;font-size:21px}p{color:#94a3b8;font-size:13px;margin:0 0 18px}label{display:block;font-size:12px;font-weight:700;color:#cbd5e1;margin:10px 0 4px}input{width:100%;box-sizing:border-box;height:40px;padding:0 12px;border-radius:9px;border:1px solid #334155;background:#0f172a;color:#fff;font-size:14px;outline:none}input:focus{border-color:#06b6d4}.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.btn{height:42px;border-radius:10px;border:none;font-weight:800;font-size:13.5px;cursor:pointer;color:#fff}.login{background:#16a34a}.reg{background:#0284c7}</style></head><body><div class="card"><div class="badge">🛡️ AETHER CLOUD WEB PORTAL 24/7</div><h2>Đăng Nhập / Đăng Ký Trên Web</h2><p>Hệ thống tài khoản độc lập của Aether Craft Launcher (không cần Microsoft). Tự động đồng bộ vào Launcher ngay sau khi xác nhận!</p><form method="GET" action="/"><label>Email hoặc Tên đăng nhập:</label><input type="text" name="loginId" required placeholder="VD: buiduchuy2010qn@gmail.com" /><label>Mật khẩu (≥4 ký tự):</label><input type="password" name="password" required minlength="4" placeholder="Nhập mật khẩu..." /><label>Tên Nhân Vật Minecraft (Nếu đăng ký mới):</label><input type="text" name="mcUsername" maxlength="16" placeholder="VD: hi0bel (Bỏ trống nếu đã có TK)" /><div class="btns"><button class="btn login" type="submit" name="action" value="login">🔑 Đăng Nhập</button><button class="btn reg" type="submit" name="action" value="register">✨ Tạo Tài Khoản</button></div></form></div></body></html>`);
         }
+
         if (completed) {
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          return res.end('<h3>Đã hoàn tất.</h3>');
+          return res.end('<h3>Đã đồng bộ vào Launcher.</h3>');
         }
+
+        const loginId = reqUrl.searchParams.get('loginId') || '';
+        const password = reqUrl.searchParams.get('password') || '';
+        const mcUsername = reqUrl.searchParams.get('mcUsername') || '';
+
+        let profile;
+        if (action === 'register') {
+          profile = await registerCloudAccount({ loginId, password, mcUsername, customDbUrl });
+        } else {
+          profile = await loginCloudAccount({ loginId, password, customDbUrl });
+        }
+
         completed = true;
-
-        const port = server.address()?.port || 25561;
-        const redirectUri = `http://localhost:${port}`;
-
-        if (error) {
-          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          res.end('<h2>Đã hủy liên kết tài khoản Aether Cloud.</h2>');
-          cleanup();
-          focusLauncher();
-          return reject(new Error('Đã hủy liên kết tài khoản trên trình duyệt.'));
-        }
-
-        const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: AZURE_CLIENT_ID,
-            grant_type: 'authorization_code',
-            code,
-            redirect_uri: redirectUri,
-            scope: AZURE_SCOPE
-          }).toString()
-        });
-
-        if (!tokenRes.ok) {
-          throw new Error(`Lỗi xác thực trình duyệt (${tokenRes.status}).`);
-        }
-
-        const tokenData = await tokenRes.json();
-        const claims = decodeJwtPayload(tokenData.id_token);
-        const profile = await findOrCreateBrowserCloudAccount({
-          name: claims.name || '',
-          email: claims.email || claims.preferred_username || '',
-          sub: claims.sub || claims.oid || '',
-          customDbUrl
-        });
-
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Aether Cloud ID</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',sans-serif}.card{background:#111827;border:2px solid #06b6d4;border-radius:16px;padding:32px 38px;text-align:center;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,0.6)}h2{color:#22d3ee;margin:0 0 10px}.acc{margin:14px 0;padding:10px 16px;background:rgba(6,182,212,0.14);border-radius:10px;font-weight:800;font-size:16px}</style></head><body><div class="card"><h2>🛡️ Đã Kết Nối Aether Cloud ID!</h2><div class="acc">👤 Nhân vật: ${profile.mcUsername} (${profile.loginId})</div><p>Tài khoản của bạn đã được lưu trên Internet Database 24/7. Bạn có thể đổi Username tự do ngay trong Launcher!</p></div><script>setTimeout(()=>{try{window.close()}catch(e){}},1600)</script></body></html>`);
+        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Aether Cloud ID</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',sans-serif}.card{background:#111827;border:2px solid #22c55e;border-radius:16px;padding:32px 38px;text-align:center;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,0.6)}h2{color:#4ade80;margin:0 0 10px}.acc{margin:14px 0;padding:10px 16px;background:rgba(34,197,94,0.14);border-radius:10px;font-weight:800;font-size:16px}</style></head><body><div class="card"><h2>✅ Đã Đồng Bộ Tài Khoản Aether Cloud!</h2><div class="acc">👤 Nhân vật: ${profile.mcUsername} (${profile.loginId})</div><p>Đã kết nối thành công vào Aether Craft Launcher! Bạn có thể đóng tab này.</p></div><script>setTimeout(()=>{try{window.close()}catch(e){}},1500)</script></body></html>`);
 
         cleanup();
         focusLauncher();
         resolve(profile);
       } catch (err) {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<h2>Lỗi: ${err.message}</h2>`);
-        cleanup();
-        focusLauncher();
-        reject(err);
+        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Lỗi Aether Cloud</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',sans-serif}.card{background:#111827;border:2px solid #ef4444;border-radius:16px;padding:32px;text-align:center;max-width:460px}a{display:inline-block;margin-top:14px;padding:9px 20px;background:#0284c7;color:#fff;text-decoration:none;border-radius:8px;font-weight:700}</style></head><body><div class="card"><h2 style="color:#f87171;">⚠️ ${err.message}</h2><a href="/">← Thử lại trên Cổng Web Aether Cloud</a></div></body></html>`);
       }
     });
 
     activeBrowserServer = server;
 
-    server.listen(25561, '127.0.0.1', () => {
-      const port = server.address().port;
-      const redirectUri = `http://localhost:${port}`;
-      const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id=${AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(AZURE_SCOPE)}&prompt=select_account`;
-      shell.openExternal(authUrl);
-    });
+    const openPortal = (port) => {
+      shell.openExternal(`http://127.0.0.1:${port}/`);
+    };
 
+    server.listen(25561, '127.0.0.1', () => openPortal(server.address().port));
     server.on('error', () => {
-      server.listen(0, '127.0.0.1', () => {
-        const port = server.address().port;
-        const redirectUri = `http://localhost:${port}`;
-        const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id=${AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(AZURE_SCOPE)}&prompt=select_account`;
-        shell.openExternal(authUrl);
-      });
+      server.listen(0, '127.0.0.1', () => openPortal(server.address().port));
     });
 
     timeoutTimer = setTimeout(() => {
       if (!completed) {
         completed = true;
         cleanup();
-        reject(new Error('Hết thời gian chờ liên kết trên trình duyệt.'));
+        reject(new Error('Đã đóng cổng Web Aether Cloud.'));
       }
     }, 180000);
   });

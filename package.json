@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "31.2.0",
-  "description": "Aether Craft v31.2 PRO - Clean Forgot Password OTP Mode & Instant Cloud Notifications",
+  "version": "31.2.1",
+  "description": "Aether Craft v31.2.1 PRO - 100% Standalone Aether Cloud Web Portal & OTP Security Inbox (No Microsoft Redirect)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
