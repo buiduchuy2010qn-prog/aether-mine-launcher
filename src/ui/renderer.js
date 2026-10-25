@@ -418,6 +418,7 @@ function setLaunchUiState(phase, statusMsg) {
   const statusEl = document.getElementById('statusText');
   const pctEl = document.getElementById('progressPercent');
   const barEl = document.getElementById('progressBar');
+  const trackEl = document.getElementById('dockProgressTrack');
 
   state.launchPhase = phase;
   if (phase === 'idle') {
@@ -428,9 +429,9 @@ function setLaunchUiState(phase, statusMsg) {
     }
     if (launchBtnText) launchBtnText.textContent = '▶ CHƠI NGAY';
     if (btnKill) btnKill.classList.add('hidden');
-    if (pctEl) pctEl.textContent = '100%';
-    if (barEl) barEl.style.width = '100%';
-    if (statusMsg && statusEl) statusEl.textContent = statusMsg;
+    if (trackEl) trackEl.classList.add('hidden');
+    if (pctEl) pctEl.classList.add('hidden');
+    if (statusEl) statusEl.textContent = statusMsg || '🟢 Trạng thái: Sẵn sàng vào game';
   } else if (phase === 'starting') {
     state.isLaunching = true;
     if (btnLaunch) {
@@ -444,6 +445,12 @@ function setLaunchUiState(phase, statusMsg) {
       const sp = btnKill.querySelector('span');
       if (sp) sp.textContent = '✕ HỦY KHỞI ĐỘNG';
     }
+    if (trackEl) trackEl.classList.remove('hidden');
+    if (pctEl) {
+      pctEl.classList.remove('hidden');
+      pctEl.textContent = '0%';
+    }
+    if (barEl) barEl.style.width = '6%';
     if (statusMsg && statusEl) statusEl.textContent = statusMsg;
   } else if (phase === 'playing') {
     state.isLaunching = true;
@@ -458,8 +465,8 @@ function setLaunchUiState(phase, statusMsg) {
       const sp = btnKill.querySelector('span');
       if (sp) sp.textContent = '⏹ DỪNG GAME NGAY';
     }
-    if (pctEl) pctEl.textContent = '100%';
-    if (barEl) barEl.style.width = '100%';
+    if (trackEl) trackEl.classList.add('hidden');
+    if (pctEl) pctEl.classList.add('hidden');
     if (statusEl) statusEl.textContent = statusMsg || '🟢 Đang chơi Minecraft — Ngủ đông 0% GPU';
   }
 }
@@ -479,13 +486,13 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
   if (!res?.ok) {
     if (manualClick && updBtnText) {
       updBtnText.textContent = '⚠ Lỗi mạng';
-      setTimeout(() => (updBtnText.textContent = '🔄 Cập nhật App'), 2000);
+      setTimeout(() => (updBtnText.textContent = '🔄 Cập nhật'), 2000);
     }
     return;
   }
 
   if (!res.hasUpdate) {
-    if (updBtnText) updBtnText.textContent = `✓ Bản mới nhất (v${res.currentVersion})`;
+    if (updBtnText) updBtnText.textContent = `✓ v${res.currentVersion}`;
     if (manualClick) {
       await askUserAgreement({
         title: '✓ Launcher Đã Ở Phiên Bản Mới Nhất',
@@ -572,7 +579,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const res = await window.aetherAPI.trimRamNow();
     if (res.ok) {
       document.getElementById('ramBadge').textContent = `RAM trống: ${res.freeMemGB}/${sys.totalMemGB} GB`;
-      txt.textContent = 'Đã tối ưu!'; setTimeout(() => (txt.textContent = 'Dọn RAM'), 1500);
+      txt.textContent = '✓ Đã dọn!'; setTimeout(() => (txt.textContent = '⚡ Dọn'), 1500);
     }
   };
 
@@ -1028,6 +1035,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   window.aetherAPI.onProgress((p) => {
     if (state.launchPhase === 'playing') return;
+    document.getElementById('dockProgressTrack')?.classList.remove('hidden');
+    document.getElementById('progressPercent')?.classList.remove('hidden');
     document.getElementById('progressPercent').textContent = `${p.percent}%`;
     document.getElementById('progressBar').style.width = `${p.percent}%`;
     document.getElementById('statusText').textContent = `Đang tải (${p.type}): ${p.task}/${p.total}`;

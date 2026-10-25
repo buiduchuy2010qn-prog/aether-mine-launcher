@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "29.1.0",
-  "description": "Aether Craft v29.1 PRO - Official 3D M App Logo, Spacious 3-Tab 3D Studio & Anti-Crash Engine",
+  "version": "29.2.0",
+  "description": "Aether Craft v29.2 PRO - Balanced Studio Layout, Strict Color Hierarchy & Clean Ready Status",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

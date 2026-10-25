@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v29.1 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v29.2 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,12 +16,11 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v29.1 PRO</span>
+          <span class="brand-version">v29.2 PRO</span>
         </div>
       </div>
 
-      <div class="theme-studio-bar">
-        <span class="ts-label">Giao diện:</span>
+      <div class="theme-studio-bar" title="Chọn phong cách giao diện">
         <button class="ts-chip" data-theme-pick="mojang">Mojang</button>
         <button class="ts-chip active" data-theme-pick="lunar">Lunar</button>
         <button class="ts-chip" data-theme-pick="modrinth">Modrinth</button>
@@ -32,18 +31,15 @@
 
       <div class="titlebar-telemetry">
         <div class="telemetry-pill hidden"><span id="cpuBadge">12 Nhân CPU</span></div>
-        <div class="telemetry-pill telemetry-ram-live" title="Tự động cập nhật dung lượng RAM thực tế mỗi 3 giây">
+        <button class="ram-boost-btn telemetry-ram-live" id="btnTrimRam" title="Bấm để dọn dẹp và giải phóng bộ nhớ đệm RAM ngay lập tức">
           <span class="live-dot-green"></span>
           <span id="ramBadge">RAM trống: -- GB</span>
           <div class="ram-mini-track"><div class="ram-mini-fill" id="ramLiveBarFill" style="width: 45%"></div></div>
-        </div>
-        <button class="ram-boost-btn" id="btnTrimRam" title="Giải phóng bộ nhớ đệm RAM ngay lập tức">
-          <span class="pulse-dot"></span>
-          <span id="ramBoostText">Dọn RAM</span>
+          <span class="ram-clean-tag" id="ramBoostText">⚡ Dọn</span>
         </button>
         <button class="ram-boost-btn update-top-btn" id="btnCheckUpdate" title="Kiểm tra & Tự động cập nhật Launcher">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="margin-right:4px;vertical-align:-1px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-          <span id="updateBtnText">Cập nhật App</span>
+          <span id="updateBtnText">v29.2.0</span>
         </button>
       </div>
 
@@ -277,7 +273,7 @@
                   <div class="auth-switcher-row">
                     <button class="auth-tab-btn active" id="tabBtnCrack">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" style="margin-right:5px;vertical-align:-2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <span>Tài khoản Offline (Crack)</span>
+                      <span>Offline (Crack)</span>
                     </button>
                     <button class="auth-tab-btn" id="tabBtnMicrosoft">
                       <!-- OFFICIAL MICROSOFT 4-COLOR LOGO -->
@@ -322,29 +318,23 @@
                     </div>
                   </div>
 
-                  <!-- COLLAPSIBLE ADVANCED PERFORMANCE & RAM DRAWER -->
+                  <!-- BALANCED PERFORMANCE & RAM SECTION (OPEN BY DEFAULT SO NO EMPTY GAP) -->
                   <div class="adv-ram-drawer">
                     <div class="adv-ram-summary-bar">
                       <div class="ars-left">
-                        <span class="ars-main">⚡ Cấp phát RAM: <strong class="qram-val" id="ramValueDisplay">3 GB</strong></span>
+                        <span class="ars-main">⚡ Bộ nhớ RAM cấp phát: <strong class="qram-val" id="ramValueDisplay">3 GB</strong></span>
                         <span class="ars-sub" id="advPerfSummaryText">Đa nhân G1GC • Ngủ đông 0% • Vào nhanh</span>
                       </div>
-                      <button type="button" class="btn-adv-toggle" id="btnToggleAdvRam" title="Mở hoặc thu gọn bảng chỉnh RAM và tối ưu máy">
-                        <span id="advToggleBtnText">⚙️ Chỉnh RAM &amp; Tối ưu ▾</span>
-                      </button>
+                      <div class="ram-preset-pills" id="ramPresetBar">
+                        <button class="ram-pill-btn" data-ram="2">2G</button>
+                        <button class="ram-pill-btn active" data-ram="3">3G</button>
+                        <button class="ram-pill-btn" data-ram="4">4G</button>
+                        <button class="ram-pill-btn" data-ram="6">6G</button>
+                        <button class="ram-pill-btn" data-ram="8">8G</button>
+                      </div>
                     </div>
 
-                    <div class="adv-ram-body hidden" id="homeAdvRamBody">
-                      <div class="qram-top">
-                        <span class="field-label no-wrap-label" style="margin:0;">Mức RAM nhanh:</span>
-                        <div class="ram-preset-pills" id="ramPresetBar">
-                          <button class="ram-pill-btn" data-ram="2">2 GB</button>
-                          <button class="ram-pill-btn active" data-ram="3">3 GB</button>
-                          <button class="ram-pill-btn" data-ram="4">4 GB</button>
-                          <button class="ram-pill-btn" data-ram="6">6 GB</button>
-                          <button class="ram-pill-btn" data-ram="8">8 GB</button>
-                        </div>
-                      </div>
+                    <div class="adv-ram-body" id="homeAdvRamBody">
                       <input type="range" id="ramSlider" min="2" max="16" step="1" value="3" class="pro-range" />
 
                       <div class="booster-pills-row">
@@ -678,10 +668,10 @@
       <!-- RIGHT: PROGRESS BAR & STATUS -->
       <div class="dock-right-status">
         <div class="drs-top">
-          <span class="drs-text" id="statusText">Sẵn sàng khởi động</span>
-          <span class="drs-pct" id="progressPercent">100%</span>
+          <span class="drs-text" id="statusText">🟢 Trạng thái: Sẵn sàng vào game</span>
+          <span class="drs-pct hidden" id="progressPercent">0%</span>
         </div>
-        <div class="dock-progress-track"><div class="dock-progress-bar" id="progressBar" style="width: 100%"></div></div>
+        <div class="dock-progress-track hidden" id="dockProgressTrack"><div class="dock-progress-bar" id="progressBar" style="width: 0%"></div></div>
         <div class="drs-account">Tài khoản: <strong id="dockAccountText">StevePlayer (Crack)</strong></div>
       </div>
     </footer>

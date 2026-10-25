@@ -3440,3 +3440,156 @@ html[data-theme="cherry"] {
   border-radius: 10px !important;
   filter: drop-shadow(0 3px 8px rgba(34, 197, 94, 0.4)) !important;
 }
+
+/* ============================================================================
+   v29.2 PRO: 5-POINT UI/UX REFINEMENT (CARD B BALANCE, NO-WRAP BUTTONS,
+   COMPACT TITLEBAR, STRICT COLOR HIERARCHY & CLEAN READY STATUS)
+   ============================================================================ */
+
+/* 1. BALANCED CARD B LAYOUT (ZERO DEAD WHITESPACE) */
+.dsp-block {
+  justify-content: flex-start !important;
+  gap: 12px !important;
+}
+
+.adv-ram-drawer {
+  margin-top: 0 !important;
+  flex: 1 !important;
+  justify-content: space-between !important;
+  padding: 12px 14px !important;
+  gap: 10px !important;
+}
+
+.adv-ram-summary-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+}
+
+#ramPresetBar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex-shrink: 0 !important;
+}
+
+.adv-ram-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding-top: 10px !important;
+}
+
+.adv-ram-body.hidden {
+  display: none !important;
+}
+
+/* 2. PREVENT CRAMPED OR WRAPPED BUTTONS */
+.auth-tab-btn {
+  white-space: nowrap !important;
+  padding: 0 10px !important;
+  height: 36px !important;
+  font-size: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* 3. COMPACT & BREATHABLE TOP TITLEBAR */
+.titlebar {
+  padding: 0 14px !important;
+  gap: 12px !important;
+}
+
+.ram-unified-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 4px 10px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-col) !important;
+  color: var(--text-main) !important;
+}
+
+.ram-unified-btn:hover {
+  border-color: var(--accent) !important;
+}
+
+.ram-clean-tag {
+  padding: 2px 6px !important;
+  border-radius: 5px !important;
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+}
+
+/* 4. STRICT COLOR HIERARCHY: ONLY 'CHƠI NGAY' IS SOLID EMERALD */
+.brand-version {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border: 1px solid var(--accent) !important;
+}
+
+.ts-chip.active {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border: 1px solid var(--accent) !important;
+  font-weight: 800 !important;
+}
+
+.mc-badge {
+  background: rgba(15, 23, 42, 0.78) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(74, 222, 128, 0.45) !important;
+  box-shadow: none !important;
+}
+
+.wp-chip.active {
+  background: rgba(34, 197, 94, 0.22) !important;
+  color: #86efac !important;
+  border-color: #4ade80 !important;
+}
+
+#btnGoModStore.banner-cta-primary {
+  background: rgba(22, 163, 74, 0.24) !important;
+  color: #dcfce7 !important;
+  border: 1px solid rgba(74, 222, 128, 0.55) !important;
+  box-shadow: none !important;
+}
+
+#btnGoModStore.banner-cta-primary:hover {
+  background: rgba(22, 163, 74, 0.36) !important;
+}
+
+.btn-sync-skin {
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+  border: 1.5px solid var(--accent) !important;
+  font-weight: 800 !important;
+}
+
+.btn-sync-skin:hover {
+  filter: brightness(1.06) !important;
+}
+
+.stage-ctrl-btn.active {
+  background: rgba(34, 197, 94, 0.22) !important;
+  color: #86efac !important;
+  border-color: #4ade80 !important;
+}
+
+/* 5. CLEAN READY STATUS IN BOTTOM DOCK */
+.dock-right-status {
+  justify-content: center !important;
+  gap: 5px !important;
+}
+
+#dockProgressTrack.hidden,
+#progressPercent.hidden {
+  display: none !important;
+}
