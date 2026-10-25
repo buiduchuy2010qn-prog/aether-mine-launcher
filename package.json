@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.3.0",
-  "description": "Aether Craft v30.3 PRO - Perfect Banner, Sidebar & 3D Toolbar in Compact Window Mode",
+  "version": "30.4.0",
+  "description": "Aether Craft v30.4 PRO - Side-by-Side Core & Account/Character Name Cards in Compact Window Mode",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

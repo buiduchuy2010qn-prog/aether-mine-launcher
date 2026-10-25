@@ -4853,120 +4853,285 @@ html[data-theme="cherry"] {
 
 @media (max-width: 1320px) {
   .titlebar {
-    padding: 0 10px !important;
-    gap: 6px !important;
+    padding: 0 8px !important;
+    gap: 5px !important;
   }
   .theme-studio-bar {
     padding: 2px !important;
     gap: 2px !important;
   }
   .ts-chip {
-    padding: 3px 7px !important;
-    font-size: 11px !important;
+    padding: 3px 6px !important;
+    font-size: 10.5px !important;
   }
   .titlebar-telemetry {
-    gap: 5px !important;
+    gap: 4px !important;
   }
   .ram-mini-track {
     display: none !important;
   }
   .ram-boost-btn {
-    padding: 3px 8px !important;
-    font-size: 11px !important;
-    height: 26px !important;
+    padding: 2px 7px !important;
+    font-size: 10.5px !important;
+    height: 25px !important;
   }
   .sidebar {
-    width: 194px !important;
-    padding: 10px 8px !important;
+    width: 164px !important;
+    padding: 8px 6px !important;
   }
   .nav-item {
-    font-size: 11.5px !important;
-    padding: 7px 8px !important;
-    gap: 7px !important;
+    font-size: 11px !important;
+    padding: 6px 7px !important;
+    gap: 6px !important;
     white-space: nowrap !important;
   }
+  .folder-action-btn {
+    font-size: 10.5px !important;
+    padding: 7px 6px !important;
+  }
+  .main-stage {
+    padding: 8px 10px !important;
+  }
   .main-play-grid {
-    grid-template-columns: minmax(0, 1fr) 286px !important;
-    gap: 10px !important;
-    height: auto !important;
+    grid-template-columns: minmax(0, 1fr) 232px !important;
+    gap: 8px !important;
+    height: 100% !important;
+  }
+  .left-play-col {
+    gap: 8px !important;
   }
   .tab-panel#tab-play {
     overflow-y: auto !important;
-    padding-bottom: 12px !important;
   }
-  /* Stack Card A and Card B vertically so each gets 480px+ full width and zero buttons clip! */
+  /* Keep Card A (Bộ Khởi Chạy) & Card B (Tài Khoản & Đặt Tên Nhân Vật) SIDE-BY-SIDE so Character Name is ALWAYS visible! */
   .direct-selector-panel {
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-    height: auto !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
   }
   .dsp-block {
-    height: auto !important;
+    padding: 10px 11px !important;
+    gap: 6px !important;
   }
-  .hero-banner-clean {
-    min-height: 156px !important;
-    max-height: none !important;
-    height: auto !important;
-    padding: 12px 14px !important;
+  .dsp-head h3 {
+    font-size: 11px !important;
+    letter-spacing: 0 !important;
   }
-  .wallpaper-switcher {
-    display: none !important;
-  }
+  #javaReqBadge,
+  #uuidPreviewTag,
+  .field-hint-mini,
+  #advPerfSummaryText,
+  #verReadyDesc,
+  .wallpaper-switcher,
   #bannerSubStatus {
     display: none !important;
+  }
+  #installedCountLabel {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
+  .field-label {
+    font-size: 11px !important;
+  }
+  /* Compact Banner so Card A & Card B have full vertical room */
+  .hero-banner-clean {
+    min-height: 92px !important;
+    max-height: 104px !important;
+    padding: 8px 12px !important;
+  }
+  .hero-mc-logo-img {
+    height: 30px !important;
+  }
+  .mc-java-edition-plaque {
+    margin-top: -2px !important;
+  }
+  .mc-java-edition-plaque span {
+    font-size: 8.5px !important;
+    padding: 1px 7px !important;
+  }
+  .hbc-edition-tag {
+    font-size: 9px !important;
+    margin-bottom: 1px !important;
   }
   .hbc-bottom-row {
     flex-wrap: wrap !important;
     align-items: flex-end !important;
     justify-content: space-between !important;
-    gap: 8px !important;
-    margin-top: 6px !important;
+    gap: 6px !important;
+    margin-top: 2px !important;
   }
   .hbc-quick-actions {
     flex-wrap: wrap !important;
-    gap: 5px !important;
+    gap: 4px !important;
   }
   .banner-cta-btn {
-    padding: 0 9px !important;
-    height: 29px !important;
-    font-size: 11px !important;
+    padding: 0 7px !important;
+    height: 25px !important;
+    font-size: 10px !important;
   }
-  .skin-studio-card {
-    height: auto !important;
-    align-self: start !important;
-    padding: 11px 11px !important;
+  /* Card A inner adaptation */
+  .core-selector-bar {
+    gap: 4px !important;
   }
-  .skin-studio-card .card-head h3 {
-    font-size: 12px !important;
+  .core-tab-btn {
+    min-height: 46px !important;
+    padding: 4px 2px !important;
+    gap: 3px !important;
   }
-  .wt-model-btn {
-    padding: 3px 6px !important;
+  .core-real-logo {
+    width: 19px !important;
+    height: 19px !important;
+  }
+  .core-tab-btn strong {
     font-size: 10.5px !important;
   }
-  .stage-unified-toolbar {
+  .core-tab-btn span {
+    display: none !important;
+  }
+  .version-selectors-row {
+    grid-template-columns: 1fr !important;
+    gap: 5px !important;
+  }
+  .vtype-btn {
+    font-size: 10px !important;
+    padding: 2px 5px !important;
+    height: 20px !important;
+  }
+  .pro-select,
+  .pro-input,
+  .btn-sync-skin {
+    height: 30px !important;
+    font-size: 11.5px !important;
+  }
+  #quickVersionGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 4px !important;
-    padding: 0 6px !important;
+  }
+  .qver-chip {
+    padding: 3px 2px !important;
+    gap: 1px !important;
+  }
+  .qver-chip strong {
+    font-size: 11px !important;
+  }
+  .qver-chip .qver-status {
+    font-size: 9.5px !important;
+    padding: 1px 4px !important;
+  }
+  .version-ready-bar {
+    padding: 6px 9px !important;
+  }
+  .vrb-badge {
+    font-size: 11px !important;
+  }
+  .vrb-action-btn {
+    height: 24px !important;
+    padding: 0 7px !important;
+    font-size: 10px !important;
+  }
+  /* Card B (Tài Khoản & Đặt Tên Nhân Vật) inner adaptation */
+  .auth-switcher-row {
+    gap: 5px !important;
+  }
+  .auth-tab-btn {
+    height: 29px !important;
+    font-size: 10.5px !important;
+    padding: 0 4px !important;
+  }
+  .auth-tab-btn svg {
+    width: 11px !important;
+    height: 11px !important;
+    margin-right: 3px !important;
+  }
+  .btn-save-acc-mini {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
+  .btn-sync-skin {
+    padding: 0 9px !important;
+    white-space: nowrap !important;
+  }
+  .acc-chip {
+    padding: 2px 6px !important;
+    font-size: 10.5px !important;
+  }
+  .adv-ram-drawer {
+    padding: 8px 9px !important;
+    gap: 6px !important;
+  }
+  .ars-main {
+    font-size: 11px !important;
+  }
+  #ramPresetBar {
+    gap: 4px !important;
+  }
+  #ramPresetBar .ram-pill-btn {
+    height: 25px !important;
+    font-size: 10.5px !important;
+    padding: 0 2px !important;
+  }
+  .adv-ram-body {
+    gap: 6px !important;
+  }
+  .booster-pills-row {
+    gap: 4px !important;
+  }
+  .booster-check-pill {
+    padding: 3px 4px !important;
+    font-size: 9.5px !important;
+    gap: 3px !important;
+  }
+  .booster-check-pill input[type="checkbox"] {
+    width: 11px !important;
+    height: 11px !important;
+  }
+  /* Card C (Nhân vật 3D) inner adaptation */
+  .skin-studio-card {
+    padding: 9px 9px !important;
+    gap: 6px !important;
+  }
+  .skin-studio-card .card-head h3 {
+    font-size: 11px !important;
+  }
+  .wt-model-btn {
+    padding: 2px 5px !important;
+    font-size: 9.5px !important;
+  }
+  .stage-unified-toolbar {
+    gap: 3px !important;
+    padding: 0 4px !important;
   }
   .stage-ctrl-btn {
-    padding: 3px 6px !important;
-    font-size: 10px !important;
+    padding: 2px 5px !important;
+    font-size: 9.5px !important;
     white-space: nowrap !important;
   }
   .webgl-stage-wrap {
-    min-height: 250px !important;
-    max-height: 290px !important;
+    min-height: 190px !important;
+  }
+  .wtab-btn {
+    font-size: 10px !important;
+    padding: 4px 2px !important;
+  }
+  .pose-btn {
+    font-size: 10px !important;
+    padding: 4px 2px !important;
   }
   .mc-official-dock {
-    padding: 0 12px !important;
+    padding: 0 10px !important;
     gap: 8px !important;
+    height: 64px !important;
   }
   .btn-mc-official-play {
-    min-width: 210px !important;
-    padding: 0 20px !important;
+    min-width: 195px !important;
+    height: 46px !important;
+    padding: 0 16px !important;
+  }
+  .mc-play-main {
+    font-size: 16.5px !important;
   }
   #statusText {
-    max-width: 240px !important;
-    font-size: 11.5px !important;
+    max-width: 215px !important;
+    font-size: 11px !important;
   }
 }
 
