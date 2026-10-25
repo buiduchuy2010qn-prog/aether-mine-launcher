@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "30.0.0",
-  "description": "Aether Craft v30.0 PRO - 3D Dream Hoodie Skin Fix, Clean Loader Tags & UI Precision Polish",
+  "version": "30.1.0",
+  "description": "Aether Craft v30.1 PRO - Keep 100% Original Mojang Skin & UI Polish",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
