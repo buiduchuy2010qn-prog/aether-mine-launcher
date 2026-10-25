@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Craft v26.0 - Ultimate Minecraft Launcher</title>
+  <title>Aether Craft v27.0 - Ultimate Minecraft Launcher</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v26.0 PRO</span>
+          <span class="brand-version">v27.0 PRO</span>
         </div>
       </div>
 
@@ -151,6 +151,10 @@
                       <p id="bannerSubStatus">Phiên bản đã sẵn sàng trên máy — Bấm CHƠI NGAY để vào thẳng thế giới.</p>
                     </div>
                     <div class="hbc-quick-actions">
+                      <button class="banner-cta-btn secondary" id="btnOpenMigrateModal" title="Đồng bộ Thế giới, Mods, Server & Tài khoản từ TLauncher, CurseForge, Modrinth, Prism...">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Đồng Bộ Cũ</span>
+                      </button>
                       <button class="banner-cta-btn secondary" id="btnBannerScreenshots" title="Mở thư mục ảnh chụp trong game">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                         <span>Ảnh Chụp</span>
@@ -689,6 +693,39 @@
         <div class="modal-foot">
           <button class="btn-modal-cancel" id="btnModalCancel">Không Đồng Ý (Hủy)</button>
           <button class="btn-modal-agree" id="btnModalAgree">Tôi Đồng Ý</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1-CLICK LAUNCHER MIGRATION & SYNC MODAL -->
+    <div class="modal-backdrop hidden" id="launcherMigrateModal">
+      <div class="modal-dialog-card" style="max-width:640px;width:94%;">
+        <div class="modal-head" style="justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="card-dot emerald"></span>
+            <h3>🔄 Đồng Bộ Dữ Liệu Từ Launcher Khác (TLauncher, CurseForge, Modrinth, Prism...)</h3>
+          </div>
+          <button class="vtype-btn" id="btnPickCustomMigrateDir" title="Chọn thủ công thư mục .minecraft hoặc Instance ở ổ đĩa khác">📂 Chọn Thư Mục Khác...</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;">
+          <p style="margin:0;font-size:12px;color:var(--text-muted);">
+            Tự động quét các Launcher đã từng chơi trên máy và chuyển <strong>Thế giới (Saves), Gói Mods, Shaders, Resource Packs, Danh sách Server &amp; Tên nhân vật</strong> sang Aether Craft:
+          </p>
+          <div id="migrateDetectedList" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;padding-right:4px;"></div>
+          <div class="modal-eula-box" style="padding:10px 12px;">
+            <strong style="display:block;margin-bottom:6px;font-size:11.5px;">Chọn hạng mục muốn đồng bộ sang Aether Craft:</strong>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11.5px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="chkMigrateWorlds" checked /> <span>🌍 Thế giới chơi dở (Saves)</span></label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="chkMigrateMods" checked /> <span>🧩 Kho Mods (.jar)</span></label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="chkMigratePacks" checked /> <span>✨ Shaders &amp; Resource Packs</span></label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="chkMigrateServers" checked /> <span>🌐 Server, Phím tắt &amp; Tên nhân vật</span></label>
+            </div>
+          </div>
+          <div id="migrateStatusNotice" style="font-size:11.5px;color:var(--accent);font-weight:700;min-height:16px;"></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn-modal-cancel" id="btnMigrateClose">Đóng</button>
+          <button class="btn-modal-agree" id="btnMigrateRunNow">⚡ Đồng Bộ Ngay (1-Click)</button>
         </div>
       </div>
     </div>

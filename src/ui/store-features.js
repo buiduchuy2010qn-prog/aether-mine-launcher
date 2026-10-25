@@ -511,3 +511,125 @@ async function pingAllFavoriteServers() {
   if (btn) btn.textContent = '📡 Ping';
   renderFavoriteServers();
 }
+
+let selectedMigrateSourcePath = '';
+
+async function openLauncherMigrateModal() {
+  const modal = document.getElementById('launcherMigrateModal');
+  const listEl = document.getElementById('migrateDetectedList');
+  const statusEl = document.getElementById('migrateStatusNotice');
+  const btnClose = document.getElementById('btnMigrateClose');
+  const btnRun = document.getElementById('btnMigrateRunNow');
+  const btnPick = document.getElementById('btnPickCustomMigrateDir');
+  if (!modal || !listEl) return;
+
+  modal.classList.remove('hidden');
+  statusEl.textContent = '⏳ Đang quét các Launcher đã cài trên máy...';
+  listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-muted);">Đang tìm TLauncher, Official, Modrinth, CurseForge, Prism, Feather...</div>';
+
+  const res = await window.aetherAPI.scanExternalLaunchers(state.gameDir);
+  const items = res?.items || [];
+
+  const renderCards = (list) => {
+    if (!list.length) {
+      listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-muted);">Chưa tìm thấy thư mục tự động. Hãy bấm <strong>"📂 Chọn Thư Mục Khác..."</strong> ở góc trên để chọn thư mục game cũ!</div>';
+      statusEl.textContent = 'Hãy chọn thư mục chứa dữ liệu Minecraft cũ của bạn.';
+      return;
+    }
+    if (!selectedMigrateSourcePath || !list.some((x) => x.path === selectedMigrateSourcePath)) {
+      selectedMigrateSourcePath = list[0].path;
+    }
+    listEl.innerHTML = list.map((it) => {
+      const active = it.path === selectedMigrateSourcePath;
+      const accText = it.accounts?.length ? ` • 👤 Tên cũ: ${it.accounts.slice(0, 4).join(', ')}` : '';
+      const sharedBadge = it.isSharedRoot
+        ? '<span style="color:#10b981;font-weight:800;font-size:10.5px;">✓ Đang dùng chung .minecraft</span>'
+        : '<span style="color:var(--accent);font-weight:800;font-size:10.5px;">📥 Có thể chép sang</span>';
+      return `<div class="addon-row migrate-source-card" data-migpath="${it.path}" style="cursor:pointer;border:1.5px solid ${active ? 'var(--accent)' : 'var(--border-col)'};background:${active ? 'var(--accent-glow)' : 'var(--bg-input)'};padding:10px 12px;border-radius:9px;">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <strong style="font-size:12.5px;color:var(--text-main);">${it.launcherName} — ${it.instanceName}</strong>
+            ${sharedBadge}
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);">
+            🌍 <strong>${it.worldsCount}</strong> Thế giới • 🧩 <strong>${it.modsCount}</strong> Mods • ✨ <strong>${it.shadersCount + it.packsCount}</strong> Shaders/Packs • 📦 <strong>${it.versionsCount}</strong> Phiên bản${accText}
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);opacity:0.75;">📂 ${it.path}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.migrate-source-card').forEach((card) => {
+      card.onclick = () => {
+        selectedMigrateSourcePath = card.dataset.migpath;
+        renderCards(list);
+      };
+    });
+    statusEl.textContent = `✓ Đã phát hiện ${list.length} nguồn dữ liệu Minecraft trên máy.`;
+  };
+
+  renderCards(items);
+
+  btnClose.onclick = () => modal.classList.add('hidden');
+
+  btnPick.onclick = async () => {
+    const pickRes = await window.aetherAPI.pickCustomLauncherDir();
+    if (pickRes?.ok && pickRes.dirPath) {
+      selectedMigrateSourcePath = pickRes.dirPath;
+      items.unshift({
+        id: 'custom-' + Date.now(),
+        launcherName: 'Thư mục tùy chọn',
+        instanceName: pickRes.dirPath.split(/[\\/]/).pop() || 'Custom',
+        path: pickRes.dirPath,
+        isSharedRoot: false,
+        worldsCount: '?',
+        modsCount: '?',
+        shadersCount: 0,
+        packsCount: '?',
+        versionsCount: '?',
+        accounts: []
+      });
+      renderCards(items);
+    }
+  };
+
+  btnRun.onclick = async () => {
+    if (!selectedMigrateSourcePath) return;
+    btnRun.disabled = true;
+    btnRun.textContent = '⏳ Đang đồng bộ...';
+    statusEl.textContent = '⏳ Đang đồng bộ Thế giới, Mods, Server & Tài khoản sang Aether Craft...';
+    const imp = await window.aetherAPI.importExternalLauncher({
+      sourceDir: selectedMigrateSourcePath,
+      targetGameDir: state.gameDir,
+      syncWorlds: Boolean(document.getElementById('chkMigrateWorlds')?.checked),
+      syncMods: Boolean(document.getElementById('chkMigrateMods')?.checked),
+      syncShadersPacks: Boolean(document.getElementById('chkMigratePacks')?.checked),
+      syncServersOptions: Boolean(document.getElementById('chkMigrateServers')?.checked)
+    });
+    btnRun.disabled = false;
+    btnRun.textContent = '⚡ Đồng Bộ Ngay (1-Click)';
+
+    if (imp?.ok) {
+      const st = imp.stats || {};
+      if (Array.isArray(st.accountsFound) && st.accountsFound.length > 0 && document.getElementById('chkMigrateServers')?.checked) {
+        for (const acc of st.accountsFound) {
+          if (!state.savedAccounts.some((a) => a.toLowerCase() === acc.toLowerCase())) {
+            state.savedAccounts.push(acc);
+          }
+        }
+        renderSavedAccounts();
+        saveCurrentConfig();
+      }
+      await refreshInstalledVersions();
+      await refreshLocalAddonsCount();
+      await renderLocalWorlds();
+      const msg = imp.isSameDir
+        ? `✓ Đã đồng bộ trực tiếp thư mục .minecraft (${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.accountsFound?.length || 0} Tài khoản cũ)!`
+        : `✓ Hoàn tất! Đã chuyển ${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.packsCopied} Shaders/Packs & ${st.accountsFound?.length || 0} Tài khoản sang Aether Craft!`;
+      statusEl.textContent = msg;
+      document.getElementById('statusText').textContent = msg;
+    } else {
+      statusEl.textContent = `⚠ Lỗi: ${imp?.error || 'Không thể đồng bộ thư mục này.'}`;
+    }
+  };
+}

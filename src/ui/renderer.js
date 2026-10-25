@@ -542,6 +542,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   const btnBanShots = document.getElementById('btnBannerScreenshots');
   if (btnBanShots) btnBanShots.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'screenshots');
+  const btnOpenMig = document.getElementById('btnOpenMigrateModal');
+  if (btnOpenMig && typeof openLauncherMigrateModal === 'function') btnOpenMig.onclick = () => openLauncherMigrateModal();
   const btnQuickVerDir = document.getElementById('btnQuickOpenVersions');
   if (btnQuickVerDir) btnQuickVerDir.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'versions');
 

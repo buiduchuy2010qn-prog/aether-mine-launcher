@@ -514,3 +514,42 @@ ipcMain.handle('server:ping', async (_e, serverIp) => {
     return { ok: false, error: err.message };
   }
 });
+
+ipcMain.handle('migrate:scan', async (_e, gameDir) => {
+  try {
+    try { delete require.cache[require.resolve('./launcher-engine')]; } catch (_) {}
+    const freshEngine = require('./launcher-engine');
+    const items = freshEngine.scanExternalLaunchers(gameDir);
+    return { ok: true, items };
+  } catch (err) {
+    return { ok: false, error: err.message, items: [] };
+  }
+});
+
+ipcMain.handle('migrate:import', async (_e, params) => {
+  try {
+    try { delete require.cache[require.resolve('./launcher-engine')]; } catch (_) {}
+    const freshEngine = require('./launcher-engine');
+    const res = freshEngine.importFromExternalLauncher(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+    return res;
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('migrate:pick-dir', async () => {
+  try {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Chọn thư mục .minecraft hoặc Profile/Instance của Launcher cũ',
+      properties: ['openDirectory']
+    });
+    if (res.canceled || !res.filePaths?.length) {
+      return { ok: false, canceled: true };
+    }
+    return { ok: true, dirPath: res.filePaths[0] };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});

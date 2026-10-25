@@ -928,6 +928,254 @@ async function launchMinecraft(config, callbacks = {}) {
   return proc;
 }
 
+function countDirItems(dirPath, filterFn) {
+  if (!dirPath || !fs.existsSync(dirPath)) return 0;
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    return filterFn ? entries.filter(filterFn).length : entries.length;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function extractSavedUsernamesFromDir(mcDir) {
+  const names = new Set();
+  if (!mcDir || !fs.existsSync(mcDir)) return [];
+  // 1. usercache.json
+  try {
+    const ucPath = path.join(mcDir, 'usercache.json');
+    if (fs.existsSync(ucPath)) {
+      const arr = JSON.parse(fs.readFileSync(ucPath, 'utf8'));
+      if (Array.isArray(arr)) {
+        arr.forEach((e) => {
+          if (e?.name && /^[a-zA-Z0-9_]{3,16}$/.test(e.name)) names.add(e.name);
+        });
+      }
+    }
+  } catch (_) {}
+  // 2. TlauncherProfiles.json / launcher_profiles.json
+  for (const fName of ['TlauncherProfiles.json', 'tlauncher_profiles.json', 'launcher_profiles.json']) {
+    try {
+      const p = path.join(mcDir, fName);
+      if (fs.existsSync(p)) {
+        const obj = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const accs = obj?.accounts || obj?.authenticationDatabase || {};
+        Object.values(accs).forEach((acc) => {
+          const u = acc?.username || acc?.displayName;
+          if (u && /^[a-zA-Z0-9_]{3,16}$/.test(u)) names.add(u);
+          if (acc?.profiles && typeof acc.profiles === 'object') {
+            Object.values(acc.profiles).forEach((pr) => {
+              if (pr?.name && /^[a-zA-Z0-9_]{3,16}$/.test(pr.name)) names.add(pr.name);
+            });
+          }
+        });
+      }
+    } catch (_) {}
+  }
+  return Array.from(names).slice(0, 12);
+}
+
+function inspectMinecraftInstanceDir(id, launcherName, instanceName, mcDir, targetRoot) {
+  if (!mcDir || !fs.existsSync(mcDir)) return null;
+  const isSameAsTarget = path.resolve(mcDir).toLowerCase() === path.resolve(targetRoot).toLowerCase();
+  const worldsCount = countDirItems(path.join(mcDir, 'saves'), (d) => d.isDirectory());
+  const modsCount = countDirItems(path.join(mcDir, 'mods'), (d) => d.isFile() && /\.(jar|disabled)$/i.test(d.name));
+  const shadersCount = countDirItems(path.join(mcDir, 'shaderpacks'), (d) => d.isFile() && /\.zip$/i.test(d.name));
+  const packsCount = countDirItems(path.join(mcDir, 'resourcepacks'), (d) => d.isFile() && /\.zip$/i.test(d.name));
+  const versionsCount = countDirItems(path.join(mcDir, 'versions'), (d) => d.isDirectory());
+  const hasServersDat = fs.existsSync(path.join(mcDir, 'servers.dat'));
+  const hasOptionsTxt = fs.existsSync(path.join(mcDir, 'options.txt'));
+  const accounts = extractSavedUsernamesFromDir(mcDir);
+
+  if (worldsCount === 0 && modsCount === 0 && shadersCount === 0 && packsCount === 0 && versionsCount === 0 && accounts.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    launcherName,
+    instanceName,
+    path: mcDir,
+    isSharedRoot: isSameAsTarget,
+    worldsCount,
+    modsCount,
+    shadersCount,
+    packsCount,
+    versionsCount,
+    hasServersDat,
+    hasOptionsTxt,
+    accounts
+  };
+}
+
+function scanExternalLaunchers(targetGameDir) {
+  const targetRoot = targetGameDir && targetGameDir.trim() ? targetGameDir.trim() : getDefaultGameDir();
+  const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  const userHome = os.homedir();
+  const discovered = [];
+
+  // 1. Default .minecraft (TLauncher / Official / SKLauncher / Legacy)
+  const stdMc = path.join(appData, '.minecraft');
+  const hasTLauncher = fs.existsSync(path.join(appData, '.tlauncher')) || fs.existsSync(path.join(stdMc, 'TlauncherProfiles.json'));
+  const stdInfo = inspectMinecraftInstanceDir(
+    'std-minecraft',
+    hasTLauncher ? 'TLauncher / Official (.minecraft)' : 'Minecraft Official (.minecraft)',
+    'Thư mục gốc .minecraft',
+    stdMc,
+    targetRoot
+  );
+  if (stdInfo) discovered.push(stdInfo);
+
+  // 2. Modrinth App profiles
+  for (const mrFolder of ['ModrinthApp', 'com.modrinth.theseus']) {
+    const profilesRoot = path.join(appData, mrFolder, 'profiles');
+    if (fs.existsSync(profilesRoot)) {
+      try {
+        for (const d of fs.readdirSync(profilesRoot, { withFileTypes: true })) {
+          if (d.isDirectory()) {
+            const pDir = path.join(profilesRoot, d.name);
+            const info = inspectMinecraftInstanceDir(`modrinth-${d.name}`, 'Modrinth App', d.name, pDir, targetRoot);
+            if (info) discovered.push(info);
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 3. CurseForge Instances
+  const cfCandidates = [
+    path.join(userHome, 'curseforge', 'minecraft', 'Instances'),
+    path.join(appData, 'curseforge', 'minecraft', 'Instances')
+  ];
+  for (const cfRoot of cfCandidates) {
+    if (fs.existsSync(cfRoot)) {
+      try {
+        for (const d of fs.readdirSync(cfRoot, { withFileTypes: true })) {
+          if (d.isDirectory()) {
+            const pDir = path.join(cfRoot, d.name);
+            const info = inspectMinecraftInstanceDir(`curseforge-${d.name}`, 'CurseForge', d.name, pDir, targetRoot);
+            if (info) discovered.push(info);
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 4. Prism Launcher / MultiMC / PollyMC
+  for (const prismName of ['PrismLauncher', 'MultiMC', 'PollyMC']) {
+    const instRoot = path.join(appData, prismName, 'instances');
+    if (fs.existsSync(instRoot)) {
+      try {
+        for (const d of fs.readdirSync(instRoot, { withFileTypes: true })) {
+          if (d.isDirectory()) {
+            const subMc = fs.existsSync(path.join(instRoot, d.name, '.minecraft'))
+              ? path.join(instRoot, d.name, '.minecraft')
+              : path.join(instRoot, d.name, 'minecraft');
+            const info = inspectMinecraftInstanceDir(`${prismName}-${d.name}`, prismName, d.name, subMc, targetRoot);
+            if (info) discovered.push(info);
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 5. Feather Client
+  const featherMods = path.join(appData, '.feather', 'user-mods');
+  if (fs.existsSync(featherMods)) {
+    const info = inspectMinecraftInstanceDir('feather-client', 'Feather Client', 'Feather User Mods', path.join(appData, '.feather'), targetRoot);
+    if (info) discovered.push(info);
+  }
+
+  return discovered;
+}
+
+function copyFolderMergeRecursive(srcDir, destDir) {
+  if (!fs.existsSync(srcDir)) return 0;
+  if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+  let copiedFiles = 0;
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const sFull = path.join(srcDir, entry.name);
+    const dFull = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      copiedFiles += copyFolderMergeRecursive(sFull, dFull);
+    } else if (entry.isFile()) {
+      if (!fs.existsSync(dFull)) {
+        try {
+          fs.copyFileSync(sFull, dFull);
+          copiedFiles++;
+        } catch (_) {}
+      }
+    }
+  }
+  return copiedFiles;
+}
+
+function importFromExternalLauncher({ sourceDir, targetGameDir, syncWorlds = true, syncMods = true, syncShadersPacks = true, syncServersOptions = true }, onStatus) {
+  const targetRoot = targetGameDir && targetGameDir.trim() ? targetGameDir.trim() : getDefaultGameDir();
+  if (!sourceDir || !fs.existsSync(sourceDir)) {
+    throw new Error('Thư mục nguồn không tồn tại.');
+  }
+  const actualSource = fs.existsSync(path.join(sourceDir, 'saves')) || fs.existsSync(path.join(sourceDir, 'mods')) || fs.existsSync(path.join(sourceDir, 'versions'))
+    ? sourceDir
+    : (fs.existsSync(path.join(sourceDir, '.minecraft')) ? path.join(sourceDir, '.minecraft') : sourceDir);
+
+  const isSameDir = path.resolve(actualSource).toLowerCase() === path.resolve(targetRoot).toLowerCase();
+  const stats = { worldsCopied: 0, modsCopied: 0, packsCopied: 0, accountsFound: [], serversSynced: false };
+
+  stats.accountsFound = extractSavedUsernamesFromDir(actualSource);
+
+  if (!isSameDir) {
+    if (syncWorlds && fs.existsSync(path.join(actualSource, 'saves'))) {
+      onStatus?.('Đang đồng bộ Thế giới chơi dở (saves)...');
+      const savesSrc = path.join(actualSource, 'saves');
+      const savesDest = path.join(targetRoot, 'saves');
+      if (!fs.existsSync(savesDest)) fs.mkdirSync(savesDest, { recursive: true });
+      for (const w of fs.readdirSync(savesSrc, { withFileTypes: true })) {
+        if (w.isDirectory()) {
+          const wDest = path.join(savesDest, w.name);
+          if (!fs.existsSync(wDest)) {
+            copyFolderMergeRecursive(path.join(savesSrc, w.name), wDest);
+            stats.worldsCopied++;
+          }
+        }
+      }
+    }
+    if (syncMods && fs.existsSync(path.join(actualSource, 'mods'))) {
+      onStatus?.('Đang đồng bộ gói Mods (.jar)...');
+      stats.modsCopied += copyFolderMergeRecursive(path.join(actualSource, 'mods'), path.join(targetRoot, 'mods'));
+    }
+    if (syncShadersPacks) {
+      if (fs.existsSync(path.join(actualSource, 'shaderpacks'))) {
+        onStatus?.('Đang đồng bộ gói Shaders...');
+        stats.packsCopied += copyFolderMergeRecursive(path.join(actualSource, 'shaderpacks'), path.join(targetRoot, 'shaderpacks'));
+      }
+      if (fs.existsSync(path.join(actualSource, 'resourcepacks'))) {
+        onStatus?.('Đang đồng bộ gói Resource Packs...');
+        stats.packsCopied += copyFolderMergeRecursive(path.join(actualSource, 'resourcepacks'), path.join(targetRoot, 'resourcepacks'));
+      }
+    }
+    if (syncServersOptions) {
+      const srvSrc = path.join(actualSource, 'servers.dat');
+      const srvDest = path.join(targetRoot, 'servers.dat');
+      if (fs.existsSync(srvSrc) && !fs.existsSync(srvDest)) {
+        try { fs.copyFileSync(srvSrc, srvDest); stats.serversSynced = true; } catch (_) {}
+      }
+      const optSrc = path.join(actualSource, 'options.txt');
+      const optDest = path.join(targetRoot, 'options.txt');
+      if (fs.existsSync(optSrc) && !fs.existsSync(optDest)) {
+        try { fs.copyFileSync(optSrc, optDest); } catch (_) {}
+      }
+    }
+  } else {
+    stats.worldsCopied = countDirItems(path.join(targetRoot, 'saves'), (d) => d.isDirectory());
+    stats.modsCopied = countDirItems(path.join(targetRoot, 'mods'), (d) => d.isFile() && /\.(jar|disabled)$/i.test(d.name));
+    stats.packsCopied = countDirItems(path.join(targetRoot, 'shaderpacks'), (d) => d.isFile()) + countDirItems(path.join(targetRoot, 'resourcepacks'), (d) => d.isFile());
+    stats.serversSynced = fs.existsSync(path.join(targetRoot, 'servers.dat'));
+  }
+
+  return { ok: true, isSameDir, actualSource, stats };
+}
+
 module.exports = {
   fetchVersionManifest,
   fetchLoaderVersions,
@@ -944,5 +1192,7 @@ module.exports = {
   forceKillMinecraft,
   cleanupJavaTempAndTrimRam,
   getDefaultGameDir,
-  detectJavaPath
+  detectJavaPath,
+  scanExternalLaunchers,
+  importFromExternalLauncher
 };
