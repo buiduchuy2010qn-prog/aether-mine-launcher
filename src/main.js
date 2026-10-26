@@ -151,7 +151,7 @@ function createWindow() {
 
   // Auto-scale UI: khi cửa sổ nhỏ hơn kích thước thiết kế, thu nhỏ toàn bộ giao diện
   // theo tỉ lệ (giữ nguyên bố cục như lúc full) thay vì xếp lại các cột.
-  const UI_DESIGN_W = 1500;
+  const UI_DESIGN_W = 1400;
   const UI_DESIGN_H = 900;
   let uiZoomTimer = null;
   const applyUiAutoZoom = () => {

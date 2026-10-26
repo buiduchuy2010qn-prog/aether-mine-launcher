@@ -452,8 +452,8 @@ function updateSummaryUI() {
   const sbBadge = document.getElementById('sidebarAuthBadge');
   if (sbBadge) {
     sbBadge.textContent = (state.authMode === 'microsoft' && state.msProfile?.name)
-      ? '👑 BẢN QUYỀN MS'
-      : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ BLOCKWAY CLOUD' : 'CRACK / OFFLINE');
+      ? '👑 MICROSOFT'
+      : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ CLOUD' : 'OFFLINE');
   }
   const modeLabel = state.authMode === 'microsoft' ? 'Microsoft' : (state.authMode === 'aether' ? 'BlockWay Cloud' : 'Crack');
   const dockAcc = document.getElementById('dockAccountText');
@@ -1388,6 +1388,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.querySelectorAll('.wp-chip').forEach((wp) => {
+    // Show each wallpaper as a small thumbnail swatch (label kept for tooltip / active matching)
+    wp.style.setProperty('--wp-thumb', `url('${wp.dataset.wp}')`);
+    wp.title = `Hình nền: ${wp.textContent.trim()}`;
     wp.onclick = () => {
       document.querySelectorAll('.wp-chip').forEach((w) => w.classList.remove('active'));
       wp.classList.add('active');

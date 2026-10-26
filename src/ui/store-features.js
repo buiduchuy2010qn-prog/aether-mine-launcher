@@ -1020,9 +1020,10 @@ function renderHomeRecentWorlds(worlds = []) {
   // If fewer than 4 local worlds exist, provide real actionable utility cards for remaining slots
   if (worldCards.length < 4) {
     worldCards.push(`
-      <div class="hw-world-card" id="hwSyncExternalCard" title="Quét và đồng bộ thế giới từ TLauncher, Official, Modrinth, CurseForge, Prism">
-        <div class="hw-world-thumb" style="background-image:url('app-banner-hero.png');background-size:280%;background-position:0% 70%;">
-          <span class="hw-world-ver-tag">Đồng bộ</span>
+      <div class="hw-world-card hw-shortcut" id="hwSyncExternalCard" title="Quét và đồng bộ thế giới từ TLauncher, Official, Modrinth, CurseForge, Prism">
+        <div class="hw-world-thumb hw-shortcut-thumb">
+          <span class="hw-shortcut-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M21 21v-5h-5"/></svg></span>
+          <span class="hw-world-ver-tag">Lối tắt</span>
         </div>
         <div class="hw-world-body">
           <div class="hw-world-info">
@@ -1036,9 +1037,10 @@ function renderHomeRecentWorlds(worlds = []) {
   }
   if (worldCards.length < 4) {
     worldCards.push(`
-      <div class="hw-world-card" id="hwOpenSavesDirCard" title="Mở thư mục .minecraft/saves trong Windows Explorer">
-        <div class="hw-world-thumb" style="background-image:url('app-banner-hero.png');background-size:280%;background-position:100% 55%;">
-          <span class="hw-world-ver-tag">.minecraft</span>
+      <div class="hw-world-card hw-shortcut" id="hwOpenSavesDirCard" title="Mở thư mục .minecraft/saves trong Windows Explorer">
+        <div class="hw-world-thumb hw-shortcut-thumb">
+          <span class="hw-shortcut-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg></span>
+          <span class="hw-world-ver-tag">Lối tắt</span>
         </div>
         <div class="hw-world-body">
           <div class="hw-world-info">
@@ -1046,22 +1048,6 @@ function renderHomeRecentWorlds(worlds = []) {
             <div class="hw-world-sub">Quản lý file bản đồ trực tiếp</div>
           </div>
           <button class="hw-world-menu-btn" title="Mở thư mục Saves">⋮</button>
-        </div>
-      </div>
-    `);
-  }
-  if (worldCards.length < 4) {
-    worldCards.push(`
-      <div class="hw-world-card" id="hwExploreModpackCard" title="Tải Modpack & Thế giới phiêu lưu từ kho Modrinth">
-        <div class="hw-world-thumb" style="background-image:url('app-banner-hero.png');background-size:280%;background-position:58% 0%;">
-          <span class="hw-world-ver-tag">Modrinth</span>
-        </div>
-        <div class="hw-world-body">
-          <div class="hw-world-info">
-            <div class="hw-world-title">Kho Mod & Pack</div>
-            <div class="hw-world-sub">Khám phá gói mở rộng</div>
-          </div>
-          <button class="hw-world-menu-btn" title="Mở Kho Modrinth">⋮</button>
         </div>
       </div>
     `);
