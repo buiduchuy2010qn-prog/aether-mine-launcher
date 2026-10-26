@@ -621,6 +621,40 @@ async function saveCloudDatabase(dbData, customDbUrl = '') {
   }
 }
 
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  'tempmail.com', 'temp-mail.org', '10minutemail.com', 'yopmail.com', 'guerrillamail.com',
+  'mailinator.com', 'trashmail.com', 'sharklasers.com', 'dispostable.com', 'maildrop.cc', 'getnada.com'
+]);
+
+const antiSpamState = {
+  failedAttempts: 0,
+  lockedUntil: 0,
+  lastRegisterAt: 0,
+  lastOtpAt: 0,
+  lastRenameAt: 0
+};
+
+function checkAntiBotLock() {
+  const now = Date.now();
+  if (antiSpamState.lockedUntil > now) {
+    const waitSec = Math.ceil((antiSpamState.lockedUntil - now) / 1000);
+    throw new Error(`🛡️ Chống Bot Spam: Bạn đã thao tác sai quá nhiều lần! Tạm khóa bảo vệ trong ${waitSec} giây.`);
+  }
+}
+
+function recordFailedAuthAttempt() {
+  antiSpamState.failedAttempts += 1;
+  if (antiSpamState.failedAttempts >= 5) {
+    antiSpamState.lockedUntil = Date.now() + 60 * 1000;
+    antiSpamState.failedAttempts = 0;
+    throw new Error('🛡️ Chống Bot dò mật khẩu: Nhập sai 5 lần liên tiếp! Tạm khóa 60 giây để bảo vệ tài khoản.');
+  }
+}
+
+function resetFailedAuthAttempts() {
+  antiSpamState.failedAttempts = 0;
+}
+
 function toPublicProfile(userRecord) {
   if (!userRecord) return null;
   return {
@@ -648,9 +682,23 @@ async function registerCloudAccount({
   skinDataUrl = '',
   customDbUrl = ''
 }) {
+  checkAntiBotLock();
+
+  const now = Date.now();
+  if (now - antiSpamState.lastRegisterAt < 90 * 1000) {
+    const waitSec = Math.ceil((90 * 1000 - (now - antiSpamState.lastRegisterAt)) / 1000);
+    throw new Error(`🛡️ Chống Bot Spam: Mỗi máy chỉ được tạo 1 tài khoản mới mỗi 90 giây! Vui lòng đợi ${waitSec}s.`);
+  }
+
   const cleanLogin = String(loginId || '').trim().toLowerCase();
-  if (cleanLogin.length < 3) {
-    throw new Error('Tên đăng nhập (hoặc Email) phải có ít nhất 3 ký tự!');
+  if (cleanLogin.length < 3 || cleanLogin.length > 64) {
+    throw new Error('Tên đăng nhập (hoặc Email) phải từ 3 đến 64 ký tự!');
+  }
+  if (cleanLogin.includes('@')) {
+    const emailDomain = cleanLogin.split('@')[1] || '';
+    if (!emailDomain.includes('.') || DISPOSABLE_EMAIL_DOMAINS.has(emailDomain)) {
+      throw new Error('🛡️ Chống Spam: Không chấp nhận Email ảo / Email rác tạm thời! Vui lòng dùng Gmail hoặc Email thật.');
+    }
   }
   if (!password || String(password).length < 4) {
     throw new Error('Mật khẩu phải có ít nhất 4 ký tự!');
@@ -677,7 +725,6 @@ async function registerCloudAccount({
   }
 
   const accountId = 'ac_' + crypto.randomBytes(6).toString('hex');
-  const now = Date.now();
   const newUser = {
     accountId,
     loginId: cleanLogin,
@@ -697,10 +744,14 @@ async function registerCloudAccount({
   db.usernames[nameKey] = accountId;
 
   await saveCloudDatabase(db, customDbUrl);
+  antiSpamState.lastRegisterAt = Date.now();
+  resetFailedAuthAttempts();
   return toPublicProfile(newUser);
 }
 
 async function loginCloudAccount({ loginId, password, customDbUrl = '' }) {
+  checkAntiBotLock();
+
   const cleanLogin = String(loginId || '').trim().toLowerCase();
   if (!cleanLogin || !password) {
     throw new Error('Vui lòng nhập đầy đủ Tên tài khoản và Mật khẩu!');
@@ -716,13 +767,16 @@ async function loginCloudAccount({ loginId, password, customDbUrl = '' }) {
   );
 
   if (!user) {
+    recordFailedAuthAttempt();
     throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud! Nếu chưa có tài khoản, hãy bấm "Tạo Tài Khoản".`);
   }
 
   if (user.passwordHash !== passHash) {
-    throw new Error('Mật khẩu không chính xác! Vui lòng kiểm tra lại.');
+    recordFailedAuthAttempt();
+    throw new Error(`Mật khẩu không chính xác! (Còn ${5 - antiSpamState.failedAttempts} lần thử trước khi tạm khóa chống Bot).`);
   }
 
+  resetFailedAuthAttempts();
   user.updatedAt = Date.now();
   await saveCloudDatabase(db, customDbUrl);
   return toPublicProfile(user);
@@ -731,6 +785,12 @@ async function loginCloudAccount({ loginId, password, customDbUrl = '' }) {
 async function changeCloudUsername({ accountId, newMcUsername, customDbUrl = '' }) {
   if (!accountId) {
     throw new Error('Bạn cần đăng nhập tài khoản Aether Cloud trước khi đổi tên!');
+  }
+
+  const now = Date.now();
+  if (now - antiSpamState.lastRenameAt < 30 * 1000) {
+    const waitSec = Math.ceil((30 * 1000 - (now - antiSpamState.lastRenameAt)) / 1000);
+    throw new Error(`🛡️ Chống Spam: Vui lòng đợi ${waitSec} giây trước khi đổi tên nhân vật tiếp!`);
   }
 
   const cleanNewName = sanitizeMcUsername(newMcUsername);
@@ -757,10 +817,11 @@ async function changeCloudUsername({ accountId, newMcUsername, customDbUrl = '' 
 
   user.mcUsername = cleanNewName;
   user.uuid = generateOfflineUUID(cleanNewName);
-  user.updatedAt = Date.now();
+  user.updatedAt = now;
   db.usernames[newKey] = accountId;
 
   await saveCloudDatabase(db, customDbUrl);
+  antiSpamState.lastRenameAt = Date.now();
   return toPublicProfile(user);
 }
 
@@ -814,6 +875,14 @@ async function changeCloudPassword({ accountId, oldPassword, newPassword, custom
 function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
   return new Promise(async (resolve, reject) => {
     try {
+      checkAntiBotLock();
+
+      const now = Date.now();
+      if (now - antiSpamState.lastOtpAt < 60 * 1000) {
+        const waitSec = Math.ceil((60 * 1000 - (now - antiSpamState.lastOtpAt)) / 1000);
+        return reject(new Error(`🛡️ Chống Spam Email: Bạn vừa gửi yêu cầu OTP! Vui lòng đợi ${waitSec} giây trước khi gửi lại.`));
+      }
+
       const cleanLogin = String(loginId || '').trim().toLowerCase();
       if (!cleanLogin) {
         return reject(new Error('Vui lòng nhập Email hoặc Tên tài khoản ở ô bên trên trước khi bấm Nhận Mã OTP!'));
@@ -834,10 +903,17 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
         return reject(new Error(`Tài khoản "${user.loginId}" không đăng ký bằng địa chỉ Email nên không thể gửi thư OTP về Gmail!`));
       }
 
+      // Database-level cooldown check (10 min expiry -> if > 9 min remaining, it was requested < 60s ago)
+      if (user.resetOtpExpires && (user.resetOtpExpires - now) > 9 * 60 * 1000) {
+        const waitDbSec = Math.ceil(((user.resetOtpExpires - now) - 9 * 60 * 1000) / 1000);
+        return reject(new Error(`🛡️ Chống Spam: Mã OTP đã được gửi tới Gmail "${user.loginId}"! Vui lòng đợi ${waitDbSec}s để gửi lại.`));
+      }
+
       const otpCode = String(Math.floor(100000 + Math.random() * 900000));
       db.users[user.accountId].resetOtpHash = hashPassword(otpCode);
-      db.users[user.accountId].resetOtpExpires = Date.now() + 10 * 60 * 1000;
+      db.users[user.accountId].resetOtpExpires = now + 10 * 60 * 1000;
       await saveCloudDatabase(db, customDbUrl);
+      antiSpamState.lastOtpAt = Date.now();
 
       // Listen on localhost:3000 in case the user clicks the Magic Link inside their real Gmail email from Supabase
       if (activeBrowserServer) {
@@ -941,6 +1017,8 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
 }
 
 async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl = '' }) {
+  checkAntiBotLock();
+
   const cleanLogin = String(loginId || '').trim().toLowerCase();
   const cleanOtp = String(otpCode || '').trim();
   if (!cleanLogin) {
@@ -960,6 +1038,7 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
       (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
   );
   if (!user) {
+    recordFailedAuthAttempt();
     throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud!`);
   }
 
@@ -994,9 +1073,11 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
   }
 
   if (!otpVerified) {
-    throw new Error('⚠️ Mã OTP 6 số không chính xác hoặc đã hết hạn! Vui lòng mở hộp thư Gmail để lấy đúng mã OTP.');
+    recordFailedAuthAttempt();
+    throw new Error(`⚠️ Mã OTP 6 số không chính xác hoặc đã hết hạn! (Còn ${5 - antiSpamState.failedAttempts} lần thử trước khi khóa chống Bot).`);
   }
 
+  resetFailedAuthAttempts();
   user.passwordHash = hashPassword(newPassword);
   user.resetOtpHash = null;
   user.resetOtpExpires = null;

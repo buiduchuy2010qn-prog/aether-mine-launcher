@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v31.3 PRO</span>
+          <span class="brand-version">v31.4 PRO</span>
         </div>
       </div>
 
@@ -310,6 +310,11 @@
                       <div class="aether-inputs-row" id="aetherTopInputsRow">
                         <input type="text" id="aetherLoginIdInput" class="pro-input" placeholder="Tài khoản / Email (vd: huy2010)..." />
                         <input type="password" id="aetherPasswordInput" class="pro-input" placeholder="Mật khẩu (≥4 ký tự)..." />
+                      </div>
+                      <div id="aetherCaptchaRow" class="aether-captcha-row hidden">
+                        <span class="aether-captcha-badge" id="aetherCaptchaQuestion">🛡️ Chống Bot: 7 + 4 = ?</span>
+                        <input type="text" id="aetherCaptchaInput" class="pro-input" maxlength="4" placeholder="Nhập kết quả..." />
+                        <button class="btn-save-acc-mini" id="btnRefreshCaptcha" title="Đổi phép tính Chống Bot mới">🔄</button>
                       </div>
                       <div id="aetherResetBox" class="aether-reset-box hidden">
                         <button class="btn-sync-skin aether-btn-reg" id="btnAetherRequestOtp" style="height:27px !important;font-size:11px !important;width:100% !important;">📨 Bước 1: Gửi Mã OTP 6 Số Về Hộp Thư Gmail</button>

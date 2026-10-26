@@ -1164,15 +1164,57 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  let expectedCaptchaAnswer = 11;
+  const captchaRow = document.getElementById('aetherCaptchaRow');
+  const captchaQEl = document.getElementById('aetherCaptchaQuestion');
+  const captchaInp = document.getElementById('aetherCaptchaInput');
+  const btnRefreshCap = document.getElementById('btnRefreshCaptcha');
+
+  const generateNewCaptcha = () => {
+    const a = Math.floor(2 + Math.random() * 9);
+    const b = Math.floor(1 + Math.random() * 9);
+    expectedCaptchaAnswer = a + b;
+    if (captchaQEl) captchaQEl.textContent = `🛡️ Chống Bot: ${a} + ${b} = ?`;
+    if (captchaInp) captchaInp.value = '';
+  };
+  generateNewCaptcha();
+  if (btnRefreshCap) btnRefreshCap.onclick = () => { generateNewCaptcha(); captchaInp?.focus(); };
+
+  const verifyOrOpenCaptcha = () => {
+    if (!captchaRow || !captchaInp) return true;
+    if (captchaRow.classList.contains('hidden')) {
+      generateNewCaptcha();
+      captchaRow.classList.remove('hidden');
+      captchaInp.focus();
+      showAetherNotification(`🛡️ Bảo vệ Chống Bot Spam: Vui lòng nhập kết quả phép tính (${captchaQEl?.textContent.replace('🛡️ Chống Bot: ', '')}) rồi bấm lại nút!`, 'info', 5000);
+      return false;
+    }
+    const val = parseInt(captchaInp.value.trim(), 10);
+    if (val !== expectedCaptchaAnswer) {
+      generateNewCaptcha();
+      captchaInp.focus();
+      showAetherNotification('⚠️ Sai kết quả phép tính Chống Bot Spam! Đã đổi câu hỏi mới, vui lòng nhập lại.', 'error', 4500);
+      return false;
+    }
+    captchaRow.classList.add('hidden');
+    generateNewCaptcha();
+    return true;
+  };
+
   const btnAetherReg = document.getElementById('btnAetherRegister');
   if (btnAetherReg) {
     btnAetherReg.onclick = async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
       const password = document.getElementById('aetherPasswordInput')?.value || '';
+      if (!loginId || password.length < 4) {
+        showAetherNotification('⚠️ Vui lòng nhập Tài khoản / Email và Mật khẩu (≥4 ký tự) trước khi Tạo Tài Khoản!', 'error', 4500);
+        return;
+      }
+      if (!verifyOrOpenCaptcha()) return;
       const suggestedMc = loginId.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16);
       btnAetherReg.disabled = true;
       btnAetherReg.textContent = '⏳ Đang tạo...';
-      showAetherNotification('☁️ Đang tạo tài khoản mới trên Internet Database 24/7...', 'info', 2500);
+      showAetherNotification('☁️ Đang tạo tài khoản mới trên Supabase PostgreSQL 24/7...', 'info', 2500);
       const res = await window.aetherAPI.cloudRegister({
         loginId,
         password,
@@ -1198,7 +1240,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     btnAetherWeb.onclick = async () => {
       btnAetherWeb.disabled = true;
       btnAetherWeb.textContent = '🌐 Đang mở Trình duyệt...';
-      showAetherNotification('🌐 Đã mở trình duyệt — Hãy chọn Email bất kỳ để tạo/đăng nhập Aether Cloud miễn phí!', 'info', 4000);
+      showAetherNotification('🌐 Đã mở Cổng Web Aether Cloud — Đăng nhập/Đăng ký trên trình duyệt để đồng bộ!', 'info', 4000);
       const res = await window.aetherAPI.cloudBrowserLogin({ customDbUrl: state.customDbUrl });
       btnAetherWeb.disabled = false;
       btnAetherWeb.textContent = '🌐 Liên Kết Trình Duyệt';
@@ -1223,6 +1265,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (normalPassInput) normalPassInput.classList.toggle('hidden', isForgot);
     if (topInputsRow) topInputsRow.classList.toggle('single-col', isForgot);
     if (normalActionsRow) normalActionsRow.classList.toggle('hidden', isForgot);
+    if (!isForgot && captchaRow) captchaRow.classList.add('hidden');
     if (btnForgotPass) btnForgotPass.textContent = isForgot ? '← Quay lại Đăng nhập' : '🔄 Quên MK?';
     if (formTitleLabel) {
       formTitleLabel.textContent = isForgot
@@ -1241,6 +1284,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  let otpCooldownTimer = null;
+  const startOtpButtonCooldown = (btn, seconds = 60) => {
+    let rem = seconds;
+    if (otpCooldownTimer) clearInterval(otpCooldownTimer);
+    btn.disabled = true;
+    btn.textContent = `⏳ Chống Spam: Gửi lại sau ${rem}s...`;
+    otpCooldownTimer = setInterval(() => {
+      rem -= 1;
+      if (rem <= 0) {
+        clearInterval(otpCooldownTimer);
+        otpCooldownTimer = null;
+        btn.disabled = false;
+        btn.textContent = '📨 Bước 1: Gửi Lại Mã OTP 6 Số Về Gmail';
+      } else {
+        btn.textContent = `⏳ Chống Spam: Gửi lại sau ${rem}s...`;
+      }
+    }, 1000);
+  };
+
   const btnRequestOtp = document.getElementById('btnAetherRequestOtp');
   if (btnRequestOtp) {
     btnRequestOtp.onclick = async () => {
@@ -1250,6 +1312,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('aetherLoginIdInput')?.focus();
         return;
       }
+      if (!verifyOrOpenCaptcha()) return;
       btnRequestOtp.disabled = true;
       btnRequestOtp.textContent = '📨 Đang gửi Email qua Supabase...';
       showAetherNotification(`📨 Đang gửi thư xác thực từ Supabase về hộp thư Gmail của "${loginId}"...`, 'info', 3500);
@@ -1257,12 +1320,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         loginId,
         customDbUrl: state.customDbUrl
       });
-      btnRequestOtp.disabled = false;
-      btnRequestOtp.textContent = '✓ Đã gửi thư về Gmail (Bấm để gửi lại)';
       if (res?.ok) {
+        startOtpButtonCooldown(btnRequestOtp, 60);
         showAetherNotification(`📨 Đã gửi Email khôi phục về hộp thư Gmail "${res.loginId}"! Hãy mở Gmail của bạn để lấy Mã OTP 6 số.`, 'success', 8000);
         document.getElementById('aetherOtpInput')?.focus();
       } else if (res?.error) {
+        btnRequestOtp.disabled = false;
         btnRequestOtp.textContent = '📨 Bước 1: Gửi Mã OTP 6 Số Về Hộp Thư Gmail';
         showAetherNotification(`⚠️ ${res.error}`, 'error', 6000);
       }
