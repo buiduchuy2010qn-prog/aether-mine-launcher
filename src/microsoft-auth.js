@@ -481,6 +481,18 @@ function sanitizeMcUsername(rawInput) {
   return clean;
 }
 
+const SUPABASE_URL = 'https://nomnwwlancfjkitsdtvh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_RvH-sAYK-jaSpQ8p1C49XA_FdvE4KJa';
+
+function getSupabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra
+  };
+}
+
 function isFirebaseUrl(url) {
   return typeof url === 'string' && (url.includes('firebaseio.com') || url.includes('firebasedatabase.app'));
 }
@@ -504,19 +516,47 @@ async function fetchCloudDatabase(customDbUrl = '') {
         return merged;
       }
     } else {
-      const objId = local.cloudObjectId || DEFAULT_CLOUD_OBJECT_ID;
-      const endpoint = `${DEFAULT_CLOUD_BASE_URL}/${objId}`;
-      const res = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+      // Primary: Supabase PostgreSQL 24/7 (Southeast Asia - Singapore)
+      const sbEndpoint = `${SUPABASE_URL}/rest/v1/aether_accounts?select=*`;
+      const res = await fetch(sbEndpoint, {
+        headers: getSupabaseHeaders({ Accept: 'application/json' })
+      });
       if (res.ok) {
-        const payload = await res.json();
-        const remoteData = payload?.data || {};
-        const merged = {
-          cloudObjectId: objId,
-          users: { ...local.users, ...(remoteData.users || {}) },
-          usernames: { ...local.usernames, ...(remoteData.usernames || {}) }
-        };
-        writeLocalCache(merged);
-        return merged;
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+          const sbUsers = {};
+          const sbUsernames = {};
+          for (const row of rows) {
+            if (!row || !row.account_id) continue;
+            const userObj = {
+              accountId: row.account_id,
+              loginId: row.login_id,
+              passwordHash: row.password_hash,
+              mcUsername: row.mc_username,
+              uuid: row.uuid || generateOfflineUUID(row.mc_username),
+              skinModel: row.skin_model || 'default',
+              capeType: row.cape_type || 'mojang',
+              skinPreset: row.skin_preset || '',
+              skinDataUrl: row.skin_data_url || '',
+              resetOtpHash: row.reset_otp_hash || null,
+              resetOtpExpires: row.reset_otp_expires ? Number(row.reset_otp_expires) : null,
+              authProvider: 'supabase_cloud',
+              createdAt: Number(row.created_at) || Date.now(),
+              updatedAt: Number(row.updated_at) || Date.now()
+            };
+            sbUsers[userObj.accountId] = userObj;
+            if (userObj.mcUsername) {
+              sbUsernames[userObj.mcUsername.toLowerCase()] = userObj.accountId;
+            }
+          }
+          const merged = {
+            cloudObjectId: 'supabase_nomnwwlancfjkitsdtvh',
+            users: sbUsers,
+            usernames: sbUsernames
+          };
+          writeLocalCache(merged);
+          return merged;
+        }
       }
     }
   } catch (_) {}
@@ -526,7 +566,7 @@ async function fetchCloudDatabase(customDbUrl = '') {
 
 async function saveCloudDatabase(dbData, customDbUrl = '') {
   const cleanDb = {
-    cloudObjectId: dbData.cloudObjectId || DEFAULT_CLOUD_OBJECT_ID,
+    cloudObjectId: dbData.cloudObjectId || 'supabase_nomnwwlancfjkitsdtvh',
     users: dbData.users || {},
     usernames: dbData.usernames || {}
   };
@@ -548,41 +588,32 @@ async function saveCloudDatabase(dbData, customDbUrl = '') {
       return true;
     }
 
-    const objId = cleanDb.cloudObjectId || DEFAULT_CLOUD_OBJECT_ID;
-    const endpoint = `${DEFAULT_CLOUD_BASE_URL}/${objId}`;
-    const putRes = await fetch(endpoint, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'AetherCloudDB',
-        data: {
-          users: cleanDb.users,
-          usernames: cleanDb.usernames,
-          updatedAt: Date.now()
-        }
-      })
-    });
+    // Primary: Upsert rows into Supabase PostgreSQL public.aether_accounts
+    const rows = Object.values(cleanDb.users).map((u) => ({
+      account_id: u.accountId,
+      login_id: u.loginId,
+      password_hash: u.passwordHash,
+      mc_username: u.mcUsername,
+      uuid: u.uuid || generateOfflineUUID(u.mcUsername),
+      skin_model: u.skinModel || 'default',
+      cape_type: u.capeType || 'mojang',
+      skin_preset: u.skinPreset || '',
+      skin_data_url: u.skinDataUrl || '',
+      reset_otp_hash: u.resetOtpHash || null,
+      reset_otp_expires: u.resetOtpExpires || null,
+      created_at: u.createdAt || Date.now(),
+      updated_at: u.updatedAt || Date.now()
+    }));
 
-    if (putRes.status === 404) {
-      const postRes = await fetch(DEFAULT_CLOUD_BASE_URL, {
+    if (rows.length > 0) {
+      const sbEndpoint = `${SUPABASE_URL}/rest/v1/aether_accounts?on_conflict=account_id`;
+      await fetch(sbEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'AetherCloudDB',
-          data: {
-            users: cleanDb.users,
-            usernames: cleanDb.usernames,
-            updatedAt: Date.now()
-          }
-        })
+        headers: getSupabaseHeaders({
+          Prefer: 'resolution=merge-duplicates,return=minimal'
+        }),
+        body: JSON.stringify(rows)
       });
-      if (postRes.ok) {
-        const created = await postRes.json();
-        if (created?.id) {
-          cleanDb.cloudObjectId = created.id;
-          writeLocalCache(cleanDb);
-        }
-      }
     }
     return true;
   } catch (_) {
@@ -796,38 +827,112 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
       );
 
       if (!user) {
-        return reject(new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud Database!`));
+        return reject(new Error(`Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud Database!`));
+      }
+
+      if (!user.loginId || !user.loginId.includes('@')) {
+        return reject(new Error(`Tài khoản "${user.loginId}" không đăng ký bằng địa chỉ Email nên không thể gửi thư OTP về Gmail!`));
       }
 
       const otpCode = String(Math.floor(100000 + Math.random() * 900000));
       db.users[user.accountId].resetOtpHash = hashPassword(otpCode);
-      db.users[user.accountId].resetOtpExpires = Date.now() + 5 * 60 * 1000;
+      db.users[user.accountId].resetOtpExpires = Date.now() + 10 * 60 * 1000;
       await saveCloudDatabase(db, customDbUrl);
 
+      // Listen on localhost:3000 in case the user clicks the Magic Link inside their real Gmail email from Supabase
       if (activeBrowserServer) {
         try { activeBrowserServer.close(); } catch (_) {}
         activeBrowserServer = null;
       }
 
-      const server = http.createServer((req, res) => {
+      const server = http.createServer(async (req, res) => {
+        const reqUrl = new URL(req.url, 'http://localhost:3000');
+        if (reqUrl.pathname === '/verify-token') {
+          const accessToken = reqUrl.searchParams.get('access_token') || '';
+          try {
+            const uRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+              headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${accessToken}`
+              }
+            });
+            if (uRes.ok) {
+              const uData = await uRes.json();
+              const verifiedEmail = String(uData?.email || '').trim().toLowerCase();
+              if (verifiedEmail === user.loginId.toLowerCase()) {
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                return res.end(JSON.stringify({ ok: true, otpCode }));
+              }
+            }
+          } catch (_) {}
+          res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
+          return res.end(JSON.stringify({ ok: false, error: 'Token từ Email không hợp lệ hoặc đã hết hạn!' }));
+        }
+
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Hộp Thư Bảo Mật OTP — Aether Cloud 24/7</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',system-ui,sans-serif}.card{background:#111827;border:2px solid #22c55e;border-radius:18px;padding:34px 40px;text-align:center;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(34,197,94,0.16);color:#4ade80;font-weight:800;font-size:12px;margin-bottom:10px}h2{color:#4ade80;margin:0 0 8px;font-size:21px}.otp{margin:18px 0;padding:16px 22px;background:rgba(34,197,94,0.14);border:2px dashed #22c55e;border-radius:14px;font-weight:900;font-size:36px;letter-spacing:10px;color:#fff;user-select:all}.btn{background:#16a34a;color:#fff;border:none;padding:11px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px}.btn:hover{background:#15803d}</style></head><body><div class="card"><div class="badge">☁️ AETHER CLOUD SECURITY 24/7</div><h2>📨 MÃ OTP KHÔI PHỤC MẬT KHẨU</h2><p style="color:#cbd5e1;font-size:14px;">Tài khoản: <strong style="color:#fff;">${user.loginId}</strong> (Nhân vật: <strong style="color:#38bdf8;">${user.mcUsername}</strong>)</p><div class="otp" id="otpVal">${otpCode}</div><button class="btn" onclick="navigator.clipboard.writeText('${otpCode}');this.textContent='✓ Đã sao chép Mã OTP (${otpCode})!';">📋 Sao chép Mã OTP 6 Số</button><p style="font-size:13px;color:#94a3b8;margin-top:16px;">Quay lại <strong>Aether Craft Launcher</strong> và dán mã 6 số này vào ô <strong>Mã OTP 6 số</strong> để đặt mật khẩu mới (Hiệu lực: 5 phút).</p></div></body></html>`);
+        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Xác Thực Email Gmail — Aether Cloud (Supabase)</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',system-ui,sans-serif}.card{background:#111827;border:2px solid #22c55e;border-radius:18px;padding:34px 40px;text-align:center;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(34,197,94,0.16);color:#4ade80;font-weight:800;font-size:12px;margin-bottom:10px}h2{color:#4ade80;margin:0 0 8px;font-size:21px}.otp{margin:18px 0;padding:16px 22px;background:rgba(34,197,94,0.14);border:2px dashed #22c55e;border-radius:14px;font-weight:900;font-size:36px;letter-spacing:10px;color:#fff;user-select:all}.btn{background:#16a34a;color:#fff;border:none;padding:11px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px}</style></head><body><div class="card"><div class="badge">⚡ SUPABASE GMAIL VERIFIED</div><h2 id="titleText">⏳ Đang kiểm tra liên kết từ Gmail...</h2><p style="color:#cbd5e1;font-size:14px;">Tài khoản: <strong style="color:#fff;">${user.loginId}</strong> (Nhân vật: <strong style="color:#38bdf8;">${user.mcUsername}</strong>)</p><div class="otp" id="otpVal">••••••</div><button class="btn" id="copyBtn" style="display:none;">📋 Sao chép Mã OTP 6 Số</button><p style="font-size:13px;color:#94a3b8;margin-top:16px;" id="subHint">Vui lòng mở thư từ Supabase trong hộp thư Gmail của bạn.</p></div><script>
+          (async () => {
+            const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+            const token = hash.get('access_token') || new URLSearchParams(window.location.search).get('access_token');
+            if (!token) {
+              document.getElementById('titleText').textContent = '⚠️ Chưa có xác thực từ hộp thư Gmail!';
+              document.getElementById('titleText').style.color = '#f87171';
+              document.getElementById('subHint').textContent = 'Bạn cần bấm vào nút xác nhận bên trong bức thư gửi về Gmail (' + '${user.loginId}' + ') để mở trang này!';
+              return;
+            }
+            const r = await fetch('/verify-token?access_token=' + encodeURIComponent(token));
+            const d = await r.json();
+            if (d.ok && d.otpCode) {
+              document.getElementById('titleText').textContent = '✅ ĐÃ XÁC THỰC GMAIL THÀNH CÔNG!';
+              document.getElementById('otpVal').textContent = d.otpCode;
+              const btn = document.getElementById('copyBtn');
+              btn.style.display = 'inline-block';
+              btn.onclick = () => { navigator.clipboard.writeText(d.otpCode); btn.textContent = '✓ Đã sao chép Mã OTP (' + d.otpCode + ')!'; };
+              document.getElementById('subHint').textContent = 'Quay lại Aether Craft Launcher và dán mã 6 số này vào ô Mã OTP 6 số để đặt mật khẩu mới!';
+            } else {
+              document.getElementById('titleText').textContent = '⚠️ Liên kết xác thực không hợp lệ!';
+              document.getElementById('titleText').style.color = '#f87171';
+            }
+          })();
+        </script></body></html>`);
       });
 
       activeBrowserServer = server;
+      server.on('error', () => {});
+      server.listen(3000, '127.0.0.1');
+      setTimeout(() => {
+        try { server.close(); } catch (_) {}
+        if (activeBrowserServer === server) activeBrowserServer = null;
+      }, 10 * 60 * 1000);
 
-      const launchOtpPage = (port) => {
-        shell.openExternal(`http://127.0.0.1:${port}/aether-otp`);
-        setTimeout(() => {
-          try { server.close(); } catch (_) {}
-          if (activeBrowserServer === server) activeBrowserServer = null;
-        }, 120000);
-        resolve({ ok: true, loginId: user.loginId, mcUsername: user.mcUsername });
-      };
+      // Send REAL email to the user's Gmail inbox via Supabase Auth!
+      const otpRes = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
+        method: 'POST',
+        headers: getSupabaseHeaders(),
+        body: JSON.stringify({
+          email: user.loginId,
+          create_user: true
+        })
+      });
 
-      server.listen(25562, '127.0.0.1', () => launchOtpPage(server.address().port));
-      server.on('error', () => {
-        server.listen(0, '127.0.0.1', () => launchOtpPage(server.address().port));
+      if (!otpRes.ok) {
+        const errBody = await otpRes.json().catch(() => ({}));
+        const errMsg = String(errBody?.msg || errBody?.message || '');
+        if (otpRes.status === 429 || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('60 seconds')) {
+          return resolve({
+            ok: true,
+            loginId: user.loginId,
+            mcUsername: user.mcUsername,
+            alreadySent: true
+          });
+        }
+        return reject(new Error(`Không thể gửi Email qua Supabase (${otpRes.status}): ${errMsg || 'Vui lòng thử lại sau 60 giây'}`));
+      }
+
+      resolve({
+        ok: true,
+        loginId: user.loginId,
+        mcUsername: user.mcUsername
       });
     } catch (e) {
       reject(e);
@@ -842,7 +947,7 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
     throw new Error('Vui lòng nhập Tên đăng nhập (hoặc Email) cần đặt lại mật khẩu!');
   }
   if (!/^\d{6}$/.test(cleanOtp)) {
-    throw new Error('⚠️ Vui lòng bấm "📨 Nhận Mã OTP" và nhập đúng Mã OTP 6 chữ số!');
+    throw new Error('⚠️ Vui lòng nhập đúng Mã OTP 6 chữ số nhận được từ hộp thư Gmail!');
   }
   if (!newPassword || String(newPassword).length < 4) {
     throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
@@ -855,20 +960,46 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
       (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
   );
   if (!user) {
-    throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud!`);
+    throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud!`);
   }
 
-  if (!user.resetOtpHash || !user.resetOtpExpires || Date.now() > user.resetOtpExpires) {
-    throw new Error('⚠️ Mã OTP đã hết hạn hoặc chưa được tạo! Hãy bấm nút "📨 Nhận Mã OTP" trước.');
+  let otpVerified = false;
+
+  // 1. Check if the 6-digit OTP matches our Gmail link-verified OTP hash
+  if (user.resetOtpHash && user.resetOtpExpires && Date.now() <= user.resetOtpExpires) {
+    if (hashPassword(cleanOtp) === user.resetOtpHash) {
+      otpVerified = true;
+    }
   }
 
-  if (hashPassword(cleanOtp) !== user.resetOtpHash) {
-    throw new Error('⚠️ Mã OTP 6 số không chính xác! Vui lòng kiểm tra lại.');
+  // 2. Also check directly with Supabase Auth /auth/v1/verify (if user entered the 6-digit {{ .Token }} from Gmail email)
+  if (!otpVerified && user.loginId.includes('@')) {
+    for (const verifyType of ['email', 'magiclink', 'signup', 'recovery']) {
+      try {
+        const vRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+          method: 'POST',
+          headers: getSupabaseHeaders(),
+          body: JSON.stringify({
+            type: verifyType,
+            email: user.loginId,
+            token: cleanOtp
+          })
+        });
+        if (vRes.ok) {
+          otpVerified = true;
+          break;
+        }
+      } catch (_) {}
+    }
+  }
+
+  if (!otpVerified) {
+    throw new Error('⚠️ Mã OTP 6 số không chính xác hoặc đã hết hạn! Vui lòng mở hộp thư Gmail để lấy đúng mã OTP.');
   }
 
   user.passwordHash = hashPassword(newPassword);
-  delete user.resetOtpHash;
-  delete user.resetOtpExpires;
+  user.resetOtpHash = null;
+  user.resetOtpExpires = null;
   user.updatedAt = Date.now();
   await saveCloudDatabase(db, customDbUrl);
   return toPublicProfile(user);

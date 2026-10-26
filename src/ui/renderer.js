@@ -1251,20 +1251,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       btnRequestOtp.disabled = true;
-      btnRequestOtp.textContent = '⏳ Đang tạo Mã OTP 6 số...';
-      showAetherNotification(`📨 Đang kết nối Cloud Database 24/7 để cấp Mã OTP 6 số cho "${loginId}"...`, 'info', 3000);
+      btnRequestOtp.textContent = '📨 Đang gửi Email qua Supabase...';
+      showAetherNotification(`📨 Đang gửi thư xác thực từ Supabase về hộp thư Gmail của "${loginId}"...`, 'info', 3500);
       const res = await window.aetherAPI.cloudRequestOtp({
         loginId,
         customDbUrl: state.customDbUrl
       });
       btnRequestOtp.disabled = false;
-      btnRequestOtp.textContent = '✓ Đã mở Hộp Thư OTP trên Trình duyệt (Gửi lại)';
+      btnRequestOtp.textContent = '✓ Đã gửi thư về Gmail (Bấm để gửi lại)';
       if (res?.ok) {
-        showAetherNotification(`🔐 Đã cấp Mã OTP 6 số cho "${res.loginId}" trên trình duyệt! Hãy dán mã 6 số vào ô bên dưới.`, 'success', 6500);
+        showAetherNotification(`📨 Đã gửi Email khôi phục về hộp thư Gmail "${res.loginId}"! Hãy mở Gmail của bạn để lấy Mã OTP 6 số.`, 'success', 8000);
         document.getElementById('aetherOtpInput')?.focus();
       } else if (res?.error) {
-        btnRequestOtp.textContent = '📨 Bước 1: Nhận Mã OTP 6 Số (Mở Hộp Thư OTP)';
-        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
+        btnRequestOtp.textContent = '📨 Bước 1: Gửi Mã OTP 6 Số Về Hộp Thư Gmail';
+        showAetherNotification(`⚠️ ${res.error}`, 'error', 6000);
       }
     };
   }

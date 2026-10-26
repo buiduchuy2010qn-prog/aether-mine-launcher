@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "31.2.1",
-  "description": "Aether Craft v31.2.1 PRO - 100% Standalone Aether Cloud Web Portal & OTP Security Inbox (No Microsoft Redirect)",
+  "version": "31.3.0",
+  "description": "Aether Craft v31.3 PRO - Official Supabase PostgreSQL 24/7 Cloud DB & Real Gmail OTP",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
