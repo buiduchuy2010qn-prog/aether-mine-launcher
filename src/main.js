@@ -76,12 +76,16 @@ async function ensureAppIconSyncedAndApplied() {
   try {
     const uiDir = path.join(__dirname, 'ui');
     const icoPath = path.join(uiDir, 'app-icon.ico');
+    const bwIcoPath = path.join(uiDir, 'app-icon-blockway.ico');
     const pngPath = path.join(uiDir, 'app-logo.png');
     const bannerPath = path.join(uiDir, 'app-banner.png');
-    const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/src/ui';
+    const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/blockway-launcher/main/src/ui';
     if (!fs.existsSync(icoPath)) {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-icon.ico?t=${Date.now()}`);
       fs.writeFileSync(icoPath, buf);
+    }
+    if (fs.existsSync(icoPath)) {
+      try { fs.copyFileSync(icoPath, bwIcoPath); } catch (_) {}
     }
     if (!fs.existsSync(pngPath)) {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-logo.png?t=${Date.now()}`);
@@ -91,13 +95,16 @@ async function ensureAppIconSyncedAndApplied() {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-banner.png?t=${Date.now()}`);
       fs.writeFileSync(bannerPath, buf);
     }
-    if (mainWindow && !mainWindow.isDestroyed() && fs.existsSync(icoPath)) {
-      mainWindow.setIcon(icoPath);
-      mainWindow.setTitle('BlockWay Launcher — v32.0 PRO');
+    const activeIco = fs.existsSync(bwIcoPath) ? bwIcoPath : icoPath;
+    if (mainWindow && !mainWindow.isDestroyed() && fs.existsSync(activeIco)) {
+      mainWindow.setIcon(activeIco);
+      mainWindow.setTitle('BlockWay Launcher — v32.1 PRO');
     }
-    if (process.platform === 'win32' && fs.existsSync(icoPath)) {
+    if (process.platform === 'win32' && fs.existsSync(activeIco)) {
       const { exec } = require('child_process');
-      const psUpdateShortcuts = `powershell -NoProfile -WindowStyle Hidden -Command "$ws = New-Object -ComObject WScript.Shell; @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs')) | ForEach-Object { Get-ChildItem -Path $_ -Include '*Aether*.lnk','*BlockWay*.lnk' -Recurse -File -ErrorAction SilentlyContinue } | ForEach-Object { try { $s = $ws.CreateShortcut($_.FullName); $s.IconLocation = '${icoPath.replace(/'/g, "''")},0'; $s.Save() } catch {} }"`;
+      const exePathEsc = (process.execPath || '').replace(/'/g, "''");
+      const icoEsc = activeIco.replace(/'/g, "''");
+      const psUpdateShortcuts = `powershell -NoProfile -WindowStyle Hidden -Command "$ws = New-Object -ComObject WScript.Shell; $dt = [Environment]::GetFolderPath('Desktop'); @($dt, [Environment]::GetFolderPath('Programs')) | ForEach-Object { Get-ChildItem -Path $_ -Include '*Aether*.lnk','*BlockWay*.lnk' -Recurse -File -ErrorAction SilentlyContinue } | ForEach-Object { try { $s = $ws.CreateShortcut($_.FullName); $s.IconLocation = '${icoEsc},0'; $s.Save() } catch {} }; try { $bw = Join-Path $dt 'BlockWay Launcher.lnk'; $s2 = $ws.CreateShortcut($bw); $s2.TargetPath = '${exePathEsc}'; $s2.IconLocation = '${icoEsc},0'; $s2.Save() } catch {}"`;
       exec(psUpdateShortcuts, () => {});
     }
   } catch (_) {}
@@ -105,8 +112,12 @@ async function ensureAppIconSyncedAndApplied() {
 
 function createWindow() {
   const icoPath = path.join(__dirname, 'ui', 'app-icon.ico');
+  const bwIcoPath = path.join(__dirname, 'ui', 'app-icon-blockway.ico');
+  if (fs.existsSync(icoPath) && !fs.existsSync(bwIcoPath)) {
+    try { fs.copyFileSync(icoPath, bwIcoPath); } catch (_) {}
+  }
   const pngPath = path.join(__dirname, 'ui', 'app-logo.png');
-  const winIcon = fs.existsSync(icoPath) ? icoPath : (fs.existsSync(pngPath) ? pngPath : undefined);
+  const winIcon = fs.existsSync(bwIcoPath) ? bwIcoPath : (fs.existsSync(icoPath) ? icoPath : (fs.existsSync(pngPath) ? pngPath : undefined));
 
   mainWindow = new BrowserWindow({
     width: 1360,
@@ -547,15 +558,29 @@ function downloadWithProgress(url, destPath, onPct) {
 ipcMain.handle('updater:check', async () => {
   try {
     const currentVersion = app.getVersion();
+    let repoSlug = 'blockway-launcher';
     let refBranch = 'main';
     try {
-      const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+      const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/blockway-launcher/commits/main?t=${Date.now()}`);
       if (commitInfo?.sha) refBranch = commitInfo.sha;
-    } catch (_) {}
-    const remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}/package.json?t=${Date.now()}`);
+    } catch (_) {
+      try {
+        const commitInfoOld = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+        if (commitInfoOld?.sha) {
+          repoSlug = 'aether-mine-launcher';
+          refBranch = commitInfoOld.sha;
+        }
+      } catch (_) {}
+    }
+    let remotePkg;
+    try {
+      remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/${repoSlug}/${refBranch}/package.json?t=${Date.now()}`);
+    } catch (_) {
+      remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}/package.json?t=${Date.now()}`);
+    }
     const latestVersion = remotePkg?.version || currentVersion;
     const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
-    const downloadUrl = `https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/download/v7.0.0/AetherCraft-Setup-${latestVersion}.exe`;
+    const downloadUrl = `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v7.0.0/AetherCraft-Setup-${latestVersion}.exe`;
     return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch };
   } catch (err) {
     return { ok: false, error: err.message, currentVersion: app.getVersion() };
@@ -568,11 +593,20 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
     const isUnpackedApp = path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
 
     if (isUnpackedApp) {
+      let repoSlug = 'blockway-launcher';
       let refBranch = 'main';
       try {
-        const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+        const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/blockway-launcher/commits/main?t=${Date.now()}`);
         if (commitInfo?.sha) refBranch = commitInfo.sha;
-      } catch (_) {}
+      } catch (_) {
+        try {
+          const commitInfoOld = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+          if (commitInfoOld?.sha) {
+            repoSlug = 'aether-mine-launcher';
+            refBranch = commitInfoOld.sha;
+          }
+        } catch (_) {}
+      }
 
       const filesToSync = [
         'package.json',
@@ -580,6 +614,7 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/preload.js',
         'src/launcher-engine.js',
         'src/microsoft-auth.js',
+        'src/aether-cloud-auth.js',
         'src/ui/index.html',
         'src/ui/styles.css',
         'src/ui/renderer.js',
@@ -589,10 +624,16 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/ui/app-logo.png',
         'src/ui/app-icon.ico'
       ];
-      const baseRaw = `https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}`;
+      const baseRaw = `https://raw.githubusercontent.com/buiduchuy2010qn-prog/${repoSlug}/${refBranch}`;
+      const fallbackRaw = `https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}`;
       for (let i = 0; i < filesToSync.length; i++) {
         const rel = filesToSync[i];
-        const buf = await fetchBinaryBuffer(`${baseRaw}/${rel}?t=${Date.now()}`);
+        let buf;
+        try {
+          buf = await fetchBinaryBuffer(`${baseRaw}/${rel}?t=${Date.now()}`);
+        } catch (_) {
+          buf = await fetchBinaryBuffer(`${fallbackRaw}/${rel}?t=${Date.now()}`);
+        }
         const targetFile = path.join(appRoot, rel);
         const dir = path.dirname(targetFile);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

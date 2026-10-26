@@ -4982,11 +4982,13 @@ html[data-theme="cherry"] {
   .field-label {
     font-size: 11px !important;
   }
-  /* Compact Banner so Card A & Card B have full vertical room */
+  /* Full BlockWay Hero Banner visibility */
   .hero-banner-clean {
-    min-height: 92px !important;
-    max-height: 104px !important;
-    padding: 8px 12px !important;
+    min-height: 162px !important;
+    max-height: 186px !important;
+    padding: 10px 14px !important;
+    background-size: 100% 100% !important;
+    background-position: center center !important;
   }
   .hero-mc-logo-img {
     height: 30px !important;

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/sitemap.xml
+Sitemap: https://buiduchuy2010qn-prog.github.io/blockway-launcher/sitemap.xml
