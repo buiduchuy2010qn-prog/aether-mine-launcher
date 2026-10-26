@@ -5497,3 +5497,159 @@ html:not([data-theme="prism"]) .aether-feedback-banner.info {
 
 
 
+
+
+/* BlockWay home layout refresh — preserve renderer IDs and IPC hooks */
+:root {
+  --bw-panel-line: rgba(105, 173, 255, 0.18);
+  --bw-panel-glow: rgba(31, 111, 235, 0.12);
+  --bw-accent-cyan: #42c8ff;
+}
+.brand-titles { gap: 7px !important; }
+.brand-name {
+  color: var(--text-main);
+  font-size: 18px !important;
+  line-height: 1;
+  font-weight: 900 !important;
+  letter-spacing: -0.5px;
+}
+.brand-product-label {
+  color: var(--bw-accent-cyan);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.8px;
+  align-self: flex-end;
+  margin: 0 2px 1px -4px;
+}
+.brand-cube-svg { filter: drop-shadow(0 0 9px var(--accent-glow)); }
+.workspace { gap: 0; min-height: 0; }
+.sidebar {
+  flex: 0 0 224px !important;
+  width: 224px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-right-color: var(--bw-panel-line) !important;
+  background: radial-gradient(ellipse at 0 0, var(--bw-panel-glow), transparent 58%), var(--bg-sidebar) !important;
+}
+.sidebar-nav { gap: 5px !important; }
+.nav-item { min-height: 40px; border-radius: 10px !important; }
+.nav-item.active { box-shadow: inset 3px 0 0 var(--accent), 0 4px 14px var(--accent-glow); }
+.main-stage { min-width: 0; padding: 12px !important; }
+.tab-panel#tab-play { overflow-y: auto !important; padding-right: 2px; }
+.main-play-grid {
+  grid-template-columns: minmax(0, 1fr) 304px !important;
+  align-items: start;
+  height: auto !important;
+  min-height: 100%;
+  gap: 12px !important;
+}
+.left-play-col { min-width: 0; }
+.hero-banner-clean {
+  flex: 0 0 auto !important;
+  min-height: 270px !important;
+  height: clamp(250px, 30vh, 330px);
+  border-radius: 16px !important;
+  border-color: var(--bw-panel-line) !important;
+  background-position: center 42% !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.22), 0 0 0 1px rgba(66,200,255,.04);
+}
+.hbc-overlay {
+  background: linear-gradient(90deg, rgba(4,10,21,.9) 0%, rgba(4,10,21,.55) 54%, rgba(4,10,21,.15) 100%), linear-gradient(0deg, rgba(4,10,21,.66), transparent 62%) !important;
+}
+.hbc-content { padding: 16px 18px !important; }
+.hbc-bottom-row { align-items: flex-end; gap: 12px; }
+.hbc-quick-actions { flex-wrap: wrap; justify-content: flex-end; gap: 6px !important; }
+.banner-cta-btn { min-height: 32px; border-radius: 9px !important; }
+.direct-selector-panel {
+  grid-template-columns: minmax(0, 1.08fr) minmax(290px, .92fr) !important;
+  gap: 12px !important;
+  align-items: start;
+}
+.dsp-block {
+  min-width: 0;
+  padding: 14px !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+  background: linear-gradient(160deg, rgba(255,255,255,.018), transparent 55%), var(--bg-card) !important;
+  border-color: var(--bw-panel-line) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+.dsp-head { min-height: 28px; }
+.core-selector-bar { gap: 7px !important; }
+.core-tab-btn { min-height: 90px; border-radius: 11px !important; }
+.version-selectors-row { gap: 10px !important; }
+.quick-version-grid { gap: 7px !important; }
+.version-ready-bar { margin-top: 1px; }
+.adv-ram-drawer {
+  margin-top: auto;
+  border-radius: 12px !important;
+  border-color: var(--bw-panel-line) !important;
+}
+.skin-studio-card {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+  padding: 13px !important;
+  border: 1px solid var(--bw-panel-line) !important;
+  border-radius: 16px !important;
+  background: radial-gradient(ellipse at 50% 0, var(--bw-panel-glow), transparent 54%), var(--bg-card) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.16);
+}
+.skin-studio-card .card-head { margin-bottom: 10px; }
+.webgl-stage-wrap {
+  min-height: 340px;
+  height: clamp(340px, 46vh, 500px);
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.wardrobe-toolbar { margin-top: 10px; gap: 8px !important; }
+.wtab-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wtab-btn { min-width: 0; white-space: nowrap; }
+.mc-official-dock {
+  position: relative;
+  z-index: 5;
+  min-height: 76px;
+  height: 76px !important;
+  grid-template-columns: minmax(210px, 1fr) minmax(230px, auto) minmax(210px, 1fr) !important;
+  gap: 12px !important;
+  padding: 8px 16px !important;
+  border-top-color: var(--bw-panel-line) !important;
+  box-shadow: 0 -8px 26px rgba(0,0,0,.15);
+}
+.dock-active-config { max-width: 100%; min-width: 0; padding: 6px 10px !important; }
+.dac-info strong, .dac-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-mc-official-play { min-width: clamp(220px, 20vw, 300px) !important; height: 52px !important; border-radius: 12px !important; }
+.dock-right-status { min-width: 0; width: 100% !important; max-width: 310px; }
+.tab-panel:not(#tab-play) { min-width: 0; }
+@media (max-width: 1500px) {
+  .sidebar { flex-basis: 205px !important; width: 205px !important; }
+  .main-play-grid { grid-template-columns: minmax(0, 1fr) 280px !important; gap: 10px !important; }
+  .direct-selector-panel { grid-template-columns: minmax(0, 1fr) minmax(270px, .9fr) !important; }
+  .dsp-block { padding: 11px !important; }
+  .hero-banner-clean { height: clamp(235px, 29vh, 290px); min-height: 235px !important; }
+  .webgl-stage-wrap { height: clamp(300px, 42vh, 420px); min-height: 300px; }
+  .wallpaper-switcher .wp-chip { padding: 3px 6px; font-size: 9.5px; }
+}
+@media (max-width: 1180px) {
+  .main-play-grid { grid-template-columns: minmax(0, 1fr) 250px !important; }
+  .sidebar { flex-basis: 184px !important; width: 184px !important; }
+  .direct-selector-panel { grid-template-columns: minmax(0, 1fr) !important; }
+  .skin-studio-card { position: static; }
+  .webgl-stage-wrap { height: 330px; }
+  .theme-studio-bar { gap: 1px; }
+  .ts-chip { padding: 4px 6px !important; }
+}
+@media (max-height: 820px) {
+  .hero-banner-clean { min-height: 210px !important; height: 230px !important; }
+  .webgl-stage-wrap { min-height: 260px; height: 300px; }
+  .mc-official-dock { height: 68px !important; min-height: 68px; }
+  .btn-mc-official-play { height: 46px !important; }
+}
+@media (max-width: 960px) {
+  .main-play-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .skin-studio-card { position: static; }
+  .webgl-stage-wrap { height: 380px; }
+  .mc-official-dock { grid-template-columns: 1fr auto !important; }
+  .dock-right-status { display: none; }
+}
