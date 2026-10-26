@@ -260,8 +260,11 @@ function updateSummaryUI() {
   if (editionTag && heroBanner) {
     const wpUrl = state.customWallpaper || 'app-banner.png';
     const wpLabelMatch = state.customWpLabel || 'BlockWay';
+    const isBlockWayBanner = wpUrl === 'app-banner.png';
     const eraTitle = `⚡ BLOCKWAY LAUNCHER • EVERY WORLD, ONE PLACE • ${ver}`;
     editionTag.textContent = eraTitle;
+    editionTag.style.display = isBlockWayBanner ? 'none' : '';
+    if (bannerSub) bannerSub.style.display = isBlockWayBanner ? 'none' : '';
     heroBanner.style.backgroundImage = `url('${wpUrl}')`;
     document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.textContent.trim() === wpLabelMatch));
   }
@@ -283,8 +286,8 @@ function updateSummaryUI() {
   document.getElementById('sidebarPlayerName').textContent = playerName;
   document.getElementById('sidebarAuthBadge').textContent = (state.authMode === 'microsoft' && state.msProfile?.name)
     ? '👑 BẢN QUYỀN MS'
-    : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ AETHER CLOUD' : 'CRACK / OFFLINE');
-  const modeLabel = state.authMode === 'microsoft' ? 'Microsoft' : (state.authMode === 'aether' ? 'Aether Cloud' : 'Crack');
+    : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ BLOCKWAY CLOUD' : 'CRACK / OFFLINE');
+  const modeLabel = state.authMode === 'microsoft' ? 'Microsoft' : (state.authMode === 'aether' ? 'BlockWay Cloud' : 'Crack');
   document.getElementById('dockAccountText').textContent = `${playerName} (${modeLabel})`;
 }
 
@@ -676,7 +679,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
     if (manualClick) {
       await askUserAgreement({
         title: '✓ Launcher Đã Ở Phiên Bản Mới Nhất',
-        message: `Bạn đang sử dụng phiên bản mới nhất của Aether Craft Launcher (v${res.currentVersion}). Khi nào có bản mới, Launcher sẽ tự động thông báo ngay lúc mở!`,
+        message: `Bạn đang sử dụng phiên bản mới nhất của BlockWay Launcher (v${res.currentVersion}). Khi nào có bản mới, Launcher sẽ tự động thông báo ngay lúc mở!`,
         agreeText: 'Đã hiểu',
         cancelText: 'Đóng'
       });
@@ -1612,7 +1615,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await refreshInstalledVersions();
   if (!state.acceptedEula) {
     const eulaAsk = await askUserAgreement({
-      title: '🛡️ Điều Khoản Sử Dụng & Cài Đặt Aether Craft Launcher',
+      title: '🛡️ Điều Khoản Sử Dụng & Cài Đặt BlockWay Launcher',
       message: 'Trước khi bắt đầu sử dụng Launcher và tải tài nguyên Minecraft, vui lòng đọc và xác nhận bạn đồng ý với các điều khoản dưới đây:',
       showEula: true,
       agreeText: '✓ Tôi Đồng Ý & Sử Dụng',

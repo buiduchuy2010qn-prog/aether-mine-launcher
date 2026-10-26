@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -36,6 +36,9 @@ const {
 } = require('./microsoft-auth');
 
 app.commandLine.appendSwitch('js-flags', '--expose-gc');
+if (process.platform === 'win32') {
+  try { app.setAppUserModelId('BlockWay.Launcher.Pro.v32'); } catch (_) {}
+}
 // Background throttling enabled for 0% idle CPU/GPU
 
 let mainWindow;
@@ -96,9 +99,13 @@ async function ensureAppIconSyncedAndApplied() {
       fs.writeFileSync(bannerPath, buf);
     }
     const activeIco = fs.existsSync(bwIcoPath) ? bwIcoPath : icoPath;
-    if (mainWindow && !mainWindow.isDestroyed() && fs.existsSync(activeIco)) {
-      mainWindow.setIcon(activeIco);
-      mainWindow.setTitle('BlockWay Launcher — v32.1 PRO');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        const nImg = fs.existsSync(pngPath) ? nativeImage.createFromPath(pngPath) : nativeImage.createFromPath(activeIco);
+        if (!nImg.isEmpty()) mainWindow.setIcon(nImg);
+        else if (fs.existsSync(activeIco)) mainWindow.setIcon(activeIco);
+      } catch (_) {}
+      mainWindow.setTitle('BlockWay Launcher — v32.2 PRO');
     }
     if (process.platform === 'win32' && fs.existsSync(activeIco)) {
       const { exec } = require('child_process');
@@ -113,11 +120,17 @@ async function ensureAppIconSyncedAndApplied() {
 function createWindow() {
   const icoPath = path.join(__dirname, 'ui', 'app-icon.ico');
   const bwIcoPath = path.join(__dirname, 'ui', 'app-icon-blockway.ico');
-  if (fs.existsSync(icoPath) && !fs.existsSync(bwIcoPath)) {
+  if (fs.existsSync(icoPath)) {
     try { fs.copyFileSync(icoPath, bwIcoPath); } catch (_) {}
   }
   const pngPath = path.join(__dirname, 'ui', 'app-logo.png');
-  const winIcon = fs.existsSync(bwIcoPath) ? bwIcoPath : (fs.existsSync(icoPath) ? icoPath : (fs.existsSync(pngPath) ? pngPath : undefined));
+  let winIcon = fs.existsSync(bwIcoPath) ? bwIcoPath : (fs.existsSync(icoPath) ? icoPath : undefined);
+  try {
+    if (fs.existsSync(pngPath)) {
+      const nImg = nativeImage.createFromPath(pngPath);
+      if (!nImg.isEmpty()) winIcon = nImg;
+    }
+  } catch (_) {}
 
   mainWindow = new BrowserWindow({
     width: 1360,

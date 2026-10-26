@@ -1130,7 +1130,7 @@ async function openLauncherMigrateModal() {
     if (!selectedMigrateSourcePath) return;
     btnRun.disabled = true;
     btnRun.textContent = '⏳ Đang đồng bộ...';
-    statusEl.textContent = '⏳ Đang đồng bộ Thế giới, Mods, Server & Tài khoản sang Aether Craft...';
+    statusEl.textContent = '⏳ Đang đồng bộ Thế giới, Mods, Server & Tài khoản sang BlockWay Launcher...';
     const imp = await window.aetherAPI.importExternalLauncher({
       sourceDir: selectedMigrateSourcePath,
       targetGameDir: state.gameDir,
@@ -1185,7 +1185,7 @@ async function openLauncherMigrateModal() {
       await renderLocalWorlds();
       const msg = imp.isSameDir
         ? `✓ Đã đồng bộ trực tiếp thư mục .minecraft (${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.accountsFound?.length || 0} Tài khoản cũ)!`
-        : `✓ Hoàn tất! Đã chuyển ${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.configsCopied || 0} Config, ${st.packsCopied} Shaders/Packs & ${st.accountsFound?.length || 0} Tài khoản sang Aether Craft!`;
+        : `✓ Hoàn tất! Đã chuyển ${st.worldsCopied} Thế giới, ${st.modsCopied} Mods, ${st.configsCopied || 0} Config, ${st.packsCopied} Shaders/Packs & ${st.accountsFound?.length || 0} Tài khoản sang BlockWay Launcher!`;
       statusEl.textContent = msg;
       document.getElementById('statusText').textContent = msg;
     } else {
