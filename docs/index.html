@@ -1,462 +1,791 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-webtheme="navy">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BlockWay Launcher (v33.0 PRO) — Every World, One Place | Tải Minecraft Launcher</title>
+  <title>BlockWay Launcher v33.0 PRO — Every World, One Place | Tải Minecraft Launcher Việt Nam</title>
   <link rel="icon" type="image/png" href="app-logo.png?v=33.0" />
   <link rel="shortcut icon" href="favicon.ico?v=33.0" />
   <link rel="apple-touch-icon" href="app-logo.png?v=33.0" />
 
-  <meta name="description" content="Tải BlockWay Launcher v33.0 PRO bởi buiduchuy2010qn-prog — Every World, One Place. Trình khởi chạy Minecraft thế hệ mới tích hợp Cloud ID 24/7, xác thực OTP Gmail, 6 chủ đề giao diện, 3D Skin Studio và kho 77,600+ Modrinth Mods & Shaders." />
+  <meta name="description" content="Tải BlockWay Launcher v33.0 PRO (bởi buiduchuy2010qn-prog) — Every World, One Place. Trình khởi chạy Minecraft thế hệ mới: Cloud ID 24/7, OTP Gmail thật, 6 chủ đề màu (Navy & Trắng Sáng), tự thu phóng giao diện, 3D Skin & 77,600+ Mods Modrinth." />
   <meta name="keywords" content="BlockWay Launcher, blockway-launcher, blockway, Aether Mine Launcher, aether-mine-launcher, Aether Craft Launcher, aether-craft-launcher, buiduchuy2010qn-prog, Minecraft Launcher Vietnam, tải BlockWay Launcher, Modrinth Launcher, Fabric Forge Quilt Launcher" />
   <meta name="author" content="buiduchuy2010qn-prog" />
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="canonical" href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/" />
 
-  <!-- Open Graph / Google & Social Preview -->
+  <!-- Open Graph / Zalo, Facebook, Discord Preview -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="BlockWay Launcher (v33.0 PRO) — Every World, One Place" />
-  <meta property="og:description" content="Trình khởi chạy Minecraft tích hợp Tài khoản Đám mây 24/7 (Supabase), OTP Gmail, 6 chủ đề màu sắc, 3D Skin & Cape và kho 77,600+ Mods Modrinth." />
+  <meta property="og:title" content="BlockWay Launcher v33.0 PRO — Every World, One Place" />
+  <meta property="og:description" content="Trình khởi chạy Minecraft thế hệ mới: Cloud ID 24/7, OTP Gmail, 6 chủ đề màu sắc, đồng bộ Map cũ 1-Click, 0% GPU khi chơi & kho 77,600+ Mods Modrinth." />
   <meta property="og:url" content="https://buiduchuy2010qn-prog.github.io/blockway-launcher/" />
-  <meta property="og:image" content="https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-banner.png?v=33.0" />
+  <meta property="og:image" content="https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-home-navy.png?v=33.0" />
   <meta property="og:site_name" content="BlockWay Launcher" />
+  <meta name="twitter:card" content="summary_large_image" />
 
-  <!-- Google Fonts: Plus Jakarta Sans for clean modern Blue & White typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- Schema.org Structured Data for Google Rich Results -->
+  <!-- Schema.org Structured Data: SoftwareApplication + FAQPage for Google Search -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "BlockWay Launcher",
-    "alternateName": ["BlockWay Launcher v33.0 PRO", "blockway-launcher", "Aether Mine Launcher", "Aether Craft Launcher", "aether-mine-launcher"],
-    "operatingSystem": "Windows 10, Windows 11",
-    "applicationCategory": "GameApplication",
-    "softwareVersion": "33.0.0",
-    "image": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-logo.png",
-    "screenshot": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-banner.png",
-    "author": {
-      "@type": "Person",
-      "name": "buiduchuy2010qn-prog",
-      "url": "https://github.com/buiduchuy2010qn-prog"
-    },
-    "url": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
-    "downloadUrl": "https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    }
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "BlockWay Launcher",
+        "alternateName": ["BlockWay Launcher v33.0 PRO", "blockway-launcher", "Aether Mine Launcher", "Aether Craft Launcher", "aether-mine-launcher"],
+        "operatingSystem": "Windows 10, Windows 11",
+        "applicationCategory": "GameApplication",
+        "softwareVersion": "33.0.0",
+        "image": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-logo.png",
+        "screenshot": [
+          "https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-home-navy.png",
+          "https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-home-light.png",
+          "https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-settings.png"
+        ],
+        "author": {
+          "@type": "Person",
+          "name": "buiduchuy2010qn-prog",
+          "url": "https://github.com/buiduchuy2010qn-prog"
+        },
+        "url": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
+        "downloadUrl": "https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Làm sao để tìm repo BlockWay Launcher trên máy mới không có tài khoản?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Bạn chỉ cần mở trình duyệt vào github.com và gõ từ khóa 'blockway-launcher' hoặc 'buiduchuy2010qn-prog', hoặc truy cập trực tiếp trang chủ https://buiduchuy2010qn-prog.github.io/blockway-launcher/ mà không cần đăng nhập."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "BlockWay Launcher cập nhật phiên bản mới như thế nào?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Launcher tự động phát hiện phiên bản mới trên GitHub Cloud khi mở ứng dụng và hiển thị thông báo để người dùng chủ động nhấn nút 'Cập Nhật Ngay'."
+            }
+          }
+        ]
+      }
+    ]
   }
   </script>
 
   <style>
-    :root {
-      --bg-top: #ebf5ff;
-      --bg-mid: #f8fbff;
-      --bg-bot: #e0f2fe;
-      --blue-primary: #0284c7;
-      --blue-light: #0ea5e9;
-      --blue-soft: #38bdf8;
-      --blue-pale: #e0f2fe;
-      --blue-deep: #0c4a6e;
+    :root, html[data-webtheme="navy"] {
+      --bg-page: #070d19;
+      --bg-grad-1: #0b162c;
+      --bg-grad-2: #070d19;
+      --bg-card: rgba(15, 25, 45, 0.88);
+      --bg-card-solid: #101c33;
+      --bg-pill: rgba(30, 48, 82, 0.65);
+      --border: rgba(56, 189, 248, 0.22);
+      --border-strong: rgba(56, 189, 248, 0.48);
+      --text-main: #f1f5f9;
+      --text-sub: #94a3b8;
+      --accent: #38bdf8;
+      --accent-blue: #2563eb;
+      --emerald: #22c55e;
+      --emerald-dark: #16a34a;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+
+    html[data-webtheme="light"] {
+      --bg-page: #f0f7ff;
+      --bg-grad-1: #e0f2fe;
+      --bg-grad-2: #f8fbff;
+      --bg-card: rgba(255, 255, 255, 0.94);
+      --bg-card-solid: #ffffff;
+      --bg-pill: #e0f2fe;
+      --border: #bae6fd;
+      --border-strong: #38bdf8;
       --text-main: #0f2942;
-      --text-sub: #336186;
-      --white: #ffffff;
+      --text-sub: #3b698c;
+      --accent: #0284c7;
+      --accent-blue: #2563eb;
+      --emerald: #16a34a;
+      --emerald-dark: #15803d;
+      --shadow: 0 16px 40px rgba(2, 132, 199, 0.12);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
     body {
       min-height: 100vh;
-      background: linear-gradient(180deg, var(--bg-top) 0%, var(--white) 48%, var(--bg-bot) 100%);
+      background: radial-gradient(circle at 18% 0%, var(--bg-grad-1) 0%, var(--bg-page) 55%, var(--bg-grad-2) 100%);
       color: var(--text-main);
       font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       overflow-x: hidden;
+      transition: background 0.25s ease, color 0.25s ease;
     }
 
-    .sky-glow-1, .sky-glow-2 {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .sky-glow-1 {
-      width: 480px;
-      height: 480px;
-      background: rgba(56, 189, 248, 0.22);
-      top: -140px;
-      left: -100px;
-    }
-    .sky-glow-2 {
-      width: 520px;
-      height: 520px;
-      background: rgba(14, 165, 233, 0.16);
-      bottom: -160px;
-      right: -120px;
-    }
-
-    /* Navbar */
+    /* Sticky Navbar */
     .navbar {
       position: sticky;
-      top: 16px;
-      z-index: 10;
-      width: calc(100% - 32px);
-      max-width: 1060px;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(14px);
-      border: 1.5px solid #bae6fd;
+      top: 14px;
+      z-index: 50;
+      width: calc(100% - 28px);
+      max-width: 1180px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1.5px solid var(--border);
       border-radius: 18px;
-      padding: 10px 22px;
+      padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
+      gap: 12px;
+      box-shadow: var(--shadow);
       margin-bottom: 28px;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-weight: 800;
-      font-size: 19px;
-      color: var(--blue-deep);
+      gap: 11px;
       text-decoration: none;
+      color: var(--text-main);
+      font-weight: 800;
+      font-size: 18px;
     }
     .brand-logo-img {
-      width: 40px;
-      height: 40px;
-      border-radius: 11px;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
       object-fit: cover;
-      border: 2px solid #7dd3fc;
-      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+      border: 1.5px solid var(--border-strong);
+    }
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      display: block;
     }
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .nav-pill {
-      padding: 7px 14px;
+      padding: 7px 13px;
       border-radius: 999px;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
-      color: var(--blue-primary);
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
+      color: var(--text-main);
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
       text-decoration: none;
-      transition: all 0.15s ease;
+      cursor: pointer;
+      transition: all 0.16s ease;
     }
     .nav-pill:hover {
-      background: #e0f2fe;
+      border-color: var(--border-strong);
       transform: translateY(-1px);
+    }
+    .nav-pill.emerald {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #ffffff;
+      border-color: #4ade80;
     }
 
     .container {
-      position: relative;
-      z-index: 1;
-      max-width: 1040px;
       width: 100%;
-      padding: 10px 20px 60px;
-      text-align: center;
+      max-width: 1180px;
+      padding: 8px 20px 72px;
     }
 
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      margin-bottom: 34px;
+    }
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 18px;
+      padding: 7px 18px;
       border-radius: 999px;
-      background: #ffffff;
-      border: 1.5px solid #7dd3fc;
-      color: #0284c7;
+      background: var(--bg-pill);
+      border: 1.5px solid var(--border-strong);
+      color: var(--accent);
       font-weight: 800;
-      font-size: 13px;
-      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.12);
+      font-size: 12.5px;
       margin-bottom: 16px;
     }
-
-    /* Hero Banner Showcase Card */
-    .hero-banner-showcase {
-      position: relative;
-      width: 100%;
-      border-radius: 22px;
-      overflow: hidden;
-      border: 3px solid #ffffff;
-      box-shadow: 0 18px 48px rgba(2, 132, 199, 0.22), 0 0 0 2px #7dd3fc;
-      margin-bottom: 26px;
-      background: #0c192c;
-    }
-    .hero-banner-showcase img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-
     h1 {
-      font-size: clamp(32px, 5vw, 48px);
+      font-size: clamp(30px, 4.8vw, 52px);
       font-weight: 800;
       letter-spacing: -0.02em;
-      line-height: 1.15;
-      background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 50%, #38bdf8 100%);
+      line-height: 1.14;
+      margin-bottom: 14px;
+    }
+    h1 span {
+      background: linear-gradient(135deg, #38bdf8 0%, #22c55e 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 2px 0 #ffffff) drop-shadow(0 6px 18px rgba(14, 165, 233, 0.18));
-      margin-bottom: 12px;
     }
-
     .subtitle {
-      font-size: 16.5px;
+      font-size: 16px;
       color: var(--text-sub);
-      font-weight: 500;
       line-height: 1.65;
-      max-width: 760px;
-      margin: 0 auto 28px;
+      max-width: 820px;
+      margin: 0 auto 24px;
     }
     .subtitle strong {
-      color: var(--blue-primary);
-      font-weight: 700;
+      color: var(--text-main);
     }
 
+    /* Primary Actions */
     .actions {
       display: flex;
-      gap: 14px;
+      gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 40px;
+      margin-bottom: 14px;
     }
-
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 15px 30px;
+      padding: 14px 26px;
       border-radius: 14px;
       font-weight: 800;
-      font-size: 15px;
+      font-size: 14.5px;
       text-decoration: none;
+      cursor: pointer;
+      border: 1.5px solid transparent;
       transition: all 0.18s ease;
+      font-family: inherit;
     }
-    .btn:hover {
-      transform: translateY(-2px);
-    }
-
+    .btn:hover { transform: translateY(-2px); }
     .btn-primary {
-      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
       color: #ffffff;
-      border: 2px solid #ffffff;
-      box-shadow: 0 12px 28px rgba(2, 132, 199, 0.28), 0 0 0 2px #7dd3fc;
+      border-color: #86efac;
+      box-shadow: 0 12px 30px rgba(34, 197, 94, 0.32);
     }
-    .btn-primary:hover {
-      box-shadow: 0 16px 34px rgba(2, 132, 199, 0.36), 0 0 0 2px #38bdf8;
+    .btn-blue {
+      background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+      color: #ffffff;
+      border-color: #7dd3fc;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
     }
-
     .btn-secondary {
-      background: #ffffff;
-      border: 1.5px solid #7dd3fc;
-      color: #0284c7;
-      box-shadow: 0 8px 22px rgba(14, 165, 233, 0.1);
+      background: var(--bg-card);
+      color: var(--text-main);
+      border-color: var(--border-strong);
     }
-    .btn-secondary:hover {
-      background: #f0f9ff;
-      border-color: #38bdf8;
+    .hero-meta-strip {
+      font-size: 12.5px;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
     }
 
-    /* Highlight Stats Strip */
+    /* Live UI Screenshot Showcase */
+    .showcase-box {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 36px;
+    }
+    .showcase-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .sc-tab {
+      padding: 8px 15px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--bg-pill);
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 12.5px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+    .sc-tab.active {
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      color: #ffffff;
+      border-color: #7dd3fc;
+    }
+    .showcase-frame {
+      border-radius: 15px;
+      overflow: hidden;
+      border: 1.5px solid var(--border-strong);
+      background: #070c16;
+    }
+    .showcase-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .showcase-caption {
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--text-sub);
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    /* Stats Strip */
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 14px;
-      background: rgba(255, 255, 255, 0.92);
-      border: 1.5px solid #bae6fd;
-      border-radius: 18px;
-      padding: 18px 22px;
-      margin-bottom: 30px;
-      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.07);
+      margin-bottom: 42px;
     }
     .stat-item {
-      padding: 6px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      box-shadow: var(--shadow);
     }
     .stat-val {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 800;
-      color: #0284c7;
-      margin-bottom: 2px;
+      color: var(--accent);
+      margin-bottom: 4px;
     }
     .stat-label {
       font-size: 13px;
       font-weight: 600;
-      color: #477899;
+      color: var(--text-sub);
     }
 
-    /* Feature Cards */
+    /* Section Headers */
+    .sec-head {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .sec-head h2 {
+      font-size: clamp(22px, 3.2vw, 32px);
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .sec-head p {
+      color: var(--text-sub);
+      font-size: 14.5px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* 6 Feature Cards Grid */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      text-align: left;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+      margin-bottom: 46px;
     }
     .card {
-      background: #ffffff;
-      border: 1.5px solid #bae6fd;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
       border-radius: 18px;
-      padding: 26px;
-      box-shadow: 0 12px 32px rgba(2, 132, 199, 0.07);
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: transform 0.18s ease, border-color 0.18s ease;
     }
     .card:hover {
       transform: translateY(-3px);
-      box-shadow: 0 16px 38px rgba(2, 132, 199, 0.13);
-      border-color: #7dd3fc;
+      border-color: var(--border-strong);
     }
     .card-tag {
       display: inline-block;
       padding: 4px 11px;
       border-radius: 8px;
-      background: #e0f2fe;
-      color: #0284c7;
-      font-size: 12px;
+      background: var(--bg-pill);
+      color: var(--accent);
+      font-size: 11.5px;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .card h3 {
-      color: #0c4a6e;
-      font-size: 18px;
+      font-size: 17.5px;
       font-weight: 800;
       margin-bottom: 8px;
     }
     .card p {
-      color: #3b698c;
-      font-size: 14.5px;
+      color: var(--text-sub);
+      font-size: 14px;
       line-height: 1.6;
     }
 
-    footer {
-      margin-top: 48px;
-      padding: 18px 28px;
-      background: rgba(255, 255, 255, 0.85);
-      border: 1px solid #bae6fd;
-      border-radius: 999px;
-      color: #3b698c;
+    /* Quick Find on Any New PC (No Account Needed) */
+    .find-box {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 20px;
+      padding: 26px;
+      margin-bottom: 46px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+    }
+    @media (max-width: 780px) {
+      .find-box { grid-template-columns: 1fr; text-align: center; }
+    }
+    .kw-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .kw-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border-radius: 10px;
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: monospace;
+    }
+    .kw-chip:hover { border-color: var(--border-strong); }
+    .qr-card {
+      background: #ffffff;
+      color: #0f172a;
+      padding: 14px;
+      border-radius: 16px;
+      text-align: center;
+      width: 176px;
+      margin: 0 auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    .qr-card img {
+      width: 140px;
+      height: 140px;
+      display: block;
+      margin: 0 auto 6px;
+    }
+    .qr-card span {
+      font-size: 11px;
+      font-weight: 800;
+      color: #0284c7;
+    }
+
+    /* 3-Step Install Guide */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 46px;
+    }
+    .step-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .step-num {
+      display: inline-flex;
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .step-card h4 {
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+    .step-card p {
       font-size: 13.5px;
+      color: var(--text-sub);
+      line-height: 1.55;
+    }
+
+    footer {
+      text-align: center;
+      padding: 22px 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      color: var(--text-sub);
+      font-size: 13px;
       font-weight: 600;
     }
     footer a {
-      color: #0284c7;
+      color: var(--accent);
       font-weight: 800;
       text-decoration: none;
-    }
-    footer a:hover {
-      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="sky-glow-1"></div>
-  <div class="sky-glow-2"></div>
-
   <header class="navbar">
     <a class="brand" href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/">
       <img class="brand-logo-img" src="app-logo.png?v=33.0" alt="BlockWay Launcher Logo" />
-      <span>BlockWay Launcher</span>
+      <div>
+        <span>BlockWay Launcher</span>
+        <span class="brand-sub">EVERY WORLD, ONE PLACE</span>
+      </div>
     </a>
     <nav class="nav-links">
-      <a class="nav-pill" id="navVerPill" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">Phiên bản v33.0 PRO</a>
-      <a class="nav-pill" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher">GitHub</a>
+      <a class="nav-pill" href="#showcase">Giao diện v33.0</a>
+      <a class="nav-pill" href="#features">Tính năng</a>
+      <a class="nav-pill" href="#find-repo">Mở trên máy mới</a>
+      <button class="nav-pill" id="btnToggleWebTheme" type="button" title="Đổi giao diện trang web Sáng / Tối">☀️ Trắng Sáng</button>
+      <a class="nav-pill emerald" id="navVerPill" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">⬇ Tải v33.0 PRO</a>
     </nav>
   </header>
 
   <main class="container">
-    <div class="badge" id="heroVerBadge">✨ PHIÊN BẢN CHÍNH THỨC v33.0.0 PRO — EVERY WORLD, ONE PLACE</div>
+    <section class="hero">
+      <div class="badge" id="heroVerBadge">✨ PHIÊN BẢN CHÍNH THỨC v33.0.0 PRO — EVERY WORLD, ONE PLACE</div>
+      <h1>Trình Khởi Chạy Minecraft Thế Hệ Mới<br/><span>BlockWay Launcher v33.0 PRO</span></h1>
+      <p class="subtitle">
+        Phát triển bởi <strong>buiduchuy2010qn-prog</strong> — Tích hợp <strong>Tài khoản Đám mây 24/7 (Supabase)</strong>, xác thực <strong>OTP 6 số qua Gmail thật</strong>, <strong>6 Chủ đề màu sắc (BlockWay Navy &amp; Trắng Sáng)</strong>, tự thu phóng tỉ lệ vừa mọi màn hình và kho <strong>77,600+ Mods / Shaders Modrinth</strong>.
+      </p>
 
-    <!-- OFFICIAL BLOCKWAY LAUNCHER HERO BANNER -->
-    <div class="hero-banner-showcase">
-      <img src="app-banner.png?v=33.0" alt="BlockWay Launcher — Every World, One Place" />
-    </div>
-
-    <h1>BlockWay Launcher</h1>
-    <p class="subtitle">
-      <strong>BlockWay Launcher</strong> (<em>Every World, One Place</em> — phát triển bởi <strong>buiduchuy2010qn-prog</strong>) — Trình khởi chạy Minecraft thế hệ mới tích hợp <strong>Tài khoản Đám mây 24/7 (Supabase)</strong>, xác thực <strong>OTP 6 số qua Gmail thật</strong>, mô hình <strong>3D Skin &amp; Cape</strong> và kho <strong>77,600+ Mods / Shaders Modrinth</strong>.
-    </p>
-
-    <div class="actions">
-      <a class="btn btn-primary" id="downloadBtnMain" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">
-        📥 Tải Về BlockWay Launcher (<span id="btnVerText">v33.0 PRO</span>)
-      </a>
-      <a class="btn btn-secondary" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher">
-        ⭐ Xem Mã Nguồn Trên GitHub
-      </a>
-    </div>
-
-    <section class="stats-bar">
-      <div class="stat-item">
-        <div class="stat-val">24/7 Cloud</div>
-        <div class="stat-label">Đồng Bộ Supabase PostgreSQL</div>
+      <div class="actions">
+        <a class="btn btn-primary" id="downloadBtnMain" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">
+          📥 Tải Về Cho Windows (<span id="btnVerText">v33.0 PRO</span>)
+        </a>
+        <a class="btn btn-blue" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher" target="_blank" rel="noopener">
+          ⭐ Mở Kho Mã Nguồn (GitHub Repo)
+        </a>
+        <button class="btn btn-secondary" id="btnCopyWebUrl" type="button">
+          📋 Sao Chép Link Trang Chủ
+        </button>
       </div>
-      <div class="stat-item">
-        <div class="stat-val">OTP 6 Số</div>
-        <div class="stat-label">Xác Thực Hộp Thư Gmail Thật</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-val">77,600+</div>
-        <div class="stat-label">Kho Mods, Modpacks &amp; Shaders</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-val">Zero-Trust</div>
-        <div class="stat-label">Bảo Mật RPC Chống Dịch Ngược</div>
+
+      <div class="hero-meta-strip">
+        <span>🪟 Hỗ trợ: <strong>Windows 10 / 11 (64-bit)</strong></span>
+        <span>☕ Tự động chọn: <strong>Java 21 / Java 17 / Java 8</strong></span>
+        <span>🔄 Cập nhật: <strong>Tự phát hiện bản mới &amp; thông báo khi mở</strong></span>
       </div>
     </section>
 
-    <section class="grid">
-      <div class="card">
-        <span class="card-tag">☁️ ĐÁM MÂY 24/7</span>
-        <h3>Cloud ID &amp; Gmail OTP Thật</h3>
-        <p>Tách biệt rõ ràng 3 chế độ Đăng Nhập, Tạo Tài Khoản và Quên Mật Khẩu. Độc quyền tên nhân vật Minecraft (Username) và nhận mã OTP 6 số trực tiếp qua Gmail.</p>
+    <!-- LIVE UI SCREENSHOT SHOWCASE -->
+    <section class="showcase-box" id="showcase">
+      <div class="showcase-tabs">
+        <button class="sc-tab active" data-img="preview-home-navy.png" data-cap="Giao diện Trang Chủ v33.0 PRO (Chủ đề BlockWay Navy mặc định) — Đầy đủ Nhân vật 3D, Chuyển nhanh Cloud/Offline/Microsoft và 4 nút tiện ích">🌙 Giao diện BlockWay Navy</button>
+        <button class="sc-tab" data-img="preview-home-light.png" data-cap="Giao diện Trắng Sáng (Light Mode) — Tinh tế, rõ nét đến từng chi tiết cho người thích tông màu sáng">☀️ Giao diện Trắng Sáng</button>
+        <button class="sc-tab" data-img="preview-settings.png" data-cap="Mục Cài Đặt Hệ Thống, Tự Dò Java, 6 Chủ Đề Màu Sắc, Tối Ưu Đa Nhân G1GC & Kiểm Tra Cập Nhật">⚙️ Cài đặt &amp; 6 Chủ đề màu</button>
+        <button class="sc-tab" data-img="app-banner.png" data-cap="Banner thương hiệu chính thức BlockWay Launcher — Every World, One Place">🎨 Banner Thương Hiệu</button>
       </div>
-      <div class="card">
-        <span class="card-tag">🛡️ BẢO MẬT ĐA LỚP</span>
-        <h3>Khóa Bảo Mật Zero-Trust RPC</h3>
-        <p>Mật khẩu băm và phiên đăng nhập được kiểm tra nội bộ trên máy chủ PostgreSQL, không lưu bộ nhớ đệm tài khoản trên ổ cứng và tích hợp Captcha chống Bot Spam.</p>
+      <div class="showcase-frame">
+        <img id="showcaseImg" src="preview-home-navy.png" alt="Giao diện thực tế BlockWay Launcher v33.0 PRO" />
       </div>
-      <div class="card">
-        <span class="card-tag">🧩 KHO MODRINTH</span>
-        <h3>Tự Động Cài Mods &amp; Shaders</h3>
-        <p>Hỗ trợ đầy đủ Vanilla, Fabric, Forge, Quilt, NeoForge cùng hơn 77,600+ bản Mods, Modpacks, Resource Packs và Shaders tải trực tiếp trong 1 cú nhấp chuột.</p>
+      <div class="showcase-caption" id="showcaseCap">
+        Giao diện Trang Chủ v33.0 PRO (Chủ đề BlockWay Navy mặc định) — Đầy đủ Nhân vật 3D, Chuyển nhanh Cloud/Offline/Microsoft và 4 nút tiện ích
+      </div>
+    </section>
+
+    <!-- STATS BAR -->
+    <section class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-val">24/7 Cloud</div>
+        <div class="stat-label">Đồng Bộ Tài Khoản &amp; OTP Gmail</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">77,600+</div>
+        <div class="stat-label">Mods, Modpacks &amp; Shaders Modrinth</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">6 Chủ Đề</div>
+        <div class="stat-label">Navy, Trắng Sáng, Mojang, Modrinth...</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">0% GPU</div>
+        <div class="stat-label">Ngủ Đông Khi Chơi &amp; X3 FPS Boost</div>
+      </div>
+    </section>
+
+    <!-- 6 FEATURE CARDS -->
+    <section id="features">
+      <div class="sec-head">
+        <h2>🔥 Điểm Nổi Bật Của BlockWay Launcher v33.0 PRO</h2>
+        <p>Tối ưu toàn diện từ tốc độ vào game, giao diện thu phóng thông minh cho đến bảo mật đám mây đa lớp.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <span class="card-tag">🎨 GIAO DIỆN v33.0 PRO</span>
+          <h3>6 Chủ Đề Màu &amp; Tự Thu Phóng Tỉ Lệ</h3>
+          <p>Chuyển đổi tức thì giữa 6 bảng màu (BlockWay Navy, Trắng Sáng, Mojang, Modrinth, Feather, Cherry). Khi thu nhỏ cửa sổ, toàn bộ giao diện tự thu phóng đồng bộ mà không bị lệch cột.</p>
+        </div>
+        <div class="card">
+          <span class="card-tag">🔄 CẬP NHẬT &amp; ĐỒNG BỘ</span>
+          <h3>Phát Hiện Bản Mới &amp; Đồng Bộ Map 1-Click</h3>
+          <p>Tự động kiểm tra bản mới trên GitHub và thông báo để bạn chủ động nhấn cập nhật. Hỗ trợ quét và chuyển Thế giới, Mods, Server từ TLauncher, CurseForge, Prism sang trong 1 cú nhấp chuột.</p>
+        </div>
+        <div class="card">
+          <span class="card-tag">☁️ ĐÁM MÂY 24/7</span>
+          <h3>Cloud ID &amp; Mã OTP 6 Số Qua Gmail</h3>
+          <p>Chuyển nhanh 3 chế độ Cloud / Offline / Microsoft ngay tại Trang chủ. Độc quyền tên nhân vật Minecraft, đồng bộ Skin 3D và khôi phục mật khẩu bằng mã OTP gửi thẳng về Gmail.</p>
+        </div>
+        <div class="card">
+          <span class="card-tag">🧩 KHO MODRINTH CHÍNH THỨC</span>
+          <h3>77,600+ Mods, Shaders &amp; Gói X3 FPS</h3>
+          <p>Hỗ trợ 5 Core Loaders (Vanilla, Fabric, Forge, Quilt, Legacy Fabric). Tự động tải kèm thư viện phụ thuộc và cài trọn bộ tối ưu X3 FPS (Sodium, Lithium, FerriteCore, Iris) chỉ với 1 nút bấm.</p>
+        </div>
+        <div class="card">
+          <span class="card-tag">⚡ HIỆU NĂNG TỐI ĐA</span>
+          <h3>Ngủ Đông 0% GPU &amp; Đa Nhân G1GC</h3>
+          <p>Tự động tạm dừng render 3D WebGL khi chuyển tab hoặc khi đang trong game, kết hợp cờ tối ưu G1GC trả RAM trống về Windows liên tục giúp máy yếu chơi mượt không giật lag.</p>
+        </div>
+        <div class="card">
+          <span class="card-tag">🛡️ BẢO MẬT CAO</span>
+          <h3>Zero-Trust RPC &amp; Chống XSS / CSP</h3>
+          <p>Khóa bảo mật hàm RPC trên máy chủ Supabase PostgreSQL, tích hợp Content-Security-Policy (CSP), kiểm tra toàn vẹn bộ nhớ đệm khi cập nhật và bảo vệ đường dẫn tệp cục bộ.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW TO FIND ON A NEW PC WITHOUT ACCOUNT -->
+    <section class="find-box" id="find-repo">
+      <div>
+        <span class="card-tag">🔍 MỞ NHANH TRÊN MÁY MỚI (KHÔNG CẦN ĐĂNG NHẬP)</span>
+        <h3 style="font-size:21px;margin-bottom:8px;">Cách tìm Repo &amp; Tải Launcher trên bất kỳ máy tính mới nào</h3>
+        <p style="color:var(--text-sub);font-size:14px;line-height:1.6;">
+          Khi ngồi ở một máy tính mới chưa đăng nhập tài khoản, bạn chỉ cần mở <strong>github.com</strong> hoặc <strong>Google</strong> rồi gõ một trong các từ khóa dưới đây (bấm vào ô để sao chép nhanh):
+        </p>
+        <div class="kw-list">
+          <button class="kw-chip" data-copy="blockway-launcher" type="button">🔎 blockway-launcher <span>📋</span></button>
+          <button class="kw-chip" data-copy="buiduchuy2010qn-prog" type="button">👤 buiduchuy2010qn-prog <span>📋</span></button>
+          <button class="kw-chip" data-copy="https://buiduchuy2010qn-prog.github.io/blockway-launcher/" type="button">🌐 Link Web Quảng Bá <span>📋</span></button>
+          <button class="kw-chip" data-copy="https://github.com/buiduchuy2010qn-prog/blockway-launcher" type="button">📦 Link GitHub Repo <span>📋</span></button>
+        </div>
+      </div>
+      <div class="qr-card" title="Quét mã QR bằng điện thoại để mở hoặc gửi link sang máy khác">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fbuiduchuy2010qn-prog.github.io%2Fblockway-launcher%2F" alt="QR Code BlockWay Launcher" loading="lazy" />
+        <span>📱 Quét QR mở Web</span>
+      </div>
+    </section>
+
+    <!-- 3 STEPS GUIDE -->
+    <section>
+      <div class="sec-head">
+        <h2>🚀 Bắt Đầu Trong 3 Bước Đơn Giản</h2>
+        <p>Không cần cài đặt phức tạp — mọi thứ đã được tự động hóa sẵn sàng.</p>
+      </div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h4>Tải bộ cài BlockWay Launcher</h4>
+          <p>Nhấn nút <strong>Tải Về Cho Windows</strong> ở đầu trang để tải bộ cài đặt <code>.exe</code> chính thức mới nhất từ GitHub Releases.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h4>Chọn Tài khoản &amp; Đồng bộ Map cũ</h4>
+          <p>Đăng nhập Cloud 24/7, Offline hoặc Microsoft. Nếu từng chơi TLauncher/CurseForge, bấm <strong>Đồng Bộ Cũ</strong> để chuyển toàn bộ Map và Mod sang.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h4>Chọn Phiên bản &amp; Bấm CHƠI NGAY</h4>
+          <p>Chọn phiên bản Minecraft (1.21.11, 1.21.4, 1.20.1...), bật gói <strong>X3 FPS</strong> nếu muốn tăng khung hình và tận hưởng thế giới của bạn!</p>
+        </div>
       </div>
     </section>
 
     <footer>
-      © 2026 <strong>BlockWay Launcher (Every World, One Place)</strong> — Phát triển bởi <a href="https://github.com/buiduchuy2010qn-prog">buiduchuy2010qn-prog</a>
+      © 2026 <strong>BlockWay Launcher v33.0 PRO (Every World, One Place)</strong> — Phát triển bởi <a href="https://github.com/buiduchuy2010qn-prog">buiduchuy2010qn-prog</a> • <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">Tải Bản Mới Nhất</a>
     </footer>
   </main>
 
-  <!-- Tự động đồng bộ số phiên bản mới nhất từ GitHub mà không cần sửa web thủ công -->
   <script>
+    // 1. Chuyển đổi giao diện Sáng / Tối trên Web
+    const themeBtn = document.getElementById('btnToggleWebTheme');
+    if (themeBtn) {
+      themeBtn.onclick = () => {
+        const cur = document.documentElement.getAttribute('data-webtheme') || 'navy';
+        const next = cur === 'navy' ? 'light' : 'navy';
+        document.documentElement.setAttribute('data-webtheme', next);
+        themeBtn.textContent = next === 'navy' ? '☀️ Trắng Sáng' : '🌙 BlockWay Navy';
+      };
+    }
+
+    // 2. Chuyển tab xem ảnh chụp màn hình thực tế
+    const scImg = document.getElementById('showcaseImg');
+    const scCap = document.getElementById('showcaseCap');
+    document.querySelectorAll('.sc-tab').forEach((btn) => {
+      btn.onclick = () => {
+        document.querySelectorAll('.sc-tab').forEach((b) => b.classList.toggle('active', b === btn));
+        if (scImg) scImg.src = btn.dataset.img;
+        if (scCap) scCap.textContent = btn.dataset.cap;
+      };
+    });
+
+    // 3. Sao chép nhanh Link & Từ khóa tìm kiếm
+    const copyText = (txt, el, doneLabel) => {
+      navigator.clipboard?.writeText(txt);
+      const orig = el.innerHTML;
+      el.textContent = doneLabel || '✓ Đã sao chép!';
+      setTimeout(() => { el.innerHTML = orig; }, 1600);
+    };
+    const btnCopyUrl = document.getElementById('btnCopyWebUrl');
+    if (btnCopyUrl) {
+      btnCopyUrl.onclick = () => copyText('https://buiduchuy2010qn-prog.github.io/blockway-launcher/', btnCopyUrl, '✓ Đã chép Link Trang Chủ!');
+    }
+    document.querySelectorAll('.kw-chip').forEach((chip) => {
+      chip.onclick = () => copyText(chip.dataset.copy, chip, '✓ Đã chép: ' + chip.dataset.copy);
+    });
+
+    // 4. Tự động đồng bộ số phiên bản & link bộ cài .exe mới nhất từ GitHub
     (async () => {
       try {
-        let res = await fetch('https://raw.githubusercontent.com/buiduchuy2010qn-prog/blockway-launcher/main/package.json?t=' + Date.now());
-        if (!res.ok) {
-          res = await fetch('https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/package.json?t=' + Date.now());
+        const res = await fetch('https://raw.githubusercontent.com/buiduchuy2010qn-prog/blockway-launcher/main/package.json?t=' + Date.now());
+        if (res.ok) {
+          const pkg = await res.json();
+          if (pkg && pkg.version) {
+            const v = 'v' + pkg.version + ' PRO';
+            const b1 = document.getElementById('heroVerBadge');
+            const b2 = document.getElementById('navVerPill');
+            const b3 = document.getElementById('btnVerText');
+            if (b1) b1.textContent = '✨ PHIÊN BẢN CHÍNH THỨC ' + v + ' — EVERY WORLD, ONE PLACE';
+            if (b2) b2.textContent = '⬇ Tải ' + v;
+            if (b3) b3.textContent = v;
+          }
         }
-        if (!res.ok) return;
-        const pkg = await res.json();
-        if (pkg && pkg.version) {
-          const v = 'v' + pkg.version + ' PRO';
-          const b1 = document.getElementById('heroVerBadge');
-          const b2 = document.getElementById('navVerPill');
-          const b3 = document.getElementById('btnVerText');
-          if (b1) b1.textContent = '✨ PHIÊN BẢN CHÍNH THỨC ' + v + ' — EVERY WORLD, ONE PLACE';
-          if (b2) b2.textContent = 'Phiên bản ' + v;
-          if (b3) b3.textContent = v;
-          document.title = 'BlockWay Launcher (' + v + ') — Every World, One Place';
+        const relRes = await fetch('https://api.github.com/repos/buiduchuy2010qn-prog/blockway-launcher/releases/latest?t=' + Date.now());
+        if (relRes.ok) {
+          const rel = await relRes.json();
+          if (Array.isArray(rel.assets)) {
+            const exe = rel.assets.find((a) => a.browser_download_url && /\.exe$/i.test(a.name || a.browser_download_url));
+            if (exe && exe.browser_download_url) {
+              const dlBtn = document.getElementById('downloadBtnMain');
+              if (dlBtn) dlBtn.href = exe.browser_download_url;
+            }
+          }
         }
       } catch (_) {}
     })();

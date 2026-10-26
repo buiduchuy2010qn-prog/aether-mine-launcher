@@ -2048,6 +2048,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   await refreshLocalAddonsCount();
   const btnUpd = document.getElementById('btnCheckUpdate'); if (btnUpd) btnUpd.onclick = () => checkAndPromptLauncherUpdate(true);
+  const btnWeb = document.getElementById('btnOpenOfficialWebsite');
+  if (btnWeb) btnWeb.onclick = () => window.aetherAPI.openExternal('https://buiduchuy2010qn-prog.github.io/blockway-launcher/');
+  const btnRepo = document.getElementById('btnOpenGitHubRepo');
+  if (btnRepo) btnRepo.onclick = () => window.aetherAPI.openExternal('https://github.com/buiduchuy2010qn-prog/blockway-launcher');
   setTimeout(() => checkAndPromptLauncherUpdate(false), 1200);
   // Tự động kiểm tra định kỳ mỗi 30 phút khi không trong game để phát hiện bản mới và hiện thông báo cho người dùng bấm cập nhật
   setInterval(() => {
