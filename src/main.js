@@ -149,6 +149,31 @@ function createWindow() {
     }
   });
 
+  // Auto-scale UI: khi cửa sổ nhỏ hơn kích thước thiết kế, thu nhỏ toàn bộ giao diện
+  // theo tỉ lệ (giữ nguyên bố cục như lúc full) thay vì xếp lại các cột.
+  const UI_DESIGN_W = 1500;
+  const UI_DESIGN_H = 900;
+  let uiZoomTimer = null;
+  const applyUiAutoZoom = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    try {
+      const [cw, ch] = mainWindow.getContentSize();
+      const z = Math.max(0.5, Math.min(1, cw / UI_DESIGN_W, ch / UI_DESIGN_H));
+      const zr = Math.round(z * 1000) / 1000;
+      if (Math.abs(mainWindow.webContents.getZoomFactor() - zr) > 0.002) {
+        mainWindow.webContents.setZoomFactor(zr);
+      }
+    } catch (_) {}
+  };
+  const scheduleUiAutoZoom = () => {
+    if (uiZoomTimer) clearTimeout(uiZoomTimer);
+    uiZoomTimer = setTimeout(applyUiAutoZoom, 16);
+  };
+  ['resize', 'maximize', 'unmaximize', 'restore', 'enter-full-screen', 'leave-full-screen']
+    .forEach((ev) => mainWindow.on(ev, scheduleUiAutoZoom));
+  mainWindow.webContents.on('did-finish-load', applyUiAutoZoom);
+  mainWindow.webContents.on('dom-ready', applyUiAutoZoom);
+
   mainWindow.loadFile(path.join(__dirname, 'ui', 'index.html'));
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
