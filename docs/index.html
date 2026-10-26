@@ -17,6 +17,11 @@
   <meta property="og:url" content="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/" />
   <meta property="og:site_name" content="Aether Mine Launcher" />
 
+  <!-- Google Fonts: Plus Jakarta Sans for clean modern Blue & White typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
   <!-- Schema.org Structured Data for Google Rich Results -->
   <script type="application/ld+json">
   {
@@ -43,97 +48,319 @@
   </script>
 
   <style>
+    :root {
+      --bg-top: #ebf5ff;
+      --bg-mid: #f8fbff;
+      --bg-bot: #e0f2fe;
+      --blue-primary: #0284c7;
+      --blue-light: #0ea5e9;
+      --blue-soft: #38bdf8;
+      --blue-pale: #e0f2fe;
+      --blue-deep: #0c4a6e;
+      --text-main: #0f2942;
+      --text-sub: #336186;
+      --white: #ffffff;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       min-height: 100vh;
-      background: radial-gradient(circle at top, #0f172a 0%, #060911 100%);
-      color: #f8fafc;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, var(--bg-top) 0%, var(--white) 48%, var(--bg-bot) 100%);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 48px 20px;
+      overflow-x: hidden;
     }
-    .container { max-width: 880px; width: 100%; text-align: center; }
-    .badge {
-      display: inline-block;
-      padding: 6px 16px;
+
+    /* Soft sky glow decorations */
+    .sky-glow-1, .sky-glow-2 {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .sky-glow-1 {
+      width: 480px;
+      height: 480px;
+      background: rgba(56, 189, 248, 0.22);
+      top: -140px;
+      left: -100px;
+    }
+    .sky-glow-2 {
+      width: 520px;
+      height: 520px;
+      background: rgba(14, 165, 233, 0.16);
+      bottom: -160px;
+      right: -120px;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: sticky;
+      top: 16px;
+      z-index: 10;
+      width: calc(100% - 32px);
+      max-width: 1040px;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1.5px solid #bae6fd;
+      border-radius: 18px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
+      margin-bottom: 36px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--blue-deep);
+      text-decoration: none;
+    }
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-pill {
+      padding: 7px 14px;
       border-radius: 999px;
-      background: rgba(34, 197, 94, 0.16);
-      border: 1px solid rgba(34, 197, 94, 0.45);
-      color: #4ade80;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--blue-primary);
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .nav-pill:hover {
+      background: #e0f2fe;
+      transform: translateY(-1px);
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1000px;
+      width: 100%;
+      padding: 20px 20px 60px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1.5px solid #7dd3fc;
+      color: #0284c7;
       font-weight: 800;
       font-size: 13px;
-      margin-bottom: 18px;
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.12);
+      margin-bottom: 20px;
     }
+
+    /* Hero Title with soft sky-blue & white-rimmed look */
     h1 {
-      font-size: 40px;
-      font-weight: 900;
-      background: linear-gradient(90deg, #4ade80, #22d3ee, #a855f7);
+      font-size: clamp(36px, 5.5vw, 54px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 50%, #38bdf8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 14px;
+      filter: drop-shadow(0 2px 0 #ffffff) drop-shadow(0 6px 18px rgba(14, 165, 233, 0.18));
+      margin-bottom: 16px;
     }
+
     .subtitle {
       font-size: 17px;
-      color: #cbd5e1;
-      line-height: 1.6;
-      max-width: 700px;
-      margin: 0 auto 30px;
+      color: var(--text-sub);
+      font-weight: 500;
+      line-height: 1.65;
+      max-width: 720px;
+      margin: 0 auto 32px;
     }
+    .subtitle strong {
+      color: var(--blue-primary);
+      font-weight: 700;
+    }
+
     .actions {
       display: flex;
       gap: 14px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 42px;
+      margin-bottom: 44px;
     }
+
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      border-radius: 12px;
+      gap: 10px;
+      padding: 15px 30px;
+      border-radius: 14px;
       font-weight: 800;
       font-size: 15px;
       text-decoration: none;
-      transition: transform 0.15s ease;
+      transition: all 0.18s ease;
     }
-    .btn:hover { transform: translateY(-2px); }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
     .btn-primary {
-      background: linear-gradient(135deg, #16a34a, #059669);
-      color: #fff;
-      box-shadow: 0 12px 30px rgba(22, 163, 74, 0.35);
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      color: #ffffff;
+      border: 2px solid #ffffff;
+      box-shadow: 0 12px 28px rgba(2, 132, 199, 0.28), 0 0 0 2px #7dd3fc;
     }
+    .btn-primary:hover {
+      box-shadow: 0 16px 34px rgba(2, 132, 199, 0.36), 0 0 0 2px #38bdf8;
+    }
+
     .btn-secondary {
-      background: rgba(30, 41, 59, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      color: #e2e8f0;
+      background: #ffffff;
+      border: 1.5px solid #7dd3fc;
+      color: #0284c7;
+      box-shadow: 0 8px 22px rgba(14, 165, 233, 0.1);
     }
+    .btn-secondary:hover {
+      background: #f0f9ff;
+      border-color: #38bdf8;
+    }
+
+    /* Highlight Stats Strip */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1.5px solid #bae6fd;
+      border-radius: 18px;
+      padding: 18px 22px;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.07);
+    }
+    .stat-item {
+      padding: 6px;
+    }
+    .stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0284c7;
+      margin-bottom: 2px;
+    }
+    .stat-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #477899;
+    }
+
+    /* Feature Cards */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
       text-align: left;
     }
     .card {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.22);
-      border-radius: 16px;
-      padding: 22px;
+      background: #ffffff;
+      border: 1.5px solid #bae6fd;
+      border-radius: 18px;
+      padding: 26px;
+      box-shadow: 0 12px 32px rgba(2, 132, 199, 0.07);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
-    .card h3 { color: #38bdf8; font-size: 17px; margin-bottom: 8px; }
-    .card p { color: #94a3b8; font-size: 14px; line-height: 1.55; }
-    footer { margin-top: 48px; color: #64748b; font-size: 13px; }
-    footer a { color: #38bdf8; text-decoration: none; }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 38px rgba(2, 132, 199, 0.13);
+      border-color: #7dd3fc;
+    }
+    .card-tag {
+      display: inline-block;
+      padding: 4px 11px;
+      border-radius: 8px;
+      background: #e0f2fe;
+      color: #0284c7;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .card h3 {
+      color: #0c4a6e;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .card p {
+      color: #3b698c;
+      font-size: 14.5px;
+      line-height: 1.6;
+    }
+
+    footer {
+      margin-top: 48px;
+      padding: 18px 28px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #bae6fd;
+      border-radius: 999px;
+      color: #3b698c;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+    footer a {
+      color: #0284c7;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="badge">⚡ PHIÊN BẢN CHÍNH THỨC v31.5.0 PRO</div>
+  <div class="sky-glow-1"></div>
+  <div class="sky-glow-2"></div>
+
+  <header class="navbar">
+    <a class="brand" href="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/">
+      <span class="brand-icon">☁️</span>
+      <span>Aether Mine Launcher</span>
+    </a>
+    <nav class="nav-links">
+      <a class="nav-pill" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest">Phiên bản v31.5 PRO</a>
+      <a class="nav-pill" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="badge">✨ PHIÊN BẢN CHÍNH THỨC v31.5.0 PRO — AETHER CLOUD 24/7</div>
     <h1>Aether Mine Launcher</h1>
     <p class="subtitle">
-      <strong>Aether Craft v31.5 PRO</strong> (bởi <strong>buiduchuy2010qn-prog</strong>) — Trình khởi chạy Minecraft tích hợp <strong>Hệ thống Tài khoản Đám mây Aether Cloud 24/7 (Supabase)</strong>, xác thực <strong>OTP 6 số qua Gmail</strong>, mô hình <strong>3D Skin &amp; Cape</strong> và kho <strong>77,600+ Mods / Shaders Modrinth</strong>.
+      <strong>Aether Craft v31.5 PRO</strong> (phát triển bởi <strong>buiduchuy2010qn-prog</strong>) — Trình khởi chạy Minecraft thế hệ mới với giao diện sáng hiện đại, tích hợp <strong>Tài khoản Đám mây Aether Cloud 24/7 (Supabase)</strong>, xác thực <strong>OTP 6 số qua Gmail thật</strong>, mô hình <strong>3D Skin &amp; Cape</strong> và kho <strong>77,600+ Mods / Shaders Modrinth</strong>.
     </p>
 
     <div class="actions">
@@ -145,24 +372,46 @@
       </a>
     </div>
 
-    <div class="grid">
+    <section class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-val">24/7 Cloud</div>
+        <div class="stat-label">Đồng Bộ Supabase PostgreSQL</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">OTP 6 Số</div>
+        <div class="stat-label">Xác Thực Hộp Thư Gmail Thật</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">77,600+</div>
+        <div class="stat-label">Kho Mods, Modpacks &amp; Shaders</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">Zero-Trust</div>
+        <div class="stat-label">Bảo Mật RPC Chống Dịch Ngược</div>
+      </div>
+    </section>
+
+    <section class="grid">
       <div class="card">
-        <h3>🛡️ Aether Cloud ID 24/7</h3>
-        <p>Đăng ký tài khoản đám mây độc quyền tên nhân vật Minecraft (Username), khôi phục mật khẩu bằng mã OTP 6 số gửi thẳng về hộp thư Gmail thật.</p>
+        <span class="card-tag">☁️ ĐÁM MÂY 24/7</span>
+        <h3>Aether Cloud ID &amp; Gmail OTP</h3>
+        <p>Tách biệt rõ ràng 3 chế độ Đăng Nhập, Tạo Tài Khoản và Quên Mật Khẩu. Độc quyền tên nhân vật Minecraft (Username) và nhận mã OTP 6 số trực tiếp qua Gmail.</p>
       </div>
       <div class="card">
-        <h3>🔒 Bảo Mật Zero-Trust RPC</h3>
-        <p>Toàn bộ mật khẩu băm và phiên đăng nhập được kiểm tra nội bộ trên máy chủ PostgreSQL, chống dịch ngược file và chống Bot Spam tự động.</p>
+        <span class="card-tag">🛡️ BẢO MẬT ĐA LỚP</span>
+        <h3>Khóa Bảo Mật Zero-Trust RPC</h3>
+        <p>Mật khẩu băm và phiên đăng nhập được kiểm tra nội bộ trên máy chủ PostgreSQL, không lưu bộ nhớ đệm tài khoản trên ổ cứng và tích hợp Captcha chống Bot Spam.</p>
       </div>
       <div class="card">
-        <h3>🧩 Kho 77,600+ Modrinth</h3>
-        <p>Tải và cài đặt tự động Fabric, Forge, Quilt, NeoForge cùng hàng chục ngàn Mods, Modpacks, Resource Packs và Shaders chỉ với 1 cú nhấp chuột.</p>
+        <span class="card-tag">🧩 KHO MODRINTH</span>
+        <h3>Tự Động Cài Mods &amp; Shaders</h3>
+        <p>Hỗ trợ đầy đủ Vanilla, Fabric, Forge, Quilt, NeoForge cùng hơn 77,600+ bản Mods, Modpacks, Resource Packs và Shaders tải trực tiếp trong 1 cú nhấp chuột.</p>
       </div>
-    </div>
+    </section>
 
     <footer>
-      © 2026 <strong>Aether Mine Launcher (Aether Craft Launcher)</strong> — Phát triển bởi <a href="https://github.com/buiduchuy2010qn-prog">buiduchuy2010qn-prog</a>.
+      © 2026 <strong>Aether Mine Launcher (Aether Craft v31.5 PRO)</strong> — Phát triển bởi <a href="https://github.com/buiduchuy2010qn-prog">buiduchuy2010qn-prog</a>
     </footer>
-  </div>
+  </main>
 </body>
 </html>
