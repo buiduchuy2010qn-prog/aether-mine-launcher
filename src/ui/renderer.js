@@ -258,30 +258,9 @@ function updateSummaryUI() {
   const editionTag = document.getElementById('hbcEditionTag');
   const heroBanner = document.getElementById('heroBanner');
   if (editionTag && heroBanner) {
-    let wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
-    let wpLabelMatch = 'Tricky Trials';
-    let eraTitle = '🌲 THE GARDEN AWAKENS & WILDERNESS • 1.21+';
-    if (ver.startsWith('26.') || ver.includes('w')) {
-      wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
-      wpLabelMatch = 'Vibrant Camp';
-      eraTitle = '🔥 SNAPSHOT & VIBRANT VISUALS • ' + ver;
-    } else if (ver === '1.21.11' || ver === '1.21.10' || ver === '1.21.9') {
-      wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
-      wpLabelMatch = 'Wilderness';
-      eraTitle = '🌲 WILDERNESS & PALE GARDEN • ' + ver;
-    } else if (ver.startsWith('1.21')) {
-      wpUrl = 'https://launchercontent.mojang.com/v2/images/1.21.11540x540.jpg';
-      wpLabelMatch = 'Tricky Trials';
-      eraTitle = '⚔️ TRICKY TRIALS UPDATE • ' + ver;
-    } else if (ver.startsWith('1.20')) {
-      wpUrl = 'https://launchercontent.mojang.com/v2/images/MCLauncher700x466.png';
-      wpLabelMatch = 'Overworld';
-      eraTitle = '🌸 TRAILS & TALES UPDATE • ' + ver;
-    } else if (ver.startsWith('1.8') || ver.startsWith('1.12')) {
-      wpUrl = 'https://launchercontent.mojang.com/v2/images/dappledcamp540x540.jpg';
-      wpLabelMatch = 'Vibrant Camp';
-      eraTitle = '⚔️ HUYỀN THOẠI PVP & MODPACK • ' + ver;
-    }
+    const wpUrl = state.customWallpaper || 'app-banner.png';
+    const wpLabelMatch = state.customWpLabel || 'BlockWay';
+    const eraTitle = `⚡ BLOCKWAY LAUNCHER • EVERY WORLD, ONE PLACE • ${ver}`;
     editionTag.textContent = eraTitle;
     heroBanner.style.backgroundImage = `url('${wpUrl}')`;
     document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.textContent.trim() === wpLabelMatch));
@@ -1014,6 +993,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     wp.onclick = () => {
       document.querySelectorAll('.wp-chip').forEach((w) => w.classList.remove('active'));
       wp.classList.add('active');
+      state.customWallpaper = wp.dataset.wp;
+      state.customWpLabel = wp.textContent.trim();
       document.getElementById('heroBanner').style.backgroundImage = `url('${wp.dataset.wp}')`;
     };
   });

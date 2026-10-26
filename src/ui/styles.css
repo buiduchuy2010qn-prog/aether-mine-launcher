@@ -2616,7 +2616,12 @@ html[data-theme="cherry"] {
 }
 
 .hero-banner-clean {
-  background-position: center 22% !important;
+  background-position: center center !important;
+  background-size: cover !important;
+}
+
+.hbc-overlay {
+  background: linear-gradient(180deg, rgba(6, 10, 20, 0.22) 0%, rgba(6, 10, 20, 0.0) 52%, rgba(6, 10, 20, 0.48) 100%) !important;
 }
 
 .banner-cta-btn {
