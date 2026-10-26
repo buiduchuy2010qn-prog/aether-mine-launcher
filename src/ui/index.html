@@ -415,7 +415,7 @@
               </div>
 
               <!-- CARD B: MICROSOFT ACCOUNT CARD -->
-              <div class="bento-card ms-account-card">
+              <div class="bento-card ms-account-card" id="homeAccountCard" data-mode="crack">
                 <div class="card-head">
                   <div class="card-title-group">
                     <svg width="14" height="14" viewBox="0 0 21 21">
@@ -424,9 +424,15 @@
                       <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
                       <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
                     </svg>
-                    <h3>Tài khoản Microsoft</h3>
+                    <span class="acc-generic-dot"></span>
+                    <h3 id="accCardTitle">Tài khoản</h3>
                   </div>
                   <button class="card-link-btn" id="btnGoAccountManager">Quản lý &gt;</button>
+                </div>
+                <div class="acc-mode-switch" id="homeAuthModeSwitch" role="tablist" aria-label="Chế độ đăng nhập">
+                  <button class="acc-mode-btn" data-authmode="aether" title="Tài khoản BlockWay Cloud (đồng bộ 24/7)">☁ Cloud</button>
+                  <button class="acc-mode-btn" data-authmode="crack" title="Chơi Offline bằng tên tự đặt">👤 Offline</button>
+                  <button class="acc-mode-btn" data-authmode="microsoft" title="Tài khoản Microsoft bản quyền">👑 Microsoft</button>
                 </div>
                 <div class="ms-card-body">
                   <div class="ms-card-user">
@@ -437,6 +443,10 @@
                     </div>
                   </div>
                   <button class="ms-card-action-btn" id="btnMsCardAction">Đăng nhập</button>
+                </div>
+                <div class="acc-offline-row" id="homeOfflineRow">
+                  <input type="text" id="homeQuickUsername" class="pro-input" maxlength="16" placeholder="Tên nhân vật Offline (3-16 ký tự)..." />
+                  <button class="acc-save-btn" id="btnHomeSaveName" title="Lưu tên này vào danh sách tài khoản">Lưu</button>
                 </div>
               </div>
 

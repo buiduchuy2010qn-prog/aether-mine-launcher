@@ -459,21 +459,37 @@ function updateSummaryUI() {
   const dockAcc = document.getElementById('dockAccountText');
   if (dockAcc) dockAcc.textContent = `${playerName} (${modeLabel})`;
 
-  // Sync Right Column Microsoft / Account Card
+  // Sync Right Column Account Card (Cloud / Offline / Microsoft)
   const msCardName = document.getElementById('msCardProfileName');
   const msCardStatus = document.getElementById('msCardStatusText');
   const msCardBtn = document.getElementById('btnMsCardAction');
+  const accCard = document.getElementById('homeAccountCard');
+  const accTitle = document.getElementById('accCardTitle');
+  const isMs = Boolean(state.authMode === 'microsoft' && state.msProfile?.name);
+  const isCloud = Boolean(state.authMode === 'aether' && state.cloudProfile?.mcUsername);
+  if (accCard) accCard.dataset.mode = state.authMode;
+  if (accTitle) {
+    accTitle.textContent = state.authMode === 'microsoft' ? 'Tài khoản Microsoft'
+      : (state.authMode === 'aether' ? 'Tài khoản BlockWay Cloud' : 'Tài khoản Offline');
+  }
+  document.querySelectorAll('#homeAuthModeSwitch .acc-mode-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.authmode === state.authMode);
+  });
   if (msCardName) msCardName.textContent = playerName;
   if (msCardStatus) {
-    const isMs = state.authMode === 'microsoft' && state.msProfile?.name;
-    const isCloud = state.authMode === 'aether' && state.cloudProfile?.mcUsername;
-    msCardStatus.textContent = isMs ? '● Đã đăng nhập (Bản quyền)' : (isCloud ? '● Đã đăng nhập (Cloud)' : '● Offline — chưa đăng nhập MS');
-    msCardStatus.classList.toggle('is-online', Boolean(isMs || isCloud));
+    let statusText = '● Offline · không cần MK';
+    if (state.authMode === 'microsoft') statusText = isMs ? '● Đã đăng nhập (Bản quyền)' : '● Chưa đăng nhập Microsoft';
+    if (state.authMode === 'aether') statusText = isCloud ? '● Đã đăng nhập (Cloud 24/7)' : '● Chưa đăng nhập Cloud';
+    msCardStatus.textContent = statusText;
+    msCardStatus.classList.toggle('is-online', isMs || isCloud || state.authMode === 'crack');
+    msCardStatus.classList.toggle('is-warn', (state.authMode === 'microsoft' && !isMs) || (state.authMode === 'aether' && !isCloud));
   }
   if (msCardBtn) {
-    const loggedIn = (state.authMode === 'microsoft' && state.msProfile?.name) || (state.authMode === 'aether' && state.cloudProfile?.mcUsername);
-    msCardBtn.textContent = loggedIn ? 'Quản lý' : 'Đăng nhập';
+    if (state.authMode === 'crack') msCardBtn.textContent = 'Đổi Skin';
+    else msCardBtn.textContent = (isMs || isCloud) ? 'Quản lý' : 'Đăng nhập';
   }
+  const quickName = document.getElementById('homeQuickUsername');
+  if (quickName && document.activeElement !== quickName) quickName.value = state.username || '';
 }
 
 let activeToastEl = null;
@@ -1022,8 +1038,46 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (sbProf) sbProf.onclick = openAccMgr;
   const btnGoAcc = document.getElementById('btnGoAccountManager');
   if (btnGoAcc) btnGoAcc.onclick = openAccMgr;
+
+  // Home account card: switch Cloud / Offline / Microsoft via the real auth tab buttons
+  const authTabMap = { aether: 'tabBtnAether', crack: 'tabBtnCrack', microsoft: 'tabBtnMicrosoft' };
+  document.querySelectorAll('#homeAuthModeSwitch .acc-mode-btn').forEach((b) => {
+    b.onclick = () => document.getElementById(authTabMap[b.dataset.authmode])?.click();
+  });
   const btnMsAct = document.getElementById('btnMsCardAction');
-  if (btnMsAct) btnMsAct.onclick = openAccMgr;
+  if (btnMsAct) {
+    btnMsAct.onclick = () => {
+      const isMsLogged = state.authMode === 'microsoft' && state.msProfile?.name;
+      if (state.authMode === 'microsoft' && !isMsLogged) {
+        document.getElementById('btnMsLogin')?.click();
+      } else if (state.authMode === 'crack') {
+        switchMainTab('skin');
+      } else {
+        openAccMgr();
+      }
+    };
+  }
+  const homeQuickName = document.getElementById('homeQuickUsername');
+  const realNameInput = document.getElementById('usernameInput');
+  if (homeQuickName && realNameInput) {
+    homeQuickName.oninput = () => {
+      realNameInput.value = homeQuickName.value;
+      realNameInput.dispatchEvent(new Event('input'));
+    };
+    homeQuickName.onkeydown = (e) => { if (e.key === 'Enter') document.getElementById('btnHomeSaveName')?.click(); };
+  }
+  const btnHomeSaveName = document.getElementById('btnHomeSaveName');
+  if (btnHomeSaveName) {
+    btnHomeSaveName.onclick = () => {
+      const name = (homeQuickName?.value || '').trim();
+      if (name.length < 3) {
+        showAetherNotification('⚠️ Tên nhân vật Offline cần từ 3–16 ký tự.', 'error', 3000);
+        return;
+      }
+      document.getElementById('btnSaveAccount')?.click();
+      showAetherNotification(`✓ Đã lưu tên Offline "${name}" vào danh sách tài khoản.`, 'success', 2800);
+    };
+  }
 
   const btnLearnMore = document.getElementById('btnSidebarLearnMore');
   if (btnLearnMore) btnLearnMore.onclick = () => switchMainTab('mods');
