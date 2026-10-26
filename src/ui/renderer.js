@@ -470,7 +470,7 @@ function updateSummaryUI() {
   if (accCard) accCard.dataset.mode = state.authMode;
   if (accTitle) {
     accTitle.textContent = state.authMode === 'microsoft' ? 'Tài khoản Microsoft'
-      : (state.authMode === 'aether' ? 'Tài khoản BlockWay Cloud' : 'Tài khoản Offline');
+      : (state.authMode === 'aether' ? 'Tài khoản Cloud' : 'Tài khoản Offline');
   }
   document.querySelectorAll('#homeAuthModeSwitch .acc-mode-btn').forEach((b) => {
     b.classList.toggle('active', b.dataset.authmode === state.authMode);
@@ -478,8 +478,8 @@ function updateSummaryUI() {
   if (msCardName) msCardName.textContent = playerName;
   if (msCardStatus) {
     let statusText = '● Offline · không cần MK';
-    if (state.authMode === 'microsoft') statusText = isMs ? '● Đã đăng nhập (Bản quyền)' : '● Chưa đăng nhập Microsoft';
-    if (state.authMode === 'aether') statusText = isCloud ? '● Đã đăng nhập (Cloud 24/7)' : '● Chưa đăng nhập Cloud';
+    if (state.authMode === 'microsoft') statusText = isMs ? '● Đã đăng nhập bản quyền' : '● Chưa đăng nhập';
+    if (state.authMode === 'aether') statusText = isCloud ? '● Đã đăng nhập · 24/7' : '● Chưa đăng nhập';
     msCardStatus.textContent = statusText;
     msCardStatus.classList.toggle('is-online', isMs || isCloud || state.authMode === 'crack');
     msCardStatus.classList.toggle('is-warn', (state.authMode === 'microsoft' && !isMs) || (state.authMode === 'aether' && !isCloud));
@@ -566,7 +566,8 @@ function saveCurrentConfig() {
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
     hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl,
-    capeType: state.capeType, winResolution: state.winResolution, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm
+    capeType: state.capeType, winResolution: state.winResolution, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
+    uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated)
   });
 }
 
@@ -944,7 +945,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const saved = await window.aetherAPI.getConfig();
   if (saved) {
     Object.assign(state, saved);
-    if (!saved.theme || saved.theme === 'prism') state.theme = 'lunar';
+    // One-time migration to the v33 BlockWay Navy theme; afterwards the user's choice (incl. Trắng Sáng) is kept
+    if (!saved.uiV33ThemeMigrated) state.theme = 'lunar';
+    state.uiV33ThemeMigrated = true;
     if ((!state.javaPath || state.javaPath === 'java') && sys.detectedJava && sys.detectedJava !== 'java') state.javaPath = sys.detectedJava;
     if (!Array.isArray(state.savedAccounts) || !state.savedAccounts.length) state.savedAccounts = [state.username || 'StevePlayer'];
     if (state.msProfile && state.msProfile.isOfficialLicense === false) {
@@ -1150,6 +1153,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
   const btnNotifUpd = document.getElementById('btnNotifCheckUpdate');
+  // Titlebar quick theme picker (swatches are .ts-chip, so setTheme() keeps them in sync with Settings)
+  const btnThemePick = document.getElementById('btnThemePicker');
+  const themePop = document.getElementById('themePickerPopover');
+  if (btnThemePick && themePop) {
+    btnThemePick.onclick = (e) => {
+      e.stopPropagation();
+      notifPop?.classList.add('hidden');
+      themePop.classList.toggle('hidden');
+    };
+    document.addEventListener('click', (e) => {
+      if (!themePop.classList.contains('hidden') && !themePop.contains(e.target) && !btnThemePick.contains(e.target)) {
+        themePop.classList.add('hidden');
+      }
+    });
+  }
   if (btnNotifUpd) {
     btnNotifUpd.onclick = () => {
       if (notifPop) notifPop.classList.add('hidden');
