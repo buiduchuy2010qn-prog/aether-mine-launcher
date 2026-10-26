@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "31.5.0",
-  "description": "Aether Craft v31.5 PRO - Separate Login/Register/Forgot Tabs & Zero-Trust Anti-Decompile Supabase RPC Security",
+  "version": "32.0.0",
+  "description": "BlockWay Launcher v32.0 PRO — Every World, One Place (24/7 Cloud ID, Real Gmail OTP, 77,600+ Modrinth Store)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -26,7 +26,7 @@
   },
   "build": {
     "appId": "com.buiduchuy.aethercraft",
-    "productName": "AetherCraft",
+    "productName": "BlockWay Launcher",
     "asar": false,
     "directories": {
       "output": "dist"

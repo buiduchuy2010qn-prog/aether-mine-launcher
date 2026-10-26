@@ -77,6 +77,7 @@ async function ensureAppIconSyncedAndApplied() {
     const uiDir = path.join(__dirname, 'ui');
     const icoPath = path.join(uiDir, 'app-icon.ico');
     const pngPath = path.join(uiDir, 'app-logo.png');
+    const bannerPath = path.join(uiDir, 'app-banner.png');
     const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/src/ui';
     if (!fs.existsSync(icoPath)) {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-icon.ico?t=${Date.now()}`);
@@ -86,12 +87,17 @@ async function ensureAppIconSyncedAndApplied() {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-logo.png?t=${Date.now()}`);
       fs.writeFileSync(pngPath, buf);
     }
+    if (!fs.existsSync(bannerPath)) {
+      const buf = await fetchBinaryBuffer(`${baseRaw}/app-banner.png?t=${Date.now()}`);
+      fs.writeFileSync(bannerPath, buf);
+    }
     if (mainWindow && !mainWindow.isDestroyed() && fs.existsSync(icoPath)) {
       mainWindow.setIcon(icoPath);
+      mainWindow.setTitle('BlockWay Launcher — v32.0 PRO');
     }
     if (process.platform === 'win32' && fs.existsSync(icoPath)) {
       const { exec } = require('child_process');
-      const psUpdateShortcuts = `powershell -NoProfile -WindowStyle Hidden -Command "$ws = New-Object -ComObject WScript.Shell; @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs')) | ForEach-Object { Get-ChildItem -Path $_ -Filter '*Aether*' -Recurse -File -Include '*.lnk' -ErrorAction SilentlyContinue } | ForEach-Object { try { $s = $ws.CreateShortcut($_.FullName); $s.IconLocation = '${icoPath.replace(/'/g, "''")},0'; $s.Save() } catch {} }"`;
+      const psUpdateShortcuts = `powershell -NoProfile -WindowStyle Hidden -Command "$ws = New-Object -ComObject WScript.Shell; @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs')) | ForEach-Object { Get-ChildItem -Path $_ -Include '*Aether*.lnk','*BlockWay*.lnk' -Recurse -File -ErrorAction SilentlyContinue } | ForEach-Object { try { $s = $ws.CreateShortcut($_.FullName); $s.IconLocation = '${icoPath.replace(/'/g, "''")},0'; $s.Save() } catch {} }"`;
       exec(psUpdateShortcuts, () => {});
     }
   } catch (_) {}
@@ -579,6 +585,7 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/ui/renderer.js',
         'src/ui/store-features.js',
         'src/ui/minecraft-logo.png',
+        'src/ui/app-banner.png',
         'src/ui/app-logo.png',
         'src/ui/app-icon.ico'
       ];

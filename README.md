@@ -1,42 +1,34 @@
-# ⚡ Aether Craft v31.5 PRO — Ultimate Minecraft Launcher (`aether-mine-launcher`)
+# ⚡ BlockWay Launcher v32.0 PRO — Every World, One Place (`aether-mine-launcher`)
 
-[![Latest Release](https://img.shields.io/badge/Release-v31.5.0_PRO-22c55e?style=for-the-badge)](https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest)
-[![Supabase Cloud 24/7](https://img.shields.io/badge/Aether_Cloud_ID-Supabase_PostgreSQL_24%2F7-06b6d4?style=for-the-badge)](https://github.com/buiduchuy2010qn-prog/aether-mine-launcher)
-[![Modrinth Store](https://img.shields.io/badge/Modrinth_Store-77%2C600%2B_Mods_%26_Shaders-a855f7?style=for-the-badge)](https://github.com/buiduchuy2010qn-prog/aether-mine-launcher)
+<p align="center">
+  <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
+</p>
 
-**Aether Craft Launcher** (*Aether Mine Launcher* — bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới tích hợp **Hệ thống Tài khoản Đám mây Aether Cloud 24/7 (Supabase PostgreSQL)**, xác thực **Mã OTP 6 số gửi thẳng về Gmail**, bảo mật **Zero-Trust RPC chống dịch ngược mã nguồn**, mô hình **3D Skin & Cape thực tế**, và kho **77,600+ Mods / Modpacks / Shaders / Resource Packs** từ Modrinth.
+<p align="center">
+  <a href="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v32.0.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher"><img src="https://img.shields.io/badge/Cloud_ID_24%2F7-Supabase_PostgreSQL-06b6d4?style=for-the-badge" alt="Cloud ID" /></a>
+</p>
+
+**BlockWay Launcher** (*Every World, One Place* — trước đây là *Aether Mine Launcher*, phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới tích hợp **Hệ thống Tài khoản Đám mây 24/7 (Supabase PostgreSQL)**, xác thực **Mã OTP 6 số gửi thẳng về Gmail**, bảo mật **Zero-Trust RPC chống dịch ngược mã nguồn**, mô hình **3D Skin & Cape thực tế**, và kho **77,600+ Mods / Modpacks / Shaders / Resource Packs** từ Modrinth.
+
+🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/](https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/)**
 
 ---
 
-## 🔥 Tính năng nổi bật trong phiên bản `v31.5.0 PRO`
+## 🔥 Tính năng nổi bật trong phiên bản `v32.0.0 PRO`
 
-1. **🛡️ Hệ thống Tài khoản Aether Cloud 24/7 (Supabase PostgreSQL + Gmail OTP thật):**
+1. **🎨 Giao diện Thương hiệu Mới `BlockWay Launcher` (Logo & Cinematic Banner):**
+   - Đồng bộ toàn diện Logo đảo bay 3D **BlockWay Launcher** và Banner **Every World, One Place** trên cả Ứng dụng máy tính (Windows) và Website chính thức.
+2. **🛡️ Hệ thống Tài khoản Đám mây 24/7 (Supabase PostgreSQL + Gmail OTP thật):**
    - **Tách riêng 3 chế độ trực quan:** `🔑 Đăng Nhập` | `✨ Tạo Tài Khoản` | `🔄 Quên MK` — bấm vào mục nào chỉ hiển thị đúng giao diện của mục đó.
    - **Sở hữu độc quyền Tên nhân vật (Username):** Mỗi tên nhân vật Minecraft thuộc về duy nhất 1 tài khoản trên đám mây, người khác không thể tạo trùng hay đổi sang tên của bạn.
    - **Khôi phục mật khẩu bằng Mã OTP 6 số qua Gmail thật:** Gửi thư xác nhận trực tiếp về hộp thư `mail.google.com`.
-   - **Đổi mật khẩu an toàn:** Yêu cầu xác minh đúng **Mật khẩu cũ** trước khi lưu mật khẩu mới.
-2. **🔒 Bảo mật Zero-Trust & Chống Bot Spam đa lớp:**
-   - **Khóa bảo mật Server-Side RPC (`SECURITY DEFINER`):** Bảng dữ liệu `aether_accounts` trên Supabase khóa hoàn toàn quyền truy cập trực tiếp (`REVOKE ALL`). Dù mã nguồn công khai trên GitHub, không ai có thể đọc trộm danh sách tài khoản, lấy mã băm mật khẩu hay sửa tài khoản của người khác.
-   - **Không lưu dữ liệu nhạy cảm trên ổ cứng (`Zero Disk Cache`):** Tự động xóa bỏ mọi file bộ nhớ đệm tài khoản trên máy.
+3. **🔒 Bảo mật Zero-Trust & Chống Bot Spam đa lớp:**
+   - **Khóa bảo mật Server-Side RPC (`SECURITY DEFINER`):** Bảng dữ liệu trên Supabase khóa hoàn toàn quyền truy cập trực tiếp (`REVOKE ALL`). Dù mã nguồn công khai trên GitHub, không ai có thể đọc trộm danh sách tài khoản, lấy mã băm mật khẩu hay sửa tài khoản của người khác.
    - **Chống Bot tự động:** Tích hợp phép tính Captcha Toán học, chặn tên miền Email rác/ảo, khóa 60s khi nhập sai 5 lần liên tiếp, và giới hạn tốc độ gửi OTP.
-3. **🎨 3D Minecraft Skin & Cape Studio + Kho Modrinth 77,600+:**
-   - Xem trước nhân vật 3D tương tác trực tiếp, tải Skin `.png` từ máy và đồng bộ lên Aether Cloud.
-   - Cài đặt **Vanilla, Fabric, Forge, Quilt, NeoForge** và tải Mods / Shaders / Resource Packs chỉ với 1 cú nhấp chuột.
-
----
-
-## 🚀 Cách tải về & Cài đặt
-
-1. Tải bản cài đặt mới nhất tại mục **[Releases (v31.5.0 PRO Latest)](https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest)** hoặc bấm nút **Cập nhật** ngay bên trong Launcher.
-2. Nếu chạy từ mã nguồn:
-   ```bash
-   git clone https://github.com/buiduchuy2010qn-prog/aether-mine-launcher.git
-   cd aether-mine-launcher
-   npm install
-   npm start
-   ```
 
 ---
 
 ### 🔍 Từ khóa tìm kiếm (SEO Keywords)
-`aether mine launcher`, `aether craft launcher`, `buiduchuy2010qn-prog`, `minecraft launcher vietnam`, `aether cloud id`, `minecraft modrinth launcher`
+`blockway launcher`, `aether mine launcher`, `aether craft launcher`, `buiduchuy2010qn-prog`, `minecraft launcher vietnam`, `minecraft modrinth launcher`

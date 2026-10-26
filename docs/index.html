@@ -3,19 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aether Mine Launcher (Aether Craft v31.5 PRO) — Tải Minecraft Launcher Chính Thức</title>
-  <meta name="description" content="Tải Aether Mine Launcher (Aether Craft v31.5 PRO) bởi buiduchuy2010qn-prog — Trình khởi chạy Minecraft thế hệ mới tích hợp Aether Cloud ID 24/7, xác thực OTP Gmail, 3D Skin Studio và kho 77,600+ Modrinth Mods & Shaders." />
-  <meta name="keywords" content="Aether Mine Launcher, aether-mine-launcher, Aether Craft Launcher, Aether Craft v31.5 PRO, buiduchuy2010qn-prog, Minecraft Launcher Vietnam, tải Aether Mine Launcher" />
+  <title>BlockWay Launcher (v32.0 PRO) — Every World, One Place | Tải Minecraft Launcher</title>
+  <link rel="icon" type="image/png" href="app-logo.png" />
+  <link rel="shortcut icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="app-logo.png" />
+
+  <meta name="description" content="Tải BlockWay Launcher v32.0 PRO (Aether Mine Launcher) bởi buiduchuy2010qn-prog — Every World, One Place. Trình khởi chạy Minecraft thế hệ mới tích hợp Cloud ID 24/7, xác thực OTP Gmail, 3D Skin Studio và kho 77,600+ Modrinth Mods & Shaders." />
+  <meta name="keywords" content="BlockWay Launcher, Aether Mine Launcher, aether-mine-launcher, Aether Craft Launcher, buiduchuy2010qn-prog, Minecraft Launcher Vietnam, tải BlockWay Launcher" />
   <meta name="author" content="buiduchuy2010qn-prog" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/" />
 
-  <!-- Open Graph / Google Search Preview -->
+  <!-- Open Graph / Google & Social Preview -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Aether Mine Launcher (Aether Craft v31.5 PRO) — Official Minecraft Launcher" />
-  <meta property="og:description" content="Trình khởi chạy Minecraft tích hợp Tài khoản Đám mây Aether Cloud 24/7 (Supabase), 3D Skin & Cape và kho 77,600+ Mods Modrinth." />
+  <meta property="og:title" content="BlockWay Launcher (v32.0 PRO) — Every World, One Place" />
+  <meta property="og:description" content="Trình khởi chạy Minecraft tích hợp Tài khoản Đám mây 24/7 (Supabase), OTP Gmail, 3D Skin & Cape và kho 77,600+ Mods Modrinth." />
   <meta property="og:url" content="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/" />
-  <meta property="og:site_name" content="Aether Mine Launcher" />
+  <meta property="og:image" content="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/app-banner.png" />
+  <meta property="og:site_name" content="BlockWay Launcher" />
 
   <!-- Google Fonts: Plus Jakarta Sans for clean modern Blue & White typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -27,11 +32,13 @@
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "Aether Mine Launcher (Aether Craft v31.5 PRO)",
-    "alternateName": ["Aether Mine Launcher", "Aether Craft Launcher", "aether-mine-launcher"],
+    "name": "BlockWay Launcher",
+    "alternateName": ["BlockWay Launcher v32.0 PRO", "Aether Mine Launcher", "Aether Craft Launcher", "aether-mine-launcher"],
     "operatingSystem": "Windows 10, Windows 11",
     "applicationCategory": "GameApplication",
-    "softwareVersion": "31.5.0",
+    "softwareVersion": "32.0.0",
+    "image": "https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/app-logo.png",
+    "screenshot": "https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/app-banner.png",
     "author": {
       "@type": "Person",
       "name": "buiduchuy2010qn-prog",
@@ -75,7 +82,6 @@
       overflow-x: hidden;
     }
 
-    /* Soft sky glow decorations */
     .sky-glow-1, .sky-glow-2 {
       position: fixed;
       border-radius: 50%;
@@ -104,43 +110,39 @@
       top: 16px;
       z-index: 10;
       width: calc(100% - 32px);
-      max-width: 1040px;
-      background: rgba(255, 255, 255, 0.88);
+      max-width: 1060px;
+      background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(14px);
       border: 1.5px solid #bae6fd;
       border-radius: 18px;
-      padding: 12px 24px;
+      padding: 10px 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       box-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
-      margin-bottom: 36px;
+      margin-bottom: 28px;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       font-weight: 800;
-      font-size: 18px;
+      font-size: 19px;
       color: var(--blue-deep);
       text-decoration: none;
     }
-    .brand-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #38bdf8, #0284c7);
-      color: #fff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    .brand-logo-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      object-fit: cover;
+      border: 2px solid #7dd3fc;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
     }
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .nav-pill {
       padding: 7px 14px;
@@ -161,9 +163,9 @@
     .container {
       position: relative;
       z-index: 1;
-      max-width: 1000px;
+      max-width: 1040px;
       width: 100%;
-      padding: 20px 20px 60px;
+      padding: 10px 20px 60px;
       text-align: center;
     }
 
@@ -179,12 +181,28 @@
       font-weight: 800;
       font-size: 13px;
       box-shadow: 0 6px 20px rgba(14, 165, 233, 0.12);
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
-    /* Hero Title with soft sky-blue & white-rimmed look */
+    /* Hero Banner Showcase Card */
+    .hero-banner-showcase {
+      position: relative;
+      width: 100%;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 3px solid #ffffff;
+      box-shadow: 0 18px 48px rgba(2, 132, 199, 0.22), 0 0 0 2px #7dd3fc;
+      margin-bottom: 26px;
+      background: #0c192c;
+    }
+    .hero-banner-showcase img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     h1 {
-      font-size: clamp(36px, 5.5vw, 54px);
+      font-size: clamp(32px, 5vw, 48px);
       font-weight: 800;
       letter-spacing: -0.02em;
       line-height: 1.15;
@@ -192,16 +210,16 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 2px 0 #ffffff) drop-shadow(0 6px 18px rgba(14, 165, 233, 0.18));
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .subtitle {
-      font-size: 17px;
+      font-size: 16.5px;
       color: var(--text-sub);
       font-weight: 500;
       line-height: 1.65;
-      max-width: 720px;
-      margin: 0 auto 32px;
+      max-width: 760px;
+      margin: 0 auto 28px;
     }
     .subtitle strong {
       color: var(--blue-primary);
@@ -213,7 +231,7 @@
       gap: 14px;
       justify-content: center;
       flex-wrap: wrap;
-      margin-bottom: 44px;
+      margin-bottom: 40px;
     }
 
     .btn {
@@ -261,7 +279,7 @@
       border: 1.5px solid #bae6fd;
       border-radius: 18px;
       padding: 18px 22px;
-      margin-bottom: 32px;
+      margin-bottom: 30px;
       box-shadow: 0 10px 30px rgba(2, 132, 199, 0.07);
     }
     .stat-item {
@@ -347,25 +365,31 @@
 
   <header class="navbar">
     <a class="brand" href="https://buiduchuy2010qn-prog.github.io/aether-mine-launcher/">
-      <span class="brand-icon">☁️</span>
-      <span>Aether Mine Launcher</span>
+      <img class="brand-logo-img" src="app-logo.png" alt="BlockWay Launcher Logo" />
+      <span>BlockWay Launcher</span>
     </a>
     <nav class="nav-links">
-      <a class="nav-pill" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest">Phiên bản v31.5 PRO</a>
+      <a class="nav-pill" id="navVerPill" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest">Phiên bản v32.0 PRO</a>
       <a class="nav-pill" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher">GitHub</a>
     </nav>
   </header>
 
   <main class="container">
-    <div class="badge">✨ PHIÊN BẢN CHÍNH THỨC v31.5.0 PRO — AETHER CLOUD 24/7</div>
-    <h1>Aether Mine Launcher</h1>
+    <div class="badge" id="heroVerBadge">✨ PHIÊN BẢN CHÍNH THỨC v32.0.0 PRO — EVERY WORLD, ONE PLACE</div>
+
+    <!-- OFFICIAL BLOCKWAY LAUNCHER HERO BANNER -->
+    <div class="hero-banner-showcase">
+      <img src="app-banner.png" alt="BlockWay Launcher — Every World, One Place" />
+    </div>
+
+    <h1>BlockWay Launcher</h1>
     <p class="subtitle">
-      <strong>Aether Craft v31.5 PRO</strong> (phát triển bởi <strong>buiduchuy2010qn-prog</strong>) — Trình khởi chạy Minecraft thế hệ mới với giao diện sáng hiện đại, tích hợp <strong>Tài khoản Đám mây Aether Cloud 24/7 (Supabase)</strong>, xác thực <strong>OTP 6 số qua Gmail thật</strong>, mô hình <strong>3D Skin &amp; Cape</strong> và kho <strong>77,600+ Mods / Shaders Modrinth</strong>.
+      <strong>BlockWay Launcher</strong> (<em>Aether Mine Launcher</em> — phát triển bởi <strong>buiduchuy2010qn-prog</strong>) — Trình khởi chạy Minecraft thế hệ mới tích hợp <strong>Tài khoản Đám mây 24/7 (Supabase)</strong>, xác thực <strong>OTP 6 số qua Gmail thật</strong>, mô hình <strong>3D Skin &amp; Cape</strong> và kho <strong>77,600+ Mods / Shaders Modrinth</strong>.
     </p>
 
     <div class="actions">
-      <a class="btn btn-primary" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest">
-        📥 Tải Về Aether Mine Launcher (v31.5 PRO)
+      <a class="btn btn-primary" id="downloadBtnMain" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher/releases/latest">
+        📥 Tải Về BlockWay Launcher (<span id="btnVerText">v32.0 PRO</span>)
       </a>
       <a class="btn btn-secondary" href="https://github.com/buiduchuy2010qn-prog/aether-mine-launcher">
         ⭐ Xem Mã Nguồn Trên GitHub
@@ -394,7 +418,7 @@
     <section class="grid">
       <div class="card">
         <span class="card-tag">☁️ ĐÁM MÂY 24/7</span>
-        <h3>Aether Cloud ID &amp; Gmail OTP</h3>
+        <h3>Cloud ID &amp; Gmail OTP Thật</h3>
         <p>Tách biệt rõ ràng 3 chế độ Đăng Nhập, Tạo Tài Khoản và Quên Mật Khẩu. Độc quyền tên nhân vật Minecraft (Username) và nhận mã OTP 6 số trực tiếp qua Gmail.</p>
       </div>
       <div class="card">
@@ -410,8 +434,29 @@
     </section>
 
     <footer>
-      © 2026 <strong>Aether Mine Launcher (Aether Craft v31.5 PRO)</strong> — Phát triển bởi <a href="https://github.com/buiduchuy2010qn-prog">buiduchuy2010qn-prog</a>
+      © 2026 <strong>BlockWay Launcher (Every World, One Place)</strong> — Phát triển bởi <a href="https://github.com/buiduchuy2010qn-prog">buiduchuy2010qn-prog</a>
     </footer>
   </main>
+
+  <!-- Tự động đồng bộ số phiên bản mới nhất từ GitHub mà không cần sửa web thủ công -->
+  <script>
+    (async () => {
+      try {
+        const res = await fetch('https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/main/package.json?t=' + Date.now());
+        if (!res.ok) return;
+        const pkg = await res.json();
+        if (pkg && pkg.version) {
+          const v = 'v' + pkg.version + ' PRO';
+          const b1 = document.getElementById('heroVerBadge');
+          const b2 = document.getElementById('navVerPill');
+          const b3 = document.getElementById('btnVerText');
+          if (b1) b1.textContent = '✨ PHIÊN BẢN CHÍNH THỨC ' + v + ' — EVERY WORLD, ONE PLACE';
+          if (b2) b2.textContent = 'Phiên bản ' + v;
+          if (b3) b3.textContent = v;
+          document.title = 'BlockWay Launcher (' + v + ') — Every World, One Place';
+        }
+      } catch (_) {}
+    })();
+  </script>
 </body>
 </html>
