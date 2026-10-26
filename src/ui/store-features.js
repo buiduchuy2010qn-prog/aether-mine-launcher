@@ -1,3 +1,13 @@
+function escapeHtml(val) {
+  return String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+window.escapeHtml = escapeHtml;
+
 function askUserAgreement({ title, message, showEula = false, showDontAsk = false, agreeText = '✓ Tôi Đồng Ý', cancelText = '✕ Không Đồng Ý (Hủy)' }) {
   return new Promise((resolve) => {
     const modal = document.getElementById('userConfirmModal');
@@ -190,7 +200,7 @@ function convertSkinTo64x64DataUrl(imgSource) {
       const c = document.createElement('canvas');
       c.width = 64;
       c.height = 64;
-      const ctx = c.getContext('2d');
+      const ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, 64, 64);
       ctx.drawImage(img, 0, 0);
@@ -245,7 +255,7 @@ function draw2DAvatarFace(imgSource) {
     const off = document.createElement('canvas');
     off.width = img.width || 64;
     off.height = img.height || 64;
-    const octx = off.getContext('2d');
+    const octx = off.getContext('2d', { willReadFrequently: true });
     octx.drawImage(img, 0, 0);
 
     for (const canvas of canvases) {
@@ -808,21 +818,28 @@ async function loadModrinthStore(append = false) {
       ? `Đang có bản ${isInstalledOtherVer} trong máy — Bấm để tự động tải và đổi sang bản ${activeVer}`
       : `Tự động chọn và cài đặt bản chuẩn cho Minecraft ${activeVer} (${state.selectedCore.toUpperCase()})`;
     const viDesc = getVietnameseModExplanation(item, state.activeModStoreType);
-    const fullTooltip = item.description
-      ? `${viDesc}\n\n[Mô tả gốc Modrinth]: ${item.description}`.replace(/"/g, '&quot;')
-      : viDesc.replace(/"/g, '&quot;');
+    const fullTooltip = escapeHtml(
+      item.description
+        ? `${viDesc}\n\n[Mô tả gốc Modrinth]: ${item.description}`
+        : viDesc
+    );
+    const safeIconUrl = /^https?:\/\//i.test(String(item.iconUrl || '')) ? escapeHtml(item.iconUrl) : '';
+    const safeTitle = escapeHtml(item.title);
+    const safeAuthor = escapeHtml(item.author || 'Creator');
+    const safeSlug = escapeHtml(item.slug);
+    const safeBtnTitle = escapeHtml(btnTitle);
     return `<div class="mod-card">
       <div class="mod-card-top">
-        <img class="mod-icon" src="${item.iconUrl || ''}" alt="" />
+        <img class="mod-icon" src="${safeIconUrl}" alt="" />
         <div class="mod-head-info">
-          <div class="mod-title" title="${item.title}">${item.title}</div>
-          <div class="mod-meta">bởi <strong>${item.author || 'Creator'}</strong> • ${dl}</div>
+          <div class="mod-title" title="${safeTitle}">${safeTitle}</div>
+          <div class="mod-meta">bởi <strong>${safeAuthor}</strong> • ${dl}</div>
         </div>
       </div>
-      <div class="mod-desc" title="${fullTooltip}">${viDesc}</div>
+      <div class="mod-desc" title="${fullTooltip}">${escapeHtml(viDesc)}</div>
       <div class="mod-card-foot">
         <div class="mod-tags">${tags}</div>
-        <button class="btn-install-mod ${isInstalledExact ? 'installed' : ''}" data-slug="${item.slug}" title="${btnTitle}">${btnText}</button>
+        <button class="btn-install-mod ${isInstalledExact ? 'installed' : ''}" data-slug="${safeSlug}" title="${safeBtnTitle}">${escapeHtml(btnText)}</button>
       </div>
     </div>`;
   }).join('');
@@ -877,15 +894,17 @@ async function renderLocalAddonsManager() {
   const items = res?.items || [];
   await refreshLocalAddonsCount();
   if (items.length === 0) {
-    listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);">Chưa có file nào trong thư mục <strong>${state.activeLocalFolder}</strong>.</div>`;
+    listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);">Chưa có file nào trong thư mục <strong>${escapeHtml(state.activeLocalFolder)}</strong>.</div>`;
     return;
   }
   const activeVer = state.selectedVersion || '1.21.4';
   listEl.innerHTML = items.map((item) => {
     const verTag = item.mcVersion
-      ? `<span style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:8px;${item.mcVersion === activeVer || (item.gameVersions || []).includes(activeVer) ? 'background:rgba(16,185,129,0.14);color:#10b981;' : 'background:rgba(245,158,11,0.15);color:#f59e0b;'}">MC ${item.mcVersion}</span>`
+      ? `<span style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:8px;${item.mcVersion === activeVer || (item.gameVersions || []).includes(activeVer) ? 'background:rgba(16,185,129,0.14);color:#10b981;' : 'background:rgba(245,158,11,0.15);color:#f59e0b;'}">MC ${escapeHtml(item.mcVersion)}</span>`
       : '';
-    return `<div class="addon-row"><div><strong style="font-size:12.5px;${item.enabled ? '' : 'text-decoration:line-through;opacity:0.6;'}">${item.cleanName}</strong>${verTag}<span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${item.sizeKB} KB • ${item.enabled ? 'Đang Bật' : 'Đã Tắt (Tự cất)'}</span></div><div style="display:flex;gap:6px;"><button class="vtype-btn ${item.enabled ? 'active' : ''}" data-toggle="${item.name}">${item.enabled ? 'Đang Bật' : 'Bật Lại'}</button><button class="vtype-btn" style="color:#ef4444;" data-del="${item.name}">Xóa</button></div></div>`;
+    const safeClean = escapeHtml(item.cleanName);
+    const safeName = escapeHtml(item.name);
+    return `<div class="addon-row"><div><strong style="font-size:12.5px;${item.enabled ? '' : 'text-decoration:line-through;opacity:0.6;'}">${safeClean}</strong>${verTag}<span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${Number(item.sizeKB) || 0} KB • ${item.enabled ? 'Đang Bật' : 'Đã Tắt (Tự cất)'}</span></div><div style="display:flex;gap:6px;"><button class="vtype-btn ${item.enabled ? 'active' : ''}" data-toggle="${safeName}">${item.enabled ? 'Đang Bật' : 'Bật Lại'}</button><button class="vtype-btn" style="color:#ef4444;" data-del="${safeName}">Xóa</button></div></div>`;
   }).join('');
   listEl.querySelectorAll('[data-toggle]').forEach((b) => { b.onclick = async () => { await window.aetherAPI.toggleLocalAddon(state.gameDir, state.activeLocalFolder, b.dataset.toggle); await renderLocalAddonsManager(); }; });
   listEl.querySelectorAll('[data-del]').forEach((b) => { b.onclick = async () => { await window.aetherAPI.deleteLocalAddon(state.gameDir, state.activeLocalFolder, b.dataset.del); await renderLocalAddonsManager(); }; });
@@ -897,7 +916,7 @@ function renderFavoriteServers() {
   const badge = document.getElementById('activeServerBadge');
   if (badge) {
     badge.innerHTML = state.serverIp
-      ? `Vào thẳng: <strong style="color:var(--accent);">${state.serverIp}</strong> <span id="btnClearActiveSrv" style="cursor:pointer;color:#ef4444;margin-left:4px;font-weight:800;" title="Hủy vào thẳng server">[✕]</span>`
+      ? `Vào thẳng: <strong style="color:var(--accent);">${escapeHtml(state.serverIp)}</strong> <span id="btnClearActiveSrv" style="cursor:pointer;color:#ef4444;margin-left:4px;font-weight:800;" title="Hủy vào thẳng server">[✕]</span>`
       : 'Chế độ: Vào Menu chính';
     const clearBtn = document.getElementById('btnClearActiveSrv');
     if (clearBtn) clearBtn.onclick = () => setServerIpEverywhere('');
@@ -943,27 +962,30 @@ function renderFavoriteServers() {
           ? `<span class="srv-ping-badge online">● ${(pingInfo.playersOnline || 0).toLocaleString('vi-VN')}/${(pingInfo.playersMax || 0).toLocaleString('vi-VN')} người</span>${latencyTag}`
           : `<span class="srv-ping-badge offline">● Ngoại tuyến</span>`)
       : `<span class="srv-ping-badge pending">⏳ Đang kiểm tra...</span>`;
-    const iconHtml = pingInfo?.icon
-      ? `<img class="srv-icon-img" src="${pingInfo.icon}" alt="" />`
+    const safeIcon = (pingInfo?.icon && /^data:image\/|^https?:\/\//i.test(String(pingInfo.icon))) ? escapeHtml(pingInfo.icon) : '';
+    const iconHtml = safeIcon
+      ? `<img class="srv-icon-img" src="${safeIcon}" alt="" />`
       : `<div class="srv-icon-img srv-icon-fallback">🌐</div>`;
     const catBadge = srv.cat === 'premium'
       ? '<span class="srv-cat-pill premium">👑 Bản quyền</span>'
       : (srv.cat === 'crack' ? '<span class="srv-cat-pill crack">🔓 Crack Quốc Tế</span>' : '<span class="srv-cat-pill vn">🇻🇳 Việt Nam</span>');
+    const safeSrvName = escapeHtml(srv.name);
+    const safeSrvIp = escapeHtml(srv.ip);
     return `<div class="srv-card-row ${isSelected ? 'active' : ''}">
       <div class="srv-card-left">
         ${iconHtml}
         <div class="srv-card-meta">
           <div class="srv-title-line">
-            <strong class="srv-name-text" title="${srv.name}">${srv.name}</strong>
+            <strong class="srv-name-text" title="${safeSrvName}">${safeSrvName}</strong>
             ${statusHtml}
           </div>
-          <div class="srv-ip-line">${catBadge} • IP: <span>${srv.ip}</span></div>
+          <div class="srv-ip-line">${catBadge} • IP: <span>${safeSrvIp}</span></div>
         </div>
       </div>
       <div class="srv-card-actions">
-        <button class="btn-install-mod ${isSelected ? 'installed' : ''}" data-joinsrv="${srv.ip}">${isSelected ? '✓ Đang chọn' : '▶ Tham gia'}</button>
+        <button class="btn-install-mod ${isSelected ? 'installed' : ''}" data-joinsrv="${safeSrvIp}">${isSelected ? '✓ Đang chọn' : '▶ Tham gia'}</button>
         <div class="srv-secondary-btns">
-          <button class="srv-icon-btn" data-copysrv="${srv.ip}" title="Sao chép địa chỉ IP: ${srv.ip}">📋</button>
+          <button class="srv-icon-btn" data-copysrv="${safeSrvIp}" title="Sao chép địa chỉ IP: ${safeSrvIp}">📋</button>
           <button class="srv-icon-btn danger" data-delsrv="${idx}" title="Xóa máy chủ khỏi danh sách">✕</button>
         </div>
       </div>
@@ -1002,16 +1024,19 @@ function renderHomeRecentWorlds(worlds = []) {
     </button>
   `;
   const worldCards = worlds.slice(0, 4).map((w) => {
-    const thumbUrl = w.iconDataUrl || 'app-banner-hero.png';
+    const thumbUrl = (w.iconDataUrl && /^data:image\//i.test(String(w.iconDataUrl))) ? w.iconDataUrl : 'app-banner-hero.png';
+    const safePath = escapeHtml(w.path);
+    const safeName = escapeHtml(w.name);
+    const safePlayed = escapeHtml(w.lastPlayed);
     return `
-      <div class="hw-world-card" data-worldpath="${w.path}" title="Thế giới: ${w.name} (${w.lastPlayed})">
+      <div class="hw-world-card" data-worldpath="${safePath}" title="Thế giới: ${safeName} (${safePlayed})">
         <div class="hw-world-thumb" style="background-image:url('${thumbUrl}')"></div>
         <div class="hw-world-body">
           <div class="hw-world-info">
-            <div class="hw-world-title">${w.name}</div>
-            <div class="hw-world-sub">Chơi gần nhất: ${w.lastPlayed}</div>
+            <div class="hw-world-title">${safeName}</div>
+            <div class="hw-world-sub">Chơi gần nhất: ${safePlayed}</div>
           </div>
-          <button class="hw-world-menu-btn" data-openworld="${w.path}" title="Mở thư mục thế giới này trong Explorer">⋮</button>
+          <button class="hw-world-menu-btn" data-openworld="${safePath}" title="Mở thư mục thế giới này trong Explorer">⋮</button>
         </div>
       </div>
     `;
@@ -1111,18 +1136,24 @@ async function renderLocalWorlds() {
     if (bMig && typeof openLauncherMigrateModal === 'function') bMig.onclick = () => openLauncherMigrateModal();
     return;
   }
-  container.innerHTML = worlds.map((w) => `<div class="world-card-row">
+  container.innerHTML = worlds.map((w) => {
+    const safeName = escapeHtml(w.name);
+    const safePlayed = escapeHtml(w.lastPlayed);
+    const safePath = escapeHtml(w.path);
+    const safeIcon = (w.iconDataUrl && /^data:image\//i.test(String(w.iconDataUrl))) ? escapeHtml(w.iconDataUrl) : '';
+    return `<div class="world-card-row">
     <div class="world-left">
-      ${w.iconDataUrl ? `<img class="world-icon" src="${w.iconDataUrl}" alt="" />` : '<div class="world-icon world-icon-fallback">🌍</div>'}
+      ${safeIcon ? `<img class="world-icon" src="${safeIcon}" alt="" />` : '<div class="world-icon world-icon-fallback">🌍</div>'}
       <div class="world-meta-col">
-        <strong class="world-title-text" title="${w.name}">${w.name}</strong>
-        <div class="world-sub-text">🕒 Lần chơi cuối: ${w.lastPlayed}</div>
+        <strong class="world-title-text" title="${safeName}">${safeName}</strong>
+        <div class="world-sub-text">🕒 Lần chơi cuối: ${safePlayed}</div>
       </div>
     </div>
     <div class="world-card-actions">
-      <button class="vtype-btn" data-openworld="${w.path}" title="Mở thư mục bản đồ này trong Windows Explorer">📂 Mở Thư Mục</button>
+      <button class="vtype-btn" data-openworld="${safePath}" title="Mở thư mục bản đồ này trong Windows Explorer">📂 Mở Thư Mục</button>
     </div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
   container.querySelectorAll('[data-openworld]').forEach((btn) => { btn.onclick = () => window.aetherAPI.openGameDir(btn.dataset.openworld); });
 }
 async function pingAllFavoriteServers() {
@@ -1171,22 +1202,23 @@ async function openLauncherMigrateModal() {
     }
     listEl.innerHTML = list.map((it) => {
       const active = it.path === selectedMigrateSourcePath;
-      const accText = it.accounts?.length ? ` • 👤 Tên cũ: <strong>${it.accounts.slice(0, 4).join(', ')}</strong>` : '';
-      const metaText = it.detectedVersion ? ` • 🎯 Bản: <strong>${it.detectedVersion} ${(it.detectedCore || '').toUpperCase()}</strong>` : '';
-      const cfgText = it.configsCount ? ` • ⚙️ <strong>${it.configsCount}</strong> Config` : '';
+      const accText = it.accounts?.length ? ` • 👤 Tên cũ: <strong>${it.accounts.slice(0, 4).map(escapeHtml).join(', ')}</strong>` : '';
+      const metaText = it.detectedVersion ? ` • 🎯 Bản: <strong>${escapeHtml(it.detectedVersion)} ${escapeHtml((it.detectedCore || '').toUpperCase())}</strong>` : '';
+      const cfgText = it.configsCount ? ` • ⚙️ <strong>${escapeHtml(it.configsCount)}</strong> Config` : '';
       const sharedBadge = it.isSharedRoot
         ? '<span style="color:#10b981;font-weight:800;font-size:11.5px;">✓ Đang dùng chung .minecraft</span>'
         : '<span style="color:var(--accent);font-weight:800;font-size:11.5px;">📥 Có thể chép sang</span>';
-      return `<div class="addon-row migrate-source-card" data-migpath="${it.path}" style="cursor:pointer;border:1.8px solid ${active ? 'var(--accent)' : 'var(--border-col)'};background:${active ? 'var(--accent-glow)' : 'var(--bg-input)'};padding:12px 14px;border-radius:10px;">
+      const safeMigPath = escapeHtml(it.path);
+      return `<div class="addon-row migrate-source-card" data-migpath="${safeMigPath}" style="cursor:pointer;border:1.8px solid ${active ? 'var(--accent)' : 'var(--border-col)'};background:${active ? 'var(--accent-glow)' : 'var(--bg-input)'};padding:12px 14px;border-radius:10px;">
         <div style="display:flex;flex-direction:column;gap:4px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <strong style="font-size:13.5px;color:var(--text-main);">${it.launcherName} — ${it.instanceName}</strong>
+            <strong style="font-size:13.5px;color:var(--text-main);">${escapeHtml(it.launcherName)} — ${escapeHtml(it.instanceName)}</strong>
             ${sharedBadge}
           </div>
           <div style="font-size:12px;color:var(--text-muted);">
-            🌍 <strong>${it.worldsCount}</strong> Thế giới • 🧩 <strong>${it.modsCount}</strong> Mods${cfgText} • ✨ <strong>${it.shadersCount + it.packsCount}</strong> Shaders/Packs${metaText}${accText}
+            🌍 <strong>${escapeHtml(it.worldsCount)}</strong> Thế giới • 🧩 <strong>${escapeHtml(it.modsCount)}</strong> Mods${cfgText} • ✨ <strong>${escapeHtml((Number(it.shadersCount) || 0) + (Number(it.packsCount) || 0) || it.packsCount)}</strong> Shaders/Packs${metaText}${accText}
           </div>
-          <div style="font-size:11px;color:var(--text-muted);opacity:0.8;">📂 ${it.path}</div>
+          <div style="font-size:11px;color:var(--text-muted);opacity:0.8;">📂 ${safeMigPath}</div>
         </div>
       </div>`;
     }).join('');

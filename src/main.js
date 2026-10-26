@@ -37,7 +37,7 @@ const {
 
 app.commandLine.appendSwitch('js-flags', '--expose-gc');
 if (process.platform === 'win32') {
-  try { app.setAppUserModelId('BlockWay.Launcher.Pro.v32'); } catch (_) {}
+  try { app.setAppUserModelId('BlockWay.Launcher.Pro.v33'); } catch (_) {}
 }
 // Background throttling enabled for 0% idle CPU/GPU
 
@@ -49,7 +49,7 @@ function fetchBinaryBuffer(url, redirects = 3) {
   return new Promise((resolve, reject) => {
     const req = https.get(
       url,
-      { headers: { 'User-Agent': 'AetherCraft-Launcher/8.0' }, timeout: 6500 },
+      { headers: { 'User-Agent': 'BlockWay-Launcher/33.0' }, timeout: 8000 },
       (res) => {
         if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
           const nextUrl = res.headers.location.startsWith('http')
@@ -82,6 +82,7 @@ async function ensureAppIconSyncedAndApplied() {
     const bwIcoPath = path.join(uiDir, 'app-icon-blockway-v322.ico');
     const pngPath = path.join(uiDir, 'app-logo.png');
     const bannerPath = path.join(uiDir, 'app-banner.png');
+    const heroBannerPath = path.join(uiDir, 'app-banner-hero.png');
     const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/blockway-launcher/main/src/ui';
     if (!fs.existsSync(icoPath)) {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-icon.ico?t=${Date.now()}`);
@@ -98,6 +99,12 @@ async function ensureAppIconSyncedAndApplied() {
       const buf = await fetchBinaryBuffer(`${baseRaw}/app-banner.png?t=${Date.now()}`);
       fs.writeFileSync(bannerPath, buf);
     }
+    if (!fs.existsSync(heroBannerPath)) {
+      try {
+        const buf = await fetchBinaryBuffer(`${baseRaw}/app-banner-hero.png?t=${Date.now()}`);
+        fs.writeFileSync(heroBannerPath, buf);
+      } catch (_) {}
+    }
     const activeIco = fs.existsSync(bwIcoPath) ? bwIcoPath : icoPath;
     if (mainWindow && !mainWindow.isDestroyed()) {
       try {
@@ -105,7 +112,7 @@ async function ensureAppIconSyncedAndApplied() {
         if (!nImg.isEmpty()) mainWindow.setIcon(nImg);
         else if (fs.existsSync(activeIco)) mainWindow.setIcon(activeIco);
       } catch (_) {}
-      mainWindow.setTitle('BlockWay Launcher — v32.2 PRO');
+      mainWindow.setTitle('BlockWay Launcher — v33.0 PRO');
     }
     if (process.platform === 'win32' && fs.existsSync(activeIco)) {
       const { exec } = require('child_process');
@@ -146,6 +153,25 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: true
+    }
+  });
+
+  // Security hardening: prevent unexpected window popups or navigation away from local UI
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+          shell.openExternal(parsed.toString());
+        }
+      } catch (_) {}
+    }
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, navUrl) => {
+    const currentUrl = mainWindow.webContents.getURL();
+    if (navUrl !== currentUrl && !String(navUrl || '').startsWith('file://')) {
+      event.preventDefault();
     }
   });
 
@@ -288,9 +314,15 @@ ipcMain.handle('cfg:save', async (_e, cfg) => {
 });
 
 ipcMain.handle('sys:open-external', async (_e, url) => {
-  if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
-    await shell.openExternal(url);
-  }
+  if (typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url.trim());
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      await shell.openExternal(parsed.toString());
+      return true;
+    }
+  } catch (_) {}
+  return false;
 });
 
 ipcMain.handle('skin:fetch-base64', async (_e, username) => {
@@ -510,15 +542,20 @@ ipcMain.handle('worlds:list', async (_e, gameDir) => {
 });
 
 ipcMain.handle('mc:open-dir', async (_e, dirPath) => {
-  const target = dirPath || getDefaultGameDir();
+  const target = path.resolve(dirPath && String(dirPath).trim() ? String(dirPath).trim() : getDefaultGameDir());
   if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
   shell.openPath(target);
   return target;
 });
 
 ipcMain.handle('mc:open-subfolder', async (_e, gameDir, subFolder) => {
-  const root = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
-  const target = subFolder ? path.join(root, subFolder) : root;
+  const root = path.resolve(gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
+  const cleanSub = String(subFolder || '').replace(/^[\\/]+/, '');
+  const target = cleanSub ? path.resolve(root, cleanSub) : root;
+  const rel = path.relative(root, target);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error('Đường dẫn thư mục con không hợp lệ.');
+  }
   if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
   shell.openPath(target);
   return target;
@@ -567,9 +604,12 @@ ipcMain.handle('mc:launch', async (_e, config) => {
     return { ok: false, error: err.message };
   }
 });
+
 function compareSemver(a, b) {
-  const pa = String(a || '0.0.0').split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = String(b || '0.0.0').split('.').map((n) => parseInt(n, 10) || 0);
+  const cleanA = String(a || '0.0.0').replace(/^v/i, '');
+  const cleanB = String(b || '0.0.0').replace(/^v/i, '');
+  const pa = cleanA.split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = cleanB.split('.').map((n) => parseInt(n, 10) || 0);
   for (let i = 0; i < 3; i++) {
     if ((pa[i] || 0) > (pb[i] || 0)) return 1;
     if ((pa[i] || 0) < (pb[i] || 0)) return -1;
@@ -577,85 +617,129 @@ function compareSemver(a, b) {
   return 0;
 }
 
-function fetchJsonSimple(url) {
+function fetchJsonSimple(url, redirects = 3) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'AetherCraft-Updater/11.0' } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume();
-        return fetchJsonSimple(res.headers.location).then(resolve).catch(reject);
+    const req = https.get(
+      url,
+      { headers: { 'User-Agent': 'BlockWay-Updater/33.0' }, timeout: 8000 },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirects > 0) {
+          const nextUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : new URL(res.headers.location, url).toString();
+          res.resume();
+          return fetchJsonSimple(nextUrl, redirects - 1).then(resolve).catch(reject);
+        }
+        if (res.statusCode !== 200) {
+          res.resume();
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
+        let raw = '';
+        res.on('data', (c) => (raw += c));
+        res.on('end', () => {
+          try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
+        });
       }
-      if (res.statusCode !== 200) {
-        res.resume();
-        return reject(new Error(`HTTP ${res.statusCode}`));
-      }
-      let raw = '';
-      res.on('data', (c) => (raw += c));
-      res.on('end', () => {
-        try { resolve(JSON.parse(raw)); } catch (e) { reject(e); }
-      });
-    }).on('error', reject);
+    );
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Timeout'));
+    });
   });
 }
 
-function downloadWithProgress(url, destPath, onPct) {
+function downloadWithProgress(url, destPath, onPct, redirects = 3) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'AetherCraft-Updater/11.0' } }, (res) => {
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-        const nextUrl = res.headers.location.startsWith('http')
-          ? res.headers.location
-          : new URL(res.headers.location, url).toString();
-        res.resume();
-        return downloadWithProgress(nextUrl, destPath, onPct).then(resolve).catch(reject);
-      }
-      if (res.statusCode !== 200) {
-        res.resume();
-        return reject(new Error(`HTTP ${res.statusCode}`));
-      }
-      const total = parseInt(res.headers['content-length'] || '0', 10);
-      let received = 0;
-      const file = fs.createWriteStream(destPath);
-      res.on('data', (chunk) => {
-        received += chunk.length;
-        if (total > 0 && onPct) {
-          onPct(Math.min(100, Math.round((received / total) * 100)));
+    const req = https.get(
+      url,
+      { headers: { 'User-Agent': 'BlockWay-Updater/33.0' }, timeout: 15000 },
+      (res) => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
+          const nextUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : new URL(res.headers.location, url).toString();
+          res.resume();
+          return downloadWithProgress(nextUrl, destPath, onPct, redirects - 1).then(resolve).catch(reject);
         }
-      });
-      res.pipe(file);
-      file.on('finish', () => file.close(resolve));
-    });
+        if (res.statusCode !== 200) {
+          res.resume();
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
+        const total = parseInt(res.headers['content-length'] || '0', 10);
+        let received = 0;
+        const file = fs.createWriteStream(destPath);
+        res.on('data', (chunk) => {
+          received += chunk.length;
+          if (total > 0 && onPct) {
+            onPct(Math.min(100, Math.round((received / total) * 100)));
+          }
+        });
+        res.pipe(file);
+        file.on('finish', () => file.close(resolve));
+      }
+    );
     req.on('error', (err) => {
       fs.unlink(destPath, () => {});
       reject(err);
     });
+    req.on('timeout', () => {
+      req.destroy();
+      fs.unlink(destPath, () => {});
+      reject(new Error('Timeout'));
+    });
   });
+}
+
+async function resolveGitHubRepoAndRef() {
+  let repoSlug = 'blockway-launcher';
+  let refBranch = 'main';
+  try {
+    const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/blockway-launcher/commits/main?t=${Date.now()}`);
+    if (commitInfo?.sha) refBranch = commitInfo.sha;
+  } catch (_) {
+    try {
+      const commitInfoOld = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
+      if (commitInfoOld?.sha) {
+        repoSlug = 'aether-mine-launcher';
+        refBranch = commitInfoOld.sha;
+      }
+    } catch (_) {}
+  }
+  return { repoSlug, refBranch };
 }
 
 ipcMain.handle('updater:check', async () => {
   try {
     const currentVersion = app.getVersion();
-    let repoSlug = 'blockway-launcher';
-    let refBranch = 'main';
-    try {
-      const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/blockway-launcher/commits/main?t=${Date.now()}`);
-      if (commitInfo?.sha) refBranch = commitInfo.sha;
-    } catch (_) {
-      try {
-        const commitInfoOld = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
-        if (commitInfoOld?.sha) {
-          repoSlug = 'aether-mine-launcher';
-          refBranch = commitInfoOld.sha;
-        }
-      } catch (_) {}
-    }
-    let remotePkg;
+    const { repoSlug, refBranch } = await resolveGitHubRepoAndRef();
+    let remotePkg = null;
     try {
       remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/${repoSlug}/${refBranch}/package.json?t=${Date.now()}`);
     } catch (_) {
-      remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}/package.json?t=${Date.now()}`);
+      try {
+        remotePkg = await fetchJsonSimple(`https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}/package.json?t=${Date.now()}`);
+      } catch (_) {}
     }
-    const latestVersion = remotePkg?.version || currentVersion;
+
+    let latestVersion = remotePkg?.version || currentVersion;
+    let downloadUrl = `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v${latestVersion}/BlockWay-Launcher-Setup-${latestVersion}.exe`;
+
+    try {
+      const relInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/${repoSlug}/releases/latest?t=${Date.now()}`);
+      const relVer = String(relInfo?.tag_name || '').replace(/^v/i, '');
+      if (relVer && compareSemver(relVer, latestVersion) > 0) {
+        latestVersion = relVer;
+      }
+      if (Array.isArray(relInfo?.assets)) {
+        const exeAsset = relInfo.assets.find((a) => typeof a?.browser_download_url === 'string' && /\.exe$/i.test(a.name || a.browser_download_url));
+        if (exeAsset?.browser_download_url) {
+          downloadUrl = exeAsset.browser_download_url;
+        }
+      }
+    } catch (_) {}
+
     const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
-    const downloadUrl = `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v7.0.0/AetherCraft-Setup-${latestVersion}.exe`;
     return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch };
   } catch (err) {
     return { ok: false, error: err.message, currentVersion: app.getVersion() };
@@ -668,21 +752,7 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
     const isUnpackedApp = path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
 
     if (isUnpackedApp) {
-      let repoSlug = 'blockway-launcher';
-      let refBranch = 'main';
-      try {
-        const commitInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/blockway-launcher/commits/main?t=${Date.now()}`);
-        if (commitInfo?.sha) refBranch = commitInfo.sha;
-      } catch (_) {
-        try {
-          const commitInfoOld = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/aether-mine-launcher/commits/main?t=${Date.now()}`);
-          if (commitInfoOld?.sha) {
-            repoSlug = 'aether-mine-launcher';
-            refBranch = commitInfoOld.sha;
-          }
-        } catch (_) {}
-      }
-
+      const { repoSlug, refBranch } = await resolveGitHubRepoAndRef();
       const filesToSync = [
         'package.json',
         'src/main.js',
@@ -692,15 +762,20 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         'src/aether-cloud-auth.js',
         'src/ui/index.html',
         'src/ui/styles.css',
+        'src/ui/layout-v33.css',
         'src/ui/renderer.js',
         'src/ui/store-features.js',
         'src/ui/minecraft-logo.png',
         'src/ui/app-banner.png',
+        'src/ui/app-banner-hero.png',
         'src/ui/app-logo.png',
         'src/ui/app-icon.ico'
       ];
       const baseRaw = `https://raw.githubusercontent.com/buiduchuy2010qn-prog/${repoSlug}/${refBranch}`;
       const fallbackRaw = `https://raw.githubusercontent.com/buiduchuy2010qn-prog/aether-mine-launcher/${refBranch}`;
+
+      // Phase 1: Download all files into memory and validate buffers before touching disk
+      const stagedFiles = [];
       for (let i = 0; i < filesToSync.length; i++) {
         const rel = filesToSync[i];
         let buf;
@@ -709,33 +784,45 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         } catch (_) {
           buf = await fetchBinaryBuffer(`${fallbackRaw}/${rel}?t=${Date.now()}`);
         }
-        const targetFile = path.join(appRoot, rel);
+        if (!buf || buf.length < 64) {
+          throw new Error(`Tệp tải về không hợp lệ hoặc bị gián đoạn: ${rel}`);
+        }
+        stagedFiles.push({ rel, buf });
+        mainWindow?.webContents.send('updater:progress', Math.round(((i + 1) / filesToSync.length) * 95));
+      }
+
+      // Phase 2: Atomic write to disk once all files are verified in memory
+      for (const item of stagedFiles) {
+        const targetFile = path.resolve(appRoot, item.rel);
+        const relCheck = path.relative(appRoot, targetFile);
+        if (relCheck.startsWith('..') || path.isAbsolute(relCheck)) continue;
         const dir = path.dirname(targetFile);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(targetFile, buf);
-        mainWindow?.webContents.send('updater:progress', Math.round(((i + 1) / filesToSync.length) * 100));
+        fs.writeFileSync(targetFile, item.buf);
       }
+      mainWindow?.webContents.send('updater:progress', 100);
+
       setTimeout(() => {
-        try {
-          const { exec } = require('child_process');
-          const exePath = process.execPath;
-          exec(`powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Milliseconds 350; Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine='\\"${exePath}\\"'}"`);
-        } catch (_) {
-          app.relaunch();
-        }
-        setTimeout(() => app.exit(0), 150);
-      }, 200);
+        app.relaunch();
+        app.exit(0);
+      }, 250);
       return { ok: true };
     }
 
-    // Fallback if running from legacy app.asar
-    const tempExe = path.join(os.tmpdir(), `AetherCraft-Setup-${latestVersion || 'latest'}.exe`);
-    await downloadWithProgress(downloadUrl, tempExe, (pct) => {
+    // Fallback if running from legacy app.asar: validate GitHub download URL strictly
+    const parsedUrl = new URL(String(downloadUrl || ''));
+    const allowedHosts = new Set(['github.com', 'objects.githubusercontent.com', 'raw.githubusercontent.com']);
+    if (parsedUrl.protocol !== 'https:' || !allowedHosts.has(parsedUrl.hostname.toLowerCase())) {
+      throw new Error('Nguồn tải bản cập nhật không hợp lệ.');
+    }
+    const safeVer = String(latestVersion || 'latest').replace(/[^0-9A-Za-z._-]/g, '');
+    const tempExe = path.join(os.tmpdir(), `BlockWay-Setup-${safeVer}.exe`);
+    await downloadWithProgress(parsedUrl.toString(), tempExe, (pct) => {
       mainWindow?.webContents.send('updater:progress', pct);
     });
     const currentExe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
     const installDir = path.dirname(currentExe);
-    const batPath = path.join(os.tmpdir(), 'aether-auto-update.bat');
+    const batPath = path.join(os.tmpdir(), 'blockway-auto-update.bat');
     const batContent = [
       '@echo off',
       'timeout /t 1 /nobreak >nul',
@@ -753,6 +840,7 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
     return { ok: false, error: err.message };
   }
 });
+
 ipcMain.handle('server:ping', async (_e, serverIp) => {
   try {
     const cleanIp = String(serverIp || '').trim();

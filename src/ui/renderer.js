@@ -324,7 +324,7 @@ function switchMainTab(tabId) {
     }
   }
 
-  // Resize WebGL 3D viewer after slot transition
+  // Resize WebGL 3D viewer after slot transition, or pause GPU rendering on non-3D tabs
   if ((targetTab === 'home' || targetTab === 'skin') && skinViewer) {
     setTimeout(() => {
       const stageWrap = document.getElementById('webglStageWrap');
@@ -334,6 +334,8 @@ function switchMainTab(tabId) {
         skinViewer.render();
       }
     }, 30);
+  } else if (skinViewer) {
+    skinViewer.renderPaused = true;
   }
 
   if (targetTab === 'mods' && typeof loadModrinthStore === 'function') loadModrinthStore(false);
@@ -505,7 +507,10 @@ function showAetherNotification(message, type = 'success', durationMs = 4500) {
   const banner = document.getElementById('aetherFeedbackBanner');
   if (banner) {
     banner.className = `aether-feedback-banner ${type}`;
-    banner.innerHTML = `<span>${message}</span>`;
+    banner.textContent = '';
+    const sp = document.createElement('span');
+    sp.textContent = String(message);
+    banner.appendChild(sp);
     if (activeBannerTimer) clearTimeout(activeBannerTimer);
     if (durationMs > 0) {
       activeBannerTimer = setTimeout(() => {
@@ -523,7 +528,9 @@ function showAetherNotification(message, type = 'success', durationMs = 4500) {
 
   const toast = document.createElement('div');
   toast.className = `aether-toast-popup ${type}`;
-  toast.innerHTML = `<span>${message}</span>`;
+  const toastSp = document.createElement('span');
+  toastSp.textContent = String(message);
+  toast.appendChild(toastSp);
   document.body.appendChild(toast);
   activeToastEl = toast;
 
@@ -605,9 +612,11 @@ function renderQuickVersionGrid() {
 function renderSavedAccounts() {
   const bar = document.getElementById('savedAccountsBar');
   if (!bar) return;
+  const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
   bar.innerHTML = state.savedAccounts.map((acc) => {
     const active = acc.toLowerCase() === state.username.toLowerCase() ? 'active' : '';
-    return `<div class="acc-chip ${active}" data-acc="${acc}"><span>👤 ${acc}</span>${state.savedAccounts.length > 1 ? `<span class="acc-chip-del" data-delacc="${acc}">×</span>` : ''}</div>`;
+    const safeAcc = esc(acc);
+    return `<div class="acc-chip ${active}" data-acc="${safeAcc}"><span>👤 ${safeAcc}</span>${state.savedAccounts.length > 1 ? `<span class="acc-chip-del" data-delacc="${safeAcc}">×</span>` : ''}</div>`;
   }).join('');
   bar.querySelectorAll('.acc-chip').forEach((chip) => {
     chip.onclick = (e) => {
@@ -864,6 +873,8 @@ function appendLog(line, type = 'normal') {
 }
 
 
+let lastNotifiedUpdateVersion = '';
+
 async function checkAndPromptLauncherUpdate(manualClick = false) {
   const updBtnText = document.getElementById('updateBtnText');
   if (manualClick && updBtnText) updBtnText.textContent = '⏳ Đang kiểm tra...';
@@ -881,7 +892,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
     if (manualClick) {
       await askUserAgreement({
         title: '✓ Launcher Đã Ở Phiên Bản Mới Nhất',
-        message: `Bạn đang sử dụng phiên bản mới nhất của BlockWay Launcher (v${res.currentVersion}). Khi nào có bản mới, Launcher sẽ tự động thông báo ngay lúc mở!`,
+        message: `Bạn đang sử dụng phiên bản mới nhất của BlockWay Launcher (v${res.currentVersion}). Khi nào có bản mới trên GitHub, Launcher sẽ tự động phát hiện và thông báo để bạn nhấn cập nhật!`,
         agreeText: 'Đã hiểu',
         cancelText: 'Đóng'
       });
@@ -890,12 +901,17 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
   }
 
   if (updBtnText) updBtnText.textContent = `🚀 Cập nhật v${res.latestVersion}!`;
-  if (typeof window.pushTopNotification === 'function') {
-    window.pushTopNotification(`🚀 Có bản cập nhật BlockWay Launcher v${res.latestVersion} (đang dùng v${res.currentVersion}).`);
+  const isNewDetectedVer = lastNotifiedUpdateVersion !== res.latestVersion;
+  if (isNewDetectedVer && typeof window.pushTopNotification === 'function') {
+    window.pushTopNotification(`🚀 Phát hiện bản cập nhật BlockWay Launcher v${res.latestVersion} (đang dùng v${res.currentVersion}). Bấm để cập nhật!`);
   }
+  // If detected via periodic background check and user already dismissed this exact version in the current session, don't interrupt again unless manualClick
+  if (!manualClick && !isNewDetectedVer) return;
+  lastNotifiedUpdateVersion = res.latestVersion;
+
   const ask = await askUserAgreement({
     title: `🚀 Có Bản Cập Nhật Launcher Mới (v${res.latestVersion})!`,
-    message: `Phát hiện phiên bản mới v${res.latestVersion} trên GitHub Cloud (bản hiện tại: v${res.currentVersion}). Bấm "Cập Nhật Ngay" để Launcher tự động tải về, tự tắt bản cũ và mở bản mới lên ngay lập tức!`,
+    message: `Phát hiện phiên bản mới v${res.latestVersion} trên GitHub Cloud (bản hiện tại: v${res.currentVersion}). Bấm "Cập Nhật Ngay" để Launcher tải về, tự tắt bản cũ và mở bản mới lên ngay lập tức!`,
     agreeText: '⚡ Cập Nhật Ngay (Tự tắt & Mở mới)',
     cancelText: 'Để sau'
   });
@@ -2033,6 +2049,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   await refreshLocalAddonsCount();
   const btnUpd = document.getElementById('btnCheckUpdate'); if (btnUpd) btnUpd.onclick = () => checkAndPromptLauncherUpdate(true);
   setTimeout(() => checkAndPromptLauncherUpdate(false), 1200);
+  // Tự động kiểm tra định kỳ mỗi 30 phút khi không trong game để phát hiện bản mới và hiện thông báo cho người dùng bấm cập nhật
+  setInterval(() => {
+    if (!state.isLaunching && state.launchPhase !== 'playing') {
+      checkAndPromptLauncherUpdate(false);
+    }
+  }, 30 * 60 * 1000);
   const verRes = await window.aetherAPI.getVersions();
   if (verRes.ok && verRes.data?.versions?.length) {
     state.versions = verRes.data.versions;

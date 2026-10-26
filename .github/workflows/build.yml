@@ -1,4 +1,4 @@
-name: Build Aether Craft v7.0 Windows EXE
+name: Build BlockWay Launcher Windows EXE
 
 on:
   push:
@@ -21,6 +21,13 @@ jobs:
         with:
           node-version: 20
 
+      - name: Read package.json version
+        id: pkg
+        shell: pwsh
+        run: |
+          $v = node -p "require('./package.json').version"
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Install dependencies in GitHub Cloud
         run: npm install
 
@@ -30,22 +37,20 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AetherCraft-v7.0
+          name: BlockWay-Launcher-v${{ steps.pkg.outputs.version }}
           path: dist/*.exe
 
-      - name: Publish GitHub Release v7.0.0
+      - name: Publish GitHub Release v${{ steps.pkg.outputs.version }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v7.0.0
-          name: "Aether Craft v7.0 — Mục Chọn Core & Phiên Bản Trực Tiếp Chuẩn Launcher (Không Gợi Ý Rối Mắt)"
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place"
           body: |
-            ### Aether Craft v7.0 — Giao Diện Chọn Core & Phiên Bản Trực Tiếp (Không Có Thẻ Gợi Ý Rối Mắt)
-            - **Loại bỏ hoàn toàn các thẻ gợi ý dựng sẵn** ở thanh bên và màn hình chính.
-            - **Mục Chọn Core & Phiên Bản Trực Tiếp Ngay Tại Màn Hình Chính & Thanh Đáy:**
-              - Chọn trực tiếp **5 Core Mod Loaders:** `Vanilla (Gốc)`, `Fabric`, `Forge`, `Quilt`, `Legacy Fabric`.
-              - Chọn trực tiếp **Phiên bản Minecraft** từ danh sách đầy đủ (`1.21.4` xuống `1.0`, có lọc `Release`, `Snapshot`, `Beta/Alpha` và ô tìm kiếm nhanh phiên bản).
-              - Chọn trực tiếp **Phiên bản Build của Core Loader** tương ứng với bản Minecraft đã chọn.
-            - **Bộ cài `AetherCraft-Setup-7.0.0.exe`** tạo Shortcut Desktop & Taskbar cố định không bao giờ lỗi mất file khi đóng mở lại.
+            ### ⚡ BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place
+            - **Giao diện Dashboard v33.0 PRO:** Bố cục Bento trực quan, 6 chủ đề màu sắc (BlockWay Navy, Trắng Sáng, Mojang, Modrinth, Feather, Cherry) và tự động thu phóng theo tỉ lệ cửa sổ.
+            - **Đồng bộ & Tự động phát hiện bản cập nhật GitHub:** Thông báo ngay khi có bản mới và cho phép người dùng chủ động nhấn **Cập Nhật Ngay** với cơ chế tải nguyên tử an toàn.
+            - **Hệ thống Tài khoản Đám mây 24/7 (Supabase PostgreSQL + Gmail OTP 6 số) & Bảo mật Zero-Trust RPC / CSP.**
+            - **Hỗ trợ 5 Core Mod Loaders (`Vanilla`, `Fabric`, `Forge`, `Quilt`, `Legacy Fabric`) & Kho 77,600+ Mods / Shaders Modrinth.**
           files: dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
