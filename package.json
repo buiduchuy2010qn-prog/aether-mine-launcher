@@ -1,6 +1,6 @@
 {
   "name": "blockway-launcher",
-  "version": "32.2.0",
+  "version": "32.2.1",
   "description": "BlockWay Launcher v32.2 PRO — Every World, One Place (24/7 Cloud ID, Real Gmail OTP, 77,600+ Modrinth Store)",
   "main": "src/main.js",
   "scripts": {

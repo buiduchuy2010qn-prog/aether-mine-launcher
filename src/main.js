@@ -79,7 +79,7 @@ async function ensureAppIconSyncedAndApplied() {
   try {
     const uiDir = path.join(__dirname, 'ui');
     const icoPath = path.join(uiDir, 'app-icon.ico');
-    const bwIcoPath = path.join(uiDir, 'app-icon-blockway.ico');
+    const bwIcoPath = path.join(uiDir, 'app-icon-blockway-v322.ico');
     const pngPath = path.join(uiDir, 'app-logo.png');
     const bannerPath = path.join(uiDir, 'app-banner.png');
     const baseRaw = 'https://raw.githubusercontent.com/buiduchuy2010qn-prog/blockway-launcher/main/src/ui';
@@ -119,7 +119,7 @@ async function ensureAppIconSyncedAndApplied() {
 
 function createWindow() {
   const icoPath = path.join(__dirname, 'ui', 'app-icon.ico');
-  const bwIcoPath = path.join(__dirname, 'ui', 'app-icon-blockway.ico');
+  const bwIcoPath = path.join(__dirname, 'ui', 'app-icon-blockway-v322.ico');
   if (fs.existsSync(icoPath)) {
     try { fs.copyFileSync(icoPath, bwIcoPath); } catch (_) {}
   }
