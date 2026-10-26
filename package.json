@@ -1,7 +1,7 @@
 {
   "name": "aether-craft-launcher",
-  "version": "31.4.0",
-  "description": "Aether Craft v31.4 PRO - Supabase PostgreSQL 24/7 with Anti-Bot Captcha & Anti-Spam Shield",
+  "version": "31.5.0",
+  "description": "Aether Craft v31.5 PRO - Separate Login/Register/Forgot Tabs & Zero-Trust Anti-Decompile Supabase RPC Security",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

@@ -16,7 +16,7 @@
         </div>
         <div class="brand-titles">
           <img src="minecraft-logo.png" class="titlebar-mc-logo" alt="MINECRAFT" draggable="false" />
-          <span class="brand-version">v31.4 PRO</span>
+          <span class="brand-version">v31.5 PRO</span>
         </div>
       </div>
 
@@ -303,31 +303,50 @@
                   <div id="panelAether" class="auth-input-area hidden">
                     <div id="aetherFeedbackBanner" class="aether-feedback-banner hidden"></div>
                     <div id="aetherNotLoggedBox" class="aether-auth-box">
-                      <div class="ver-label-bar" style="margin-bottom:1px;">
-                        <label class="field-label no-wrap-label" id="aetherFormTitle" style="margin:0;">☁️ Tự động lưu Tên &amp; Skin 3D (.PNG) theo Acc</label>
-                        <button class="btn-save-acc-mini" id="btnAetherForgotPass" title="Đặt lại mật khẩu mới khi quên mật khẩu">🔄 Quên MK?</button>
+                      <div class="aether-submode-tabs">
+                        <button class="aether-subtab-btn active" id="subTabAetherLogin">🔑 Đăng Nhập</button>
+                        <button class="aether-subtab-btn" id="subTabAetherRegister">✨ Tạo Tài Khoản</button>
+                        <button class="aether-subtab-btn" id="subTabAetherForgot">🔄 Quên MK</button>
                       </div>
-                      <div class="aether-inputs-row" id="aetherTopInputsRow">
-                        <input type="text" id="aetherLoginIdInput" class="pro-input" placeholder="Tài khoản / Email (vd: huy2010)..." />
-                        <input type="password" id="aetherPasswordInput" class="pro-input" placeholder="Mật khẩu (≥4 ký tự)..." />
+
+                      <!-- VIEW 1: ĐĂNG NHẬP RIÊNG BIỆT -->
+                      <div id="aetherViewLogin" class="aether-subview">
+                        <div class="aether-inputs-row">
+                          <input type="text" id="aetherLoginIdInput" class="pro-input" placeholder="Email hoặc Tên NV (vd: hi0bel)..." />
+                          <input type="password" id="aetherPasswordInput" class="pro-input" placeholder="Mật khẩu..." />
+                        </div>
+                        <button class="btn-sync-skin aether-btn-login" id="btnAetherLogin" style="width:100% !important;">🔑 Đăng Nhập Vào Aether Cloud</button>
                       </div>
-                      <div id="aetherCaptchaRow" class="aether-captcha-row hidden">
-                        <span class="aether-captcha-badge" id="aetherCaptchaQuestion">🛡️ Chống Bot: 7 + 4 = ?</span>
-                        <input type="text" id="aetherCaptchaInput" class="pro-input" maxlength="4" placeholder="Nhập kết quả..." />
-                        <button class="btn-save-acc-mini" id="btnRefreshCaptcha" title="Đổi phép tính Chống Bot mới">🔄</button>
+
+                      <!-- VIEW 2: TẠO TÀI KHOẢN MỚI RIÊNG BIỆT -->
+                      <div id="aetherViewRegister" class="aether-subview hidden">
+                        <input type="email" id="aetherRegEmailInput" class="pro-input" placeholder="Nhập Email Gmail của bạn (vd: huy@gmail.com)..." style="height:28px !important;font-size:11.5px !important;" />
+                        <div class="aether-inputs-row">
+                          <input type="text" id="aetherRegMcNameInput" class="pro-input" maxlength="16" placeholder="Tên nhân vật Game (3-16 ký tự)..." />
+                          <input type="password" id="aetherRegPassInput" class="pro-input" placeholder="Mật khẩu mới (≥4 ký tự)..." />
+                        </div>
+                        <div class="aether-captcha-row">
+                          <span class="aether-captcha-badge" id="aetherRegCaptchaQ">🛡️ Chống Bot: 7 + 4 = ?</span>
+                          <input type="text" id="aetherRegCaptchaInp" class="pro-input" maxlength="4" placeholder="Nhập kết quả..." />
+                          <button class="btn-save-acc-mini" id="btnRefreshRegCaptcha" title="Đổi phép tính mới">🔄</button>
+                        </div>
+                        <button class="btn-sync-skin aether-btn-reg" id="btnAetherRegister" style="width:100% !important;">✨ Xác Nhận Tạo Tài Khoản Mới</button>
                       </div>
-                      <div id="aetherResetBox" class="aether-reset-box hidden">
+
+                      <!-- VIEW 3: QUÊN MẬT KHẨU (OTP GMAIL) RIÊNG BIỆT -->
+                      <div id="aetherViewForgot" class="aether-subview hidden">
+                        <input type="email" id="aetherForgotEmailInput" class="pro-input" placeholder="Nhập Email Gmail đã đăng ký tài khoản..." style="height:28px !important;font-size:11.5px !important;" />
+                        <div class="aether-captcha-row">
+                          <span class="aether-captcha-badge" id="aetherOtpCaptchaQ">🛡️ Chống Bot: 5 + 3 = ?</span>
+                          <input type="text" id="aetherOtpCaptchaInp" class="pro-input" maxlength="4" placeholder="Nhập kết quả..." />
+                          <button class="btn-save-acc-mini" id="btnRefreshOtpCaptcha" title="Đổi phép tính mới">🔄</button>
+                        </div>
                         <button class="btn-sync-skin aether-btn-reg" id="btnAetherRequestOtp" style="height:27px !important;font-size:11px !important;width:100% !important;">📨 Bước 1: Gửi Mã OTP 6 Số Về Hộp Thư Gmail</button>
                         <div class="aether-inputs-row">
                           <input type="text" id="aetherOtpInput" class="pro-input" maxlength="6" placeholder="Nhập Mã OTP 6 số..." />
                           <input type="password" id="aetherResetNewPassInput" class="pro-input" placeholder="Mật khẩu mới (≥4 ký tự)..." />
                         </div>
                         <button class="btn-sync-skin aether-btn-login" id="btnAetherConfirmReset" style="height:27px !important;font-size:11px !important;width:100% !important;">✓ Bước 2: Xác Nhận Đặt Lại Mật Khẩu</button>
-                      </div>
-                      <div class="aether-actions-row" id="aetherNormalActions">
-                        <button class="btn-sync-skin aether-btn-login" id="btnAetherLogin">🔑 Đăng Nhập</button>
-                        <button class="btn-sync-skin aether-btn-reg" id="btnAetherRegister">✨ Tạo Tài Khoản</button>
-                        <button class="btn-sync-skin aether-btn-web" id="btnAetherBrowserLogin" title="Liên kết nhanh bằng tài khoản Email trên trình duyệt (Miễn phí 100%)">🌐 Liên Kết Trình Duyệt</button>
                       </div>
                     </div>
 

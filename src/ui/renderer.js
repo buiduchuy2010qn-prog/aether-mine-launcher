@@ -356,6 +356,7 @@ function syncCloudCosmeticsIfActive(notifyMsg = '') {
   if (state.authMode === 'aether' && state.cloudProfile?.accountId && window.aetherAPI?.cloudSyncCosmetics) {
     window.aetherAPI.cloudSyncCosmetics({
       accountId: state.cloudProfile.accountId,
+      sessionToken: state.cloudProfile.sessionToken || '',
       skinModel: state.skinModel,
       capeType: state.capeType,
       skinPreset: state.selectedSkinPreset,
@@ -1145,17 +1146,67 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (msg) showAetherNotification(msg, 'success', 5000);
   };
 
+  const subTabLogin = document.getElementById('subTabAetherLogin');
+  const subTabReg = document.getElementById('subTabAetherRegister');
+  const subTabForgot = document.getElementById('subTabAetherForgot');
+  const viewLogin = document.getElementById('aetherViewLogin');
+  const viewReg = document.getElementById('aetherViewRegister');
+  const viewForgot = document.getElementById('aetherViewForgot');
+
+  let regCaptchaAns = 11;
+  let otpCaptchaAns = 8;
+
+  const refreshRegCaptcha = () => {
+    const a = Math.floor(2 + Math.random() * 9);
+    const b = Math.floor(1 + Math.random() * 9);
+    regCaptchaAns = a + b;
+    const qEl = document.getElementById('aetherRegCaptchaQ');
+    const inpEl = document.getElementById('aetherRegCaptchaInp');
+    if (qEl) qEl.textContent = `🛡️ Chống Bot: ${a} + ${b} = ?`;
+    if (inpEl) inpEl.value = '';
+  };
+
+  const refreshOtpCaptcha = () => {
+    const a = Math.floor(2 + Math.random() * 9);
+    const b = Math.floor(1 + Math.random() * 9);
+    otpCaptchaAns = a + b;
+    const qEl = document.getElementById('aetherOtpCaptchaQ');
+    const inpEl = document.getElementById('aetherOtpCaptchaInp');
+    if (qEl) qEl.textContent = `🛡️ Chống Bot: ${a} + ${b} = ?`;
+    if (inpEl) inpEl.value = '';
+  };
+
+  refreshRegCaptcha();
+  refreshOtpCaptcha();
+  document.getElementById('btnRefreshRegCaptcha')?.addEventListener('click', refreshRegCaptcha);
+  document.getElementById('btnRefreshOtpCaptcha')?.addEventListener('click', refreshOtpCaptcha);
+
+  const switchAetherSubView = (mode) => {
+    subTabLogin?.classList.toggle('active', mode === 'login');
+    subTabReg?.classList.toggle('active', mode === 'register');
+    subTabForgot?.classList.toggle('active', mode === 'forgot');
+    viewLogin?.classList.toggle('hidden', mode !== 'login');
+    viewReg?.classList.toggle('hidden', mode !== 'register');
+    viewForgot?.classList.toggle('hidden', mode !== 'forgot');
+    if (mode === 'register') refreshRegCaptcha();
+    if (mode === 'forgot') refreshOtpCaptcha();
+  };
+
+  if (subTabLogin) subTabLogin.onclick = () => switchAetherSubView('login');
+  if (subTabReg) subTabReg.onclick = () => switchAetherSubView('register');
+  if (subTabForgot) subTabForgot.onclick = () => switchAetherSubView('forgot');
+
   const btnAetherLogin = document.getElementById('btnAetherLogin');
   if (btnAetherLogin) {
     btnAetherLogin.onclick = async () => {
       const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
       const password = document.getElementById('aetherPasswordInput')?.value || '';
       btnAetherLogin.disabled = true;
-      btnAetherLogin.textContent = '⏳ Đang kiểm tra...';
-      showAetherNotification('☁️ Đang kết nối Internet Database 24/7 để đăng nhập...', 'info', 2500);
+      btnAetherLogin.textContent = '⏳ Đang kiểm tra bảo mật...';
+      showAetherNotification('☁️ Đang xác thực tài khoản trên Supabase Server 24/7...', 'info', 2500);
       const res = await window.aetherAPI.cloudLogin({ loginId, password, customDbUrl: state.customDbUrl });
       btnAetherLogin.disabled = false;
-      btnAetherLogin.textContent = '🔑 Đăng Nhập';
+      btnAetherLogin.textContent = '🔑 Đăng Nhập Vào Aether Cloud';
       if (res?.ok && res.profile) {
         applyCloudProfileToUI(res.profile, `✅ Đăng nhập thành công! Nhân vật: ${res.profile.mcUsername} (${res.profile.loginId})`);
       } else if (res?.error) {
@@ -1164,61 +1215,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  let expectedCaptchaAnswer = 11;
-  const captchaRow = document.getElementById('aetherCaptchaRow');
-  const captchaQEl = document.getElementById('aetherCaptchaQuestion');
-  const captchaInp = document.getElementById('aetherCaptchaInput');
-  const btnRefreshCap = document.getElementById('btnRefreshCaptcha');
-
-  const generateNewCaptcha = () => {
-    const a = Math.floor(2 + Math.random() * 9);
-    const b = Math.floor(1 + Math.random() * 9);
-    expectedCaptchaAnswer = a + b;
-    if (captchaQEl) captchaQEl.textContent = `🛡️ Chống Bot: ${a} + ${b} = ?`;
-    if (captchaInp) captchaInp.value = '';
-  };
-  generateNewCaptcha();
-  if (btnRefreshCap) btnRefreshCap.onclick = () => { generateNewCaptcha(); captchaInp?.focus(); };
-
-  const verifyOrOpenCaptcha = () => {
-    if (!captchaRow || !captchaInp) return true;
-    if (captchaRow.classList.contains('hidden')) {
-      generateNewCaptcha();
-      captchaRow.classList.remove('hidden');
-      captchaInp.focus();
-      showAetherNotification(`🛡️ Bảo vệ Chống Bot Spam: Vui lòng nhập kết quả phép tính (${captchaQEl?.textContent.replace('🛡️ Chống Bot: ', '')}) rồi bấm lại nút!`, 'info', 5000);
-      return false;
-    }
-    const val = parseInt(captchaInp.value.trim(), 10);
-    if (val !== expectedCaptchaAnswer) {
-      generateNewCaptcha();
-      captchaInp.focus();
-      showAetherNotification('⚠️ Sai kết quả phép tính Chống Bot Spam! Đã đổi câu hỏi mới, vui lòng nhập lại.', 'error', 4500);
-      return false;
-    }
-    captchaRow.classList.add('hidden');
-    generateNewCaptcha();
-    return true;
-  };
-
   const btnAetherReg = document.getElementById('btnAetherRegister');
   if (btnAetherReg) {
     btnAetherReg.onclick = async () => {
-      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
-      const password = document.getElementById('aetherPasswordInput')?.value || '';
+      const loginId = document.getElementById('aetherRegEmailInput')?.value.trim() || '';
+      const customMcName = document.getElementById('aetherRegMcNameInput')?.value.trim() || '';
+      const password = document.getElementById('aetherRegPassInput')?.value || '';
+      const capVal = parseInt(document.getElementById('aetherRegCaptchaInp')?.value.trim() || '', 10);
+
       if (!loginId || password.length < 4) {
-        showAetherNotification('⚠️ Vui lòng nhập Tài khoản / Email và Mật khẩu (≥4 ký tự) trước khi Tạo Tài Khoản!', 'error', 4500);
+        showAetherNotification('⚠️ Vui lòng nhập đầy đủ Email Gmail và Mật khẩu (≥4 ký tự)!', 'error', 4500);
         return;
       }
-      if (!verifyOrOpenCaptcha()) return;
-      const suggestedMc = loginId.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16);
+      if (capVal !== regCaptchaAns) {
+        refreshRegCaptcha();
+        showAetherNotification('⚠️ Sai kết quả phép tính Chống Bot Spam! Đã đổi câu hỏi mới, vui lòng nhập lại.', 'error', 4500);
+        return;
+      }
+
+      const fallbackMc = loginId.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16);
       btnAetherReg.disabled = true;
-      btnAetherReg.textContent = '⏳ Đang tạo...';
+      btnAetherReg.textContent = '⏳ Đang khởi tạo trên Supabase...';
       showAetherNotification('☁️ Đang tạo tài khoản mới trên Supabase PostgreSQL 24/7...', 'info', 2500);
       const res = await window.aetherAPI.cloudRegister({
         loginId,
         password,
-        mcUsername: suggestedMc.length >= 3 ? suggestedMc : (state.username || 'Player'),
+        mcUsername: customMcName.length >= 3 ? customMcName : (fallbackMc.length >= 3 ? fallbackMc : 'AetherPlayer'),
         skinModel: state.skinModel,
         capeType: state.capeType,
         skinPreset: state.selectedSkinPreset,
@@ -1226,60 +1248,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         customDbUrl: state.customDbUrl
       });
       btnAetherReg.disabled = false;
-      btnAetherReg.textContent = '✨ Tạo Tài Khoản';
+      btnAetherReg.textContent = '✨ Xác Nhận Tạo Tài Khoản Mới';
+      refreshRegCaptcha();
       if (res?.ok && res.profile) {
         applyCloudProfileToUI(res.profile, `🎉 Tạo tài khoản Aether Cloud thành công! Nhân vật: "${res.profile.mcUsername}"`);
       } else if (res?.error) {
         showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
-      }
-    };
-  }
-
-  const btnAetherWeb = document.getElementById('btnAetherBrowserLogin');
-  if (btnAetherWeb) {
-    btnAetherWeb.onclick = async () => {
-      btnAetherWeb.disabled = true;
-      btnAetherWeb.textContent = '🌐 Đang mở Trình duyệt...';
-      showAetherNotification('🌐 Đã mở Cổng Web Aether Cloud — Đăng nhập/Đăng ký trên trình duyệt để đồng bộ!', 'info', 4000);
-      const res = await window.aetherAPI.cloudBrowserLogin({ customDbUrl: state.customDbUrl });
-      btnAetherWeb.disabled = false;
-      btnAetherWeb.textContent = '🌐 Liên Kết Trình Duyệt';
-      if (res?.ok && res.profile) {
-        applyCloudProfileToUI(res.profile, `✅ Đã liên kết & đăng nhập Aether Cloud: ${res.profile.mcUsername} (${res.profile.loginId})!`);
-      } else if (res?.error) {
-        showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
-      }
-    };
-  }
-
-  const btnForgotPass = document.getElementById('btnAetherForgotPass');
-  const resetBox = document.getElementById('aetherResetBox');
-  const topInputsRow = document.getElementById('aetherTopInputsRow');
-  const normalPassInput = document.getElementById('aetherPasswordInput');
-  const normalActionsRow = document.getElementById('aetherNormalActions');
-  const formTitleLabel = document.getElementById('aetherFormTitle');
-
-  const setForgotPassMode = (isForgot) => {
-    if (!resetBox) return;
-    resetBox.classList.toggle('hidden', !isForgot);
-    if (normalPassInput) normalPassInput.classList.toggle('hidden', isForgot);
-    if (topInputsRow) topInputsRow.classList.toggle('single-col', isForgot);
-    if (normalActionsRow) normalActionsRow.classList.toggle('hidden', isForgot);
-    if (!isForgot && captchaRow) captchaRow.classList.add('hidden');
-    if (btnForgotPass) btnForgotPass.textContent = isForgot ? '← Quay lại Đăng nhập' : '🔄 Quên MK?';
-    if (formTitleLabel) {
-      formTitleLabel.textContent = isForgot
-        ? '🔐 Khôi phục mật khẩu bằng Mã OTP 6 số'
-        : '☁️ Tự động lưu Tên & Skin 3D (.PNG) theo Acc';
-    }
-  };
-
-  if (btnForgotPass && resetBox) {
-    btnForgotPass.onclick = () => {
-      const willOpen = resetBox.classList.contains('hidden');
-      setForgotPassMode(willOpen);
-      if (willOpen) {
-        document.getElementById('aetherLoginIdInput')?.focus();
       }
     };
   }
@@ -1306,13 +1280,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnRequestOtp = document.getElementById('btnAetherRequestOtp');
   if (btnRequestOtp) {
     btnRequestOtp.onclick = async () => {
-      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
+      const loginId = document.getElementById('aetherForgotEmailInput')?.value.trim() || '';
+      const capVal = parseInt(document.getElementById('aetherOtpCaptchaInp')?.value.trim() || '', 10);
       if (!loginId) {
-        showAetherNotification('⚠️ Vui lòng nhập Tài khoản / Email vào ô bên trên trước khi bấm Nhận Mã OTP!', 'error', 5000);
-        document.getElementById('aetherLoginIdInput')?.focus();
+        showAetherNotification('⚠️ Vui lòng nhập Email Gmail đã đăng ký vào ô bên trên!', 'error', 5000);
+        document.getElementById('aetherForgotEmailInput')?.focus();
         return;
       }
-      if (!verifyOrOpenCaptcha()) return;
+      if (capVal !== otpCaptchaAns) {
+        refreshOtpCaptcha();
+        showAetherNotification('⚠️ Sai kết quả phép tính Chống Bot Spam! Đã đổi câu hỏi mới, vui lòng nhập lại.', 'error', 4500);
+        return;
+      }
       btnRequestOtp.disabled = true;
       btnRequestOtp.textContent = '📨 Đang gửi Email qua Supabase...';
       showAetherNotification(`📨 Đang gửi thư xác thực từ Supabase về hộp thư Gmail của "${loginId}"...`, 'info', 3500);
@@ -1320,6 +1299,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         loginId,
         customDbUrl: state.customDbUrl
       });
+      refreshOtpCaptcha();
       if (res?.ok) {
         startOtpButtonCooldown(btnRequestOtp, 60);
         showAetherNotification(`📨 Đã gửi Email khôi phục về hộp thư Gmail "${res.loginId}"! Hãy mở Gmail của bạn để lấy Mã OTP 6 số.`, 'success', 8000);
@@ -1335,7 +1315,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnConfirmReset = document.getElementById('btnAetherConfirmReset');
   if (btnConfirmReset) {
     btnConfirmReset.onclick = async () => {
-      const loginId = document.getElementById('aetherLoginIdInput')?.value.trim() || '';
+      const loginId = document.getElementById('aetherForgotEmailInput')?.value.trim() || '';
       const otpCode = document.getElementById('aetherOtpInput')?.value.trim() || '';
       const newPassword = document.getElementById('aetherResetNewPassInput')?.value || '';
       btnConfirmReset.disabled = true;
@@ -1349,7 +1329,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnConfirmReset.disabled = false;
       btnConfirmReset.textContent = '✓ Bước 2: Xác Nhận Đặt Lại Mật Khẩu';
       if (res?.ok && res.profile) {
-        setForgotPassMode(false);
+        switchAetherSubView('login');
         applyCloudProfileToUI(res.profile, `✅ Đã xác thực OTP & đặt lại mật khẩu mới thành công cho "${res.profile.mcUsername}"!`);
       } else if (res?.error) {
         showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
@@ -1401,6 +1381,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnSavePass.textContent = 'Đang lưu...';
       const res = await window.aetherAPI.cloudChangePassword({
         accountId: state.cloudProfile.accountId,
+        sessionToken: state.cloudProfile.sessionToken || '',
         oldPassword,
         newPassword,
         customDbUrl: state.customDbUrl
@@ -1408,6 +1389,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnSavePass.disabled = false;
       btnSavePass.textContent = 'Lưu MK';
       if (res?.ok && res.profile) {
+        state.cloudProfile = res.profile;
+        saveCurrentConfig();
         changePassRow?.classList.add('hidden');
         showAetherNotification(`✅ Đã xác minh mật khẩu cũ & đổi mật khẩu mới thành công cho "${res.profile.loginId}"!`, 'success', 5500);
       } else if (res?.error) {
@@ -1425,6 +1408,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnSaveName.textContent = 'Đang lưu...';
       const res = await window.aetherAPI.cloudChangeUsername({
         accountId: state.cloudProfile.accountId,
+        sessionToken: state.cloudProfile.sessionToken || '',
         newMcUsername,
         customDbUrl: state.customDbUrl
       });

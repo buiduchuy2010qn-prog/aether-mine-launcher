@@ -432,20 +432,18 @@ function getLocalCachePath() {
   }
 }
 
-function readLocalCache() {
+function purgeLegacyDiskCache() {
   try {
     const p = getLocalCachePath();
     if (fs.existsSync(p)) {
-      const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
-      if (parsed && typeof parsed.users === 'object') {
-        return {
-          cloudObjectId: parsed.cloudObjectId || DEFAULT_CLOUD_OBJECT_ID,
-          users: parsed.users || {},
-          usernames: parsed.usernames || {}
-        };
-      }
+      fs.unlinkSync(p);
     }
   } catch (_) {}
+}
+
+function readLocalCache() {
+  // ZERO-TRUST SECURITY: Never store or read full account tables / password hashes on local disk
+  purgeLegacyDiskCache();
   return {
     cloudObjectId: DEFAULT_CLOUD_OBJECT_ID,
     users: {},
@@ -453,11 +451,40 @@ function readLocalCache() {
   };
 }
 
-function writeLocalCache(dbData) {
+function writeLocalCache(_dbData) {
+  // ZERO-TRUST SECURITY: Never write account tables or password hashes to local disk
+  purgeLegacyDiskCache();
+}
+
+function generateSessionToken() {
+  return 'ast_' + crypto.randomBytes(24).toString('hex');
+}
+
+async function callSupabaseRpc(fnName, params = {}) {
   try {
-    const p = getLocalCachePath();
-    fs.writeFileSync(p, JSON.stringify(dbData, null, 2), 'utf8');
-  } catch (_) {}
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+      method: 'POST',
+      headers: getSupabaseHeaders({ Accept: 'application/json' }),
+      body: JSON.stringify(params)
+    });
+    if (res.status === 404) {
+      return { rpcUnavailable: true };
+    }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      const msg = data?.message || data?.error || '';
+      if (String(msg).includes('Could not find the function')) {
+        return { rpcUnavailable: true };
+      }
+      return { ok: false, error: msg || `Lỗi RPC (${res.status})` };
+    }
+    if (data && typeof data === 'object') {
+      return data;
+    }
+    return { rpcUnavailable: true };
+  } catch (_) {
+    return { rpcUnavailable: true };
+  }
 }
 
 function hashPassword(rawPassword) {
@@ -658,17 +685,18 @@ function resetFailedAuthAttempts() {
 function toPublicProfile(userRecord) {
   if (!userRecord) return null;
   return {
-    accountId: userRecord.accountId,
-    loginId: userRecord.loginId,
-    mcUsername: userRecord.mcUsername,
-    uuid: userRecord.uuid || generateOfflineUUID(userRecord.mcUsername),
-    skinModel: userRecord.skinModel || 'default',
-    capeType: userRecord.capeType || 'mojang',
-    skinPreset: userRecord.skinPreset || '',
-    skinDataUrl: userRecord.skinDataUrl || '',
-    authProvider: userRecord.authProvider || 'password',
-    createdAt: userRecord.createdAt,
-    updatedAt: userRecord.updatedAt
+    accountId: userRecord.accountId || userRecord.account_id,
+    loginId: userRecord.loginId || userRecord.login_id,
+    mcUsername: userRecord.mcUsername || userRecord.mc_username,
+    uuid: userRecord.uuid || generateOfflineUUID(userRecord.mcUsername || userRecord.mc_username),
+    skinModel: userRecord.skinModel || userRecord.skin_model || 'default',
+    capeType: userRecord.capeType || userRecord.cape_type || 'mojang',
+    skinPreset: userRecord.skinPreset || userRecord.skin_preset || '',
+    skinDataUrl: userRecord.skinDataUrl || userRecord.skin_data_url || '',
+    sessionToken: userRecord.sessionToken || userRecord.session_token || '',
+    authProvider: userRecord.authProvider || 'supabase_zero_trust',
+    createdAt: Number(userRecord.createdAt || userRecord.created_at) || Date.now(),
+    updatedAt: Number(userRecord.updatedAt || userRecord.updated_at) || Date.now()
   };
 }
 
@@ -709,13 +737,43 @@ async function registerCloudAccount({
     throw new Error('Tên nhân vật (Username) phải từ 3 đến 16 ký tự chữ hoặc số!');
   }
 
+  const accountId = 'ac_' + crypto.randomBytes(6).toString('hex');
+  const sessionToken = generateSessionToken();
+  const passHash = hashPassword(password);
+  const cleanSkinUrl = (typeof skinDataUrl === 'string' && skinDataUrl.length < 35000) ? skinDataUrl : '';
+
+  // 1. Try Server-Side Zero-Trust Supabase RPC first
+  const rpcRes = await callSupabaseRpc('aether_rpc_register', {
+    p_account_id: accountId,
+    p_login_id: cleanLogin,
+    p_password_hash: passHash,
+    p_mc_username: desiredMcName,
+    p_uuid: generateOfflineUUID(desiredMcName),
+    p_skin_model: skinModel || 'default',
+    p_cape_type: capeType || 'mojang',
+    p_skin_preset: skinPreset || '',
+    p_skin_data_url: cleanSkinUrl,
+    p_session_token: sessionToken,
+    p_now: now
+  });
+
+  if (!rpcRes.rpcUnavailable) {
+    if (!rpcRes.ok) {
+      throw new Error(rpcRes.error || 'Không thể đăng ký tài khoản trên Supabase Cloud!');
+    }
+    antiSpamState.lastRegisterAt = Date.now();
+    resetFailedAuthAttempts();
+    return toPublicProfile({ ...rpcRes.profile, sessionToken });
+  }
+
+  // 2. Fallback if user hasn't run the SQL RPC Lock script yet
   const db = await fetchCloudDatabase(customDbUrl);
 
   const existingAccount = Object.values(db.users).find(
     (u) => u.loginId && u.loginId.toLowerCase() === cleanLogin
   );
   if (existingAccount) {
-    throw new Error(`Tài khoản "${loginId}" đã được đăng ký trên Aether Cloud! Hãy bấm nút "Đăng Nhập".`);
+    throw new Error(`Tài khoản "${loginId}" đã được đăng ký trên Aether Cloud! Hãy chuyển sang mục "🔑 Đăng Nhập".`);
   }
 
   const nameKey = desiredMcName.toLowerCase();
@@ -724,17 +782,17 @@ async function registerCloudAccount({
     throw new Error(`Tên nhân vật "${desiredMcName}" đã có người sở hữu trên Aether Cloud! Bạn hãy chọn tên khác nhé.`);
   }
 
-  const accountId = 'ac_' + crypto.randomBytes(6).toString('hex');
   const newUser = {
     accountId,
     loginId: cleanLogin,
-    passwordHash: hashPassword(password),
+    passwordHash: passHash,
     mcUsername: desiredMcName,
     uuid: generateOfflineUUID(desiredMcName),
     skinModel: skinModel || 'default',
     capeType: capeType || 'mojang',
     skinPreset: skinPreset || '',
-    skinDataUrl: (typeof skinDataUrl === 'string' && skinDataUrl.length < 35000) ? skinDataUrl : '',
+    skinDataUrl: cleanSkinUrl,
+    sessionToken,
     authProvider: 'password',
     createdAt: now,
     updatedAt: now
@@ -757,8 +815,28 @@ async function loginCloudAccount({ loginId, password, customDbUrl = '' }) {
     throw new Error('Vui lòng nhập đầy đủ Tên tài khoản và Mật khẩu!');
   }
 
-  const db = await fetchCloudDatabase(customDbUrl);
   const passHash = hashPassword(password);
+  const sessionToken = generateSessionToken();
+
+  // 1. Try Server-Side Zero-Trust Supabase RPC first (Never exposes password_hash to client!)
+  const rpcRes = await callSupabaseRpc('aether_rpc_login', {
+    p_login_id: cleanLogin,
+    p_password_hash: passHash,
+    p_session_token: sessionToken,
+    p_now: Date.now()
+  });
+
+  if (!rpcRes.rpcUnavailable) {
+    if (!rpcRes.ok) {
+      recordFailedAuthAttempt();
+      throw new Error(`${rpcRes.error || 'Sai tài khoản hoặc mật khẩu!'} (Còn ${5 - antiSpamState.failedAttempts} lần thử trước khi khóa chống Bot).`);
+    }
+    resetFailedAuthAttempts();
+    return toPublicProfile({ ...rpcRes.profile, sessionToken });
+  }
+
+  // 2. Fallback if user hasn't run the SQL RPC Lock script yet
+  const db = await fetchCloudDatabase(customDbUrl);
 
   const user = Object.values(db.users).find(
     (u) =>
@@ -768,7 +846,7 @@ async function loginCloudAccount({ loginId, password, customDbUrl = '' }) {
 
   if (!user) {
     recordFailedAuthAttempt();
-    throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud! Nếu chưa có tài khoản, hãy bấm "Tạo Tài Khoản".`);
+    throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Aether Cloud! Nếu chưa có tài khoản, hãy chuyển sang mục "✨ Tạo Tài Khoản".`);
   }
 
   if (user.passwordHash !== passHash) {
@@ -778,11 +856,12 @@ async function loginCloudAccount({ loginId, password, customDbUrl = '' }) {
 
   resetFailedAuthAttempts();
   user.updatedAt = Date.now();
+  user.sessionToken = sessionToken;
   await saveCloudDatabase(db, customDbUrl);
   return toPublicProfile(user);
 }
 
-async function changeCloudUsername({ accountId, newMcUsername, customDbUrl = '' }) {
+async function changeCloudUsername({ accountId, sessionToken = '', newMcUsername, customDbUrl = '' }) {
   if (!accountId) {
     throw new Error('Bạn cần đăng nhập tài khoản Aether Cloud trước khi đổi tên!');
   }
@@ -798,6 +877,24 @@ async function changeCloudUsername({ accountId, newMcUsername, customDbUrl = '' 
     throw new Error('Tên nhân vật mới phải từ 3 đến 16 ký tự (chữ cái, chữ số hoặc dấu gạch dưới _)!');
   }
 
+  // 1. Try Server-Side Zero-Trust Supabase RPC first
+  const rpcRes = await callSupabaseRpc('aether_rpc_rename', {
+    p_account_id: accountId,
+    p_session_token: sessionToken || '',
+    p_new_mc_username: cleanNewName,
+    p_new_uuid: generateOfflineUUID(cleanNewName),
+    p_now: now
+  });
+
+  if (!rpcRes.rpcUnavailable) {
+    if (!rpcRes.ok) {
+      throw new Error(rpcRes.error || 'Không thể đổi tên nhân vật!');
+    }
+    antiSpamState.lastRenameAt = Date.now();
+    return toPublicProfile({ ...rpcRes.profile, sessionToken });
+  }
+
+  // 2. Fallback
   const db = await fetchCloudDatabase(customDbUrl);
   const user = db.users[accountId];
   if (!user) {
@@ -822,11 +919,28 @@ async function changeCloudUsername({ accountId, newMcUsername, customDbUrl = '' 
 
   await saveCloudDatabase(db, customDbUrl);
   antiSpamState.lastRenameAt = Date.now();
-  return toPublicProfile(user);
+  return toPublicProfile({ ...user, sessionToken });
 }
 
-async function syncCloudCosmetics({ accountId, skinModel, capeType, skinPreset, skinDataUrl, customDbUrl = '' }) {
+async function syncCloudCosmetics({ accountId, sessionToken = '', skinModel, capeType, skinPreset, skinDataUrl, customDbUrl = '' }) {
   if (!accountId) return null;
+  const cleanSkinUrl = (typeof skinDataUrl === 'string' && skinDataUrl.startsWith('data:image/png;base64,') && skinDataUrl.length < 35000) ? skinDataUrl : '';
+
+  const rpcRes = await callSupabaseRpc('aether_rpc_sync_cosmetics', {
+    p_account_id: accountId,
+    p_session_token: sessionToken || '',
+    p_skin_model: skinModel || 'default',
+    p_cape_type: capeType || 'mojang',
+    p_skin_preset: typeof skinPreset === 'string' ? skinPreset : '',
+    p_skin_data_url: cleanSkinUrl,
+    p_now: Date.now()
+  });
+
+  if (!rpcRes.rpcUnavailable) {
+    if (!rpcRes.ok) return null;
+    return toPublicProfile({ ...rpcRes.profile, sessionToken });
+  }
+
   const db = await fetchCloudDatabase(customDbUrl);
   const user = db.users[accountId];
   if (!user) return null;
@@ -834,16 +948,16 @@ async function syncCloudCosmetics({ accountId, skinModel, capeType, skinPreset, 
   if (skinModel) user.skinModel = skinModel;
   if (capeType) user.capeType = capeType;
   if (typeof skinPreset === 'string') user.skinPreset = skinPreset;
-  if (typeof skinDataUrl === 'string' && skinDataUrl.startsWith('data:image/png;base64,') && skinDataUrl.length < 35000) {
-    user.skinDataUrl = skinDataUrl;
+  if (cleanSkinUrl) {
+    user.skinDataUrl = cleanSkinUrl;
   }
   user.updatedAt = Date.now();
 
   await saveCloudDatabase(db, customDbUrl);
-  return toPublicProfile(user);
+  return toPublicProfile({ ...user, sessionToken });
 }
 
-async function changeCloudPassword({ accountId, oldPassword, newPassword, customDbUrl = '' }) {
+async function changeCloudPassword({ accountId, sessionToken = '', oldPassword, newPassword, customDbUrl = '' }) {
   if (!accountId) {
     throw new Error('Bạn cần đăng nhập tài khoản Aether Cloud trước!');
   }
@@ -854,18 +968,39 @@ async function changeCloudPassword({ accountId, oldPassword, newPassword, custom
     throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
   }
 
+  const oldHash = hashPassword(oldPassword);
+  const newHash = hashPassword(newPassword);
+  const nextSessionToken = generateSessionToken();
+
+  // 1. Try Server-Side Zero-Trust Supabase RPC first
+  const rpcRes = await callSupabaseRpc('aether_rpc_change_password', {
+    p_account_id: accountId,
+    p_old_password_hash: oldHash,
+    p_new_password_hash: newHash,
+    p_new_session_token: nextSessionToken,
+    p_now: Date.now()
+  });
+
+  if (!rpcRes.rpcUnavailable) {
+    if (!rpcRes.ok) {
+      throw new Error(rpcRes.error || '⚠️ Mật khẩu cũ không chính xác!');
+    }
+    return toPublicProfile({ ...rpcRes.profile, sessionToken: nextSessionToken });
+  }
+
+  // 2. Fallback
   const db = await fetchCloudDatabase(customDbUrl);
   const user = db.users[accountId];
   if (!user) {
     throw new Error('Không tìm thấy hồ sơ tài khoản trên Aether Cloud!');
   }
 
-  const oldHash = hashPassword(oldPassword);
   if (user.passwordHash && user.passwordHash !== oldHash) {
     throw new Error('⚠️ Mật khẩu cũ không chính xác! Vui lòng nhập đúng mật khẩu hiện tại.');
   }
 
-  user.passwordHash = hashPassword(newPassword);
+  user.passwordHash = newHash;
+  user.sessionToken = nextSessionToken;
   user.authProvider = 'password';
   user.updatedAt = Date.now();
   await saveCloudDatabase(db, customDbUrl);
@@ -888,31 +1023,56 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
         return reject(new Error('Vui lòng nhập Email hoặc Tên tài khoản ở ô bên trên trước khi bấm Nhận Mã OTP!'));
       }
 
-      const db = await fetchCloudDatabase(customDbUrl);
-      const user = Object.values(db.users).find(
-        (u) =>
-          (u.loginId && u.loginId.toLowerCase() === cleanLogin) ||
-          (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
-      );
-
-      if (!user) {
-        return reject(new Error(`Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud Database!`));
-      }
-
-      if (!user.loginId || !user.loginId.includes('@')) {
-        return reject(new Error(`Tài khoản "${user.loginId}" không đăng ký bằng địa chỉ Email nên không thể gửi thư OTP về Gmail!`));
-      }
-
-      // Database-level cooldown check (10 min expiry -> if > 9 min remaining, it was requested < 60s ago)
-      if (user.resetOtpExpires && (user.resetOtpExpires - now) > 9 * 60 * 1000) {
-        const waitDbSec = Math.ceil(((user.resetOtpExpires - now) - 9 * 60 * 1000) / 1000);
-        return reject(new Error(`🛡️ Chống Spam: Mã OTP đã được gửi tới Gmail "${user.loginId}"! Vui lòng đợi ${waitDbSec}s để gửi lại.`));
-      }
-
       const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-      db.users[user.accountId].resetOtpHash = hashPassword(otpCode);
-      db.users[user.accountId].resetOtpExpires = now + 10 * 60 * 1000;
-      await saveCloudDatabase(db, customDbUrl);
+      const otpHash = hashPassword(otpCode);
+      const otpExpires = now + 10 * 60 * 1000;
+
+      let targetEmail = '';
+      let targetMcUsername = '';
+
+      // 1. Try Server-Side Zero-Trust Supabase RPC first
+      const rpcRes = await callSupabaseRpc('aether_rpc_prepare_otp', {
+        p_login_id: cleanLogin,
+        p_otp_hash: otpHash,
+        p_otp_expires: otpExpires,
+        p_now: now
+      });
+
+      if (!rpcRes.rpcUnavailable) {
+        if (!rpcRes.ok) {
+          return reject(new Error(rpcRes.error || `Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud!`));
+        }
+        targetEmail = rpcRes.login_id;
+        targetMcUsername = rpcRes.mc_username;
+      } else {
+        // 2. Fallback
+        const db = await fetchCloudDatabase(customDbUrl);
+        const user = Object.values(db.users).find(
+          (u) =>
+            (u.loginId && u.loginId.toLowerCase() === cleanLogin) ||
+            (u.mcUsername && u.mcUsername.toLowerCase() === cleanLogin)
+        );
+
+        if (!user) {
+          return reject(new Error(`Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud Database!`));
+        }
+
+        if (!user.loginId || !user.loginId.includes('@')) {
+          return reject(new Error(`Tài khoản "${user.loginId}" không đăng ký bằng địa chỉ Email nên không thể gửi thư OTP về Gmail!`));
+        }
+
+        if (user.resetOtpExpires && (user.resetOtpExpires - now) > 9 * 60 * 1000) {
+          const waitDbSec = Math.ceil(((user.resetOtpExpires - now) - 9 * 60 * 1000) / 1000);
+          return reject(new Error(`🛡️ Chống Spam: Mã OTP đã được gửi tới Gmail "${user.loginId}"! Vui lòng đợi ${waitDbSec}s để gửi lại.`));
+        }
+
+        db.users[user.accountId].resetOtpHash = otpHash;
+        db.users[user.accountId].resetOtpExpires = otpExpires;
+        await saveCloudDatabase(db, customDbUrl);
+        targetEmail = user.loginId;
+        targetMcUsername = user.mcUsername;
+      }
+
       antiSpamState.lastOtpAt = Date.now();
 
       // Listen on localhost:3000 in case the user clicks the Magic Link inside their real Gmail email from Supabase
@@ -935,7 +1095,7 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
             if (uRes.ok) {
               const uData = await uRes.json();
               const verifiedEmail = String(uData?.email || '').trim().toLowerCase();
-              if (verifiedEmail === user.loginId.toLowerCase()) {
+              if (verifiedEmail === targetEmail.toLowerCase()) {
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                 return res.end(JSON.stringify({ ok: true, otpCode }));
               }
@@ -946,14 +1106,14 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
         }
 
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Xác Thực Email Gmail — Aether Cloud (Supabase)</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',system-ui,sans-serif}.card{background:#111827;border:2px solid #22c55e;border-radius:18px;padding:34px 40px;text-align:center;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(34,197,94,0.16);color:#4ade80;font-weight:800;font-size:12px;margin-bottom:10px}h2{color:#4ade80;margin:0 0 8px;font-size:21px}.otp{margin:18px 0;padding:16px 22px;background:rgba(34,197,94,0.14);border:2px dashed #22c55e;border-radius:14px;font-weight:900;font-size:36px;letter-spacing:10px;color:#fff;user-select:all}.btn{background:#16a34a;color:#fff;border:none;padding:11px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px}</style></head><body><div class="card"><div class="badge">⚡ SUPABASE GMAIL VERIFIED</div><h2 id="titleText">⏳ Đang kiểm tra liên kết từ Gmail...</h2><p style="color:#cbd5e1;font-size:14px;">Tài khoản: <strong style="color:#fff;">${user.loginId}</strong> (Nhân vật: <strong style="color:#38bdf8;">${user.mcUsername}</strong>)</p><div class="otp" id="otpVal">••••••</div><button class="btn" id="copyBtn" style="display:none;">📋 Sao chép Mã OTP 6 Số</button><p style="font-size:13px;color:#94a3b8;margin-top:16px;" id="subHint">Vui lòng mở thư từ Supabase trong hộp thư Gmail của bạn.</p></div><script>
+        res.end(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"/><title>Xác Thực Email Gmail — Aether Cloud (Supabase)</title><style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#090d16;color:#f8fafc;font-family:'Segoe UI',system-ui,sans-serif}.card{background:#111827;border:2px solid #22c55e;border-radius:18px;padding:34px 40px;text-align:center;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.7)}.badge{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(34,197,94,0.16);color:#4ade80;font-weight:800;font-size:12px;margin-bottom:10px}h2{color:#4ade80;margin:0 0 8px;font-size:21px}.otp{margin:18px 0;padding:16px 22px;background:rgba(34,197,94,0.14);border:2px dashed #22c55e;border-radius:14px;font-weight:900;font-size:36px;letter-spacing:10px;color:#fff;user-select:all}.btn{background:#16a34a;color:#fff;border:none;padding:11px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-top:6px}</style></head><body><div class="card"><div class="badge">⚡ SUPABASE GMAIL VERIFIED</div><h2 id="titleText">⏳ Đang kiểm tra liên kết từ Gmail...</h2><p style="color:#cbd5e1;font-size:14px;">Tài khoản: <strong style="color:#fff;">${targetEmail}</strong> (Nhân vật: <strong style="color:#38bdf8;">${targetMcUsername}</strong>)</p><div class="otp" id="otpVal">••••••</div><button class="btn" id="copyBtn" style="display:none;">📋 Sao chép Mã OTP 6 Số</button><p style="font-size:13px;color:#94a3b8;margin-top:16px;" id="subHint">Vui lòng mở thư từ Supabase trong hộp thư Gmail của bạn.</p></div><script>
           (async () => {
             const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
             const token = hash.get('access_token') || new URLSearchParams(window.location.search).get('access_token');
             if (!token) {
               document.getElementById('titleText').textContent = '⚠️ Chưa có xác thực từ hộp thư Gmail!';
               document.getElementById('titleText').style.color = '#f87171';
-              document.getElementById('subHint').textContent = 'Bạn cần bấm vào nút xác nhận bên trong bức thư gửi về Gmail (' + '${user.loginId}' + ') để mở trang này!';
+              document.getElementById('subHint').textContent = 'Bạn cần bấm vào nút xác nhận bên trong bức thư gửi về Gmail (' + '${targetEmail}' + ') để mở trang này!';
               return;
             }
             const r = await fetch('/verify-token?access_token=' + encodeURIComponent(token));
@@ -986,7 +1146,7 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
         method: 'POST',
         headers: getSupabaseHeaders(),
         body: JSON.stringify({
-          email: user.loginId,
+          email: targetEmail,
           create_user: true
         })
       });
@@ -997,8 +1157,8 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
         if (otpRes.status === 429 || errMsg.toLowerCase().includes('rate limit') || errMsg.toLowerCase().includes('60 seconds')) {
           return resolve({
             ok: true,
-            loginId: user.loginId,
-            mcUsername: user.mcUsername,
+            loginId: targetEmail,
+            mcUsername: targetMcUsername,
             alreadySent: true
           });
         }
@@ -1007,8 +1167,8 @@ function requestPasswordResetOtp({ loginId, parentWindow, customDbUrl = '' }) {
 
       resolve({
         ok: true,
-        loginId: user.loginId,
-        mcUsername: user.mcUsername
+        loginId: targetEmail,
+        mcUsername: targetMcUsername
       });
     } catch (e) {
       reject(e);
@@ -1031,6 +1191,52 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
     throw new Error('Mật khẩu mới phải có ít nhất 4 ký tự!');
   }
 
+  const otpHash = hashPassword(cleanOtp);
+  const newPassHash = hashPassword(newPassword);
+  const nextSessionToken = generateSessionToken();
+
+  // Check if Supabase Auth directly verifies the 6-digit token (in case user typed {{ .Token }} from email)
+  let supabaseDirectVerified = false;
+  if (cleanLogin.includes('@')) {
+    for (const verifyType of ['email', 'magiclink', 'signup', 'recovery']) {
+      try {
+        const vRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+          method: 'POST',
+          headers: getSupabaseHeaders(),
+          body: JSON.stringify({
+            type: verifyType,
+            email: cleanLogin,
+            token: cleanOtp
+          })
+        });
+        if (vRes.ok) {
+          supabaseDirectVerified = true;
+          break;
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 1. Try Server-Side Zero-Trust Supabase RPC first
+  const rpcRes = await callSupabaseRpc('aether_rpc_reset_password', {
+    p_login_id: cleanLogin,
+    p_otp_hash: otpHash,
+    p_supabase_verified: supabaseDirectVerified,
+    p_new_password_hash: newPassHash,
+    p_new_session_token: nextSessionToken,
+    p_now: Date.now()
+  });
+
+  if (!rpcRes.rpcUnavailable) {
+    if (!rpcRes.ok) {
+      recordFailedAuthAttempt();
+      throw new Error(`${rpcRes.error || '⚠️ Mã OTP 6 số không chính xác hoặc đã hết hạn!'} (Còn ${5 - antiSpamState.failedAttempts} lần thử trước khi khóa chống Bot).`);
+    }
+    resetFailedAuthAttempts();
+    return toPublicProfile({ ...rpcRes.profile, sessionToken: nextSessionToken });
+  }
+
+  // 2. Fallback
   const db = await fetchCloudDatabase(customDbUrl);
   const user = Object.values(db.users).find(
     (u) =>
@@ -1042,33 +1248,11 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
     throw new Error(`Không tìm thấy tài khoản "${loginId}" trên Supabase Cloud!`);
   }
 
-  let otpVerified = false;
+  let otpVerified = supabaseDirectVerified;
 
-  // 1. Check if the 6-digit OTP matches our Gmail link-verified OTP hash
-  if (user.resetOtpHash && user.resetOtpExpires && Date.now() <= user.resetOtpExpires) {
-    if (hashPassword(cleanOtp) === user.resetOtpHash) {
+  if (!otpVerified && user.resetOtpHash && user.resetOtpExpires && Date.now() <= user.resetOtpExpires) {
+    if (otpHash === user.resetOtpHash) {
       otpVerified = true;
-    }
-  }
-
-  // 2. Also check directly with Supabase Auth /auth/v1/verify (if user entered the 6-digit {{ .Token }} from Gmail email)
-  if (!otpVerified && user.loginId.includes('@')) {
-    for (const verifyType of ['email', 'magiclink', 'signup', 'recovery']) {
-      try {
-        const vRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
-          method: 'POST',
-          headers: getSupabaseHeaders(),
-          body: JSON.stringify({
-            type: verifyType,
-            email: user.loginId,
-            token: cleanOtp
-          })
-        });
-        if (vRes.ok) {
-          otpVerified = true;
-          break;
-        }
-      } catch (_) {}
     }
   }
 
@@ -1078,7 +1262,8 @@ async function resetCloudPassword({ loginId, otpCode, newPassword, customDbUrl =
   }
 
   resetFailedAuthAttempts();
-  user.passwordHash = hashPassword(newPassword);
+  user.passwordHash = newPassHash;
+  user.sessionToken = nextSessionToken;
   user.resetOtpHash = null;
   user.resetOtpExpires = null;
   user.updatedAt = Date.now();
