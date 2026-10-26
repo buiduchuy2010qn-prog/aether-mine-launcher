@@ -23,11 +23,11 @@ const DEFAULT_FEATURED_SERVERS = [
 ];
 
 const state = {
-  theme: 'prism', authMode: 'crack', username: 'StevePlayer',
+  theme: 'lunar', authMode: 'crack', username: 'StevePlayer',
   savedAccounts: ['StevePlayer', 'Dream', 'Technoblade'],
   crackSkinSync: true, msProfile: null, cloudProfile: null, customDbUrl: '', selectedVersion: '1.21.4',
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
-  ramGB: 3, javaPath: 'java', gameDir: '', serverIp: '',
+  ramGB: 3, totalMemGB: 8, freeMemGB: 4, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
   versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', cachedSkinDataUrl: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
   activeModStoreType: 'mod', activeLocalFolder: 'mods', serverCategoryFilter: 'all',
@@ -121,7 +121,7 @@ function init3DSkinViewer() {
     skinViewer.cameraLight.position.set(12, 24, 38);
   }
   skinViewer.camera.position.set(-14, 11, 42);
-  skinViewer.zoom = 0.84;
+  skinViewer.zoom = 0.74;
   skinViewer.autoRotate = false;
   skinViewer.autoRotateSpeed = 0.45;
   skinViewer.animation = new window.skinview3d.WalkingAnimation();
@@ -199,10 +199,150 @@ function setPose(poseName) {
 }
 
 function setTheme(themeId) {
-  state.theme = themeId || 'prism';
+  state.theme = themeId || 'lunar';
   document.documentElement.setAttribute('data-theme', state.theme);
   document.querySelectorAll('.ts-chip').forEach((btn) => btn.classList.toggle('active', btn.dataset.themePick === state.theme));
   saveCurrentConfig();
+}
+
+let cachedWebGlGpuName = '';
+function detectWebGlGpuName() {
+  if (cachedWebGlGpuName) return cachedWebGlGpuName;
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+    if (gl) {
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const raw = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+      if (raw) {
+        cachedWebGlGpuName = String(raw)
+          .replace(/ANGLE \(([^,]+),\s*([^,(]+).*$/i, '$2')
+          .replace(/Direct3D11.*$/i, '')
+          .trim()
+          .slice(0, 26);
+      }
+    }
+  } catch (_) {}
+  if (!cachedWebGlGpuName) cachedWebGlGpuName = 'WebGL 3D Hardware';
+  return cachedWebGlGpuName;
+}
+
+function updateSystemTelemetryUI(info) {
+  if (!info) return;
+  if (info.totalMemGB) state.totalMemGB = info.totalMemGB;
+  if (info.freeMemGB !== undefined) state.freeMemGB = info.freeMemGB;
+  const totalMem = state.totalMemGB || 8;
+  const freeMem = state.freeMemGB !== undefined ? state.freeMemGB : 4;
+  const usedMemPct = Math.max(12, Math.min(96, Math.round(((totalMem - freeMem) / totalMem) * 100)));
+
+  const ramBadge = document.getElementById('ramBadge');
+  if (ramBadge) ramBadge.textContent = `RAM trống: ${freeMem}/${totalMem} GB`;
+  const fillEl = document.getElementById('ramLiveBarFill');
+  if (fillEl) fillEl.style.width = `${usedMemPct}%`;
+
+  const ramCardUsage = document.getElementById('ramCardUsageText');
+  if (ramCardUsage) ramCardUsage.textContent = `Đang cấp: ${state.ramGB} GB / ${totalMem} GB`;
+
+  const sysRamVal = document.getElementById('sysRamVal');
+  if (sysRamVal) sysRamVal.textContent = `${freeMem} GB / ${totalMem} GB`;
+  const sysRamBar = document.getElementById('sysRamBar');
+  if (sysRamBar) sysRamBar.style.width = `${Math.max(15, Math.min(95, Math.round((freeMem / totalMem) * 100)))}%`;
+
+  const cpuPct = info.cpuLoadPct !== undefined ? info.cpuLoadPct : 22;
+  const sysCpuSub = document.getElementById('sysCpuSub');
+  if (sysCpuSub) sysCpuSub.textContent = `${info.cpuCores || state.cpuCores || 8} Nhân`;
+  const sysCpuVal = document.getElementById('sysCpuVal');
+  if (sysCpuVal) sysCpuVal.textContent = `${cpuPct}%`;
+  const sysCpuBar = document.getElementById('sysCpuBar');
+  if (sysCpuBar) sysCpuBar.style.width = `${cpuPct}%`;
+
+  const gpuName = detectWebGlGpuName();
+  const sysGpuSub = document.getElementById('sysGpuSub');
+  if (sysGpuSub) sysGpuSub.textContent = gpuName;
+  const gpuActive = skinViewer && !skinViewer.renderPaused;
+  const sysGpuVal = document.getElementById('sysGpuVal');
+  if (sysGpuVal) sysGpuVal.textContent = gpuActive ? 'WebGL 3D' : 'Tiết kiệm (0%)';
+  const sysGpuBar = document.getElementById('sysGpuBar');
+  if (sysGpuBar) sysGpuBar.style.width = gpuActive ? '34%' : '12%';
+
+  if (info.diskTotalGB) {
+    const diskPct = Math.max(8, Math.min(98, Math.round((info.diskUsedGB / info.diskTotalGB) * 100)));
+    const sysDiskVal = document.getElementById('sysDiskVal');
+    if (sysDiskVal) sysDiskVal.textContent = `${info.diskUsedGB} GB / ${info.diskTotalGB} GB`;
+    const sysDiskPct = document.getElementById('sysDiskPct');
+    if (sysDiskPct) sysDiskPct.textContent = `${diskPct}%`;
+    const sysDiskBar = document.getElementById('sysDiskBar');
+    if (sysDiskBar) sysDiskBar.style.width = `${diskPct}%`;
+  }
+}
+
+function switchMainTab(tabId) {
+  const targetTab = tabId || 'home';
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach((n) => {
+    n.classList.toggle('active', n.dataset.tab === targetTab);
+  });
+  document.querySelectorAll('.main-stage > .tab-panel').forEach((p) => {
+    p.classList.toggle('active', p.id === `tab-${targetTab}`);
+  });
+  const stage = document.querySelector('.main-stage');
+  if (stage) stage.scrollTop = 0;
+
+  // Mount shared Launch Bar & Loader/RAM cards into active tab slot (zero duplicate IDs)
+  const sharedLaunch = document.getElementById('sharedLaunchBarWrap');
+  const sharedLoaderRam = document.getElementById('sharedLoaderRamWrap');
+  if (targetTab === 'play') {
+    const playLaunchSlot = document.getElementById('playPageLaunchSlot');
+    const playLoaderSlot = document.getElementById('playPageLoaderRamSlot');
+    if (playLaunchSlot && sharedLaunch && sharedLaunch.parentElement !== playLaunchSlot) {
+      playLaunchSlot.appendChild(sharedLaunch);
+    }
+    if (playLoaderSlot && sharedLoaderRam && sharedLoaderRam.parentElement !== playLoaderSlot) {
+      playLoaderSlot.appendChild(sharedLoaderRam);
+    }
+  } else if (targetTab === 'home') {
+    const homeLaunchSlot = document.getElementById('homeLaunchSlot');
+    const homeLoaderSlot = document.getElementById('homeLoaderRamSlot');
+    if (homeLaunchSlot && sharedLaunch && sharedLaunch.parentElement !== homeLaunchSlot) {
+      homeLaunchSlot.appendChild(sharedLaunch);
+    }
+    if (homeLoaderSlot && sharedLoaderRam && sharedLoaderRam.parentElement !== homeLoaderSlot) {
+      homeLoaderSlot.appendChild(sharedLoaderRam);
+    }
+  }
+
+  // Mount shared 3D Skin Viewer card between Home right column and Skin tab
+  const sharedSkin = document.getElementById('sharedSkinViewerCard');
+  if (targetTab === 'skin') {
+    const skinSlot = document.getElementById('skinPageStageSlot');
+    if (skinSlot && sharedSkin && sharedSkin.parentElement !== skinSlot) {
+      skinSlot.appendChild(sharedSkin);
+    }
+  } else if (targetTab === 'home') {
+    const homeSkinSlot = document.getElementById('homeRightSkinSlot');
+    if (homeSkinSlot && sharedSkin && sharedSkin.parentElement !== homeSkinSlot) {
+      homeSkinSlot.appendChild(sharedSkin);
+    }
+  }
+
+  // Resize WebGL 3D viewer after slot transition
+  if ((targetTab === 'home' || targetTab === 'skin') && skinViewer) {
+    setTimeout(() => {
+      const stageWrap = document.getElementById('webglStageWrap');
+      if (stageWrap && stageWrap.clientWidth && stageWrap.clientHeight) {
+        skinViewer.setSize(Math.max(180, stageWrap.clientWidth - 10), Math.max(180, stageWrap.clientHeight - 16));
+        skinViewer.renderPaused = false;
+        skinViewer.render();
+      }
+    }, 30);
+  }
+
+  if (targetTab === 'mods' && typeof loadModrinthStore === 'function') loadModrinthStore(false);
+  if ((targetTab === 'worlds' || targetTab === 'home') && typeof renderLocalWorlds === 'function') renderLocalWorlds();
+  if (targetTab === 'servers') {
+    if (typeof renderFavoriteServers === 'function') renderFavoriteServers();
+    if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers();
+  }
+  if (targetTab === 'tools' && typeof renderLocalAddonsManager === 'function') renderLocalAddonsManager();
 }
 
 function getRecommendedJavaBadge(mcVer) {
@@ -217,14 +357,39 @@ function getRecommendedJavaBadge(mcVer) {
 function updateSummaryUI() {
   const coreUpper = state.selectedCore.toUpperCase(), ver = state.selectedVersion, ram = `${state.ramGB} GB`;
   const ldrTag = (state.selectedCore !== 'vanilla' && state.selectedLoaderVersion) ? ` ${state.selectedLoaderVersion}` : '';
-  document.getElementById('sideVerText').textContent = ver;
-  document.getElementById('sideCoreText').textContent = coreUpper;
-  document.getElementById('sideRamText').textContent = ram;
-  document.getElementById('dockVersionTitle').textContent = `Minecraft ${ver}`;
-  document.getElementById('dockCoreSubtitle').textContent = `Core: ${coreUpper}${ldrTag} • RAM: ${ram}`;
-  document.querySelectorAll('#ramPresetBar .ram-pill-btn').forEach((b) => {
+  const sideVer = document.getElementById('sideVerText');
+  if (sideVer) sideVer.textContent = ver;
+  const sideCore = document.getElementById('sideCoreText');
+  if (sideCore) sideCore.textContent = coreUpper;
+  const sideRam = document.getElementById('sideRamText');
+  if (sideRam) sideRam.textContent = ram;
+  const dockTitle = document.getElementById('dockVersionTitle');
+  if (dockTitle) dockTitle.textContent = `Minecraft ${ver}`;
+  const dockSub = document.getElementById('dockCoreSubtitle');
+  if (dockSub) dockSub.textContent = `${coreUpper}${ldrTag} • ${ram} RAM`;
+
+  const ramCardUsage = document.getElementById('ramCardUsageText');
+  if (ramCardUsage) ramCardUsage.textContent = `Đang cấp: ${state.ramGB} GB / ${state.totalMemGB || 8} GB`;
+  const ramSliderEl = document.getElementById('ramSlider');
+  if (ramSliderEl) {
+    const min = parseFloat(ramSliderEl.min) || 2;
+    const max = parseFloat(ramSliderEl.max) || 16;
+    const pct = Math.max(0, Math.min(100, ((state.ramGB - min) / Math.max(1, max - min)) * 100));
+    ramSliderEl.style.setProperty('--ram-pct', `${pct}%`);
+  }
+
+  document.querySelectorAll('#ramPresetBar .ram-pill-btn[data-ram]').forEach((b) => {
     b.classList.toggle('active', parseInt(b.dataset.ram, 10) === state.ramGB);
   });
+
+  // Sync core radio buttons
+  document.querySelectorAll('.core-tab-btn').forEach((card) => {
+    const isAct = card.dataset.core === state.selectedCore;
+    card.classList.toggle('active', isAct);
+    const radio = card.querySelector('input[type="radio"]');
+    if (radio) radio.checked = isAct;
+  });
+
   const dockMiniBadge = document.getElementById('dockCoreMiniBadge');
   const activeCoreImg = document.querySelector(`.core-tab-btn[data-core="${state.selectedCore}"] img`);
   if (dockMiniBadge && activeCoreImg) {
@@ -236,13 +401,17 @@ function updateSummaryUI() {
     }
   }
   const srvSuffix = state.serverIp ? ` • ${state.serverIp}` : '';
-  document.getElementById('launchBtnSub').textContent = `${ver} • ${coreUpper}${srvSuffix}`;
+  const launchSub = document.getElementById('launchBtnSub');
+  if (launchSub) launchSub.textContent = `${ver} • ${coreUpper}${srvSuffix}`;
   const isInst = isVersionInstalledOnDisk(ver);
   const vBadge = document.getElementById('verReadyBadge');
   const vDesc = document.getElementById('verReadyDesc');
-  if (vBadge && vDesc) {
+  if (vBadge) {
     vBadge.className = 'vrb-badge ' + (isInst ? 'ready' : 'cloud');
     vBadge.textContent = isInst ? ('✓ Đã cài sẵn trên máy (' + ver + ')') : ('☁ Chưa tải trên máy (' + ver + ')');
+  }
+  if (dockTitle) dockTitle.textContent = `Minecraft ${ver}${isInst ? ' (Đã tải)' : ''}`;
+  if (vDesc) {
     vDesc.textContent = isInst ? 'Sẵn sàng vào thẳng game ngay lập tức (< 1 giây)' : 'Sẵn sàng tải tự động từ máy chủ Mojang khi bấm CHƠI NGAY';
   }
   if (!state.isLaunching && (!state.launchPhase || state.launchPhase === 'idle')) {
@@ -255,17 +424,12 @@ function updateSummaryUI() {
   if (bannerSub) bannerSub.textContent = isInst
     ? `Phiên bản Minecraft ${ver} (${coreUpper}) đã cài sẵn trên máy — Bấm CHƠI NGAY để vào thẳng game!`
     : `Phiên bản Minecraft ${ver} (${coreUpper}) sẵn sàng tải tự động từ Mojang khi bấm CHƠI NGAY.`;
-  const editionTag = document.getElementById('hbcEditionTag');
   const heroBanner = document.getElementById('heroBanner');
-  if (editionTag && heroBanner) {
-    const wpUrl = state.customWallpaper || 'app-banner.png';
-    const wpLabelMatch = state.customWpLabel || 'BlockWay';
-    const isBlockWayBanner = wpUrl === 'app-banner.png';
-    const eraTitle = `⚡ BLOCKWAY LAUNCHER • EVERY WORLD, ONE PLACE • ${ver}`;
-    editionTag.textContent = eraTitle;
-    editionTag.style.display = isBlockWayBanner ? 'none' : '';
-    if (bannerSub) bannerSub.style.display = isBlockWayBanner ? 'none' : '';
+  if (heroBanner) {
+    const wpUrl = state.customWallpaper || 'app-banner-hero.png';
     heroBanner.style.backgroundImage = `url('${wpUrl}')`;
+    heroBanner.classList.toggle('is-brand-wallpaper', wpUrl === 'app-banner-hero.png');
+    const wpLabelMatch = state.customWpLabel || 'BlockWay';
     document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.textContent.trim() === wpLabelMatch));
   }
   const javaBadge = document.getElementById('javaReqBadge');
@@ -283,12 +447,33 @@ function updateSummaryUI() {
   const playerName = (state.authMode === 'microsoft' && state.msProfile?.name)
     ? state.msProfile.name
     : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username);
-  document.getElementById('sidebarPlayerName').textContent = playerName;
-  document.getElementById('sidebarAuthBadge').textContent = (state.authMode === 'microsoft' && state.msProfile?.name)
-    ? '👑 BẢN QUYỀN MS'
-    : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ BLOCKWAY CLOUD' : 'CRACK / OFFLINE');
+  const sbName = document.getElementById('sidebarPlayerName');
+  if (sbName) sbName.textContent = playerName;
+  const sbBadge = document.getElementById('sidebarAuthBadge');
+  if (sbBadge) {
+    sbBadge.textContent = (state.authMode === 'microsoft' && state.msProfile?.name)
+      ? '👑 BẢN QUYỀN MS'
+      : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ BLOCKWAY CLOUD' : 'CRACK / OFFLINE');
+  }
   const modeLabel = state.authMode === 'microsoft' ? 'Microsoft' : (state.authMode === 'aether' ? 'BlockWay Cloud' : 'Crack');
-  document.getElementById('dockAccountText').textContent = `${playerName} (${modeLabel})`;
+  const dockAcc = document.getElementById('dockAccountText');
+  if (dockAcc) dockAcc.textContent = `${playerName} (${modeLabel})`;
+
+  // Sync Right Column Microsoft / Account Card
+  const msCardName = document.getElementById('msCardProfileName');
+  const msCardStatus = document.getElementById('msCardStatusText');
+  const msCardBtn = document.getElementById('btnMsCardAction');
+  if (msCardName) msCardName.textContent = playerName;
+  if (msCardStatus) {
+    const isMs = state.authMode === 'microsoft' && state.msProfile?.name;
+    const isCloud = state.authMode === 'aether' && state.cloudProfile?.mcUsername;
+    msCardStatus.textContent = isMs ? '● Đã đăng nhập (Bản quyền)' : (isCloud ? '● Đã đăng nhập (Cloud)' : '● Offline — chưa đăng nhập MS');
+    msCardStatus.classList.toggle('is-online', Boolean(isMs || isCloud));
+  }
+  if (msCardBtn) {
+    const loggedIn = (state.authMode === 'microsoft' && state.msProfile?.name) || (state.authMode === 'aether' && state.cloudProfile?.mcUsername);
+    msCardBtn.textContent = loggedIn ? 'Quản lý' : 'Đăng nhập';
+  }
 }
 
 let activeToastEl = null;
@@ -610,7 +795,7 @@ function setLaunchUiState(phase, statusMsg) {
       btnLaunch.disabled = false;
       btnLaunch.classList.remove('is-starting', 'is-playing');
     }
-    if (launchBtnText) launchBtnText.textContent = '▶ CHƠI NGAY';
+    if (launchBtnText) launchBtnText.textContent = 'CHƠI NGAY';
     if (btnKill) btnKill.classList.add('hidden');
     if (trackEl) trackEl.classList.add('hidden');
     if (pctEl) pctEl.classList.add('hidden');
@@ -688,6 +873,9 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
   }
 
   if (updBtnText) updBtnText.textContent = `🚀 Cập nhật v${res.latestVersion}!`;
+  if (typeof window.pushTopNotification === 'function') {
+    window.pushTopNotification(`🚀 Có bản cập nhật BlockWay Launcher v${res.latestVersion} (đang dùng v${res.currentVersion}).`);
+  }
   const ask = await askUserAgreement({
     title: `🚀 Có Bản Cập Nhật Launcher Mới (v${res.latestVersion})!`,
     message: `Phát hiện phiên bản mới v${res.latestVersion} trên GitHub Cloud (bản hiện tại: v${res.currentVersion}). Bấm "Cập Nhật Ngay" để Launcher tự động tải về, tự tắt bản cũ và mở bản mới lên ngay lập tức!`,
@@ -727,14 +915,21 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
 window.addEventListener('DOMContentLoaded', async () => {
   init3DSkinViewer();
   const sys = await window.aetherAPI.getSystemInfo();
-  state.cpuCores = sys.cpuCores || 8; state.gameDir = sys.defaultGameDir; state.javaPath = sys.detectedJava || 'java';
-  document.getElementById('cpuBadge').textContent = `${sys.cpuCores} Nhân CPU`;
-  document.getElementById('ramBadge').textContent = `RAM trống: ${sys.freeMemGB}/${sys.totalMemGB} GB`;
-  const ramSlider = document.getElementById('ramSlider'); ramSlider.max = Math.max(4, sys.totalMemGB);
+  state.cpuCores = sys.cpuCores || 8;
+  state.totalMemGB = sys.totalMemGB || 8;
+  state.freeMemGB = sys.freeMemGB || 4;
+  state.gameDir = sys.defaultGameDir;
+  state.javaPath = sys.detectedJava || 'java';
+  const cpuB = document.getElementById('cpuBadge');
+  if (cpuB) cpuB.textContent = `${sys.cpuCores} Nhân CPU`;
+  const ramSlider = document.getElementById('ramSlider');
+  if (ramSlider) ramSlider.max = Math.max(4, sys.totalMemGB);
 
   const saved = await window.aetherAPI.getConfig();
   if (saved) {
-    Object.assign(state, saved); if ((!state.javaPath || state.javaPath === 'java') && sys.detectedJava && sys.detectedJava !== 'java') state.javaPath = sys.detectedJava;
+    Object.assign(state, saved);
+    if (!saved.theme || saved.theme === 'prism') state.theme = 'lunar';
+    if ((!state.javaPath || state.javaPath === 'java') && sys.detectedJava && sys.detectedJava !== 'java') state.javaPath = sys.detectedJava;
     if (!Array.isArray(state.savedAccounts) || !state.savedAccounts.length) state.savedAccounts = [state.username || 'StevePlayer'];
     if (state.msProfile && state.msProfile.isOfficialLicense === false) {
       state.msProfile = null;
@@ -742,6 +937,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
   syncFeaturedServersIntoState();
+  updateSystemTelemetryUI(sys);
   saveCurrentConfig();
 
   document.querySelectorAll('#serverCategoryBar [data-srvcat]').forEach((btn) => {
@@ -759,8 +955,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('gameDirInput').value = state.gameDir;
   document.getElementById('crackSkinSyncToggle').checked = state.crackSkinSync !== false;
 
-  setTheme(state.theme || 'prism'); syncBoosterCheckboxes(); setServerIpEverywhere(state.serverIp);
+  setTheme(state.theme || 'lunar'); syncBoosterCheckboxes(); setServerIpEverywhere(state.serverIp);
   renderSavedAccounts(); renderFavoriteServers(); updateCrackUuidPreview(state.username); applyCapeToViewer(state.capeType || 'mojang');
+  if (typeof renderLocalWorlds === 'function') renderLocalWorlds();
 
   document.querySelectorAll('.wt-model-btn').forEach((b) => b.classList.toggle('active', b.dataset.model === state.skinModel));
   document.querySelectorAll('.core-tab-btn').forEach((btn) => btn.classList.toggle('active', btn.dataset.core === state.selectedCore));
@@ -771,40 +968,169 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnMax').onclick = () => window.aetherAPI.maximize();
   document.getElementById('btnClose').onclick = () => window.aetherAPI.close();
 
-  document.getElementById('btnTrimRam').onclick = async () => {
-    const txt = document.getElementById('ramBoostText'); txt.textContent = 'Đang dọn...';
+  const runRamTrim = async (btnEl, textEl) => {
+    if (textEl) textEl.textContent = 'Đang dọn...';
     const res = await window.aetherAPI.trimRamNow();
     if (res.ok) {
-      document.getElementById('ramBadge').textContent = `RAM trống: ${res.freeMemGB}/${sys.totalMemGB} GB`;
-      txt.textContent = '✓ Đã dọn!'; setTimeout(() => (txt.textContent = '⚡ Dọn'), 1500);
+      const freshSys = await window.aetherAPI.getSystemInfo();
+      updateSystemTelemetryUI({ ...freshSys, freeMemGB: res.freeMemGB });
+      if (textEl) {
+        textEl.textContent = '✓ Đã dọn!';
+        setTimeout(() => (textEl.textContent = '⚡ Dọn'), 1500);
+      }
+      showAetherNotification(`⚡ Đã giải phóng bộ nhớ RAM! RAM trống hiện tại: ${res.freeMemGB}/${state.totalMemGB} GB`, 'success', 3000);
     }
   };
 
+  const btnTrim = document.getElementById('btnTrimRam');
+  if (btnTrim) btnTrim.onclick = () => runRamTrim(btnTrim, document.getElementById('ramBoostText'));
+  const btnSysOpt = document.getElementById('btnSysOptimize');
+  if (btnSysOpt) btnSysOpt.onclick = () => runRamTrim(btnSysOpt, null);
+
   document.querySelectorAll('.ts-chip').forEach((chip) => { chip.onclick = () => setTheme(chip.dataset.themePick); });
-  document.querySelectorAll('.nav-item').forEach((nav) => {
-    nav.onclick = () => {
-      document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-      nav.classList.add('active');
-      document.getElementById(`tab-${nav.dataset.tab}`).classList.add('active');
-      if (nav.dataset.tab === 'mods') loadModrinthStore();
-      if (nav.dataset.tab === 'worlds') { renderLocalWorlds(); if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers(); }
-    };
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach((nav) => {
+    nav.onclick = () => switchMainTab(nav.dataset.tab);
   });
-  document.getElementById('btnGoModStore').onclick = () => document.querySelector('.nav-item[data-tab="mods"]').click();
+
+  // 5 Quick Action Cards on Home
+  const qaMap = {
+    qaCreateWorld: 'worlds',
+    qaJoinServer: 'servers',
+    qaAddModPack: 'mods',
+    qaGameSettings: 'settings',
+    qaUsefulTools: 'tools'
+  };
+  Object.entries(qaMap).forEach(([id, tab]) => {
+    const el = document.getElementById(id);
+    if (el) el.onclick = () => switchMainTab(tab);
+  });
+
+  // Navigation shortcuts across Home, Sidebar & Right Column
+  const btnQuickPlayCfg = document.getElementById('btnQuickPlaySettings');
+  if (btnQuickPlayCfg) btnQuickPlayCfg.onclick = () => switchMainTab('play');
+  const btnGoSkin = document.getElementById('btnGoSkinStudio');
+  if (btnGoSkin) btnGoSkin.onclick = () => switchMainTab('skin');
+  const btnExpSkin = document.getElementById('btnExpandSkinStudio');
+  if (btnExpSkin) btnExpSkin.onclick = () => switchMainTab('skin');
+  const openAccMgr = () => {
+    switchMainTab('play');
+    setTimeout(() => {
+      document.querySelector('#tab-play .auth-switcher-row')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+  };
+  const sbProf = document.getElementById('sidebarProfileCard');
+  if (sbProf) sbProf.onclick = openAccMgr;
+  const btnGoAcc = document.getElementById('btnGoAccountManager');
+  if (btnGoAcc) btnGoAcc.onclick = openAccMgr;
+  const btnMsAct = document.getElementById('btnMsCardAction');
+  if (btnMsAct) btnMsAct.onclick = openAccMgr;
+
+  const btnLearnMore = document.getElementById('btnSidebarLearnMore');
+  if (btnLearnMore) btnLearnMore.onclick = () => switchMainTab('mods');
+  const btnViewAllW = document.getElementById('btnHomeViewAllWorlds');
+  if (btnViewAllW) btnViewAllW.onclick = () => switchMainTab('worlds');
+  const btnWorldsNew = document.getElementById('btnWorldsCreateNew');
+  if (btnWorldsNew) {
+    btnWorldsNew.onclick = () => {
+      switchMainTab('home');
+      document.getElementById('btnLaunch')?.click();
+    };
+  }
+
+  // Titlebar Search Input (#globalSearchInput)
+  const globalSearch = document.getElementById('globalSearchInput');
+  if (globalSearch) {
+    globalSearch.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        const q = globalSearch.value.trim();
+        if (!q) return;
+        if (/^1\.\d+/.test(q)) {
+          switchMainTab('play');
+          const verInp = document.getElementById('versionSearchInput');
+          if (verInp) {
+            verInp.value = q;
+            renderFullVersionTable(q);
+          }
+        } else {
+          switchMainTab('mods');
+          const modInp = document.getElementById('modSearchInput');
+          if (modInp) modInp.value = q;
+          if (typeof loadModrinthStore === 'function') loadModrinthStore(false);
+        }
+      }
+    };
+  }
+
+  // Titlebar Notification Popover (real data: launcher update check + launch status)
+  const btnNotif = document.getElementById('btnTopNotifications');
+  const notifPop = document.getElementById('topNotifPopover');
+  const notifBadge = document.getElementById('topNotifBadge');
+  const notifList = document.getElementById('topNotifList');
+  const setNotifCount = (n) => {
+    if (!notifBadge) return;
+    notifBadge.textContent = String(n);
+    notifBadge.style.display = n > 0 ? '' : 'none';
+  };
+  setNotifCount(0);
+  window.pushTopNotification = (text) => {
+    if (!notifList || !text) return;
+    const item = document.createElement('div');
+    item.className = 'notif-pop-item';
+    item.textContent = text;
+    notifList.prepend(item);
+    while (notifList.children.length > 8) notifList.lastElementChild.remove();
+    if (notifPop && notifPop.classList.contains('hidden')) {
+      setNotifCount((parseInt(notifBadge?.textContent || '0', 10) || 0) + 1);
+    }
+  };
+  if (btnNotif && notifPop) {
+    btnNotif.onclick = (e) => {
+      e.stopPropagation();
+      notifPop.classList.toggle('hidden');
+      if (!notifPop.classList.contains('hidden')) setNotifCount(0);
+    };
+    document.addEventListener('click', (e) => {
+      if (!notifPop.classList.contains('hidden') && !notifPop.contains(e.target) && !btnNotif.contains(e.target)) {
+        notifPop.classList.add('hidden');
+      }
+    });
+  }
+  const btnNotifUpd = document.getElementById('btnNotifCheckUpdate');
+  if (btnNotifUpd) {
+    btnNotifUpd.onclick = () => {
+      if (notifPop) notifPop.classList.add('hidden');
+      checkAndPromptLauncherUpdate(true);
+    };
+  }
+
+  document.getElementById('btnGoModStore').onclick = () => switchMainTab('mods');
   const btnBanWorlds = document.getElementById('btnBannerWorlds');
-  if (btnBanWorlds) btnBanWorlds.onclick = () => document.querySelector('.nav-item[data-tab="worlds"]').click();
-  document.querySelectorAll('#ramPresetBar .ram-pill-btn').forEach((btn) => {
+  if (btnBanWorlds) btnBanWorlds.onclick = () => switchMainTab('worlds');
+  document.querySelectorAll('#ramPresetBar .ram-pill-btn[data-ram]').forEach((btn) => {
     btn.classList.toggle('active', parseInt(btn.dataset.ram, 10) === state.ramGB);
     btn.onclick = () => {
       state.ramGB = parseInt(btn.dataset.ram, 10);
       ramSlider.value = state.ramGB;
       document.getElementById('ramValueDisplay').textContent = `${state.ramGB} GB`;
       document.querySelectorAll('#ramPresetBar .ram-pill-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      document.getElementById('btnRamAuto')?.classList.remove('active');
       updateSummaryUI();
       saveCurrentConfig();
     };
   });
+  const btnRamAuto = document.getElementById('btnRamAuto');
+  if (btnRamAuto) {
+    btnRamAuto.onclick = () => {
+      const autoRam = Math.min(8, Math.max(3, Math.round((state.totalMemGB || 8) * 0.45)));
+      state.ramGB = autoRam;
+      ramSlider.value = state.ramGB;
+      document.getElementById('ramValueDisplay').textContent = `${state.ramGB} GB`;
+      updateSummaryUI();
+      btnRamAuto.classList.add('active');
+      showAetherNotification(`⚙️ Tự động chọn ${autoRam} GB RAM (≈45% của ${state.totalMemGB} GB trên máy).`, 'info', 2800);
+      saveCurrentConfig();
+    };
+  }
   const btnBanShots = document.getElementById('btnBannerScreenshots');
   if (btnBanShots) btnBanShots.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'screenshots');
   const btnOpenMig = document.getElementById('btnOpenMigrateModal');
@@ -954,10 +1280,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
       const info = await window.aetherAPI.getSystemInfo();
       if (info && info.totalMemGB) {
-        document.getElementById('ramBadge').textContent = `RAM trống: ${info.freeMemGB}/${info.totalMemGB} GB`;
-        const usedPct = Math.max(10, Math.min(95, Math.round(((info.totalMemGB - info.freeMemGB) / info.totalMemGB) * 100)));
-        const fillEl = document.getElementById('ramLiveBarFill');
-        if (fillEl) fillEl.style.width = `${usedPct}%`;
+        updateSystemTelemetryUI(info);
       }
     } catch (_) {}
   }, 3500);
@@ -998,7 +1321,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       wp.classList.add('active');
       state.customWallpaper = wp.dataset.wp;
       state.customWpLabel = wp.textContent.trim();
-      document.getElementById('heroBanner').style.backgroundImage = `url('${wp.dataset.wp}')`;
+      const heroBanner = document.getElementById('heroBanner');
+      if (heroBanner) {
+        heroBanner.style.backgroundImage = `url('${wp.dataset.wp}')`;
+        heroBanner.classList.toggle('is-brand-wallpaper', wp.dataset.wp === 'app-banner-hero.png');
+      }
     };
   });
 
@@ -1670,5 +1997,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       ? 'Đã thoát Minecraft mượt mà (Mã: 0)'
       : `Minecraft đã đóng (Mã: ${code}) — Đã giải phóng RAM`;
     setLaunchUiState('idle', exitMsg);
+    if (typeof window.pushTopNotification === 'function') window.pushTopNotification(`🎮 ${exitMsg}`);
   });
 });

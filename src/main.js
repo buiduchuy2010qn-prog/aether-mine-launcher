@@ -180,16 +180,53 @@ ipcMain.on('win:close', () => {
   app.exit(0);
 });
 
+let prevCpuSnap = null;
+function sampleCpuLoadPct() {
+  try {
+    const cpus = os.cpus();
+    let idle = 0, total = 0;
+    for (const c of cpus) {
+      for (const k of Object.keys(c.times)) total += c.times[k];
+      idle += c.times.idle;
+    }
+    if (!prevCpuSnap) {
+      prevCpuSnap = { idle, total };
+      return 12;
+    }
+    const dIdle = idle - prevCpuSnap.idle;
+    const dTotal = total - prevCpuSnap.total;
+    prevCpuSnap = { idle, total };
+    if (dTotal <= 0) return 10;
+    return Math.max(2, Math.min(99, Math.round((1 - dIdle / dTotal) * 100)));
+  } catch (_) {
+    return 10;
+  }
+}
+
 ipcMain.handle('sys:info', async () => {
   const totalMemGB = Math.round(os.totalmem() / (1024 ** 3));
   const freeMemGB = Math.round((os.freemem() / (1024 ** 3)) * 10) / 10;
   const cpus = os.cpus();
+  const defaultGameDir = getDefaultGameDir();
+  let diskUsedGB = null;
+  let diskTotalGB = null;
+  try {
+    if (typeof fs.statfsSync === 'function') {
+      const st = fs.statfsSync(defaultGameDir && fs.existsSync(defaultGameDir) ? defaultGameDir : os.homedir());
+      diskTotalGB = Math.round((st.blocks * st.bsize) / (1024 ** 3));
+      const diskFreeGB = Math.round((st.bfree * st.bsize) / (1024 ** 3));
+      diskUsedGB = Math.max(1, diskTotalGB - diskFreeGB);
+    }
+  } catch (_) {}
   return {
     totalMemGB,
     freeMemGB,
     cpuModel: cpus[0]?.model || 'Multi-Core Processor',
     cpuCores: cpus.length,
-    defaultGameDir: getDefaultGameDir(),
+    cpuLoadPct: sampleCpuLoadPct(),
+    diskUsedGB,
+    diskTotalGB,
+    defaultGameDir,
     detectedJava: detectJavaPath(),
     platform: process.platform
   };

@@ -235,10 +235,11 @@ function convertSkinTo64x64DataUrl(imgSource) {
 }
 
 function draw2DAvatarFace(imgSource) {
-  const canvas = document.getElementById('avatar2dCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
+  const canvases = [
+    document.getElementById('avatar2dCanvas'),
+    document.getElementById('msCardAvatarCanvas')
+  ].filter(Boolean);
+  if (!canvases.length) return;
   const img = new Image();
   img.onload = () => {
     const off = document.createElement('canvas');
@@ -247,47 +248,48 @@ function draw2DAvatarFace(imgSource) {
     const octx = off.getContext('2d');
     octx.drawImage(img, 0, 0);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 8, 8, 8, 8, 0, 0, canvas.width, canvas.height);
+    for (const canvas of canvases) {
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 8, 8, 8, 8, 0, 0, canvas.width, canvas.height);
 
-    try {
-      // Only overlay hat layer (40, 8, 8, 8) if the hat region uses alpha transparency
-      const hatData = octx.getImageData(32, 0, 32, 16).data;
-      let hasTransparent = false;
-      let hasOpaque = false;
-      for (let i = 3; i < hatData.length; i += 4) {
-        if (hatData[i] < 245) hasTransparent = true;
-        if (hatData[i] > 15) hasOpaque = true;
-      }
-      if (hasTransparent && hasOpaque) {
-        ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
-      }
-
-      // Check if head (8,8,8,8) is a single solid color (like Dream's neon green skin)
-      const faceData = octx.getImageData(8, 8, 8, 6).data;
-      const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
-      let solidHead = true;
-      for (let i = 0; i < faceData.length; i += 4) {
-        if (Math.abs(faceData[i] - r0) > 12 || Math.abs(faceData[i + 1] - g0) > 12 || Math.abs(faceData[i + 2] - b0) > 12) {
-          solidHead = false;
-          break;
+      try {
+        const hatData = octx.getImageData(32, 0, 32, 16).data;
+        let hasTransparent = false;
+        let hasOpaque = false;
+        for (let i = 3; i < hatData.length; i += 4) {
+          if (hatData[i] < 245) hasTransparent = true;
+          if (hatData[i] > 15) hasOpaque = true;
         }
-      }
-      if (solidHead) {
-        const w = canvas.width;
-        // Render Dream-style framed avatar: green border + white mask + pixel smiley eyes & mouth!
-        ctx.fillStyle = `rgb(${r0}, ${g0}, ${b0})`;
-        ctx.fillRect(0, 0, w, w);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(Math.round(w * 0.14), Math.round(w * 0.14), Math.round(w * 0.72), Math.round(w * 0.72));
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
-        ctx.fillRect(Math.round(w * 0.60), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
-        ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.62), Math.round(w * 0.44), Math.round(w * 0.10));
-        ctx.fillRect(Math.round(w * 0.21), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
-        ctx.fillRect(Math.round(w * 0.69), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
-      }
-    } catch (_) {}
+        if (hasTransparent && hasOpaque) {
+          ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
+        }
+
+        const faceData = octx.getImageData(8, 8, 8, 6).data;
+        const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
+        let solidHead = true;
+        for (let i = 0; i < faceData.length; i += 4) {
+          if (Math.abs(faceData[i] - r0) > 12 || Math.abs(faceData[i + 1] - g0) > 12 || Math.abs(faceData[i + 2] - b0) > 12) {
+            solidHead = false;
+            break;
+          }
+        }
+        if (solidHead) {
+          const w = canvas.width;
+          ctx.fillStyle = `rgb(${r0}, ${g0}, ${b0})`;
+          ctx.fillRect(0, 0, w, w);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(Math.round(w * 0.14), Math.round(w * 0.14), Math.round(w * 0.72), Math.round(w * 0.72));
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
+          ctx.fillRect(Math.round(w * 0.60), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
+          ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.62), Math.round(w * 0.44), Math.round(w * 0.10));
+          ctx.fillRect(Math.round(w * 0.21), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
+          ctx.fillRect(Math.round(w * 0.69), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
+        }
+      } catch (_) {}
+    }
   };
   img.src = imgSource;
 }
@@ -989,11 +991,122 @@ function renderFavoriteServers() {
   });
 }
 
+function renderHomeRecentWorlds(worlds = []) {
+  const homeGrid = document.getElementById('homeRecentWorldsGrid');
+  if (!homeGrid) return;
+  const createCardHtml = `
+    <button class="hw-create-card" id="btnHomeCreateWorldCard" title="Vào game tạo thế giới mới hoặc mở thư mục Saves">
+      <div class="hw-create-plus">+</div>
+      <div class="hw-create-label">Tạo thế giới mới</div>
+      <div class="hw-create-sub">Bắt đầu hành trình</div>
+    </button>
+  `;
+  const worldCards = worlds.slice(0, 4).map((w) => {
+    const thumbUrl = w.iconDataUrl || 'app-banner-hero.png';
+    return `
+      <div class="hw-world-card" data-worldpath="${w.path}" title="Thế giới: ${w.name} (${w.lastPlayed})">
+        <div class="hw-world-thumb" style="background-image:url('${thumbUrl}')"></div>
+        <div class="hw-world-body">
+          <div class="hw-world-info">
+            <div class="hw-world-title">${w.name}</div>
+            <div class="hw-world-sub">Chơi gần nhất: ${w.lastPlayed}</div>
+          </div>
+          <button class="hw-world-menu-btn" data-openworld="${w.path}" title="Mở thư mục thế giới này trong Explorer">⋮</button>
+        </div>
+      </div>
+    `;
+  });
+
+  // If fewer than 4 local worlds exist, provide real actionable utility cards for remaining slots
+  if (worldCards.length < 4) {
+    worldCards.push(`
+      <div class="hw-world-card" id="hwSyncExternalCard" title="Quét và đồng bộ thế giới từ TLauncher, Official, Modrinth, CurseForge, Prism">
+        <div class="hw-world-thumb" style="background-image:url('app-banner-hero.png');background-size:280%;background-position:0% 70%;">
+          <span class="hw-world-ver-tag">Đồng bộ</span>
+        </div>
+        <div class="hw-world-body">
+          <div class="hw-world-info">
+            <div class="hw-world-title">Đồng bộ Map Cũ</div>
+            <div class="hw-world-sub">Từ Launcher khác trên máy</div>
+          </div>
+          <button class="hw-world-menu-btn" title="Mở trình đồng bộ">⋮</button>
+        </div>
+      </div>
+    `);
+  }
+  if (worldCards.length < 4) {
+    worldCards.push(`
+      <div class="hw-world-card" id="hwOpenSavesDirCard" title="Mở thư mục .minecraft/saves trong Windows Explorer">
+        <div class="hw-world-thumb" style="background-image:url('app-banner-hero.png');background-size:280%;background-position:100% 55%;">
+          <span class="hw-world-ver-tag">.minecraft</span>
+        </div>
+        <div class="hw-world-body">
+          <div class="hw-world-info">
+            <div class="hw-world-title">Thư mục Saves</div>
+            <div class="hw-world-sub">Quản lý file bản đồ trực tiếp</div>
+          </div>
+          <button class="hw-world-menu-btn" title="Mở thư mục Saves">⋮</button>
+        </div>
+      </div>
+    `);
+  }
+  if (worldCards.length < 4) {
+    worldCards.push(`
+      <div class="hw-world-card" id="hwExploreModpackCard" title="Tải Modpack & Thế giới phiêu lưu từ kho Modrinth">
+        <div class="hw-world-thumb" style="background-image:url('app-banner-hero.png');background-size:280%;background-position:58% 0%;">
+          <span class="hw-world-ver-tag">Modrinth</span>
+        </div>
+        <div class="hw-world-body">
+          <div class="hw-world-info">
+            <div class="hw-world-title">Kho Mod & Pack</div>
+            <div class="hw-world-sub">Khám phá gói mở rộng</div>
+          </div>
+          <button class="hw-world-menu-btn" title="Mở Kho Modrinth">⋮</button>
+        </div>
+      </div>
+    `);
+  }
+
+  homeGrid.innerHTML = createCardHtml + worldCards.slice(0, 4).join('');
+
+  const btnCreate = document.getElementById('btnHomeCreateWorldCard');
+  if (btnCreate) {
+    btnCreate.onclick = () => {
+      const playBtn = document.getElementById('btnLaunch');
+      if (playBtn && !state.isLaunching) playBtn.click();
+    };
+  }
+  homeGrid.querySelectorAll('[data-openworld]').forEach((btn) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      window.aetherAPI.openGameDir(btn.dataset.openworld);
+    };
+  });
+  homeGrid.querySelectorAll('.hw-world-card[data-worldpath]').forEach((card) => {
+    card.onclick = () => {
+      window.aetherAPI.openGameDir(card.dataset.worldpath);
+    };
+  });
+  const syncCard = document.getElementById('hwSyncExternalCard');
+  if (syncCard && typeof openLauncherMigrateModal === 'function') {
+    syncCard.onclick = () => openLauncherMigrateModal();
+  }
+  const savesCard = document.getElementById('hwOpenSavesDirCard');
+  if (savesCard) {
+    savesCard.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'saves');
+  }
+  const modCard = document.getElementById('hwExploreModpackCard');
+  if (modCard) {
+    modCard.onclick = () => document.querySelector('.nav-item[data-tab="mods"]')?.click();
+  }
+}
+
 async function renderLocalWorlds() {
-  const container = document.getElementById('localWorldsList');
-  if (!container) return;
   const res = await window.aetherAPI.listLocalWorlds(state.gameDir);
   const worlds = res?.worlds || [];
+  renderHomeRecentWorlds(worlds);
+  const container = document.getElementById('localWorldsList');
+  if (!container) return;
   const countBadge = document.getElementById('worldsCountBadge');
   if (countBadge) countBadge.textContent = `${worlds.length} Map`;
   if (worlds.length === 0) {
