@@ -12,7 +12,7 @@ const crypto = require('crypto');
 let AdmZip = null;
 try { AdmZip = require('adm-zip'); } catch (_) { AdmZip = null; }
 
-/* ============================== NBT WRITER ============================== */
+/* ============================== NBT READER & WRITER ============================== */
 const TAG = { END: 0, BYTE: 1, SHORT: 2, INT: 3, LONG: 4, FLOAT: 5, DOUBLE: 6, BYTE_ARRAY: 7, STRING: 8, LIST: 9, COMPOUND: 10, INT_ARRAY: 11, LONG_ARRAY: 12 };
 
 const nbt = {
@@ -22,13 +22,15 @@ const nbt = {
   long: (v) => ({ t: TAG.LONG, v: BigInt.asIntN(64, BigInt(v)) }),
   float: (v) => ({ t: TAG.FLOAT, v: Number(v) }),
   double: (v) => ({ t: TAG.DOUBLE, v: Number(v) }),
+  byteArray: (buf) => ({ t: TAG.BYTE_ARRAY, v: Buffer.isBuffer(buf) ? Buffer.from(buf) : Buffer.from(buf || []) }),
   string: (v) => ({ t: TAG.STRING, v: String(v) }),
   list: (et, items) => ({ t: TAG.LIST, et: items.length ? et : TAG.END, v: items }),
   compound: (obj) => ({ t: TAG.COMPOUND, v: obj }),
-  intArray: (arr) => ({ t: TAG.INT_ARRAY, v: arr.map((x) => Number(x) | 0) })
+  intArray: (arr) => ({ t: TAG.INT_ARRAY, v: arr.map((x) => Number(x) | 0) }),
+  longArray: (arr) => ({ t: TAG.LONG_ARRAY, v: arr.map((x) => BigInt.asIntN(64, BigInt(x))) })
 };
 
-// Java "Modified UTF-8" (DataOutput.writeUTF) — dùng cho mọi chuỗi trong NBT
+// Java "Modified UTF-8" (DataOutput.writeUTF / DataInput.readUTF) — dùng cho mọi chuỗi trong NBT
 function encodeModifiedUtf8(str) {
   const bytes = [];
   for (let i = 0; i < str.length; i++) {
@@ -41,7 +43,106 @@ function encodeModifiedUtf8(str) {
   return Buffer.from(bytes);
 }
 
-function writeNbtRoot(rootCompound) {
+function decodeModifiedUtf8(buf, start, len) {
+  const end = start + len;
+  const chars = [];
+  let i = start;
+  while (i < end) {
+    const b1 = buf[i] & 0xff;
+    if ((b1 & 0x80) === 0) {
+      chars.push(b1);
+      i += 1;
+    } else if ((b1 & 0xe0) === 0xc0 && i + 1 < end) {
+      const b2 = buf[i + 1] & 0x3f;
+      chars.push(((b1 & 0x1f) << 6) | b2);
+      i += 2;
+    } else if ((b1 & 0xf0) === 0xe0 && i + 2 < end) {
+      const b2 = buf[i + 1] & 0x3f;
+      const b3 = buf[i + 2] & 0x3f;
+      chars.push(((b1 & 0x0f) << 12) | (b2 << 6) | b3);
+      i += 3;
+    } else {
+      chars.push(b1);
+      i += 1;
+    }
+  }
+  return String.fromCharCode(...chars);
+}
+
+function readNbtRoot(rawBuf) {
+  const buf = Buffer.isBuffer(rawBuf) ? rawBuf : Buffer.from(rawBuf);
+  let off = 0;
+  const u8 = () => { const v = buf.readUInt8(off); off += 1; return v; };
+  const i8 = () => { const v = buf.readInt8(off); off += 1; return v; };
+  const i16 = () => { const v = buf.readInt16BE(off); off += 2; return v; };
+  const i32 = () => { const v = buf.readInt32BE(off); off += 4; return v; };
+  const i64 = () => { const v = buf.readBigInt64BE(off); off += 8; return v; };
+  const f32 = () => { const v = buf.readFloatBE(off); off += 4; return v; };
+  const f64 = () => { const v = buf.readDoubleBE(off); off += 8; return v; };
+  const str = () => {
+    const len = buf.readUInt16BE(off);
+    off += 2;
+    const s = decodeModifiedUtf8(buf, off, len);
+    off += len;
+    return s;
+  };
+  const readPayload = (tagType) => {
+    switch (tagType) {
+      case TAG.BYTE: return nbt.byte(i8());
+      case TAG.SHORT: return nbt.short(i16());
+      case TAG.INT: return nbt.int(i32());
+      case TAG.LONG: return nbt.long(i64());
+      case TAG.FLOAT: return nbt.float(f32());
+      case TAG.DOUBLE: return nbt.double(f64());
+      case TAG.BYTE_ARRAY: {
+        const len = i32();
+        const slice = Buffer.from(buf.subarray(off, off + len));
+        off += len;
+        return nbt.byteArray(slice);
+      }
+      case TAG.STRING: return nbt.string(str());
+      case TAG.LIST: {
+        const elemType = u8();
+        const len = i32();
+        const items = [];
+        for (let k = 0; k < len; k++) items.push(readPayload(elemType));
+        return { t: TAG.LIST, et: len > 0 ? elemType : TAG.END, v: items };
+      }
+      case TAG.COMPOUND: {
+        const obj = {};
+        while (off < buf.length) {
+          const childType = u8();
+          if (childType === TAG.END) break;
+          const key = str();
+          obj[key] = readPayload(childType);
+        }
+        return nbt.compound(obj);
+      }
+      case TAG.INT_ARRAY: {
+        const len = i32();
+        const arr = new Array(len);
+        for (let k = 0; k < len; k++) arr[k] = i32();
+        return nbt.intArray(arr);
+      }
+      case TAG.LONG_ARRAY: {
+        const len = i32();
+        const arr = new Array(len);
+        for (let k = 0; k < len; k++) arr[k] = i64();
+        return nbt.longArray(arr);
+      }
+      default:
+        throw new Error(`Kiểu thẻ NBT không xác định (${tagType}) tại vị trí ${off}`);
+    }
+  };
+  const rootType = u8();
+  if (rootType !== TAG.COMPOUND) throw new Error('Tệp NBT không bắt đầu bằng thẻ Compound');
+  const rootName = str();
+  const root = readPayload(TAG.COMPOUND);
+  root._rootName = rootName;
+  return root;
+}
+
+function writeNbtRoot(rootCompound, rootNameOverride) {
   const chunks = [];
   const push = (b) => chunks.push(b);
   const u8 = (v) => { const b = Buffer.alloc(1); b.writeUInt8(v & 0xff); push(b); };
@@ -58,15 +159,23 @@ function writeNbtRoot(rootCompound) {
       case TAG.LONG: i64(node.v); break;
       case TAG.FLOAT: { const b = Buffer.alloc(4); b.writeFloatBE(node.v); push(b); break; }
       case TAG.DOUBLE: { const b = Buffer.alloc(8); b.writeDoubleBE(node.v); push(b); break; }
+      case TAG.BYTE_ARRAY: {
+        const b = Buffer.isBuffer(node.v) ? node.v : Buffer.from(node.v || []);
+        i32(b.length);
+        push(b);
+        break;
+      }
       case TAG.STRING: str(node.v); break;
-      case TAG.LIST:
-        u8(node.et);
+      case TAG.LIST: {
+        const actualEt = node.v.length ? node.et : TAG.END;
+        u8(actualEt);
         i32(node.v.length);
         for (const item of node.v) {
-          if (item.t !== node.et) throw new Error('Danh sách NBT không đồng nhất kiểu');
+          if (item.t !== actualEt) throw new Error('Danh sách NBT không đồng nhất kiểu');
           payload(item);
         }
         break;
+      }
       case TAG.COMPOUND:
         for (const [k, child] of Object.entries(node.v)) {
           if (!child) continue;
@@ -77,11 +186,12 @@ function writeNbtRoot(rootCompound) {
         u8(TAG.END);
         break;
       case TAG.INT_ARRAY: i32(node.v.length); node.v.forEach((x) => i32(x)); break;
+      case TAG.LONG_ARRAY: i32(node.v.length); node.v.forEach((x) => i64(x)); break;
       default: throw new Error(`Kiểu NBT không hỗ trợ: ${node.t}`);
     }
   };
   u8(TAG.COMPOUND);
-  str('');
+  str(typeof rootNameOverride === 'string' ? rootNameOverride : (rootCompound._rootName || ''));
   payload(rootCompound);
   return Buffer.concat(chunks);
 }
@@ -579,11 +689,461 @@ function savesHasWorlds(gameDirectory) {
   }
 }
 
+/* ==================== v40.7 PRO: CURATED SEED VAULT & WORLD NBT RESCUE ==================== */
+const CURATED_SEEDS_VAULT = [
+  {
+    id: 'cherry-ring-mountain',
+    title: '🌸 Thung Lũng Anh Đào Ôm Trọn Hồ Núi Tuyết',
+    seed: '1691256543523180978',
+    category: 'scenic',
+    badge: 'Đẹp Nhất Xây Nhà',
+    coordsHint: 'Spawn gần X: 120, Z: 80',
+    description: 'Vòng núi tuyết hùng vĩ khép kín bao quanh thung lũng hoa anh đào hồng rực, hồ nước trong vắt ở giữa và ngôi làng bình yên sát bên.'
+  },
+  {
+    id: 'mushroom-safe-island',
+    title: '🍄 Quần Đảo Nấm Khổng Lồ (100% Không Quái Ban Đêm)',
+    seed: '-4270204629242599305',
+    category: 'survival',
+    badge: 'An Toàn Tuyệt Đối',
+    coordsHint: 'Xuất hiện ngay trên Đảo Nấm',
+    description: 'Đảo Nấm rộng lớn nằm giữa đại dương ngay điểm xuất hiện — ban đêm không bao giờ tự sinh Zombie/Creeper, lý tưởng để xây đại căn cứ.'
+  },
+  {
+    id: 'mansion-village-ancient',
+    title: '🏰 Biệt Thự Rừng + Làng Cổ + Thành Cổ Ngầm Sát Nhau',
+    seed: '5706378859201728440',
+    category: 'adventure',
+    badge: 'Siêu Hiếm 3-Trong-1',
+    coordsHint: 'Ngay sát điểm xuất hiện (X: 60, Z: 90)',
+    description: 'Vừa vào thế giới đã đứng trước tòa Biệt thự Woodland Mansion khổng lồ ghép liền với ngôi làng dân làng và thành cổ Ancient City sâu bên dưới.'
+  },
+  {
+    id: 'coral-castaway-island',
+    title: '🏝️ Đảo Hoang San Hô Rực Rỡ & Kho Báu Tàu Đắm',
+    seed: '-3420545464665791887',
+    category: 'island',
+    badge: 'Sinh Tồn Đảo Hoang',
+    coordsHint: 'Đảo chính tại X: 0, Z: 0',
+    description: 'Thử thách sinh tồn trên hòn đảo nhỏ giữa vùng biển ấm rực rỡ san hô phát sáng ban đêm, bao quanh bởi xác tàu đắm và phế tích biển.'
+  },
+  {
+    id: 'ice-spikes-frozen-kingdom',
+    title: '❄️ Vương Quốc Gai Băng Cổ Đại & Làng Tuyết',
+    seed: '-7253978062019363248',
+    category: 'scenic',
+    badge: 'Cảnh Quan Kỳ Vĩ',
+    coordsHint: 'Gai băng tại X: -150, Z: 120',
+    description: 'Hàng trăm cột băng xanh cao vút nối liền rặng núi tuyết trắng xóa, có sẵn làng tuyết Igloo và cổng địa ngục cổ ngay gần điểm xuất hiện.'
+  },
+  {
+    id: 'badlands-gold-oasis',
+    title: '🏜️ Ốc Đảo Hẻm Núi Đỏ Giàu Vàng & Đền Sa Mạc',
+    seed: '8678942899319966093',
+    category: 'adventure',
+    badge: 'Giàu Tài Nguyên',
+    coordsHint: 'Ốc đảo tại X: 40, Z: -60',
+    description: 'Sự giao thoa tuyệt đẹp giữa hồ nước xanh, làng sa mạc, Kim tự tháp chứa kho báu và dãy núi đất nung Badlands lộ thiên đầy mỏ vàng.'
+  },
+  {
+    id: 'speedrun-bastion-fortress',
+    title: '⚡ Hạt Giống Phá Đảo Thần Tốc (Làng Rèn + Pháo Đài Gần)',
+    seed: '-4530634556500121041',
+    category: 'speedrun',
+    badge: 'Speedrun Chuẩn',
+    coordsHint: 'Làng & Hồ Lava ngay cạnh Spawn',
+    description: 'Có sẵn làng thợ rèn lấy sắt/đồ ăn và hồ dung nham dựng cổng Nether mở thẳng ra khu vực sát Pháo đài Nether Fortress và Bastion.'
+  },
+  {
+    id: 'lush-cave-ancient-taiga',
+    title: '🌲 Rừng Tùng Cổ Thụ & Đại Hang Động Rêu Phát Sáng',
+    seed: '7092092118958763650',
+    category: 'scenic',
+    badge: 'Hang Động Tuyệt Đẹp',
+    coordsHint: 'Cửa hang lớn tại X: -80, Z: 40',
+    description: 'Rừng thông khổng lồ phủ rêu phong bên trên một quần thể hang động Lush Caves rực sáng quả mọng phát quang và cá kỳ nhông Axolotl.'
+  }
+];
+
+const MODE_ID_TO_KEY = { 0: 'survival', 1: 'creative', 2: 'adventure', 3: 'spectator' };
+const MODE_KEY_TO_LABEL = {
+  survival: 'Sinh tồn (Survival)',
+  creative: 'Sáng tạo (Creative)',
+  adventure: 'Phiêu lưu (Adventure)',
+  spectator: 'Khán giả (Spectator)'
+};
+const DIFF_ID_TO_KEY = { 0: 'peaceful', 1: 'easy', 2: 'normal', 3: 'hard' };
+const DIFF_KEY_TO_LABEL = {
+  peaceful: 'Hòa bình',
+  easy: 'Dễ',
+  normal: 'Bình thường',
+  hard: 'Khó'
+};
+
+function formatDimensionLabel(dimRaw) {
+  const s = String(dimRaw ?? 'minecraft:overworld');
+  if (s === '0' || s.endsWith(':overworld')) return 'Thế giới chính (Overworld)';
+  if (s === '-1' || s.endsWith(':the_nether')) return 'Địa ngục (Nether)';
+  if (s === '1' || s.endsWith(':the_end')) return 'Thế giới Rồng (The End)';
+  return s;
+}
+
+function readLatestPlayerNbtFile(worldDir) {
+  try {
+    const pdDir = path.join(worldDir, 'playerdata');
+    if (!fs.existsSync(pdDir)) return null;
+    const files = fs.readdirSync(pdDir)
+      .filter((f) => /\.dat$/i.test(f))
+      .map((f) => {
+        const full = path.join(pdDir, f);
+        return { full, mtimeMs: fs.statSync(full).mtimeMs || 0 };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+    if (!files.length) return null;
+    const raw = zlib.gunzipSync(fs.readFileSync(files[0].full));
+    return { filePath: files[0].full, root: readNbtRoot(raw) };
+  } catch (_) {
+    return null;
+  }
+}
+
+function extractPlayerSummary(playerCompoundObj) {
+  if (!playerCompoundObj) return null;
+  const posList = playerCompoundObj.Pos?.v;
+  if (!Array.isArray(posList) || posList.length < 3) return null;
+  const x = Math.round(Number(posList[0].v) * 10) / 10;
+  const y = Math.round(Number(posList[1].v) * 10) / 10;
+  const z = Math.round(Number(posList[2].v) * 10) / 10;
+  const dimRaw = playerCompoundObj.Dimension?.v ?? 'minecraft:overworld';
+  const health = playerCompoundObj.Health ? Math.round(Number(playerCompoundObj.Health.v) * 10) / 10 : 20;
+  const foodLevel = playerCompoundObj.foodLevel ? Number(playerCompoundObj.foodLevel.v) : 20;
+  const xpLevel = playerCompoundObj.XpLevel ? Number(playerCompoundObj.XpLevel.v) : 0;
+  const deathTime = playerCompoundObj.DeathTime ? Number(playerCompoundObj.DeathTime.v) : 0;
+  return {
+    x,
+    y,
+    z,
+    dimension: String(dimRaw),
+    dimensionLabel: formatDimensionLabel(dimRaw),
+    health,
+    foodLevel,
+    xpLevel,
+    isDead: health <= 0 || deathTime > 0
+  };
+}
+
+function inspectWorldNbt(worldDir) {
+  const levelDatPath = path.join(worldDir, 'level.dat');
+  if (!fs.existsSync(levelDatPath)) {
+    throw new Error('Không tìm thấy tệp dữ liệu level.dat trong thư mục thế giới này.');
+  }
+  const unzipped = zlib.gunzipSync(fs.readFileSync(levelDatPath));
+  const root = readNbtRoot(unzipped);
+  const dataObj = root.v?.Data?.v || root.v;
+  if (!dataObj) throw new Error('Cấu trúc dữ liệu level.dat không hợp lệ.');
+
+  const levelName = String(dataObj.LevelName?.v || path.basename(worldDir));
+  const mcVersion = String(dataObj.Version?.v?.Name?.v || '');
+  const dataVersion = Number(dataObj.DataVersion?.v || dataObj.Version?.v?.Id?.v || 0);
+
+  // Extract Seed across MC 1.8 -> 1.21.x -> 26.x
+  let seedBig = null;
+  if (dataObj.WorldGenSettings?.v?.seed?.v !== undefined) {
+    seedBig = dataObj.WorldGenSettings.v.seed.v;
+  } else if (dataObj.RandomSeed?.v !== undefined) {
+    seedBig = dataObj.RandomSeed.v;
+  } else {
+    const wgsPath = path.join(worldDir, 'data', 'minecraft', 'world_gen_settings.dat');
+    if (fs.existsSync(wgsPath)) {
+      try {
+        const wgsRoot = readNbtRoot(zlib.gunzipSync(fs.readFileSync(wgsPath)));
+        if (wgsRoot.v?.data?.v?.seed?.v !== undefined) {
+          seedBig = wgsRoot.v.data.v.seed.v;
+        }
+      } catch (_) {}
+    }
+  }
+  const seed = seedBig !== null && seedBig !== undefined ? String(seedBig) : '';
+
+  const hardcore = Boolean(
+    (dataObj.hardcore && Number(dataObj.hardcore.v) === 1) ||
+    (dataObj.difficulty_settings?.v?.hardcore && Number(dataObj.difficulty_settings.v.hardcore.v) === 1)
+  );
+  const rawGt = Number(dataObj.GameType?.v ?? 0);
+  const gameMode = MODE_ID_TO_KEY[rawGt] || 'survival';
+  const rawDiff = dataObj.Difficulty !== undefined
+    ? Number(dataObj.Difficulty.v)
+    : (DIFFICULTIES[dataObj.difficulty_settings?.v?.difficulty?.v] ?? 2);
+  const difficulty = DIFF_ID_TO_KEY[rawDiff] || 'normal';
+  const allowCommands = Boolean(dataObj.allowCommands && Number(dataObj.allowCommands.v) === 1);
+
+  // Check keepInventory in GameRules OR blockway-rules datapack
+  const rulesObj = dataObj.GameRules?.v || {};
+  let keepInventory = String(rulesObj.keepInventory?.v || rulesObj.keep_inventory?.v || '').toLowerCase() === 'true';
+  if (!keepInventory) {
+    try {
+      const bwRuleFn = path.join(worldDir, 'datapacks', 'blockway-rules', 'data', 'blockway', 'function', 'rules_legacy.mcfunction');
+      if (fs.existsSync(bwRuleFn) && /keepInventory\s+true/i.test(fs.readFileSync(bwRuleFn, 'utf8'))) {
+        keepInventory = true;
+      }
+    } catch (_) {}
+  }
+
+  const dayTicks = Number(dataObj.DayTime?.v ?? dataObj.Time?.v ?? 0n);
+  const totalTicks = Number(dataObj.Time?.v ?? dataObj.DayTime?.v ?? 0n);
+  const dayCount = Math.max(0, Math.floor(Math.max(dayTicks, totalTicks) / 24000));
+  const phaseTick = ((dayTicks % 24000) + 24000) % 24000;
+  let timePhase = 'Ban ngày';
+  if (phaseTick >= 12000 && phaseTick < 13800) timePhase = 'Hoàng hôn';
+  else if (phaseTick >= 13800 && phaseTick < 22500) timePhase = 'Ban đêm';
+  else if (phaseTick >= 22500) timePhase = 'Bình minh';
+
+  const raining = Boolean(dataObj.raining && Number(dataObj.raining.v) === 1);
+  const thundering = Boolean(dataObj.thundering && Number(dataObj.thundering.v) === 1);
+
+  // Spawn coordinates (classic SpawnX/Y/Z or modern 1.21.9+/26.x spawn.pos intArray)
+  let spawnPos = { x: 0, y: 72, z: 0 };
+  if (Array.isArray(dataObj.spawn?.v?.pos?.v) && dataObj.spawn.v.pos.v.length >= 3) {
+    spawnPos = {
+      x: Number(dataObj.spawn.v.pos.v[0]),
+      y: Number(dataObj.spawn.v.pos.v[1]),
+      z: Number(dataObj.spawn.v.pos.v[2])
+    };
+  } else if (dataObj.SpawnX !== undefined && dataObj.SpawnZ !== undefined) {
+    spawnPos = {
+      x: Number(dataObj.SpawnX.v),
+      y: Number(dataObj.SpawnY?.v ?? 72),
+      z: Number(dataObj.SpawnZ.v)
+    };
+  }
+
+  let playerPos = extractPlayerSummary(dataObj.Player?.v);
+  if (!playerPos) {
+    const extPlayer = readLatestPlayerNbtFile(worldDir);
+    if (extPlayer?.root?.v) {
+      playerPos = extractPlayerSummary(extPlayer.root.v);
+    }
+  }
+
+  return {
+    ok: true,
+    folderName: path.basename(worldDir),
+    worldDir,
+    levelName,
+    mcVersion,
+    dataVersion,
+    seed,
+    gameMode,
+    gameModeLabel: hardcore && gameMode === 'spectator' ? '💀 Đã tử trận (Hardcore)' : (hardcore ? '💀 Sinh tồn Khốc liệt (Hardcore)' : MODE_KEY_TO_LABEL[gameMode]),
+    hardcore,
+    difficulty,
+    difficultyLabel: DIFF_KEY_TO_LABEL[difficulty] || 'Bình thường',
+    allowCommands,
+    keepInventory,
+    dayCount,
+    timePhase,
+    raining,
+    thundering,
+    spawnPos,
+    playerPos,
+    hasSafetyBackup: fs.existsSync(path.join(worldDir, 'level.dat.bw-bak'))
+  };
+}
+
+function applyPlayerPatchesToCompound(playerObj, { gameTypeId, reviveHardcore, teleportCoords }) {
+  if (!playerObj) return;
+  if (gameTypeId !== null && gameTypeId !== undefined) {
+    playerObj.playerGameType = nbt.int(gameTypeId);
+  }
+  if (reviveHardcore) {
+    playerObj.playerGameType = nbt.int(0);
+    playerObj.Health = nbt.float(20.0);
+    playerObj.DeathTime = nbt.short(0);
+    playerObj.HurtTime = nbt.short(0);
+    playerObj.FallDistance = nbt.float(0.0);
+    playerObj.Fire = nbt.short(-20);
+    playerObj.foodLevel = nbt.int(20);
+    playerObj.foodSaturationLevel = nbt.float(5.0);
+  }
+  if (teleportCoords) {
+    playerObj.Pos = nbt.list(TAG.DOUBLE, [
+      nbt.double(Number(teleportCoords.x) + 0.5),
+      nbt.double(Number(teleportCoords.y) + 1.0),
+      nbt.double(Number(teleportCoords.z) + 0.5)
+    ]);
+    playerObj.Motion = nbt.list(TAG.DOUBLE, [nbt.double(0), nbt.double(0), nbt.double(0)]);
+    playerObj.FallDistance = nbt.float(0.0);
+    playerObj.Dimension = nbt.string('minecraft:overworld');
+  }
+}
+
+function rescueAndPatchWorldNbt(worldDir, patches = {}) {
+  const levelDatPath = path.join(worldDir, 'level.dat');
+  if (!fs.existsSync(levelDatPath)) {
+    throw new Error('Không tìm thấy tệp level.dat của thế giới này.');
+  }
+
+  // Always create a safety backup before touching NBT bytes
+  const bakPath = path.join(worldDir, 'level.dat.bw-bak');
+  try {
+    fs.copyFileSync(levelDatPath, bakPath);
+  } catch (_) {}
+
+  const root = readNbtRoot(zlib.gunzipSync(fs.readFileSync(levelDatPath)));
+  const dataObj = root.v?.Data?.v || root.v;
+  if (!dataObj) throw new Error('Không đọc được cấu trúc Data trong level.dat.');
+
+  const appliedActions = [];
+  let targetGameTypeId = null;
+
+  if (typeof patches.levelName === 'string' && patches.levelName.trim()) {
+    dataObj.LevelName = nbt.string(cleanLevelName(patches.levelName));
+    appliedActions.push('Đổi tên thế giới');
+  }
+
+  if (patches.gameMode && GAME_MODES[patches.gameMode] !== undefined) {
+    targetGameTypeId = GAME_MODES[patches.gameMode];
+    dataObj.GameType = nbt.int(targetGameTypeId);
+    appliedActions.push(`Chế độ chơi → ${MODE_KEY_TO_LABEL[patches.gameMode]}`);
+  }
+
+  if (patches.difficulty && DIFFICULTIES[patches.difficulty] !== undefined) {
+    const diffId = DIFFICULTIES[patches.difficulty];
+    dataObj.Difficulty = nbt.byte(diffId);
+    dataObj.DifficultyLocked = nbt.byte(0);
+    if (dataObj.difficulty_settings?.v) {
+      dataObj.difficulty_settings.v.difficulty = nbt.string(patches.difficulty);
+      dataObj.difficulty_settings.v.locked = nbt.byte(0);
+    }
+    appliedActions.push(`Độ khó → ${DIFF_KEY_TO_LABEL[patches.difficulty]}`);
+  }
+
+  if (typeof patches.allowCommands === 'boolean') {
+    dataObj.allowCommands = nbt.byte(patches.allowCommands ? 1 : 0);
+    appliedActions.push(patches.allowCommands ? 'Mở khóa Dùng Lệnh (Cheats)' : 'Tắt Dùng Lệnh');
+  }
+
+  if (typeof patches.keepInventory === 'boolean') {
+    if (!dataObj.GameRules || dataObj.GameRules.t !== TAG.COMPOUND) {
+      dataObj.GameRules = nbt.compound({});
+    }
+    const valStr = patches.keepInventory ? 'true' : 'false';
+    dataObj.GameRules.v.keepInventory = nbt.string(valStr);
+    dataObj.GameRules.v.keep_inventory = nbt.string(valStr);
+    // Also sync blockway-rules datapack if world uses modern 26.x gamerule registry
+    const bwRulesDir = path.join(worldDir, 'datapacks', 'blockway-rules');
+    if (patches.keepInventory) {
+      writeRulesDatapack(worldDir, { pack_version: 48 }, { keepInventory: true, alwaysDay: false });
+      if (dataObj.DataPacks?.v?.Enabled?.v) {
+        const hasBw = dataObj.DataPacks.v.Enabled.v.some((item) => item.v === 'file/blockway-rules');
+        if (!hasBw) {
+          dataObj.DataPacks.v.Enabled.v.push(nbt.string('file/blockway-rules'));
+          dataObj.DataPacks.v.Enabled.et = TAG.STRING;
+        }
+      }
+    } else if (fs.existsSync(bwRulesDir)) {
+      try { fs.rmSync(bwRulesDir, { recursive: true, force: true }); } catch (_) {}
+    }
+    appliedActions.push(patches.keepInventory ? 'Bật Giữ Đồ Khi Chết' : 'Tắt Giữ Đồ Khi Chết');
+  }
+
+  if (patches.clearWeatherAndDay) {
+    dataObj.DayTime = nbt.long(1000);
+    dataObj.raining = nbt.byte(0);
+    dataObj.thundering = nbt.byte(0);
+    dataObj.rainTime = nbt.int(0);
+    dataObj.thunderTime = nbt.int(0);
+    dataObj.clearWeatherTime = nbt.int(24000);
+    appliedActions.push('Chỉnh Trời Quang & Ban Ngày');
+  }
+
+  // Compute safe spawn coordinates in case teleportToSpawn or reviveHardcore is requested
+  let spawnCoords = { x: 0, y: 72, z: 0 };
+  if (Array.isArray(dataObj.spawn?.v?.pos?.v) && dataObj.spawn.v.pos.v.length >= 3) {
+    spawnCoords = {
+      x: Number(dataObj.spawn.v.pos.v[0]),
+      y: Number(dataObj.spawn.v.pos.v[1]),
+      z: Number(dataObj.spawn.v.pos.v[2])
+    };
+  } else if (dataObj.SpawnX !== undefined && dataObj.SpawnZ !== undefined) {
+    spawnCoords = {
+      x: Number(dataObj.SpawnX.v),
+      y: Number(dataObj.SpawnY?.v ?? 72),
+      z: Number(dataObj.SpawnZ.v)
+    };
+  }
+
+  const doRevive = Boolean(patches.reviveHardcore);
+  const doTeleport = Boolean(patches.teleportToSpawn);
+
+  if (doRevive) {
+    dataObj.hardcore = nbt.byte(0);
+    dataObj.GameType = nbt.int(0);
+    dataObj.allowCommands = nbt.byte(1);
+    targetGameTypeId = 0;
+    if (dataObj.difficulty_settings?.v) {
+      dataObj.difficulty_settings.v.hardcore = nbt.byte(0);
+      dataObj.difficulty_settings.v.locked = nbt.byte(0);
+    }
+    appliedActions.push('Hồi sinh khỏi Hardcore & hồi đầy 20 Máu');
+  }
+  if (doTeleport) {
+    appliedActions.push(`Đưa nhân vật về Điểm Xuất Hiện (${spawnCoords.x}, ${spawnCoords.y + 1}, ${spawnCoords.z})`);
+  }
+
+  if (targetGameTypeId !== null || doRevive || doTeleport) {
+    if (dataObj.Player?.v) {
+      applyPlayerPatchesToCompound(dataObj.Player.v, {
+        gameTypeId: targetGameTypeId,
+        reviveHardcore: doRevive,
+        teleportCoords: doTeleport ? spawnCoords : null
+      });
+    }
+    // Also patch all playerdata/*.dat files so singleplayer/LAN UUID profiles stay in sync!
+    const pdDir = path.join(worldDir, 'playerdata');
+    if (fs.existsSync(pdDir)) {
+      for (const f of fs.readdirSync(pdDir)) {
+        if (!/\.dat$/i.test(f)) continue;
+        const pFull = path.join(pdDir, f);
+        try {
+          const pRoot = readNbtRoot(zlib.gunzipSync(fs.readFileSync(pFull)));
+          if (pRoot?.v) {
+            applyPlayerPatchesToCompound(pRoot.v, {
+              gameTypeId: targetGameTypeId,
+              reviveHardcore: doRevive,
+              teleportCoords: doTeleport ? spawnCoords : null
+            });
+            const pTmp = `${pFull}.tmp`;
+            fs.writeFileSync(pTmp, zlib.gzipSync(writeNbtRoot(pRoot)));
+            fs.renameSync(pTmp, pFull);
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  const tmpLevel = `${levelDatPath}.tmp`;
+  fs.writeFileSync(tmpLevel, zlib.gzipSync(writeNbtRoot(root)));
+  fs.renameSync(tmpLevel, levelDatPath);
+
+  const freshInspected = inspectWorldNbt(worldDir);
+  return {
+    ...freshInspected,
+    ok: true,
+    appliedActions,
+    inspected: freshInspected
+  };
+}
+
 module.exports = {
   createQuickWorld,
   supportsQuickWorldCreation,
   savesHasWorlds,
   resolveSeed,
   javaStringHashCode,
-  _internal: { writeNbtRoot, jsonToNbt, nbt, TAG, scanModDataPacks, findClientJar, makeWorldFolderName, encodeModifiedUtf8 }
+  CURATED_SEEDS_VAULT,
+  inspectWorldNbt,
+  rescueAndPatchWorldNbt,
+  readNbtRoot,
+  _internal: { writeNbtRoot, readNbtRoot, jsonToNbt, nbt, TAG, scanModDataPacks, findClientJar, makeWorldFolderName, encodeModifiedUtf8, decodeModifiedUtf8 }
 };

@@ -716,6 +716,15 @@ async function loadModrinthStore(append = false) {
     'ears': 'Cho phép gắn thêm tai mèo, tai cáo, sừng, đuôi, cánh và phụ kiện 3D trực tiếp lên nhân vật từ file ảnh Skin.',
     'capes': 'Hiển thị đầy đủ áo choàng (Capes) của OptiFine, LabyMod, MinecraftCapes và Mojang cho mọi người chơi trong game.',
     'custom-skin-loader': 'Đồng bộ và hiển thị Skin HD, Áo choàng (Capes) từ nhiều nguồn máy chủ cho cả chế độ Offline/Crack lẫn Multiplayer.',
+    'customskinloader': 'Đồng bộ và hiển thị đúng Skin, Áo choàng (Capes) riêng của từng người chơi khi chơi Offline / LAN / Server.',
+    '3dskinlayers': 'Biến lớp áo ngoài (tóc, mũ, áo khoác, tay áo) trên Skin từ mặt phẳng 2D thành mô hình nổi 3D sống động.',
+    'skinshuffle': 'Đổi nóng bộ trang phục Skin 3D ngay giữa lúc đang chơi trong thế giới hoặc Server mà không cần thoát game.',
+    'evergreenhud': 'Giao diện HUD chiến đấu kiểu Lunar Client: Hiển thị FPS, Ping, tọa độ, tốc độ nhấp chuột CPS và bàn phím bấm Keystrokes.',
+    'clean-keystrokes': 'Hiển thị bàn phím WASD + Chuột Trái/Phải kèm bộ đếm tốc độ nhấp chuột CPS gọn đẹp cho PvP / BedWars.',
+    'armor-hud': 'Hiển thị trực quan độ bền Mũ, Áo giáp, Quần, Giày ngay cạnh thanh công cụ dưới màn hình khi giao tranh PvP.',
+    'status-effect-bars': 'Hiển thị thanh thời gian đếm ngược của Táo vàng, Thuốc Tốc độ, Sức mạnh, Kháng lửa ngay trên màn hình.',
+    'dynamiccrosshair': 'Tâm ngắm chiến đấu thông minh tự đổi kiểu và báo hiệu khi vung kiếm đủ lực hoặc nhắm trúng mục tiêu.',
+    'freelook': 'Nhấn giữ phím để xoay góc nhìn camera 360° quan sát sau lưng khi đang chạy nước rút hoặc bắc cầu BedWars.',
     'fabrishot': 'Chụp ảnh màn hình (Screenshot) độ phân giải siêu cao 4K / 8K sắc nét gấp nhiều lần kích thước màn hình thực tế.',
     'advancement-plaques': 'Thay thế thông báo Thành tựu (Advancements) góc trên bằng biểu ngữ huy chương vàng kèm hiệu ứng âm thanh sang trọng.',
     'iceberg': 'Thư viện đồ họa và sự kiện nền tảng cần thiết cho các Mod giao diện của Grend_G như Advancement Plaques, Legendary Tooltips.',
@@ -1704,6 +1713,7 @@ async function renderLocalWorlds() {
     </div>
     <div class="world-card-actions" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
       <button class="btn-install-mod" data-playworld="${safeName}" data-widx="${idx}" title="⚡ Vào thẳng thế giới ${safeName} (${w.instanceName ? `Gói ${escapeHtml(w.instanceName)}` : 'Minecraft'}) chỉ với 1 cú nhấp!">⚡ Vào Thẳng</button>
+      <button class="vtype-btn world-rescue-btn" data-worldrescue="${safePath}" data-worldtitle="${safeName}" title="Xem Seed, tọa độ nhân vật (X, Y, Z), mở khóa lệnh, bật giữ đồ hoặc hồi sinh Hardcore">🛠️ Cứu hộ / Seed</button>
       <button class="vtype-btn" data-worlddatapacks="${safePath}" data-worldtitle="${safeName}" title="Quản lý hoặc thêm các gói Datapack đang gắn trong thế giới này">📜 Datapack${dpCount > 0 ? ` (${dpCount})` : ''}</button>
       <button class="vtype-btn" data-backupworld="${safeFolder}" data-worldpath="${safePath}" data-worldtitle="${safeName}" title="Sao lưu 1-Click thế giới này thành bản .zip an toàn">💾 Sao lưu</button>
       <button class="vtype-btn" data-exportworld="${safeFolder}" data-worldpath="${safePath}" data-worldtitle="${safeName}" title="Xuất thế giới này ra file .zip để chia sẻ với bạn bè">📤 Xuất Map</button>
@@ -1712,6 +1722,13 @@ async function renderLocalWorlds() {
   </div>`;
   }).join('');
   container.querySelectorAll('[data-openworld]').forEach((btn) => { btn.onclick = () => window.aetherAPI.openGameDir(btn.dataset.openworld); });
+  container.querySelectorAll('[data-worldrescue]').forEach((btn) => {
+    btn.onclick = () => {
+      if (typeof window.openWorldRescueModal === 'function') {
+        window.openWorldRescueModal(btn.dataset.worldrescue, btn.dataset.worldtitle);
+      }
+    };
+  });
   container.querySelectorAll('[data-worlddatapacks]').forEach((btn) => {
     btn.onclick = () => {
       if (typeof window.openWorldDatapacksModal === 'function') {
@@ -2783,17 +2800,21 @@ function quickWorldSupported(mcVersion) {
   return major >= 2 || (major === 1 && minor >= 20);
 }
 
-function openQuickWorldModal(inst) {
-  if (!inst) return;
-  const supported = quickWorldSupported(inst.mcVersion);
-  const islandName = inst.autoIslandMode === 'oneblock' ? 'Đảo OneBlock giữa khoảng không' : inst.autoIslandMode ? 'Đảo SkyBlock giữa khoảng không' : '';
-  const worldTypeLabel = islandName ? `🏝️ ${islandName}` : '🌳 Kiểu thế giới mặc định của gói';
-  const defaultName = String(inst.name || 'Thế giới mới').slice(0, 40);
+function openQuickWorldModal(inst = null, prefillSeed = '', prefillName = '') {
+  const isStandalone = !inst;
+  const targetMcVer = isStandalone ? (state.selectedVersion || '1.21.4') : (inst.mcVersion || '1.21.4');
+  const supported = quickWorldSupported(targetMcVer);
+  const islandName = !isStandalone
+    ? (inst.autoIslandMode === 'oneblock' ? 'Đảo OneBlock giữa khoảng không' : inst.autoIslandMode ? 'Đảo SkyBlock giữa khoảng không' : '')
+    : '';
+  const worldTypeLabel = islandName ? `🏝️ ${islandName}` : '🌳 Thế giới sinh tồn chuẩn Minecraft';
+  const defaultName = String(prefillName || (isStandalone ? 'Thế giới mới' : (inst.name || 'Thế giới mới'))).slice(0, 40);
+  const headTarget = isStandalone ? `Minecraft ${escapeHtml(targetMcVer)}` : escapeHtml(inst.name || 'Modpack');
   const card = packOpenModal(`
-    <div class="modal-head"><span class="card-dot emerald"></span><h3>🌍 Tạo thế giới mới — ${escapeHtml(inst.name || 'Modpack')}</h3></div>
+    <div class="modal-head"><span class="card-dot emerald"></span><h3>🌍 Tạo thế giới mới — ${headTarget}</h3></div>
     <div class="modal-body qw-body">
-      ${supported ? '' : `<p class="pack-modal-hint">⚠️ Tạo thế giới tự động cần Minecraft <strong>1.20 trở lên</strong> (gói này là MC ${escapeHtml(inst.mcVersion || '?')}). Hãy bấm <strong>▶ Chơi</strong> rồi tạo thế giới trong game nhé.</p>`}
-      <p class="pack-modal-hint">Kiểu thế giới: <strong>${worldTypeLabel}</strong> • MC ${escapeHtml(inst.mcVersion || '?')}. Bấm tạo xong là game mở thẳng vào thế giới, không cần qua Menu.</p>
+      ${supported ? '' : `<p class="pack-modal-hint">⚠️ Tạo thế giới tự động ngoài game cần Minecraft <strong>1.20 trở lên</strong> (đang chọn MC ${escapeHtml(targetMcVer)}). Hãy đổi sang 1.20+ hoặc bấm CHƠI NGAY để tạo trong game nhé.</p>`}
+      <p class="pack-modal-hint">Kiểu thế giới: <strong>${worldTypeLabel}</strong> • MC ${escapeHtml(targetMcVer)}. Cấu hình sẵn chế độ, giữ đồ, hạt giống Seed đẹp rồi lưu sẵn hoặc vào thẳng không cần qua Menu!</p>
       <label class="qw-label">Tên thế giới</label>
       <input type="text" id="qwName" class="pro-input" maxlength="40" value="${escapeHtml(defaultName)}" />
       <label class="qw-label">Chế độ chơi</label>
@@ -2810,8 +2831,15 @@ function openQuickWorldModal(inst) {
         <button type="button" class="vtype-btn active" data-v="normal">😐 Thường</button>
         <button type="button" class="vtype-btn" data-v="hard">😈 Khó</button>
       </div>
-      <label class="qw-label">Seed <span class="qw-sub">(để trống = ngẫu nhiên; nhập số hoặc chữ đều được)</span></label>
-      <input type="text" id="qwSeed" class="pro-input" maxlength="64" placeholder="VD: 123456 hoặc blockway" />
+      <label class="qw-label">Seed <span class="qw-sub">(để trống = ngẫu nhiên, hoặc bấm chọn nhanh Hạt giống đẹp bên dưới)</span></label>
+      <input type="text" id="qwSeed" class="pro-input" maxlength="64" value="${escapeHtml(prefillSeed || '')}" placeholder="VD: 1691256543523180978 hoặc để trống..." />
+      <div class="qw-seed-chips">
+        <button type="button" class="mqt-chip" data-qwseed="1691256543523180978" data-qwtitle="Thung Lũng Anh Đào">🌸 Anh Đào Núi Tuyết</button>
+        <button type="button" class="mqt-chip" data-qwseed="-4270204629242599305" data-qwtitle="Đảo Nấm Bình Yên">🍄 Đảo Nấm Không Quái</button>
+        <button type="button" class="mqt-chip" data-qwseed="5706378859201728440" data-qwtitle="Biệt Thự & Thành Cổ">🏰 Biệt Thự + Làng</button>
+        <button type="button" class="mqt-chip" data-qwseed="-3420545464665791887" data-qwtitle="Đảo Hoang San Hô">🏝️ Đảo San Hô</button>
+        <button type="button" class="mqt-chip" data-qwseed="-4530634556500121041" data-qwtitle="Speedrun Phá Đảo">⚡ Speedrun</button>
+      </div>
       <div class="qw-toggles">
         <label class="settings-opt-item"><input type="checkbox" id="qwKeepInv" /><div class="soi-body"><strong>🎒 Giữ đồ khi chết</strong><span>Chết không bị rơi đồ và kinh nghiệm.</span></div></label>
         <label class="settings-opt-item"><input type="checkbox" id="qwAlwaysDay" /><div class="soi-body"><strong>☀️ Luôn ban ngày</strong><span>Dừng chu kỳ ngày đêm, quái ít xuất hiện hơn.</span></div></label>
@@ -2819,10 +2847,26 @@ function openQuickWorldModal(inst) {
         <label class="settings-opt-item"><input type="checkbox" id="qwCheats" /><div class="soi-body"><strong>⌨️ Cho phép dùng lệnh</strong><span>Dùng được /gamemode, /time, /tp... (tắt khi chọn Hardcore).</span></div></label>
       </div>
     </div>
-    <div class="modal-foot"><button class="btn-modal-cancel" data-pmclose>Hủy</button><button class="btn-modal-agree" id="btnQwCreate" ${supported ? '' : 'disabled'}>🚀 Tạo &amp; Vào Thẳng</button></div>`, false);
+    <div class="modal-foot" style="gap:8px;flex-wrap:wrap;">
+      <button class="btn-modal-cancel" data-pmclose>Hủy</button>
+      ${isStandalone ? `<button class="btn-sync-skin" id="btnQwSaveOnly" ${supported ? '' : 'disabled'}>💾 Tạo Sẵn Vào Danh Sách</button>` : ''}
+      <button class="btn-modal-agree" id="btnQwCreate" ${supported ? '' : 'disabled'}>🚀 Tạo &amp; Vào Thẳng</button>
+    </div>`, false);
   if (!card) return;
 
   const pick = { mode: 'survival', difficulty: 'normal' };
+  card.querySelectorAll('[data-qwseed]').forEach((chip) => {
+    chip.onclick = () => {
+      const seedInp = card.querySelector('#qwSeed');
+      const nameInp = card.querySelector('#qwName');
+      if (seedInp) seedInp.value = chip.dataset.qwseed || '';
+      if (nameInp && (!nameInp.value.trim() || nameInp.value.trim() === 'Thế giới mới')) {
+        nameInp.value = chip.dataset.qwtitle || 'Thế giới mới';
+      }
+      card.querySelectorAll('[data-qwseed]').forEach((c) => c.classList.toggle('active', c === chip));
+    };
+  });
+
   card.querySelectorAll('.qw-seg').forEach((grp) => {
     grp.querySelectorAll('button[data-v]').forEach((btn) => {
       btn.onclick = () => {
@@ -2846,9 +2890,9 @@ function openQuickWorldModal(inst) {
     });
   });
 
-  card.querySelector('#btnQwCreate').onclick = () => {
+  const collectOpts = () => {
     const isHc = pick.mode === 'hardcore';
-    const opts = {
+    return {
       force: true,
       levelName: (card.querySelector('#qwName').value || '').trim() || defaultName,
       gameMode: isHc ? 'survival' : pick.mode,
@@ -2860,11 +2904,65 @@ function openQuickWorldModal(inst) {
       bonusChest: card.querySelector('#qwBonusChest').checked,
       allowCommands: !isHc && card.querySelector('#qwCheats').checked
     };
+  };
+
+  const runStandaloneCreate = async (launchImmediately) => {
+    const opts = collectOpts();
+    const btnSave = card.querySelector('#btnQwSaveOnly');
+    const btnGo = card.querySelector('#btnQwCreate');
+    if (btnSave) btnSave.disabled = true;
+    if (btnGo) { btnGo.disabled = true; btnGo.textContent = '⏳ Đang khởi tạo Map...'; }
+    try {
+      const r = await window.aetherAPI.createStandaloneQuickWorld({
+        gameDir: state.gameDir,
+        instanceDir: '',
+        mcVersion: targetMcVer,
+        loaderType: state.selectedCore || 'fabric',
+        ...opts
+      });
+      if (!r?.ok) {
+        showAetherNotification(`⚠️ ${r?.error || 'Không thể tạo thế giới mới'}`, 'error', 4500);
+        if (btnSave) btnSave.disabled = false;
+        if (btnGo) { btnGo.disabled = false; btnGo.textContent = '🚀 Tạo & Vào Thẳng'; }
+        return;
+      }
+      packCloseModal();
+      await renderLocalWorlds();
+      if (launchImmediately) {
+        quickLaunchWorld({
+          name: r.levelName || opts.levelName,
+          folderName: r.folderName,
+          path: r.worldDir,
+          version: targetMcVer
+        });
+      } else {
+        switchWorldsSubView('local');
+        showAetherNotification(`🌍 Đã tạo sẵn thế giới "${r.levelName || opts.levelName}" (Seed: ${r.seed}) vào .minecraft/saves!`, 'success', 4800);
+      }
+    } catch (err) {
+      if (btnSave) btnSave.disabled = false;
+      if (btnGo) { btnGo.disabled = false; btnGo.textContent = '🚀 Tạo & Vào Thẳng'; }
+      showAetherNotification(`⚠️ ${err.message}`, 'error', 4500);
+    }
+  };
+
+  const btnSaveOnly = card.querySelector('#btnQwSaveOnly');
+  if (btnSaveOnly) {
+    btnSaveOnly.onclick = () => runStandaloneCreate(false);
+  }
+
+  card.querySelector('#btnQwCreate').onclick = () => {
+    if (isStandalone) {
+      runStandaloneCreate(true);
+      return;
+    }
+    const opts = collectOpts();
     packCloseModal();
     launchPackInstance(inst, '', '', '', opts);
   };
   setTimeout(() => card.querySelector('#qwName')?.focus(), 50);
 }
+window.openQuickWorldModal = openQuickWorldModal;
 
 async function launchPackInstance(inst, customServerIp = '', customWorldFolder = '', customWorldTitle = '', newWorldOptions = null) {
   if (state.isLaunching) { packNotify('⚠️ Minecraft đang chạy hoặc đang khởi động. Hãy tắt game trước.', 'error'); return; }
@@ -4996,22 +5094,30 @@ const worldStoreState = {
 };
 
 function switchWorldsSubView(viewMode = 'local') {
-  worldStoreState.view = viewMode === 'store' ? 'store' : 'local';
+  const validModes = ['local', 'store', 'seeds'];
+  worldStoreState.view = validModes.includes(viewMode) ? viewMode : 'local';
   const btnLocal = document.getElementById('btnWorldsViewLocal');
   const btnStore = document.getElementById('btnWorldsViewStore');
+  const btnSeeds = document.getElementById('btnWorldsViewSeeds');
   const localCard = document.getElementById('worldsDropZoneCard');
   const storePanel = document.getElementById('worldStorePanel');
+  const seedsPanel = document.getElementById('worldSeedsPanel');
   const backupsBox = document.getElementById('worldBackupsBox');
 
   btnLocal?.classList.toggle('active', worldStoreState.view === 'local');
   btnStore?.classList.toggle('active', worldStoreState.view === 'store');
+  btnSeeds?.classList.toggle('active', worldStoreState.view === 'seeds');
   localCard?.classList.toggle('hidden', worldStoreState.view !== 'local');
   storePanel?.classList.toggle('hidden', worldStoreState.view !== 'store');
-  if (worldStoreState.view === 'store') {
+  seedsPanel?.classList.toggle('hidden', worldStoreState.view !== 'seeds');
+  if (worldStoreState.view !== 'local') {
     backupsBox?.classList.add('hidden');
-    if (!worldStoreState.loadedOnce) {
-      loadWorldStoreUI(true);
-    }
+  }
+  if (worldStoreState.view === 'store' && !worldStoreState.loadedOnce) {
+    loadWorldStoreUI(true);
+  }
+  if (worldStoreState.view === 'seeds' && typeof window.renderSeedVaultUI === 'function') {
+    window.renderSeedVaultUI();
   }
 }
 window.switchWorldsSubView = switchWorldsSubView;
@@ -5476,8 +5582,650 @@ function initV406FeaturesUI() {
   setTimeout(() => refreshSmartRamCoachUI(), 650);
 }
 
+/* ============================================================================
+   v40.7 PRO: ONLINE SKIN HUB + FRIEND SKIN SYNC, PVP LUNAR MODE,
+              WORLD NBT RESCUE + SEED VAULT, AND 1-CLICK REPLAY STUDIO
+   ============================================================================ */
+const onlineSkinHubState = {
+  category: 'popular',
+  page: 1,
+  loadedOnce: false,
+  items: []
+};
+
+function getCurrentActivePlayerName() {
+  if (state.authMode === 'microsoft' && state.msProfile?.name) return state.msProfile.name;
+  if (state.authMode === 'aether' && state.cloudProfile?.mcUsername) return state.cloudProfile.mcUsername;
+  return state.username || 'StevePlayer';
+}
+
+async function loadOnlineSkinHubUI(resetPage = false) {
+  const grid = document.getElementById('onlineSkinGrid');
+  const badge = document.getElementById('onlineSkinCountBadge');
+  if (!grid || typeof window.aetherAPI?.searchOnlineSkins !== 'function') return;
+  onlineSkinHubState.loadedOnce = true;
+  if (resetPage) onlineSkinHubState.page = 1;
+
+  const query = document.getElementById('onlineSkinSearchInput')?.value.trim() || '';
+  grid.innerHTML = '<div style="grid-column:1/-1;padding:22px;text-align:center;color:var(--text-muted);font-weight:700;">⏳ Đang tải mẫu nhân vật 3D từ Kho Skin...</div>';
+
+  try {
+    const res = await window.aetherAPI.searchOnlineSkins({
+      query,
+      category: onlineSkinHubState.category || 'popular',
+      page: onlineSkinHubState.page || 1
+    });
+    const items = res?.items || [];
+    onlineSkinHubState.items = items;
+    if (badge) {
+      badge.textContent = items.length > 0 ? `${items.length} Mẫu • Trang ${onlineSkinHubState.page}` : 'Kho Mojang & Cộng Đồng';
+    }
+    if (!items.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:22px;text-align:center;color:var(--text-muted);">Không tìm thấy Skin khớp từ khóa này. Hãy thử nhập tên người chơi khác hoặc chọn chủ đề bên trên!</div>';
+      return;
+    }
+
+    grid.innerHTML = items.map((sk, idx) => {
+      const safePreview = /^https:\/\//i.test(String(sk.previewUrl || '')) ? escapeHtml(sk.previewUrl) : '';
+      const safeFace = /^https:\/\//i.test(String(sk.faceUrl || '')) ? escapeHtml(sk.faceUrl) : '';
+      const safeName = escapeHtml(sk.name || 'Skin 3D');
+      const safeBadge = escapeHtml(sk.badge || '🌐 Skin 3D');
+      return `<div class="online-skin-card">
+        <span class="osc-badge">${safeBadge}</span>
+        <div class="osc-preview-wrap">
+          <img class="osc-body-img" src="${safePreview}" data-fallback="${safeFace}" alt="${safeName}" loading="lazy" />
+        </div>
+        <strong class="osc-name" title="${safeName}">${safeName}</strong>
+        <button type="button" class="btn-install-mod osc-wear-btn" data-wearskin="${idx}">👕 Mặc Ngay</button>
+      </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.osc-body-img').forEach((img) => {
+      img.addEventListener('error', () => {
+        const fb = img.dataset.fallback;
+        if (fb && img.src !== fb) {
+          img.src = fb;
+        }
+      }, { once: true });
+    });
+
+    grid.querySelectorAll('[data-wearskin]').forEach((btn) => {
+      btn.onclick = async () => {
+        const sk = items[Number(btn.dataset.wearskin)];
+        if (!sk) return;
+        const orig = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Đang mặc...';
+        try {
+          const r = await window.aetherAPI.applyOnlineSkin({
+            gameDir: state.gameDir,
+            username: getCurrentActivePlayerName(),
+            textureUrl: sk.textureUrl,
+            skinName: sk.name
+          });
+          if (!r?.ok || !r.dataUrl) {
+            throw new Error(r?.error || 'Không tải được ảnh Skin này');
+          }
+          if (typeof window.applyExternalSkinDataUrl === 'function') {
+            await window.applyExternalSkinDataUrl(r.dataUrl, r.skinName || sk.name);
+          }
+          btn.textContent = '✓ Đang mặc!';
+          showAetherNotification(`👕 Đã mặc Skin "${sk.name}" lên mô hình 3D và đồng bộ sẵn vào game!`, 'success', 4000);
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = orig;
+          }, 2200);
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = orig;
+          showAetherNotification(`⚠️ ${err.message}`, 'error', 4200);
+        }
+      };
+    });
+  } catch (err) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:22px;text-align:center;color:var(--text-muted);">⚠️ Không kết nối được Kho Skin trực tuyến (${escapeHtml(err.message)}).</div>`;
+  }
+}
+window.loadOnlineSkinHubUI = loadOnlineSkinHubUI;
+window.onSkinTabShown = () => {
+  if (!onlineSkinHubState.loadedOnce) {
+    loadOnlineSkinHubUI(true);
+  }
+};
+
+/* ---------- Upgrade 2: Lunar-Style 1-Click PvP / BedWars Mode ---------- */
+async function refreshPvpModeUI() {
+  if (typeof window.aetherAPI?.getPvpModeState !== 'function') return;
+  try {
+    const res = await window.aetherAPI.getPvpModeState({
+      gameDir: state.gameDir,
+      instanceDir: state.modTargetInstanceDir || ''
+    });
+    const isOn = Boolean(res?.enabled);
+    const count = Array.isArray(res?.activeMods) ? res.activeMods.length : 0;
+    const card = document.getElementById('pvpClientModeCard');
+    const badge = document.getElementById('pvpModeStateBadge');
+    const btnMain = document.getElementById('btnTogglePvpClientMode');
+    const btnTool = document.getElementById('btnToolsPvpQuickToggle');
+
+    card?.classList.toggle('is-active', isOn);
+    if (badge) {
+      badge.textContent = isOn ? `🟢 Đang bật (${count} gói PvP)` : 'Đang tắt';
+    }
+    if (btnMain) {
+      btnMain.textContent = isOn ? '🛑 Tắt Chế Độ PvP (Về Sinh Tồn)' : '⚔️ Bật Chế Độ PvP 1-Click';
+    }
+    if (btnTool) {
+      btnTool.classList.toggle('is-ok', isOn);
+      btnTool.textContent = isOn ? '⚔️ Chế Độ PvP HUD: ĐANG BẬT' : '⚔️ Bật / Tắt Chế Độ PvP HUD';
+    }
+  } catch (_) {}
+}
+window.refreshPvpModeUI = refreshPvpModeUI;
+
+async function handleTogglePvpModeClick(triggerBtn) {
+  if (typeof window.aetherAPI?.togglePvpMode !== 'function') return;
+  const cur = await window.aetherAPI.getPvpModeState({
+    gameDir: state.gameDir,
+    instanceDir: state.modTargetInstanceDir || ''
+  });
+  const wantEnable = !cur?.enabled;
+
+  let targetCore = state.selectedCore || 'fabric';
+  if (wantEnable && !state.modTargetInstanceDir && (targetCore === 'vanilla' || targetCore === 'legacyfabric')) {
+    targetCore = 'fabric';
+    if (typeof window.selectMcVersionAndCore === 'function') {
+      await window.selectMcVersionAndCore(state.selectedVersion || '1.21.4', 'fabric');
+    }
+  }
+
+  const origText = triggerBtn?.textContent || '';
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = wantEnable ? '⏳ Đang trang bị HUD PvP & Lửa Thấp...' : '⏳ Đang gỡ HUD PvP...';
+  }
+  try {
+    const r = await window.aetherAPI.togglePvpMode({
+      gameDir: state.gameDir,
+      instanceDir: state.modTargetInstanceDir || '',
+      mcVersion: state.selectedVersion || '1.21.4',
+      loaderType: targetCore,
+      enable: wantEnable
+    });
+    await refreshLocalAddonsCount();
+    await refreshPvpModeUI();
+    if (wantEnable) {
+      const n = r?.installedMods?.length || 0;
+      showAetherNotification(
+        `⚔️ Đã bật Chế Độ Chiến Đấu PvP (${n} gói HUD + Tự chạy nhanh ToggleSprint + Lửa thấp không che màn hình)! Sẵn sàng chiến BedWars / BoxPvP!`,
+        'success',
+        5500
+      );
+    } else {
+      showAetherNotification(
+        `🌿 Đã tắt Chế Độ PvP (tạm cất ${r?.disabledCount || 0} gói HUD PvP và gỡ gói Lửa thấp), trả lại nguyên vẹn bộ Mod sinh tồn!`,
+        'info',
+        4500
+      );
+    }
+  } catch (err) {
+    if (triggerBtn) triggerBtn.textContent = origText;
+    showAetherNotification(`⚠️ ${err.message}`, 'error', 4500);
+  } finally {
+    if (triggerBtn) triggerBtn.disabled = false;
+    await refreshPvpModeUI();
+  }
+}
+
+/* ---------- Upgrade 3: World NBT Inspector, Hardcore Rescue & Seed Vault ---------- */
+let cachedCuratedSeeds = null;
+
+async function renderSeedVaultUI() {
+  const grid = document.getElementById('seedVaultGrid');
+  if (!grid || typeof window.aetherAPI?.getCuratedSeedsVault !== 'function') return;
+  if (!cachedCuratedSeeds) {
+    const res = await window.aetherAPI.getCuratedSeedsVault();
+    cachedCuratedSeeds = res?.seeds || [];
+  }
+  const seeds = cachedCuratedSeeds;
+  if (!seeds.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-muted);">Chưa tải được danh sách Hạt giống.</div>';
+    return;
+  }
+
+  grid.innerHTML = seeds.map((s, idx) => `
+    <div class="mod-card seed-vault-card">
+      <div class="svc-top">
+        <span class="mod-compat-pill ok">🌱 ${escapeHtml(s.badge || 'Hạt giống tuyển chọn')}</span>
+        <span class="svc-coords">${escapeHtml(s.coordsHint || '')}</span>
+      </div>
+      <div class="mod-title svc-title">${escapeHtml(s.title)}</div>
+      <div class="mod-desc">${escapeHtml(s.description || '')}</div>
+      <div class="svc-seed-row">
+        <code class="svc-seed-code">${escapeHtml(s.seed)}</code>
+        <button type="button" class="vtype-btn" data-copyseed="${idx}" title="Sao chép mã Seed này">📋 Copy Seed</button>
+      </div>
+      <div class="mod-card-foot" style="justify-content:flex-end;margin-top:4px;">
+        <button type="button" class="btn-install-mod" data-createseed="${idx}">🌍 Tạo Map Với Seed Này</button>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('[data-copyseed]').forEach((btn) => {
+    btn.onclick = () => {
+      const s = seeds[Number(btn.dataset.copyseed)];
+      if (!s) return;
+      window.aetherAPI.copyTextToClipboard(s.seed);
+      showAetherNotification(`📋 Đã sao chép mã Seed "${s.seed}" vào khay nhớ tạm!`, 'success', 3000);
+    };
+  });
+
+  grid.querySelectorAll('[data-createseed]').forEach((btn) => {
+    btn.onclick = () => {
+      const s = seeds[Number(btn.dataset.createseed)];
+      if (!s) return;
+      const cleanTitle = String(s.title || 'Thế giới mới').replace(/^[^\p{L}\p{N}]+/u, '').split('(')[0].trim().slice(0, 36);
+      openQuickWorldModal(null, s.seed, cleanTitle);
+    };
+  });
+}
+window.renderSeedVaultUI = renderSeedVaultUI;
+
+async function openWorldRescueModal(worldPath, worldTitle) {
+  if (typeof window.aetherAPI?.inspectWorldDetails !== 'function') return;
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="card-dot emerald"></span>
+        <h3 id="worldRescueTitleLabel">🛠️ Cứu Hộ &amp; Thông Tin Thế Giới — “${escapeHtml(worldTitle || 'Map')}”</h3>
+      </div>
+      <button class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body" id="worldRescueModalBody" style="overflow-x:hidden;">
+      <div class="pack-modal-loading">⏳ Đang đọc dữ liệu nhị phân level.dat của thế giới...</div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span class="field-hint-mini">🛡️ Tự tạo bản dự phòng <code>level.dat.bw-bak</code> an toàn trước khi sửa (đóng Map trong game trước khi áp dụng).</span>
+      <button class="btn-modal-cancel" data-pmclose>Đóng</button>
+    </div>`, true);
+  if (!card) return;
+
+  const body = card.querySelector('#worldRescueModalBody');
+  const titleEl = card.querySelector('#worldRescueTitleLabel');
+
+  const applyPatchAndReload = async (patches, successMsg, triggerBtn) => {
+    if (triggerBtn) triggerBtn.disabled = true;
+    try {
+      const r = await window.aetherAPI.rescuePatchWorld({
+        gameDir: state.gameDir,
+        worldNameOrPath: worldPath,
+        patches
+      });
+      if (!r?.ok) {
+        showAetherNotification(`⚠️ ${r?.error || 'Không thể cập nhật dữ liệu thế giới'}`, 'error', 4500);
+        if (triggerBtn) triggerBtn.disabled = false;
+        return;
+      }
+      showAetherNotification(successMsg, 'success', 4200);
+      await renderLocalWorlds();
+      renderDetails(r);
+    } catch (err) {
+      if (triggerBtn) triggerBtn.disabled = false;
+      showAetherNotification(`⚠️ ${err.message}`, 'error', 4500);
+    }
+  };
+
+  const renderDetails = (info) => {
+    if (!info?.ok) {
+      body.innerHTML = `<div class="pack-modal-msg">⚠️ Không đọc được dữ liệu thế giới: ${escapeHtml(info?.error || 'Lỗi không xác định')}</div>`;
+      return;
+    }
+    if (titleEl && info.levelName) {
+      titleEl.textContent = `🛠️ Cứu Hộ & Thông Tin Thế Giới — “${info.levelName}”`;
+    }
+    const p = info.playerPos;
+    const sp = info.spawnPos || { x: 0, y: 72, z: 0 };
+    const coordStr = p ? `${p.x}, ${p.y}, ${p.z}` : `${sp.x}, ${sp.y}, ${sp.z}`;
+    const weatherLabel = info.thundering ? '⛈️ Đang giông bão' : (info.raining ? '🌧️ Đang mưa' : '☀️ Trời quang');
+    const needHardcoreRevive = Boolean(info.hardcore || p?.isDead);
+
+    body.innerHTML = `
+      <div class="world-rescue-seed-bar">
+        <div class="wrs-left">
+          <span class="wrs-label">🌱 Hạt giống (Seed):</span>
+          <code class="svc-seed-code">${escapeHtml(info.seed || 'Chưa xác định')}</code>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${info.seed ? '<button type="button" class="vtype-btn" id="btnWrCopySeed">📋 Sao chép Seed</button>' : ''}
+          ${info.seed ? '<button type="button" class="btn-sync-skin" id="btnWrCloneSeed">🌍 Tạo Map Mới Từ Seed Này</button>' : ''}
+        </div>
+      </div>
+
+      <div class="world-rescue-grid">
+        <div class="wr-stat-tile">
+          <span class="wr-stat-k">📍 Vị trí nhân vật hiện tại</span>
+          <strong class="wr-stat-v">${p ? `X: ${p.x} • Y: ${p.y} • Z: ${p.z}` : `Spawn: X: ${sp.x}, Y: ${sp.y}, Z: ${sp.z}`}</strong>
+          <div class="wr-stat-sub">
+            <span>${escapeHtml(p ? p.dimensionLabel : 'Chưa vào thế giới lần đầu')}</span>
+            <button type="button" class="vtype-btn wr-mini-copy" id="btnWrCopyCoords">📋 Copy tọa độ</button>
+          </div>
+        </div>
+        <div class="wr-stat-tile">
+          <span class="wr-stat-k">🎮 Chế độ &amp; Độ khó</span>
+          <strong class="wr-stat-v">${escapeHtml(info.gameModeLabel || info.gameMode)}</strong>
+          <span class="wr-stat-sub">Độ khó: <strong>${escapeHtml(info.difficultyLabel)}</strong> • MC ${escapeHtml(info.mcVersion || '?')}</span>
+        </div>
+        <div class="wr-stat-tile">
+          <span class="wr-stat-k">⏳ Thời gian &amp; Thời tiết</span>
+          <strong class="wr-stat-v">Ngày thứ ${Number(info.dayCount || 0)} (${escapeHtml(info.timePhase || 'Ban ngày')})</strong>
+          <span class="wr-stat-sub">${weatherLabel}</span>
+        </div>
+        <div class="wr-stat-tile">
+          <span class="wr-stat-k">❤️ Nhân vật &amp; Quy tắc</span>
+          <strong class="wr-stat-v">${p ? `❤️ ${p.health}/20 Máu • ⭐ Cấp ${p.xpLevel}` : '❤️ 20/20 Máu (Mới tạo)'}</strong>
+          <span class="wr-stat-sub">Giữ đồ: <strong>${info.keepInventory ? 'BẬT' : 'TẮT'}</strong> • Lệnh Cheat: <strong>${info.allowCommands ? 'BẬT' : 'TẮT'}</strong></span>
+        </div>
+      </div>
+
+      ${needHardcoreRevive ? `
+      <div class="wr-hardcore-banner">
+        <div>
+          <strong>💖 Cứu Hộ Khẩn Cấp Thế Giới Hardcore / Tử Trận</strong>
+          <span>Gỡ khóa Hardcore, hồi đầy 20 Máu + Thức ăn, xóa trạng thái Khán giả để bạn chơi tiếp công trình tâm huyết!</span>
+        </div>
+        <button type="button" class="btn-fps-boost-1click" id="btnWrReviveHardcore">💖 Hồi Sinh Khỏi Hardcore Ngay</button>
+      </div>` : ''}
+
+      <div class="wr-actions-section">
+        <span class="wr-sec-title">⚡ Công Cụ Cứu Hộ &amp; Chỉnh Nhanh 1-Click:</span>
+        <div class="wr-actions-grid">
+          <button type="button" class="btn-sync-skin ${info.allowCommands ? 'is-ok' : ''}" id="btnWrToggleCheats">
+            ${info.allowCommands ? '⌨️ Dùng Lệnh (/gamemode, /tp): ĐANG BẬT' : '🔓 Mở Khóa Dùng Lệnh (/gamemode, /tp)'}
+          </button>
+          <button type="button" class="btn-sync-skin ${info.keepInventory ? 'is-ok' : ''}" id="btnWrToggleKeepInv">
+            ${info.keepInventory ? '🎒 Giữ Đồ Khi Chết: ĐANG BẬT' : '🎒 Bật Giữ Đồ Khi Chết (KeepInventory)'}
+          </button>
+          <button type="button" class="btn-sync-skin" id="btnWrTeleportSpawn" title="Đưa nhân vật về lại tọa độ xuất hiện ban đầu ở Overworld khi bị kẹt dưới vực Void, dung nham hoặc lỗi Chunk">
+            🏠 Đưa Nhân Vật Về Điểm Xuất Hiện (${sp.x}, ${sp.y}, ${sp.z})
+          </button>
+          <button type="button" class="btn-sync-skin" id="btnWrClearWeather">
+            ☀️ Đặt Lại Ban Ngày &amp; Tạnh Mưa Bão
+          </button>
+        </div>
+      </div>
+
+      <div class="wr-actions-section">
+        <span class="wr-sec-title">🎮 Đổi Nhanh Chế Độ Chơi Mặc Định:</span>
+        <div class="qw-seg">
+          <button type="button" class="vtype-btn ${!info.hardcore && info.gameMode === 'survival' ? 'active' : ''}" data-wrmode="survival">⚔️ Sinh tồn</button>
+          <button type="button" class="vtype-btn ${info.gameMode === 'creative' ? 'active' : ''}" data-wrmode="creative">🎨 Sáng tạo</button>
+          <button type="button" class="vtype-btn ${info.gameMode === 'adventure' ? 'active' : ''}" data-wrmode="adventure">🧭 Phiêu lưu</button>
+          <button type="button" class="vtype-btn ${info.gameMode === 'spectator' ? 'active' : ''}" data-wrmode="spectator">👻 Khán giả</button>
+        </div>
+      </div>
+    `;
+
+    const bCopySeed = body.querySelector('#btnWrCopySeed');
+    if (bCopySeed) {
+      bCopySeed.onclick = () => {
+        window.aetherAPI.copyTextToClipboard(info.seed);
+        showAetherNotification(`📋 Đã sao chép Seed "${info.seed}"!`, 'success', 2800);
+      };
+    }
+    const bCloneSeed = body.querySelector('#btnWrCloneSeed');
+    if (bCloneSeed) {
+      bCloneSeed.onclick = () => {
+        packCloseModal();
+        openQuickWorldModal(null, info.seed, `${info.levelName || 'Bản sao'} (Mới)`.slice(0, 38));
+      };
+    }
+    const bCopyCoords = body.querySelector('#btnWrCopyCoords');
+    if (bCopyCoords) {
+      bCopyCoords.onclick = () => {
+        window.aetherAPI.copyTextToClipboard(coordStr);
+        showAetherNotification(`📋 Đã sao chép tọa độ "${coordStr}"!`, 'success', 2800);
+      };
+    }
+    const bRevive = body.querySelector('#btnWrReviveHardcore');
+    if (bRevive) {
+      bRevive.onclick = () => applyPatchAndReload(
+        { reviveHardcore: true, allowCommands: true },
+        `💖 Đã hồi sinh nhân vật khỏi Hardcore (20/20 Máu, Chế độ Sinh tồn) trong "${info.levelName}"!`,
+        bRevive
+      );
+    }
+    const bCheats = body.querySelector('#btnWrToggleCheats');
+    if (bCheats) {
+      bCheats.onclick = () => applyPatchAndReload(
+        { allowCommands: !info.allowCommands },
+        info.allowCommands ? '🔒 Đã tắt quyền dùng lệnh Cheat trong thế giới.' : '🔓 Đã mở khóa dùng lệnh (/gamemode, /tp, /locate...) trong thế giới!',
+        bCheats
+      );
+    }
+    const bKeep = body.querySelector('#btnWrToggleKeepInv');
+    if (bKeep) {
+      bKeep.onclick = () => applyPatchAndReload(
+        { keepInventory: !info.keepInventory },
+        info.keepInventory ? '🎒 Đã tắt Giữ đồ khi chết.' : '🎒 Đã bật Giữ đồ khi chết (keepInventory = true) cho thế giới!',
+        bKeep
+      );
+    }
+    const bTpSpawn = body.querySelector('#btnWrTeleportSpawn');
+    if (bTpSpawn) {
+      bTpSpawn.onclick = () => applyPatchAndReload(
+        { teleportToSpawn: true },
+        `🏠 Đã đưa nhân vật an toàn về Điểm xuất hiện (${sp.x}, ${sp.y}, ${sp.z}) tại Overworld!`,
+        bTpSpawn
+      );
+    }
+    const bWeather = body.querySelector('#btnWrClearWeather');
+    if (bWeather) {
+      bWeather.onclick = () => applyPatchAndReload(
+        { clearWeatherAndDay: true },
+        '☀️ Đã đặt lại bình minh trời quang tạnh mưa cho thế giới!',
+        bWeather
+      );
+    }
+    body.querySelectorAll('[data-wrmode]').forEach((btn) => {
+      btn.onclick = () => {
+        const m = btn.dataset.wrmode;
+        applyPatchAndReload({ gameMode: m }, `🎮 Đã chuyển thế giới sang chế độ ${btn.textContent.trim()}!`, btn);
+      };
+    });
+  };
+
+  try {
+    const info = await window.aetherAPI.inspectWorldDetails({
+      gameDir: state.gameDir,
+      worldNameOrPath: worldPath
+    });
+    renderDetails(info);
+  } catch (err) {
+    body.innerHTML = `<div class="pack-modal-msg">⚠️ ${escapeHtml(err.message)}</div>`;
+  }
+}
+window.openWorldRescueModal = openWorldRescueModal;
+
+/* ---------- Upgrade 4: 1-Click Replay & TikTok Cam Studio ---------- */
+let cachedReplayVideosFolder = '';
+
+async function refreshReplayStudioUI() {
+  const badge = document.getElementById('replayStudioBadge');
+  const btnInstall = document.getElementById('btnInstallReplayStudio');
+  if (!badge || typeof window.aetherAPI?.getReplayStudioStatus !== 'function') return;
+  try {
+    const st = await window.aetherAPI.getReplayStudioStatus({
+      gameDir: state.gameDir,
+      instanceDir: state.modTargetInstanceDir || ''
+    });
+    if (st?.videosFolder) cachedReplayVideosFolder = st.videosFolder;
+    if (st?.equipped) {
+      const ffLabel = st.ffmpegReady ? 'Xuất MP4 Sẵn sàng' : 'Chưa cài bộ xuất MP4';
+      const recBadge = st.recordingsCount > 0 ? ` • ${st.recordingsCount} Bản quay` : '';
+      badge.textContent = `🟢 ${st.activeReplayMod}${st.hasFreecam ? ' + Freecam' : ''} • ${ffLabel}${recBadge}`;
+      if (btnInstall) {
+        btnInstall.textContent = st.ffmpegReady
+          ? `✓ Đã Trang Bị ${st.activeReplayMod} & Xuất MP4 (Bấm Cài Lại / Cập Nhật)`
+          : `🎬 Bổ Sung Bộ Kết Xuất Video MP4 Tự Động`;
+      }
+    } else {
+      badge.textContent = st?.ffmpegReady ? 'Sẵn sàng bộ xuất MP4 • Chưa gắn Mod quay' : 'Sẵn sàng trang bị 1-Click';
+      if (btnInstall) {
+        btnInstall.textContent = '🎬 Trang Bị Bộ Quay Phim 3D & Xuất Video MP4';
+      }
+    }
+  } catch (_) {}
+}
+window.refreshReplayStudioUI = refreshReplayStudioUI;
+window.refreshPvpAndReplayStates = () => {
+  refreshPvpModeUI();
+  refreshReplayStudioUI();
+};
+
+function initV407FeaturesUI() {
+  // 1. Seed Vault Sub-Tab in #tab-worlds
+  const btnWSeeds = document.getElementById('btnWorldsViewSeeds');
+  if (btnWSeeds) btnWSeeds.onclick = () => switchWorldsSubView('seeds');
+
+  // 2. Online Skin Hub & Co-op Friend Skin Sync in #tab-skin
+  const btnSkinSearch = document.getElementById('btnOnlineSkinSearch');
+  const inpSkinSearch = document.getElementById('onlineSkinSearchInput');
+  if (btnSkinSearch) btnSkinSearch.onclick = () => loadOnlineSkinHubUI(true);
+  if (inpSkinSearch) {
+    inpSkinSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadOnlineSkinHubUI(true);
+    });
+  }
+  document.querySelectorAll('#onlineSkinCatBar [data-skincat]').forEach((chip) => {
+    chip.onclick = () => {
+      document.querySelectorAll('#onlineSkinCatBar [data-skincat]').forEach((c) => c.classList.toggle('active', c === chip));
+      onlineSkinHubState.category = chip.dataset.skincat || 'popular';
+      if (inpSkinSearch) inpSkinSearch.value = '';
+      loadOnlineSkinHubUI(true);
+    };
+  });
+  const btnSkinNext = document.getElementById('btnOnlineSkinNextPage');
+  if (btnSkinNext) {
+    btnSkinNext.onclick = () => {
+      onlineSkinHubState.page = ((onlineSkinHubState.page || 1) % 12) + 1;
+      loadOnlineSkinHubUI(false);
+    };
+  }
+
+  const btnFriendSkin = document.getElementById('btnInstallFriendSkinSync');
+  if (btnFriendSkin && typeof window.aetherAPI?.installFriendSkinSync === 'function') {
+    btnFriendSkin.onclick = async () => {
+      let targetCore = state.selectedCore || 'fabric';
+      if (!state.modTargetInstanceDir && (targetCore === 'vanilla' || targetCore === 'legacyfabric')) {
+        targetCore = 'fabric';
+        if (typeof window.selectMcVersionAndCore === 'function') {
+          await window.selectMcVersionAndCore(state.selectedVersion || '1.21.4', 'fabric');
+        }
+      }
+      const orig = btnFriendSkin.textContent;
+      btnFriendSkin.disabled = true;
+      btnFriendSkin.textContent = '⏳ Đang cài CustomSkinLoader + Lớp Áo 3D + Capes...';
+      try {
+        const friendNames = Array.from(new Set([
+          getCurrentActivePlayerName(),
+          ...(Array.isArray(state.savedAccounts) ? state.savedAccounts : [])
+        ]));
+        const r = await window.aetherAPI.installFriendSkinSync({
+          gameDir: state.gameDir,
+          instanceDir: state.modTargetInstanceDir || '',
+          mcVersion: state.selectedVersion || '1.21.4',
+          loaderType: targetCore,
+          friendNames
+        });
+        await refreshLocalAddonsCount();
+        if (r?.ok) {
+          showAetherNotification(
+            `🤝 Đã trang bị đồng bộ Skin đa người chơi (${r.installed.length} gói)! Khi chơi chung LAN / e4mc / Mã Phòng, bạn bè sẽ thấy đúng Skin & Lớp áo 3D riêng của nhau (không bị trùng Steve/Alex)!`,
+            'success',
+            5800
+          );
+        } else {
+          showAetherNotification(`ℹ️ Phiên bản MC ${state.selectedVersion} chưa có bản CustomSkinLoader tương ứng trên Modrinth.`, 'info', 4500);
+        }
+      } catch (err) {
+        showAetherNotification(`⚠️ ${err.message}`, 'error', 4500);
+      } finally {
+        btnFriendSkin.disabled = false;
+        btnFriendSkin.textContent = orig;
+      }
+    };
+  }
+
+  // 3. Lunar-Style PvP Mode Toggle in #tab-servers & #tab-tools
+  const btnPvpMain = document.getElementById('btnTogglePvpClientMode');
+  if (btnPvpMain) btnPvpMain.onclick = () => handleTogglePvpModeClick(btnPvpMain);
+  const btnPvpTool = document.getElementById('btnToolsPvpQuickToggle');
+  if (btnPvpTool) btnPvpTool.onclick = () => handleTogglePvpModeClick(btnPvpTool);
+
+  // 4. Replay Studio & Cinematic Cam in #tab-tools
+  const btnInstallReplay = document.getElementById('btnInstallReplayStudio');
+  if (btnInstallReplay && typeof window.aetherAPI?.installReplayStudioPack === 'function') {
+    btnInstallReplay.onclick = async () => {
+      let targetCore = state.selectedCore || 'fabric';
+      if (!state.modTargetInstanceDir && (targetCore === 'vanilla' || targetCore === 'legacyfabric')) {
+        targetCore = 'fabric';
+        if (typeof window.selectMcVersionAndCore === 'function') {
+          await window.selectMcVersionAndCore(state.selectedVersion || '1.21.4', 'fabric');
+        }
+      }
+      const orig = btnInstallReplay.textContent;
+      btnInstallReplay.disabled = true;
+      btnInstallReplay.textContent = '⏳ Đang cài Flashback / ReplayMod + Freecam + Bộ xuất MP4...';
+      try {
+        const r = await window.aetherAPI.installReplayStudioPack({
+          gameDir: state.gameDir,
+          instanceDir: state.modTargetInstanceDir || '',
+          mcVersion: state.selectedVersion || '1.21.4',
+          loaderType: targetCore,
+          installFfmpeg: true
+        });
+        await refreshLocalAddonsCount();
+        await refreshReplayStudioUI();
+        if (r?.ok) {
+          showAetherNotification(
+            `🎬 Đã trang bị Studio Quay Phim 3D (${r.installed.join(', ')}) ${r.ffmpegReady ? 'kèm Bộ xuất Video MP4 tự động' : ''}! Vào game chơi xong mở mục Replays ngoài Menu để xoay góc máy điện ảnh và xuất clip!`,
+            'success',
+            6000
+          );
+        } else {
+          btnInstallReplay.textContent = orig;
+          showAetherNotification(`ℹ️ Phiên bản MC ${state.selectedVersion} (${targetCore.toUpperCase()}) hiện chưa có bản Flashback / ReplayMod trên Modrinth. Bạn hãy thử chọn Fabric 1.21.4 hoặc 1.21.1 nhé!`, 'info', 5200);
+        }
+      } catch (err) {
+        btnInstallReplay.textContent = orig;
+        showAetherNotification(`⚠️ ${err.message}`, 'error', 4500);
+      } finally {
+        btnInstallReplay.disabled = false;
+      }
+    };
+  }
+
+  const btnOpenReplayDir = document.getElementById('btnOpenReplayVideosDir');
+  if (btnOpenReplayDir) {
+    btnOpenReplayDir.onclick = async () => {
+      const st = await window.aetherAPI.getReplayStudioStatus({
+        gameDir: state.gameDir,
+        instanceDir: state.modTargetInstanceDir || ''
+      });
+      const targetFolder = st?.videosFolder || cachedReplayVideosFolder || state.gameDir;
+      window.aetherAPI.openGameDir(targetFolder);
+    };
+  }
+
+  setTimeout(() => {
+    refreshPvpModeUI();
+    refreshReplayStudioUI();
+  }, 850);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   initCoopHubUI();
   initV402FeaturesUI();
   initV406FeaturesUI();
+  initV407FeaturesUI();
 });

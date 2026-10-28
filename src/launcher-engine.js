@@ -841,6 +841,20 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'carry-on': ['carryon-'],
   'waystones': ['waystones-'],
   'sound-physics-remastered': ['sound-physics-remastered-', 'soundphysics-'],
+  'customskinloader': ['customskinloader_', 'customskinloader-'],
+  '3dskinlayers': ['skinlayers3d-', '3dskinlayers-'],
+  'skinshuffle': ['skinshuffle-'],
+  'skinrestorer': ['skinrestorer-'],
+  'capes': ['capes-'],
+  'evergreenhud': ['evergreenhud-'],
+  'clean-keystrokes': ['clean-keystrokes-', 'cleankeystrokes-'],
+  'armor-hud': ['armor-hud-', 'armorhud-', 'ukus-armor-hud-'],
+  'status-effect-bars': ['status-effect-bars-', 'statuseffectbars-'],
+  'dynamiccrosshair': ['dynamiccrosshair-'],
+  'freelook': ['freelook-'],
+  'flashback': ['flashback-'],
+  'replaymod': ['replaymod-'],
+  'freecam': ['freecam-'],
   'jei': ['jei-'],
   'rei': ['roughlyenoughitems-'],
   'emi': ['emi-'],
@@ -1132,7 +1146,7 @@ function equipResourcePackInGame(gameDir, packFileName, enable = true) {
       items = items.filter((it) => it !== packToken && it !== cleanName && it !== 'file/AetherSkinSync.zip');
       if (!items.includes('vanilla')) items.unshift('vanilla');
       if (enable) items.push(packToken);
-      if (hadSkinSync) items.push('file/AetherSkinSync.zip');
+      if (hadSkinSync && (packToken !== 'file/AetherSkinSync.zip' || enable)) items.push('file/AetherSkinSync.zip');
       return `resourcePacks:${JSON.stringify(items)}${cr}`;
     });
   } else if (enable) {
@@ -1685,6 +1699,7 @@ function scanSavesDirEntries(savesDir, extraMeta = {}) {
             minute: '2-digit'
           });
         } catch (_) {}
+        let displayLevelName = d.name;
         const levelDatPath = path.join(wPath, 'level.dat');
         if (fs.existsSync(levelDatPath)) {
           try {
@@ -1700,6 +1715,14 @@ function scanSavesDirEntries(savesDir, extraMeta = {}) {
               });
             }
             const raw = zlib.gunzipSync(fs.readFileSync(levelDatPath));
+            const lnIdx = raw.indexOf(Buffer.from('\x08\x00\x09LevelName'));
+            if (lnIdx !== -1 && lnIdx + 14 <= raw.length) {
+              const lnLen = raw.readUInt16BE(lnIdx + 12);
+              if (lnLen > 0 && lnLen <= 128 && lnIdx + 14 + lnLen <= raw.length) {
+                const parsedTitle = raw.subarray(lnIdx + 14, lnIdx + 14 + lnLen).toString('utf8').trim();
+                if (parsedTitle) displayLevelName = parsedTitle;
+              }
+            }
             const vIdx = raw.indexOf(Buffer.from('Version'));
             if (vIdx !== -1) {
               const sub = raw.subarray(vIdx, Math.min(raw.length, vIdx + 120));
@@ -1735,7 +1758,7 @@ function scanSavesDirEntries(savesDir, extraMeta = {}) {
           } catch (_) {}
         }
         return {
-          name: d.name,
+          name: displayLevelName,
           folderName: d.name,
           path: wPath,
           lastPlayed,
@@ -1946,7 +1969,17 @@ function detectResourcePackMeta(rootDir, mcVersion = '1.21.4') {
   return { pack: { pack_format: fmt, description: desc } };
 }
 
-function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl, mcVersion = '1.21.4') {
+function hasEnabledCustomSkinLoaderMod(rootDir) {
+  try {
+    const modsDir = path.join(rootDir, 'mods');
+    if (!fs.existsSync(modsDir)) return false;
+    return fs.readdirSync(modsDir).some((f) => /\.jar$/i.test(f) && /customskinloader/i.test(f));
+  } catch (_) {
+    return false;
+  }
+}
+
+function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl, mcVersion = '1.21.4', loaderType = 'vanilla') {
   try {
     if (!skinDataUrl || !skinDataUrl.startsWith('data:image/png;base64,')) return;
     const base64Data = skinDataUrl.replace(/^data:image\/png;base64,/, '');
@@ -1959,7 +1992,32 @@ function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl, mcVersion = '1
     fs.writeFileSync(path.join(skinsDir, `${cleanName}.png`), skinBuf);
     configureCrackSkinSupport(rootDir);
 
-    // Build a 100% standard PKZIP ResourcePack with exact version metadata so Vanilla & Fabric/Forge load the active 3D skin!
+    const optsPath = path.join(rootDir, 'options.txt');
+    const packId = 'file/AetherSkinSync.zip';
+    const useCslPerPlayer = loaderType !== 'vanilla' && hasEnabledCustomSkinLoaderMod(rootDir);
+
+    // v40.7 PRO: When CustomSkinLoader is active on a modded loader, detach AetherSkinSync.zip from options.txt
+    // so offline friends NEVER all turn into clones of your Steve/Alex skin — CustomSkinLoader renders each player's own skin!
+    if (useCslPerPlayer) {
+      if (fs.existsSync(optsPath)) {
+        let optsContent = fs.readFileSync(optsPath, 'utf8');
+        if (optsContent.includes('AetherSkinSync.zip')) {
+          optsContent = optsContent.replace(/^resourcePacks:\[(.*?)\](\r?)$/m, (_full, inner, cr) => {
+            let items = [];
+            try { items = JSON.parse(`[${inner}]`); } catch (_) {
+              items = inner.split(',').map((s) => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+            }
+            items = items.filter((item) => item !== packId && item !== 'AetherSkinSync.zip');
+            if (!items.includes('vanilla')) items.unshift('vanilla');
+            return `resourcePacks:${JSON.stringify(items)}${cr}`;
+          });
+          fs.writeFileSync(optsPath, optsContent, 'utf8');
+        }
+      }
+      return;
+    }
+
+    // Fallback for pure Vanilla (no mod loader): build standard PKZIP ResourcePack so singleplayer still shows 3D skin
     const rpDir = path.join(rootDir, 'resourcepacks');
     if (!fs.existsSync(rpDir)) fs.mkdirSync(rpDir, { recursive: true });
     const mcmeta = detectResourcePackMeta(rootDir, mcVersion);
@@ -1976,10 +2034,7 @@ function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl, mcVersion = '1
     const rpZipPath = path.join(rpDir, 'AetherSkinSync.zip');
     fs.writeFileSync(rpZipPath, buildStandardZipBuffer(zipEntries));
 
-    // Ensure "file/AetherSkinSync.zip" is enabled at highest priority in options.txt (handling Windows CRLF \r\n)
-    const optsPath = path.join(rootDir, 'options.txt');
     let optsContent = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
-    const packId = 'file/AetherSkinSync.zip';
     if (/^resourcePacks:\[.*?\]\r?$/m.test(optsContent)) {
       optsContent = optsContent.replace(/^resourcePacks:\[(.*?)\](\r?)$/m, (_full, inner, cr) => {
         let items = [];
@@ -1997,7 +2052,6 @@ function syncActive3DSkinIntoGame(rootDir, username, skinDataUrl, mcVersion = '1
       const nl = optsContent.includes('\r\n') ? '\r\n' : '\n';
       optsContent += (optsContent.endsWith('\n') || !optsContent ? '' : nl) + `resourcePacks:["vanilla","${packId}"]${nl}`;
     }
-    // Remove from incompatibleResourcePacks if present
     optsContent = optsContent.replace(/^incompatibleResourcePacks:\[(.*?)\](\r?)$/m, (_full, inner, cr) => {
       try {
         const items = JSON.parse(`[${inner}]`).filter((item) => item !== packId && item !== 'AetherSkinSync.zip');
@@ -2100,7 +2154,7 @@ async function launchMinecraft(config, callbacks = {}) {
         configureCrackSkinSupport(skinRoot);
       }
       if (skinDataUrl) {
-        syncActive3DSkinIntoGame(skinRoot, cleanName, skinDataUrl, mcVersion);
+        syncActive3DSkinIntoGame(skinRoot, cleanName, skinDataUrl, mcVersion, loaderType);
       }
     }
   } else if (authMode === 'aether' && cloudProfile && cloudProfile.mcUsername) {
@@ -2111,7 +2165,7 @@ async function launchMinecraft(config, callbacks = {}) {
       configureCrackSkinSupport(skinRoot);
     }
     if (skinDataUrl) {
-      syncActive3DSkinIntoGame(skinRoot, cleanName, skinDataUrl, mcVersion);
+      syncActive3DSkinIntoGame(skinRoot, cleanName, skinDataUrl, mcVersion, loaderType);
     }
   } else {
     const cleanName = (username || 'Player').trim().slice(0, 16) || 'Player';
@@ -2121,7 +2175,7 @@ async function launchMinecraft(config, callbacks = {}) {
       configureCrackSkinSupport(skinRoot);
     }
     if (skinDataUrl) {
-      syncActive3DSkinIntoGame(skinRoot, cleanName, skinDataUrl, mcVersion);
+      syncActive3DSkinIntoGame(skinRoot, cleanName, skinDataUrl, mcVersion, loaderType);
     }
   }
 
@@ -2321,6 +2375,15 @@ async function launchMinecraft(config, callbacks = {}) {
   });
 
   callbacks.onStatus?.(`Đang khởi chạy Minecraft ${mcVersion} (${loaderType.toUpperCase()}) • Java: ${path.basename(path.dirname(path.dirname(resolvedJava)) || 'Java')}...`);
+
+  // v40.7 PRO: Auto-inject portable FFmpeg into PATH so Flashback / ReplayMod .MP4 export works out-of-the-box
+  try {
+    const ffmpegBinDir = path.join(rootDir, 'runtimes', 'ffmpeg');
+    const ffmpegExe = path.join(ffmpegBinDir, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+    if (fs.existsSync(ffmpegExe) && !(process.env.PATH || '').includes(ffmpegBinDir)) {
+      process.env.PATH = `${ffmpegBinDir}${path.delimiter}${process.env.PATH || ''}`;
+    }
+  } catch (_) {}
 
   const proc = await launcher.launch(launchOpts);
   activeMcProcess = proc;
@@ -5015,22 +5078,60 @@ async function buildCoopModBasket(rawInput = {}) {
     });
   }
 
+  // v40.7 PRO: Include small local custom skins (<64 KB PNG) so Co-op friends see each other's uploaded skins automatically
+  const localSkins = [];
+  try {
+    const skinsDir = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'skins');
+    if (fs.existsSync(skinsDir)) {
+      for (const sf of fs.readdirSync(skinsDir)) {
+        if (!/^[A-Za-z0-9_]{2,16}\.png$/i.test(sf)) continue;
+        const sFull = path.join(skinsDir, sf);
+        const st = fs.statSync(sFull);
+        if (st.isFile() && st.size > 100 && st.size <= 65536) {
+          const buf = fs.readFileSync(sFull);
+          if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+            localSkins.push({ name: sf.replace(/\.png$/i, ''), base64: buf.toString('base64') });
+          }
+        }
+        if (localSkins.length >= 8) break;
+      }
+    }
+  } catch (_) {}
+
   return {
     ok: true,
     mcVersion,
     loaderType,
     modsCount: modBasket.length,
     modBasket,
-    basket: modBasket
+    basket: modBasket,
+    localSkins
   };
 }
 
-async function syncCoopModBasket({ gameDir, instanceDir, mcVersion = '1.21.4', loaderType = 'fabric', modBasket = [] } = {}, onStatus) {
+async function syncCoopModBasket({ gameDir, instanceDir, mcVersion = '1.21.4', loaderType = 'fabric', modBasket = [], localSkins = [] } = {}, onStatus) {
   const rootDir = (instanceDir && fs.existsSync(instanceDir))
     ? instanceDir
     : (gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
   const modsFolder = path.join(rootDir, 'mods');
   if (!fs.existsSync(modsFolder)) fs.mkdirSync(modsFolder, { recursive: true });
+
+  // Sync any custom friend/host PNG skins included in the Co-op Room / Basket
+  if (Array.isArray(localSkins) && localSkins.length > 0) {
+    try {
+      const skinsDir = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'skins');
+      fs.mkdirSync(skinsDir, { recursive: true });
+      for (const sk of localSkins.slice(0, 12)) {
+        const cleanPlayer = String(sk?.name || '').replace(/[^A-Za-z0-9_]/g, '').slice(0, 16);
+        if (!cleanPlayer || !sk?.base64 || String(sk.base64).length > 100000) continue;
+        const buf = Buffer.from(String(sk.base64), 'base64');
+        if (buf.length > 100 && buf.length <= 65536 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+          fs.writeFileSync(path.join(skinsDir, `${cleanPlayer}.png`), buf);
+        }
+      }
+      configureCrackSkinSupport(rootDir);
+    } catch (_) {}
+  }
 
   const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
   const items = Array.isArray(modBasket) ? modBasket : [];
@@ -7491,6 +7592,665 @@ function computeSmartRamAndJvmAdvice({
   };
 }
 
+/* ============================================================================
+   v40.7 PRO — 4 ULTRA UPGRADES:
+   1. Online Skin Hub & Co-op Offline Friend Skin Sync
+   2. Lunar-Style 1-Click PvP / BedWars HUD & Low-Fire Mode
+   3. World NBT Inspector, Hardcore Rescue & Curated Seed Vault
+   4. 1-Click Replay & TikTok Cinematic Studio + Portable FFmpeg
+   ============================================================================ */
+
+const ONLINE_SKIN_PRESETS = {
+  popular: {
+    filter: '',
+    curatedPlayers: ['Technoblade', 'Dream', 'Grian', 'Philza', 'DanTDM', 'Sapnap', 'SB737', 'Mumbo']
+  },
+  anime: {
+    filter: 'anime',
+    curatedQueries: ['naruto', 'gojo', 'luffy', 'anime']
+  },
+  cool: {
+    filter: 'hacker',
+    curatedQueries: ['cyber', 'hoodie', 'assassin', 'neon']
+  },
+  cute: {
+    filter: 'cute',
+    curatedQueries: ['pastel', 'kawaii', 'sakura', 'bunny']
+  },
+  knight: {
+    filter: 'knight',
+    curatedQueries: ['knight', 'samurai', 'king', 'warrior']
+  },
+  youtuber: {
+    filter: '',
+    curatedPlayers: ['Technoblade', 'Dream', 'GeorgeNotFound', 'Sapnap', 'BadBoyHalo', 'TommyInnit', 'Grian', 'Mumbo', 'Philza', 'DanTDM', 'Skeppy', 'SB737']
+  }
+};
+
+function fetchBufferHttps(url, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    const safeUrl = String(url || '').replace(/^http:\/\/textures\.minecraft\.net\//i, 'https://textures.minecraft.net/');
+    const lib = safeUrl.startsWith('https:') ? https : http;
+    const req = lib.get(safeUrl, { headers: { 'User-Agent': 'BlockWay-Launcher/40.7' }, timeout: timeoutMs }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        const nextUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, safeUrl).toString();
+        res.resume();
+        return fetchBufferHttps(nextUrl, timeoutMs).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Timeout'));
+    });
+  });
+}
+
+async function searchOnlineSkins({ query = '', category = 'popular', page = 1 } = {}) {
+  const cleanQuery = String(query || '').trim();
+  const safePage = Math.max(1, Math.min(50, Number(page) || 1));
+  const preset = ONLINE_SKIN_PRESETS[category] || ONLINE_SKIN_PRESETS.popular;
+  const items = [];
+  const seenKeys = new Set();
+
+  const pushSkin = (it) => {
+    if (!it || !it.textureUrl) return;
+    const k = String(it.textureUrl).toLowerCase();
+    if (seenKeys.has(k)) return;
+    seenKeys.add(k);
+    items.push(it);
+  };
+
+  // 1. If user typed a valid Minecraft player name (3..16 chars), put exact player skin match first!
+  if (cleanQuery && /^[A-Za-z0-9_]{3,16}$/.test(cleanQuery) && safePage === 1) {
+    pushSkin({
+      id: `player-${cleanQuery.toLowerCase()}`,
+      name: `${cleanQuery} (Nhân vật)`,
+      textureUrl: `https://mc-heads.net/skin/${encodeURIComponent(cleanQuery)}`,
+      previewUrl: `https://mc-heads.net/body/${encodeURIComponent(cleanQuery)}/120`,
+      faceUrl: `https://mc-heads.net/avatar/${encodeURIComponent(cleanQuery)}/64`,
+      badge: '👤 Theo tên người chơi'
+    });
+  }
+
+  // 2. Curated featured players when on page 1 without custom query
+  if (!cleanQuery && Array.isArray(preset.curatedPlayers) && safePage === 1) {
+    for (const pName of preset.curatedPlayers) {
+      pushSkin({
+        id: `curated-${pName.toLowerCase()}`,
+        name: pName,
+        textureUrl: `https://mc-heads.net/skin/${encodeURIComponent(pName)}`,
+        previewUrl: `https://mc-heads.net/body/${encodeURIComponent(pName)}/120`,
+        faceUrl: `https://mc-heads.net/avatar/${encodeURIComponent(pName)}/64`,
+        badge: category === 'youtuber' ? '🎬 YouTuber' : '⭐ Nổi bật'
+      });
+    }
+  }
+
+  // 3. Query MineSkin gallery API (millions of tagged community 64x64 skins hosted on Mojang CDN)
+  const queriesToRun = cleanQuery
+    ? [cleanQuery]
+    : (Array.isArray(preset.curatedQueries) && preset.curatedQueries.length
+      ? preset.curatedQueries.slice(0, 2)
+      : [preset.filter || '']);
+
+  await Promise.all(queriesToRun.map(async (qStr) => {
+    try {
+      const apiUrl = `https://api.mineskin.org/get/list/${safePage}?size=20${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
+      const data = await fetchJson(apiUrl);
+      for (const sk of (data?.skins || [])) {
+        const rawUrl = String(sk?.url || '');
+        const hash = rawUrl.split('/').pop();
+        if (!hash || !/^[a-f0-9]{32,68}$/i.test(hash)) continue;
+        const cleanLabel = String(sk.name || qStr || 'Skin 3D').trim().slice(0, 28) || 'Skin 3D';
+        pushSkin({
+          id: `ms-${sk.id || hash.slice(0, 12)}`,
+          name: cleanLabel,
+          textureUrl: `https://textures.minecraft.net/texture/${hash}`,
+          previewUrl: `https://mc-heads.net/body/${hash}/120`,
+          faceUrl: `https://mc-heads.net/avatar/${hash}/64`,
+          badge: qStr ? `#${qStr}` : '🌐 Cộng đồng'
+        });
+      }
+    } catch (_) {}
+  }));
+
+  return {
+    ok: true,
+    page: safePage,
+    total: items.length,
+    items: items.slice(0, 32)
+  };
+}
+
+async function applyOnlineSkinToWardrobe({
+  gameDir,
+  username = 'StevePlayer',
+  textureUrl = '',
+  skinName = ''
+} = {}) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const normalizedUrl = String(textureUrl || '').trim().replace(/^http:\/\/textures\.minecraft\.net\//i, 'https://textures.minecraft.net/');
+  if (!normalizedUrl) throw new Error('Chưa có đường dẫn ảnh Skin hợp lệ.');
+
+  const parsed = new URL(normalizedUrl);
+  const allowedHosts = ['textures.minecraft.net', 'mc-heads.net', 'minotar.net', 'crafatar.com', 'littleskin.cn', 'ely.by', 'skinsystem.ely.by'];
+  if (!allowedHosts.some((h) => parsed.hostname === h || parsed.hostname.endsWith(`.${h}`))) {
+    throw new Error('Nguồn tải Skin không nằm trong danh sách máy chủ chính thức.');
+  }
+
+  let pngBuf = null;
+  try {
+    pngBuf = await fetchBufferHttps(parsed.toString(), 12000);
+  } catch (e) {
+    // Fallback if mc-heads username lookup failed -> try minotar
+    const mName = parsed.pathname.match(/^\/skin\/([A-Za-z0-9_]{3,16})$/);
+    if (mName) {
+      pngBuf = await fetchBufferHttps(`https://minotar.net/skin/${mName[1]}`, 10000);
+    } else {
+      throw e;
+    }
+  }
+
+  if (!pngBuf || pngBuf.length < 100 || pngBuf[0] !== 0x89 || pngBuf[1] !== 0x50 || pngBuf[2] !== 0x4e || pngBuf[3] !== 0x47) {
+    throw new Error('Không tìm thấy dữ liệu ảnh PNG hợp lệ cho nhân vật này.');
+  }
+
+  const cleanName = (username || 'StevePlayer').replace(/[^a-zA-Z0-9_]/g, '') || 'StevePlayer';
+  const skinsDir = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'skins');
+  fs.mkdirSync(skinsDir, { recursive: true });
+  const savedPath = path.join(skinsDir, `${cleanName}.png`);
+  fs.writeFileSync(savedPath, pngBuf);
+  configureCrackSkinSupport(rootDir);
+
+  return {
+    ok: true,
+    skinName: skinName || cleanName,
+    savedPath,
+    dataUrl: `data:image/png;base64,${pngBuf.toString('base64')}`
+  };
+}
+
+async function installFriendSkinSyncPack({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  friendNames = []
+} = {}, onStatus) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const installed = [];
+  const skipped = [];
+
+  const slugs = effectiveLoader === 'fabric'
+    ? ['customskinloader', '3dskinlayers', 'capes', 'skinshuffle']
+    : ['customskinloader', '3dskinlayers', 'capes'];
+
+  for (const slug of slugs) {
+    try {
+      onStatus?.(`👕 Đang trang bị gói đồng bộ Skin & Áo choàng bạn bè (${slug}) cho MC ${mcVersion}...`);
+      const r = await installModrinthProject({
+        slug,
+        projectType: 'mod',
+        mcVersion,
+        loaderType: effectiveLoader,
+        gameDir: targetDir
+      }, onStatus);
+      if (r?.fileName) installed.push(r.fileName);
+    } catch (_) {
+      skipped.push(slug);
+    }
+  }
+
+  configureCrackSkinSupport(targetDir);
+
+  // Detach AetherSkinSync.zip from options.txt if CustomSkinLoader is now active so friends never clone your skin!
+  if (hasEnabledCustomSkinLoaderMod(targetDir)) {
+    try {
+      equipResourcePackInGame(targetDir, 'AetherSkinSync.zip', false);
+    } catch (_) {}
+  }
+
+  // Optionally pre-cache any friend usernames into LocalSkin
+  const syncedFriends = [];
+  const skinsDir = path.join(targetDir, 'CustomSkinLoader', 'LocalSkin', 'skins');
+  fs.mkdirSync(skinsDir, { recursive: true });
+  for (const rawFriend of (Array.isArray(friendNames) ? friendNames : []).slice(0, 12)) {
+    const fName = String(rawFriend || '').trim().replace(/[^A-Za-z0-9_]/g, '');
+    if (fName.length < 3 || fName.length > 16) continue;
+    try {
+      const buf = await fetchBufferHttps(`https://mc-heads.net/skin/${encodeURIComponent(fName)}`, 8000);
+      if (buf && buf.length > 100 && buf[0] === 0x89 && buf[1] === 0x50) {
+        fs.writeFileSync(path.join(skinsDir, `${fName}.png`), buf);
+        syncedFriends.push(fName);
+      }
+    } catch (_) {}
+  }
+
+  return {
+    ok: installed.length > 0,
+    effectiveLoader,
+    targetDir,
+    installed,
+    skipped,
+    syncedFriends
+  };
+}
+
+/* ---------------- Upgrade 2: Lunar-Style 1-Click PvP / BedWars HUD Mode ---------------- */
+const PVP_MODE_STATE_FILE = '.blockway-pvp-mode.json';
+
+function readPvpModeManifest(targetDir) {
+  try {
+    const p = path.join(targetDir, PVP_MODE_STATE_FILE);
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8')) || {};
+  } catch (_) {}
+  return { enabled: false, installedMods: [], lowFirePack: '' };
+}
+
+function writePvpModeManifest(targetDir, data) {
+  try {
+    fs.mkdirSync(targetDir, { recursive: true });
+    fs.writeFileSync(path.join(targetDir, PVP_MODE_STATE_FILE), JSON.stringify(data, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+function getPvpClientModeState({ gameDir, instanceDir = '' } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const manifest = readPvpModeManifest(targetDir);
+  const modsDir = path.join(targetDir, 'mods');
+  const activeMods = [];
+  if (fs.existsSync(modsDir)) {
+    for (const f of (manifest.installedMods || [])) {
+      const clean = String(f || '').replace(/\.disabled$/i, '');
+      if (clean && fs.existsSync(path.join(modsDir, clean))) activeMods.push(clean);
+    }
+  }
+  const equipped = getEquippedAddonsState(targetDir);
+  const lowFireActive = Boolean(
+    manifest.lowFirePack && equipped.activeResourcePacks.includes(manifest.lowFirePack)
+  );
+  const isEnabled = Boolean(manifest.enabled && (activeMods.length > 0 || lowFireActive));
+  return {
+    ok: true,
+    enabled: isEnabled,
+    activeMods,
+    lowFirePack: manifest.lowFirePack || '',
+    lowFireActive
+  };
+}
+
+async function togglePvpClientMode({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  enable = true
+} = {}, onStatus) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const modsDir = path.join(targetDir, 'mods');
+  fs.mkdirSync(modsDir, { recursive: true });
+  const prevManifest = readPvpModeManifest(targetDir);
+
+  if (!enable) {
+    let disabledCount = 0;
+    for (const f of (prevManifest.installedMods || [])) {
+      const clean = path.basename(String(f || '')).replace(/\.disabled$/i, '');
+      if (!clean) continue;
+      // Never disable core shared libraries like fabric-api or cloth-config
+      if (/^(fabric-api|cloth-config|yacl|architectury|modmenu)/i.test(clean)) continue;
+      const enPath = path.join(modsDir, clean);
+      const disPath = `${enPath}.disabled`;
+      if (fs.existsSync(enPath)) {
+        try {
+          if (fs.existsSync(disPath)) fs.unlinkSync(disPath);
+          fs.renameSync(enPath, disPath);
+          disabledCount++;
+        } catch (_) {}
+      }
+    }
+    if (prevManifest.lowFirePack) {
+      try { equipResourcePackInGame(targetDir, prevManifest.lowFirePack, false); } catch (_) {}
+    }
+    writePvpModeManifest(targetDir, {
+      ...prevManifest,
+      enabled: false,
+      updatedAt: Date.now()
+    });
+    return {
+      ok: true,
+      enabled: false,
+      disabledCount,
+      installedMods: []
+    };
+  }
+
+  // Enable PvP HUD Mode!
+  const installedMods = [];
+  const tryInstallGroup = async (candidates, label) => {
+    for (const slug of candidates) {
+      try {
+        onStatus?.(`⚔️ Đang trang bị ${label} (${slug}) cho MC ${mcVersion}...`);
+        const r = await installModrinthProject({
+          slug,
+          projectType: 'mod',
+          mcVersion,
+          loaderType: effectiveLoader,
+          gameDir: targetDir
+        }, onStatus);
+        if (r?.fileName) {
+          installedMods.push(r.fileName);
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  };
+
+  await tryInstallGroup(['evergreenhud', 'clean-keystrokes', 'kronhud'], 'Bảng phím Keystrokes & CPS');
+  await tryInstallGroup(['armor-hud'], 'Thanh độ bền Giáp PvP');
+  await tryInstallGroup(['status-effect-bars'], 'Đồng hồ Hiệu ứng Thuốc');
+  await tryInstallGroup(['dynamiccrosshair'], 'Tâm ngắm Chiến đấu');
+  await tryInstallGroup(['zoomify', 'wi-zoom'], 'Ống nhòm Phóng to');
+  await tryInstallGroup(['freelook'], 'Góc nhìn 360° Freelook');
+  await tryInstallGroup(['appleskin'], 'Hiển thị Hồi máu / Táo vàng');
+
+  // Equip Low-Fire PvP Resource Pack so fire never blocks screen during combat
+  let lowFirePack = prevManifest.lowFirePack || '';
+  try {
+    onStatus?.('🔥 Đang kích hoạt gói Lửa Thấp PvP (Low Fire) chống che màn hình...');
+    const rpRes = await installModrinthProject({
+      slug: 'low-fire-pack',
+      projectType: 'resourcepack',
+      mcVersion,
+      loaderType: effectiveLoader,
+      gameDir: targetDir
+    }, onStatus);
+    if (rpRes?.fileName) {
+      lowFirePack = rpRes.fileName;
+      equipResourcePackInGame(targetDir, lowFirePack, true);
+    }
+  } catch (_) {}
+
+  // Set Vanilla ToggleSprint = true, AutoJump = false, VSync = false in options.txt for crisp 0ms input PvP!
+  try {
+    const optsPath = path.join(targetDir, 'options.txt');
+    let content = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
+    const nl = content.includes('\r\n') ? '\r\n' : '\n';
+    const setOpt = (k, v) => {
+      const rx = new RegExp(`^${k}:.*(\\r?)$`, 'm');
+      if (rx.test(content)) content = content.replace(rx, `${k}:${v}$1`);
+      else content += (content && !content.endsWith('\n') ? nl : '') + `${k}:${v}${nl}`;
+    };
+    setOpt('toggleSprint', 'true');
+    setOpt('autoJump', 'false');
+    setOpt('enableVsync', 'false');
+    fs.writeFileSync(optsPath, content, 'utf8');
+  } catch (_) {}
+
+  const uniqueMods = Array.from(new Set(installedMods));
+  writePvpModeManifest(targetDir, {
+    enabled: true,
+    mcVersion,
+    loader: effectiveLoader,
+    installedMods: uniqueMods,
+    lowFirePack,
+    updatedAt: Date.now()
+  });
+
+  return {
+    ok: true,
+    enabled: true,
+    effectiveLoader,
+    installedMods: uniqueMods,
+    lowFirePack
+  };
+}
+
+/* ---------------- Upgrade 3: World NBT Inspector, Rescue & Curated Seed Vault ---------------- */
+function inspectLocalWorldDetails({ gameDir, worldNameOrPath } = {}) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const { worldPath } = resolveWorldFolderPath(rootDir, worldNameOrPath);
+  return worldCreator.inspectWorldNbt(worldPath);
+}
+
+function rescuePatchLocalWorld({ gameDir, worldNameOrPath, patches = {} } = {}) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const { worldPath } = resolveWorldFolderPath(rootDir, worldNameOrPath);
+  return worldCreator.rescueAndPatchWorldNbt(worldPath, patches || {});
+}
+
+function getCuratedSeedsVault() {
+  return {
+    ok: true,
+    seeds: worldCreator.CURATED_SEEDS_VAULT || []
+  };
+}
+
+async function createStandaloneQuickWorld({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  levelName = 'Thế giới mới',
+  gameMode = 'survival',
+  difficulty = 'normal',
+  hardcore = false,
+  allowCommands = false,
+  seed = '',
+  bonusChest = false,
+  keepInventory = false,
+  alwaysDay = false
+} = {}, onStatus) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const effectiveGameDir = instanceDir && String(instanceDir).trim()
+    ? assertInsideInstances(rootDir, instanceDir)
+    : rootDir;
+  const targetMc = worldCreator.supportsQuickWorldCreation(mcVersion) ? mcVersion : '1.21.4';
+  return await worldCreator.createQuickWorld({
+    rootDir,
+    gameDirectory: effectiveGameDir,
+    mcVersion: targetMc,
+    loaderType,
+    levelName,
+    gameMode,
+    difficulty,
+    hardcore,
+    allowCommands,
+    seed,
+    bonusChest,
+    keepInventory,
+    alwaysDay,
+    fetchJson,
+    downloadVerified,
+    onStatus
+  });
+}
+
+/* ---------------- Upgrade 4: 1-Click Replay & TikTok Cam Studio + Portable FFmpeg ---------------- */
+function detectFfmpegExecutable(rootDir) {
+  const exeName = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+  const portablePath = path.join(rootDir, 'runtimes', 'ffmpeg', exeName);
+  if (fs.existsSync(portablePath)) {
+    try {
+      if (fs.statSync(portablePath).size > 1024 * 1024) return { found: true, path: portablePath, source: 'portable' };
+    } catch (_) {}
+  }
+  try {
+    const cmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
+    const out = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }).trim();
+    const firstLine = out.split(/\r?\n/)[0]?.trim();
+    if (firstLine && fs.existsSync(firstLine)) {
+      return { found: true, path: firstLine, source: 'system' };
+    }
+  } catch (_) {}
+  return { found: false, path: '', source: '' };
+}
+
+function getReplayStudioStatus({ gameDir, instanceDir = '' } = {}) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const targetDir = resolveTweakerDir(rootDir, instanceDir);
+  const modsDir = path.join(targetDir, 'mods');
+  let activeReplayMod = '';
+  let hasFreecam = false;
+  if (fs.existsSync(modsDir)) {
+    for (const f of fs.readdirSync(modsDir)) {
+      if (!/\.jar$/i.test(f)) continue;
+      if (/^flashback[-_]/i.test(f)) activeReplayMod = 'Flashback';
+      else if (/^replaymod[-_]/i.test(f) && !activeReplayMod) activeReplayMod = 'ReplayMod';
+      if (/^freecam[-_]/i.test(f)) hasFreecam = true;
+    }
+  }
+  const ffmpeg = detectFfmpegExecutable(rootDir);
+
+  let recordingsCount = 0;
+  for (const rel of ['flashback/replays', 'replay_recordings']) {
+    const d = path.join(targetDir, rel);
+    if (fs.existsSync(d)) {
+      try {
+        recordingsCount += fs.readdirSync(d).filter((x) => /\.(mcpr|zip)$/i.test(x) || fs.statSync(path.join(d, x)).isDirectory()).length;
+      } catch (_) {}
+    }
+  }
+  let exportedVideosCount = 0;
+  let videosFolder = path.join(targetDir, 'replay_videos');
+  for (const rel of ['flashback/exports', 'replay_videos']) {
+    const d = path.join(targetDir, rel);
+    if (fs.existsSync(d)) {
+      try {
+        const mp4s = fs.readdirSync(d).filter((x) => /\.(mp4|webm|mkv)$/i.test(x));
+        if (mp4s.length > 0) videosFolder = d;
+        exportedVideosCount += mp4s.length;
+      } catch (_) {}
+    }
+  }
+
+  return {
+    ok: true,
+    equipped: Boolean(activeReplayMod),
+    activeReplayMod,
+    hasFreecam,
+    ffmpegReady: ffmpeg.found,
+    ffmpegSource: ffmpeg.source,
+    ffmpegPath: ffmpeg.path,
+    recordingsCount,
+    exportedVideosCount,
+    videosFolder
+  };
+}
+
+async function ensurePortableFfmpeg(gameDir, onStatus) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const existing = detectFfmpegExecutable(rootDir);
+  if (existing.found) return { ok: true, ...existing, alreadyInstalled: true };
+  if (process.platform !== 'win32') {
+    return { ok: false, error: 'Tải FFmpeg tự động hiện chỉ hỗ trợ Windows.' };
+  }
+
+  const ffmpegDir = path.join(rootDir, 'runtimes', 'ffmpeg');
+  fs.mkdirSync(ffmpegDir, { recursive: true });
+  const gzPath = path.join(ffmpegDir, 'ffmpeg-win64.gz');
+  const exePath = path.join(ffmpegDir, 'ffmpeg.exe');
+
+  onStatus?.('🎬 Đang tải bộ kết xuất Video MP4 (FFmpeg gọn nhẹ 28 MB — chỉ tải 1 lần duy nhất)...');
+  await downloadFile('https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-win32-x64.gz', gzPath);
+  onStatus?.('🎬 Đang giải nén & kích hoạt bộ xuất Video MP4...');
+  await new Promise((resolve, reject) => {
+    const inp = fs.createReadStream(gzPath);
+    const gunzip = zlib.createGunzip();
+    const out = fs.createWriteStream(exePath);
+    inp.pipe(gunzip).pipe(out);
+    out.on('finish', resolve);
+    out.on('error', reject);
+    gunzip.on('error', reject);
+    inp.on('error', reject);
+  });
+  try { fs.unlinkSync(gzPath); } catch (_) {}
+
+  if (!(process.env.PATH || '').includes(ffmpegDir)) {
+    process.env.PATH = `${ffmpegDir}${path.delimiter}${process.env.PATH || ''}`;
+  }
+  return { ok: true, found: true, path: exePath, source: 'portable', alreadyInstalled: false };
+}
+
+async function installReplayStudioPack({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  installFfmpeg = true
+} = {}, onStatus) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const targetDir = resolveTweakerDir(rootDir, instanceDir);
+  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const installed = [];
+
+  // Prefer Flashback on modern Fabric (super lightweight & intuitive UI), fallback to ReplayMod
+  const recorderCandidates = effectiveLoader === 'fabric'
+    ? ['flashback', 'replaymod']
+    : ['replaymod'];
+
+  for (const slug of recorderCandidates) {
+    try {
+      onStatus?.(`🎬 Đang cài trình quay phim 3D trong game (${slug}) cho MC ${mcVersion}...`);
+      const r = await installModrinthProject({
+        slug,
+        projectType: 'mod',
+        mcVersion,
+        loaderType: effectiveLoader,
+        gameDir: targetDir
+      }, onStatus);
+      if (r?.fileName) {
+        installed.push(r.fileName);
+        break;
+      }
+    } catch (_) {}
+  }
+
+  // Also equip Freecam for live detached camera / TikTok cinematic angles
+  try {
+    onStatus?.(`🎥 Đang trang bị Camera Bay Tự Do (Freecam) cho MC ${mcVersion}...`);
+    const fc = await installModrinthProject({
+      slug: 'freecam',
+      projectType: 'mod',
+      mcVersion,
+      loaderType: effectiveLoader,
+      gameDir: targetDir
+    }, onStatus);
+    if (fc?.fileName) installed.push(fc.fileName);
+  } catch (_) {}
+
+  let ffmpegInfo = detectFfmpegExecutable(rootDir);
+  if (installFfmpeg && !ffmpegInfo.found) {
+    try {
+      ffmpegInfo = await ensurePortableFfmpeg(rootDir, onStatus);
+    } catch (_) {}
+  }
+
+  // Ensure replay_videos folder exists for easy access
+  const videosDir = path.join(targetDir, 'replay_videos');
+  fs.mkdirSync(videosDir, { recursive: true });
+
+  return {
+    ok: installed.length > 0,
+    effectiveLoader,
+    installed,
+    ffmpegReady: Boolean(ffmpegInfo?.found),
+    status: getReplayStudioStatus({ gameDir: rootDir, instanceDir })
+  };
+}
+
 module.exports = {
   fetchVersionManifest,
   fetchLoaderVersions,
@@ -7566,5 +8326,17 @@ module.exports = {
   listWorldDatapacks,
   deleteWorldDatapack,
   installCoopComboPack,
-  computeSmartRamAndJvmAdvice
+  computeSmartRamAndJvmAdvice,
+  searchOnlineSkins,
+  applyOnlineSkinToWardrobe,
+  installFriendSkinSyncPack,
+  getPvpClientModeState,
+  togglePvpClientMode,
+  inspectLocalWorldDetails,
+  rescuePatchLocalWorld,
+  getCuratedSeedsVault,
+  createStandaloneQuickWorld,
+  getReplayStudioStatus,
+  ensurePortableFfmpeg,
+  installReplayStudioPack
 };

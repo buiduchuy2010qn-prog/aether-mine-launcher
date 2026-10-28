@@ -438,6 +438,10 @@ function switchMainTab(tabId) {
     if (typeof renderFavoriteServers === 'function') renderFavoriteServers();
     if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers();
     if (typeof onCoopHubTabShown === 'function') onCoopHubTabShown();
+    if (typeof window.refreshPvpAndReplayStates === 'function') window.refreshPvpAndReplayStates();
+  }
+  if (targetTab === 'skin') {
+    if (typeof window.onSkinTabShown === 'function') window.onSkinTabShown();
   }
   if (targetTab === 'play') {
     if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
@@ -446,6 +450,7 @@ function switchMainTab(tabId) {
     if (typeof renderLocalAddonsManager === 'function') renderLocalAddonsManager();
     if (typeof window.runDiskJunkScanUI === 'function') window.runDiskJunkScanUI(false);
     if (typeof window.refreshToolsKeyConflictBadge === 'function') window.refreshToolsKeyConflictBadge();
+    if (typeof window.refreshPvpAndReplayStates === 'function') window.refreshPvpAndReplayStates();
   }
 }
 window.switchMainTab = switchMainTab;
@@ -1130,7 +1135,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.6.0'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.7.0'}`), 2000);
       }
     }
     return;
@@ -1404,8 +1409,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnWorldsNew = document.getElementById('btnWorldsCreateNew');
   if (btnWorldsNew) {
     btnWorldsNew.onclick = () => {
-      switchMainTab('home');
-      document.getElementById('btnLaunch')?.click();
+      if (typeof window.openQuickWorldModal === 'function') {
+        window.openQuickWorldModal(null);
+      } else {
+        switchMainTab('home');
+        document.getElementById('btnLaunch')?.click();
+      }
     };
   }
 
@@ -1748,6 +1757,28 @@ window.addEventListener('DOMContentLoaded', async () => {
       syncCloudCosmeticsIfActive(`🦸 Đã cập nhật Áo choàng (${chip.textContent}) cho nhân vật!`);
     };
   });
+
+  window.applyExternalSkinDataUrl = async (rawDataUrl, skinLabel = 'Skin 3D') => {
+    if (!rawDataUrl) return;
+    const normUrl = typeof convertSkinTo64x64DataUrl === 'function'
+      ? await convertSkinTo64x64DataUrl(rawDataUrl)
+      : rawDataUrl;
+    currentSkinDataUrl = normUrl;
+    state.cachedSkinDataUrl = normUrl;
+    state.selectedSkinPreset = '';
+    document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.remove('active'));
+    saveCurrentConfig();
+    syncCloudCosmeticsIfActive(`👕 Đã mặc mẫu "${skinLabel}" lên nhân vật 3D & đồng bộ tự động!`);
+    if (skinViewer) {
+      try {
+        skinViewer.renderPaused = false;
+        await skinViewer.loadSkin(normUrl, { model: state.skinModel });
+        skinViewer.render();
+        scheduleIdleGpuPause(2500);
+      } catch (_) {}
+    }
+    draw2DAvatarFace(normUrl);
+  };
 
   document.getElementById('btnUploadSkinPng').onclick = async () => {
     const targetName = (state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username;

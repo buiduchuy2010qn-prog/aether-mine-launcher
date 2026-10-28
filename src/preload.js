@@ -129,6 +129,20 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   installCoopComboPack: (params) => ipcRenderer.invoke('coop:install-combo', params),
   analyzeSmartRamCoach: (params) => ipcRenderer.invoke('coach:analyze', params),
 
+  // v40.7 PRO — Kho Skin Online + Thấy Skin Nhau, Chế Độ PvP Lunar, Cứu Hộ Map & Kho Seed, Studio Quay Phim Replay
+  searchOnlineSkins: (params) => ipcRenderer.invoke('skins:search-online', params),
+  applyOnlineSkin: (params) => ipcRenderer.invoke('skins:apply-online', params),
+  installFriendSkinSync: (params) => ipcRenderer.invoke('skins:install-friend-sync', params),
+  getPvpModeState: (params) => ipcRenderer.invoke('pvp:state', params),
+  togglePvpMode: (params) => ipcRenderer.invoke('pvp:toggle', params),
+  inspectWorldDetails: (params) => ipcRenderer.invoke('worlds:inspect', params),
+  rescuePatchWorld: (params) => ipcRenderer.invoke('worlds:rescue-patch', params),
+  getCuratedSeedsVault: () => ipcRenderer.invoke('worlds:seeds-vault'),
+  createStandaloneQuickWorld: (params) => ipcRenderer.invoke('worlds:create-quick', params),
+  getReplayStudioStatus: (params) => ipcRenderer.invoke('replay:status', params),
+  installReplayStudioPack: (params) => ipcRenderer.invoke('replay:install', params),
+  copyTextToClipboard: (text) => ipcRenderer.invoke('sys:copy-text', text),
+
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
   onUpdateProgress: (cb) => ipcRenderer.on('updater:progress', (_e, pct) => cb(pct)),

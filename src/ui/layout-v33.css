@@ -5917,6 +5917,7 @@ html:not([data-theme="prism"]):not([data-theme="sakura"]) .pack-src-badge.src-at
 
 #worldsDropZoneCard.hidden,
 #worldStorePanel.hidden,
+#worldSeedsPanel.hidden,
 #btnUpdateAllAddons.hidden {
   display: none !important;
 }
@@ -6179,4 +6180,360 @@ html:not([data-theme="prism"]):not([data-theme="sakura"]) .pack-src-badge.src-at
   color: var(--text-muted);
   border-radius: 10px;
   border: 1px dashed var(--border-col);
+}
+
+/* ============================================================================
+   v40.7 PRO: ONLINE SKIN HUB, LUNAR PVP BANNER, SEED VAULT & WORLD RESCUE
+   ============================================================================ */
+
+/* 1. Lunar-Style 1-Click PvP / BedWars Banner (#tab-servers) */
+.pvp-client-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 15px 18px !important;
+  margin-bottom: 14px;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.11) 0%, rgba(239, 68, 68, 0.06) 50%, var(--bg-card) 100%) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pvp-client-banner.is-active {
+  border-color: rgba(16, 185, 129, 0.65) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(59, 130, 246, 0.08) 55%, var(--bg-card) 100%) !important;
+  box-shadow: 0 8px 26px rgba(16, 185, 129, 0.16);
+}
+
+.pvp-banner-left {
+  flex: 1 1 420px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pvp-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--text-main);
+}
+
+.pvp-badge-pill {
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.pvp-client-banner.is-active .pvp-badge-pill {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.pvp-desc-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.48;
+  color: var(--text-muted);
+}
+
+.pvp-banner-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+/* 2. Online Skin Hub Grid (#tab-skin) */
+.online-skin-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.online-skin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.online-skin-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.online-skin-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+.online-skin-card .osc-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.13);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.online-skin-card .osc-preview-wrap {
+  width: 100%;
+  height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.14), transparent 72%);
+}
+
+.online-skin-card .osc-body-img {
+  max-height: 116px;
+  max-width: 90px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+}
+
+.online-skin-card .osc-name {
+  font-size: 12.2px;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.online-skin-card .osc-wear-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 6px 10px !important;
+  font-size: 11.8px !important;
+}
+
+/* 3. Seed Vault & Quick World Seed Chips (#tab-worlds) */
+.qw-seed-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: -2px;
+}
+
+.seed-vault-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.seed-vault-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seed-vault-card .svc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.seed-vault-card .svc-coords {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.seed-vault-card .svc-title {
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.svc-seed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px dashed var(--border-col);
+}
+
+.svc-seed-code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  user-select: all;
+}
+
+/* 4. World NBT Inspector & Hardcore Rescue Modal */
+.world-rescue-btn {
+  border-color: rgba(16, 185, 129, 0.42) !important;
+}
+
+.world-rescue-seed-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.09);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  margin-bottom: 8px;
+}
+
+.world-rescue-seed-bar .wrs-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.world-rescue-seed-bar .wrs-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.world-rescue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 720px) {
+  .world-rescue-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wr-stat-tile {
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid var(--border-col);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wr-stat-tile .wr-stat-k {
+  font-size: 10.8px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.wr-stat-tile .wr-stat-v {
+  font-size: 12.6px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.wr-stat-tile .wr-stat-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.wr-stat-tile .wr-mini-copy {
+  padding: 2px 7px !important;
+  font-size: 10.6px !important;
+}
+
+.wr-hardcore-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 9px 13px;
+  margin-bottom: 8px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(245, 158, 11, 0.12));
+  border: 1px solid rgba(248, 113, 113, 0.5);
+}
+
+.wr-hardcore-banner > div {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.8px;
+}
+
+.wr-hardcore-banner > div strong {
+  color: #fca5a5;
+  font-size: 12.5px;
+}
+
+.wr-hardcore-banner > div span {
+  color: var(--text-muted);
+}
+
+.wr-actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.wr-actions-section .wr-sec-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.wr-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.wr-actions-grid .btn-sync-skin {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 720px) {
+  .wr-actions-grid {
+    grid-template-columns: 1fr;
+  }
 }

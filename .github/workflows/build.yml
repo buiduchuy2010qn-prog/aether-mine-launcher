@@ -48,12 +48,11 @@ jobs:
           name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place"
           body: |
             ### ⚡ BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place
-            - **🎛️ Trình Gỡ Trùng Phím Tắt Modpack & Tinh Chỉnh Ngoài Game:** Quét phát hiện toàn bộ phím bị đè nhau trong các gói nhiều Mod, gỡ trùng tự động 1-Click, chỉnh sẵn góc nhìn FOV, âm lượng, độ nhạy chuột, giới hạn FPS, khoảng cách nhìn và **Bật Sáng Trong Hang (`Fullbright`)** ngay ngoài Launcher trước khi mở game.
-            - **🔄 Cập Nhật Mod / Shader / Gói Tài Nguyên 1-Click & Hoàn Tác An Toàn:** Tự dò bản cập nhật mới nhất đúng phiên bản Minecraft & Loader cho toàn bộ file đang cài, nâng cấp hàng loạt 1-Click và giữ bản dự phòng để **Hoàn tác 1-Click** ngay nếu bản mới không hợp ý.
-            - **🗺️ Kho Bản Đồ Xây Sẵn & Datapack 1-Click:** Duyệt và tải trực tiếp hàng ngàn Map Phiêu lưu, Parkour, Giải đố, Kinh dị, SkyBlock/OneBlock và Datapack sinh tồn — tự giải nén thẳng vào Thế giới hoặc tạo Thế giới mới gắn sẵn Datapack chỉ với 1 cú nhấp.
-            - **🎙️ Tổ Đội Sinh Tồn & Đàm Thoại Trong Game (`Co-op Voice & Team Pack`):** Tự động trang bị bộ **Đàm thoại khoảng cách gần trong game (`Simple Voice Chat`)** và **Tổ đội sinh tồn** (chia sẻ bản đồ, đánh dấu tọa độ, xem ba lô, hồi sinh đồng đội) cho cả chủ phòng lẫn bạn bè khi mở phòng chơi chung.
-            - **📊 Cố Vấn RAM Tự Động & Chống Giật Khựng Thông Minh:** Tự động tính toán mức RAM chuẩn xác nhất theo dung lượng máy, số lượng Mod và Shader đang bật kèm bộ tham số khởi chạy thế hệ mới giúp triệt tiêu hiện tượng khựng hình khi tải vùng đất mới.
-            - **🌍 Tạo Thế Giới & Vào Thẳng 1-Click (`1.20 → 26.x`):** Gói Modpack chưa có thế giới bấm **▶ Chơi** là tự tạo đảo khoảng không / thế giới chuẩn kiểu của gói và vào thẳng game không cần qua menu.
+            - **👕 Kho Skin Trực Tuyến Theo Chủ Đề & Đồng Bộ Thấy Đúng Skin Nhau:** Duyệt và mặc 1-Click hàng ngàn mẫu Skin 3D (*Anime, Ngầu, Dễ thương, Hiệp sĩ, YouTuber*) kèm chế độ **Đồng bộ Skin đa người chơi** giúp bạn bè chơi chung Offline / LAN / Phòng mạng đều nhìn thấy đúng Skin & Lớp áo 3D riêng của nhau.
+            - **⚔️ Chế Độ Chiến Đấu PvP / BedWars 1-Click (Phong Cách Lunar Client):** Bật 1-Click để tự trang bị **Bảng phím bấm Keystrokes + tốc độ nhấp CPS, Tự chạy nhanh (`ToggleSprint`), Thanh độ bền Giáp & Hiệu ứng Thuốc, Tâm ngắm động, Góc nhìn 360° và Lửa thấp không che màn hình** — tắt 1-Click là trả lại nguyên vẹn bộ Mod sinh tồn.
+            - **🛠️ Trình Cứu Hộ Thế Giới Hardcore & Kho Hạt Giống (Seed) Đẹp:** Xem trực tiếp mã **Seed** và **tọa độ nhân vật (`X, Y, Z`)**, mở khóa dùng lệnh, bật giữ đồ khi chết, cứu nhân vật kẹt dưới vực về Điểm xuất hiện, **Hồi sinh khỏi Hardcore 1-Click** và tạo thế giới từ Kho Seed tuyển chọn đẹp nhất.
+            - **🎬 Studio Quay Lại Trận Đấu 3D & Xuất Video `.MP4` Tự Động:** Tự cài trình quay phim 3D trong game (**Flashback / ReplayMod**) + **Camera bay tự do (`Freecam`)** kèm bộ kết xuất Video `.MP4` gọn nhẹ để dựng clip điện ảnh đăng TikTok / YouTube mà không gây tụt FPS lúc đang chơi.
+            - **🎛️ Hệ Sinh Thái Toàn Diện:** Gỡ trùng phím tắt Modpack & Sáng hang động Fullbright 1-Click, Kho Bản đồ xây sẵn & Datapack, Combo Voice Chat Tổ đội, Cố vấn RAM tự động, Tự động đảo Void OneBlock / SkyBlock và Bác Sĩ Crash Tiếng Việt.
           files: |
             dist/*.exe
         env:

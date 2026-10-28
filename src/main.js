@@ -33,7 +33,11 @@ const {
   readGameOptionsAndKeybinds, saveGameOptionsAndKeybinds, autoResolveKeybindConflicts, toggleFullbrightPack,
   checkLocalAddonsUpdates, updateLocalAddons, rollbackLocalAddon,
   searchWorldAndDatapackStore, installStoreWorldOrDatapack, listWorldDatapacks, deleteWorldDatapack,
-  installCoopComboPack, computeSmartRamAndJvmAdvice
+  installCoopComboPack, computeSmartRamAndJvmAdvice,
+  searchOnlineSkins, applyOnlineSkinToWardrobe, installFriendSkinSyncPack,
+  getPvpClientModeState, togglePvpClientMode,
+  inspectLocalWorldDetails, rescuePatchLocalWorld, getCuratedSeedsVault, createStandaloneQuickWorld,
+  getReplayStudioStatus, installReplayStudioPack
 } = require('./launcher-engine');
 const {
   loginWithMicrosoftModal,
@@ -72,7 +76,7 @@ function getLauncherVersionTitle() {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     if (pkg?.version) return `BlockWay Launcher — v${pkg.version} PRO`;
   } catch (_) {}
-  return 'BlockWay Launcher — v40.6.0 PRO';
+  return 'BlockWay Launcher — v40.7.0 PRO';
 }
 
 let mainWindow;
@@ -1694,7 +1698,8 @@ ipcMain.handle('coop:export-basket-file', async (_e, params) => {
       mcVersion: basketRes.mcVersion,
       loaderType: basketRes.loaderType,
       modsCount: basketRes.modsCount,
-      modBasket: basketRes.modBasket
+      modBasket: basketRes.modBasket,
+      localSkins: basketRes.localSkins || []
     }, null, 2), 'utf8');
     return { ok: true, filePath: saveRes.filePath, modsCount: basketRes.modsCount };
   } catch (err) {
@@ -1712,7 +1717,8 @@ ipcMain.handle('coop:import-basket-file', async (_e, params) => {
     if (openRes.canceled || !openRes.filePaths?.length) return { ok: false, canceled: true };
     const raw = JSON.parse(fs.readFileSync(openRes.filePaths[0], 'utf8'));
     const modBasket = Array.isArray(raw?.modBasket) ? raw.modBasket : [];
-    if (!modBasket.length) {
+    const localSkins = Array.isArray(raw?.localSkins) ? raw.localSkins : [];
+    if (!modBasket.length && !localSkins.length) {
       return { ok: false, error: 'File này không chứa danh sách Giỏ Mod hợp lệ.' };
     }
     const targetMc = raw.mcVersion || params?.mcVersion || '1.21.4';
@@ -1722,7 +1728,8 @@ ipcMain.handle('coop:import-basket-file', async (_e, params) => {
       instanceDir: params?.instanceDir,
       mcVersion: targetMc,
       loaderType: targetLoader,
-      modBasket
+      modBasket,
+      localSkins
     }, (st) => {
       mainWindow?.webContents.send('mc:status', st);
     });
@@ -2020,6 +2027,115 @@ ipcMain.handle('coop:install-combo', async (_e, params = {}) => {
 ipcMain.handle('coach:analyze', async (_e, params = {}) => {
   try {
     return computeSmartRamAndJvmAdvice(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+/* ============================================================================
+   v40.7 PRO — ONLINE SKIN HUB & FRIEND SYNC, LUNAR PVP HUD MODE,
+               WORLD NBT RESCUE & SEED VAULT, REPLAY STUDIO + FFMPEG
+   ============================================================================ */
+ipcMain.handle('skins:search-online', async (_e, params = {}) => {
+  try {
+    return await searchOnlineSkins(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, items: [] };
+  }
+});
+
+ipcMain.handle('skins:apply-online', async (_e, params = {}) => {
+  try {
+    return await applyOnlineSkinToWardrobe(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('skins:install-friend-sync', async (_e, params = {}) => {
+  try {
+    return await installFriendSkinSyncPack(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message, installed: [] };
+  }
+});
+
+ipcMain.handle('pvp:state', async (_e, params = {}) => {
+  try {
+    return getPvpClientModeState(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, enabled: false, activeMods: [] };
+  }
+});
+
+ipcMain.handle('pvp:toggle', async (_e, params = {}) => {
+  try {
+    return await togglePvpClientMode(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worlds:inspect', async (_e, params = {}) => {
+  try {
+    return inspectLocalWorldDetails(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worlds:rescue-patch', async (_e, params = {}) => {
+  try {
+    return rescuePatchLocalWorld(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worlds:seeds-vault', async () => {
+  try {
+    return getCuratedSeedsVault();
+  } catch (err) {
+    return { ok: false, error: err.message, seeds: [] };
+  }
+});
+
+ipcMain.handle('worlds:create-quick', async (_e, params = {}) => {
+  try {
+    return await createStandaloneQuickWorld(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('replay:status', async (_e, params = {}) => {
+  try {
+    return getReplayStudioStatus(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, equipped: false };
+  }
+});
+
+ipcMain.handle('replay:install', async (_e, params = {}) => {
+  try {
+    return await installReplayStudioPack(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message, installed: [] };
+  }
+});
+
+ipcMain.handle('sys:copy-text', async (_e, text = '') => {
+  try {
+    clipboard.writeText(String(text ?? '').slice(0, 4096));
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
   }
