@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://buiduchuy2010qn-prog.github.io/blockway-launcher/</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-home-light.png</image:loc>
+      <image:title>BlockWay Launcher v40.4.2 PRO — Giao diện Trắng Sáng (Prism Light)</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-home-navy.png</image:loc>
+      <image:title>BlockWay Launcher v40.4.2 PRO — Giao diện BlockWay Dark</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://buiduchuy2010qn-prog.github.io/blockway-launcher/preview-settings.png</image:loc>
+      <image:title>BlockWay Launcher v40.4.2 PRO — Cài đặt &amp; 7 Chủ đề màu</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-banner.png</image:loc>
+      <image:title>BlockWay Launcher — Every World, One Place</image:title>
+    </image:image>
+  </url>
+</urlset>

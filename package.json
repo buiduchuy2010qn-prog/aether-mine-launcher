@@ -1,0 +1,79 @@
+{
+  "name": "blockway-launcher",
+  "version": "40.4.2",
+  "description": "BlockWay Launcher v40.4.2 PRO — Every World, One Place (Tự Động Đảo Void OneBlock/SkyBlock, Tự Bật Shader/ResourcePack & Tiếng Việt Trong Game, Đóng Gói .mrpack, Dọn Rác Ổ Cứng & Vào Thẳng Thế Giới 1-Click)",
+  "homepage": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/buiduchuy2010qn-prog/blockway-launcher.git"
+  },
+  "bugs": {
+    "url": "https://github.com/buiduchuy2010qn-prog/blockway-launcher/issues"
+  },
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable --publish never"
+  },
+  "keywords": [
+    "blockway-launcher",
+    "blockway",
+    "aether-mine-launcher",
+    "aether-craft-launcher",
+    "buiduchuy2010qn-prog",
+    "minecraft",
+    "minecraft-launcher",
+    "minecraft-launcher-vietnam",
+    "launcher",
+    "modrinth",
+    "fabric",
+    "forge",
+    "quilt",
+    "neoforge",
+    "skinview3d",
+    "electron-launcher"
+  ],
+  "author": "buiduchuy2010qn-prog",
+  "license": "MIT",
+  "dependencies": {
+    "minecraft-launcher-core": "^3.16.2"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.buiduchuy.aethercraft",
+    "productName": "BlockWay Launcher",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "ota-manifest.json",
+      "LICENSE.rtf"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "src/ui/app-icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "unicode": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "LICENSE.rtf",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BlockWay Launcher",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    }
+  }
+}

@@ -1,0 +1,58 @@
+name: Build BlockWay Launcher Windows EXE
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Read package.json version
+        id: pkg
+        shell: pwsh
+        run: |
+          $v = node -p "require('./package.json').version"
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Install dependencies in GitHub Cloud
+        run: npm install
+
+      - name: Build Windows Setup & Portable EXE
+        run: npm run dist:win
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BlockWay-Launcher-v${{ steps.pkg.outputs.version }}
+          path: |
+            dist/*.exe
+
+      - name: Publish GitHub Release v${{ steps.pkg.outputs.version }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place"
+          body: |
+            ### ⚡ BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place
+            - **🏝️ Tự Động Đảo Khoảng Không (`Auto Void OneBlock / SkyBlock`):** Cài gói OneBlock hoặc SkyBlock là bấm *Tạo thế giới mới* vào thẳng đảo giữa khoảng không chuẩn 100%, không cần chỉnh tay *World Type*.
+            - **✨ Tự Bật Shader / Resource Pack & Tiếng Việt Ngay Trong Game:** Cài Shader hoặc Resource Pack là tự động kích hoạt ngay trong game (kèm tự cài `Sodium` + `Iris`); hỗ trợ tự chuyển ngôn ngữ **Tiếng Việt (`vi_vn`)** và **Chế độ Đồ họa Siêu Mượt cho Máy Yếu**.
+            - **📦 Đóng Gói `.mrpack` Chuẩn Quốc Tế & Quét Sâu File `.jar`:** Xuất trọn bộ Mod/Shader/Server đang dùng thành 1 file `.mrpack` gọn nhẹ để gửi bạn bè hoặc mang sang máy khác mở 1-Click; tự nhận diện chuẩn phiên bản mọi file `.jar` tải ngoài.
+            - **🧹 Dọn Rác Ổ Cứng Thông Minh & Vào Thẳng Map 1-Click:** Giải phóng bộ nhớ đệm, nhật ký cũ an toàn 100% cho Thế giới (`saves`), kèm tính năng nhảy thẳng vào thế giới chơi đơn và tự sao lưu ngầm khi thoát game.
+          files: |
+            dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
