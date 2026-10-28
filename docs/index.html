@@ -115,6 +115,7 @@
       --bg-grad-1: rgba(2, 132, 199, 0.12);
       --bg-grad-2: rgba(22, 163, 74, 0.08);
       --bg-card: rgba(255, 255, 255, 0.94);
+      --bg-header: rgba(255, 255, 255, 0.96);
       --bg-card-solid: #ffffff;
       --bg-elevated: #f1f5f9;
       --bg-pill: #eff6ff;
@@ -137,6 +138,7 @@
       --bg-grad-1: rgba(14, 165, 233, 0.16);
       --bg-grad-2: rgba(34, 197, 94, 0.11);
       --bg-card: rgba(17, 22, 33, 0.88);
+      --bg-header: rgba(10, 14, 23, 0.95);
       --bg-card-solid: #111622;
       --bg-elevated: rgba(26, 34, 50, 0.85);
       --bg-pill: rgba(30, 41, 59, 0.85);
@@ -159,6 +161,7 @@
       --bg-grad-1: rgba(244, 114, 182, 0.16);
       --bg-grad-2: rgba(56, 189, 248, 0.12);
       --bg-card: rgba(255, 255, 255, 0.95);
+      --bg-header: rgba(255, 250, 253, 0.96);
       --bg-card-solid: #ffffff;
       --bg-elevated: #fdf2f8;
       --bg-pill: #fce7f3;
@@ -202,66 +205,69 @@
     }
 
     section[id] {
-      scroll-margin-top: 96px;
+      scroll-margin-top: 76px;
     }
 
-    /* Sticky Navbar */
+    /* Full-Width Docked Sticky Navbar (Zero Top Gap) */
     .navbar {
       position: sticky;
-      top: 12px;
-      z-index: 60;
-      width: calc(100% - 28px);
-      max-width: 1260px;
-      background: var(--bg-card);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1.5px solid var(--border);
-      border-radius: 18px;
-      padding: 11px 20px;
+      top: 0;
+      z-index: 90;
+      width: 100%;
+      background: var(--bg-header);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1.5px solid var(--border);
+      box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+      margin-bottom: 12px;
+    }
+    .navbar-inner {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 9px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      box-shadow: var(--shadow);
-      margin-bottom: 18px;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 11px;
       text-decoration: none;
       color: var(--text-main);
       font-weight: 800;
-      font-size: 18.5px;
+      font-size: 18px;
       flex-shrink: 0;
     }
     .brand-logo-img {
-      width: 42px;
-      height: 42px;
-      border-radius: 11px;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
       object-fit: cover;
       border: 1.5px solid var(--border-strong);
-      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25);
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.22);
     }
     .brand-sub {
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 800;
       color: var(--accent);
       letter-spacing: 0.04em;
       display: block;
-      margin-top: 1px;
+      margin-top: 0;
     }
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
     .nav-pill {
-      padding: 8px 14px;
+      padding: 7px 13px;
       border-radius: 999px;
-      font-size: 13.8px;
+      font-size: 13.4px;
       font-weight: 700;
       color: var(--text-main);
       background: var(--bg-pill);
@@ -280,26 +286,22 @@
       background: linear-gradient(135deg, #22c55e, #16a34a);
       color: #ffffff;
       border-color: #15803d;
-      box-shadow: 0 6px 18px rgba(22, 163, 74, 0.32);
+      box-shadow: 0 5px 16px rgba(22, 163, 74, 0.3);
     }
 
     .container {
       width: 100%;
       max-width: 1280px;
-      padding: 2px 20px 76px;
-    }
-
-    section[id] {
-      scroll-margin-top: 94px;
+      padding: 0 20px 72px;
     }
 
     /* Modern 2-Column Split Hero Section */
     .hero-split {
       display: grid;
-      grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-      gap: 28px;
+      grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+      gap: 24px;
       align-items: center;
-      margin-bottom: 38px;
+      margin-bottom: 13px;
     }
     .hero-left {
       text-align: left;
@@ -311,14 +313,14 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6.5px 14px;
+      padding: 6px 13px;
       border-radius: 999px;
       background: rgba(22, 163, 74, 0.11);
       border: 1px solid rgba(22, 163, 74, 0.36);
       color: var(--emerald);
       font-weight: 800;
-      font-size: 12.6px;
-      margin-bottom: 14px;
+      font-size: 12.4px;
+      margin-bottom: 12px;
     }
     .pulse-dot {
       width: 8px;
@@ -329,11 +331,11 @@
       flex-shrink: 0;
     }
     h1 {
-      font-size: clamp(26px, 2.55vw, 36px);
+      font-size: clamp(27px, 2.62vw, 37px);
       font-weight: 900;
       letter-spacing: -0.025em;
-      line-height: 1.2;
-      margin-bottom: 12px;
+      line-height: 1.18;
+      margin-bottom: 11px;
       color: var(--text-main);
     }
     h1 span {
@@ -342,10 +344,10 @@
       -webkit-text-fill-color: transparent;
     }
     .subtitle {
-      font-size: 15.8px;
+      font-size: 15.2px;
       color: var(--text-sub);
-      line-height: 1.62;
-      margin: 0 0 18px;
+      line-height: 1.58;
+      margin: 0 0 15px;
       font-weight: 500;
     }
     .subtitle strong {
@@ -459,26 +461,26 @@
     .showcase-box {
       background: var(--bg-card);
       border: 1.5px solid var(--border);
-      border-radius: 20px;
-      padding: 13px;
+      border-radius: 18px;
+      padding: 10px 11px 9px;
       box-shadow: var(--shadow);
       min-width: 0;
     }
     .showcase-tabs {
       display: flex;
       justify-content: center;
-      gap: 5px;
+      gap: 4.5px;
       flex-wrap: wrap;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .sc-tab {
-      padding: 6px 9.5px;
-      border-radius: 9px;
+      padding: 5.5px 9px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--bg-pill);
       color: var(--text-main);
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11.6px;
       cursor: pointer;
       font-family: inherit;
       white-space: nowrap;
@@ -498,13 +500,13 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      padding: 7.5px 12px;
+      padding: 6px 11px;
       background: #0d121d;
       border: 1.5px solid var(--border-strong);
       border-bottom: none;
-      border-radius: 13px 13px 0 0;
+      border-radius: 12px 12px 0 0;
       color: #cbd5e1;
-      font-size: 11.8px;
+      font-size: 11.4px;
       font-weight: 700;
     }
     .swb-dots {
@@ -514,8 +516,8 @@
       flex-shrink: 0;
     }
     .swb-dots i {
-      width: 9px;
-      height: 9px;
+      width: 8.5px;
+      height: 8.5px;
       border-radius: 50%;
       display: inline-block;
     }
@@ -528,12 +530,12 @@
       white-space: nowrap;
     }
     .swb-zoom-btn {
-      padding: 3.5px 9px;
-      border-radius: 7px;
+      padding: 3px 8.5px;
+      border-radius: 6px;
       border: 1px solid rgba(148, 163, 184, 0.3);
       background: rgba(30, 41, 59, 0.85);
       color: #f8fafc;
-      font-size: 11.2px;
+      font-size: 11px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
@@ -543,7 +545,7 @@
       border-color: #38bdf8;
     }
     .showcase-frame {
-      border-radius: 0 0 13px 13px;
+      border-radius: 0 0 12px 12px;
       overflow: hidden;
       border: 1.5px solid var(--border-strong);
       background: #070c16;
@@ -557,11 +559,14 @@
     }
     .showcase-caption {
       text-align: center;
-      font-size: 12.6px;
+      font-size: 12px;
       color: var(--text-sub);
-      margin-top: 9px;
+      margin-top: 7px;
       font-weight: 600;
-      line-height: 1.45;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Fullscreen Image Lightbox */
@@ -588,52 +593,75 @@
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8);
     }
 
-    /* Stats Strip */
+    /* Compact Horizontal Icon-Stat Strip (Fits Above the Fold!) */
     .stats-bar {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 48px;
+      gap: 12px;
+      margin-bottom: 42px;
     }
     .stat-item {
       background: var(--bg-card);
       border: 1.5px solid var(--border);
-      border-radius: 16px;
-      padding: 20px 16px;
-      text-align: center;
+      border-radius: 14px;
+      padding: 9px 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
       box-shadow: var(--shadow);
+      min-width: 0;
+    }
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--bg-pill);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      flex-shrink: 0;
+    }
+    .stat-body {
+      min-width: 0;
     }
     .stat-val {
-      font-size: 25px;
+      font-size: 16.5px;
       font-weight: 900;
       color: var(--accent);
-      margin-bottom: 5px;
+      margin-bottom: 1px;
       line-height: 1.2;
+      white-space: nowrap;
     }
     .stat-label {
-      font-size: 14px;
+      font-size: 12.2px;
       font-weight: 600;
       color: var(--text-sub);
-      line-height: 1.45;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Section Headers */
     .sec-head {
       text-align: center;
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
     .sec-head h2 {
-      font-size: clamp(24px, 3.2vw, 35px);
+      font-size: clamp(22px, 2.5vw, 30px);
       font-weight: 900;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       line-height: 1.25;
       color: var(--text-main);
     }
     .sec-head p {
       color: var(--text-sub);
-      font-size: 16.8px;
-      line-height: 1.65;
-      max-width: 780px;
+      font-size: 15.2px;
+      line-height: 1.55;
+      max-width: 820px;
       margin: 0 auto;
     }
 
@@ -643,15 +671,15 @@
       justify-content: center;
       gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 22px;
+      margin-bottom: 16px;
     }
     .ff-btn {
-      padding: 8px 15px;
+      padding: 7px 14px;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: var(--bg-pill);
       color: var(--text-main);
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
@@ -667,14 +695,14 @@
     .grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 18px;
-      margin-bottom: 52px;
+      gap: 14px;
+      margin-bottom: 46px;
     }
     .card {
       background: var(--bg-card);
       border: 1.5px solid var(--border);
-      border-radius: 18px;
-      padding: 24px;
+      border-radius: 16px;
+      padding: 18px 20px;
       box-shadow: var(--shadow);
       display: flex;
       flex-direction: column;
@@ -687,22 +715,22 @@
       border-color: rgba(56, 189, 248, 0.38);
     }
     .card:hover {
-      transform: translateY(-3px);
+      transform: translateY(-2px);
       border-color: var(--border-strong);
     }
     .card-tag {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       align-self: flex-start;
-      padding: 4.5px 11px;
-      border-radius: 8px;
+      padding: 3.5px 10px;
+      border-radius: 7px;
       background: var(--bg-pill);
       border: 1px solid var(--border);
       color: var(--accent);
-      font-size: 12.2px;
+      font-size: 11.6px;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 9px;
     }
     .card-tag.emerald-tag {
       background: rgba(34, 197, 94, 0.14);
@@ -710,16 +738,16 @@
       color: var(--emerald);
     }
     .card h3 {
-      font-size: 19px;
+      font-size: 16.8px;
       font-weight: 800;
-      line-height: 1.34;
-      margin-bottom: 9px;
+      line-height: 1.32;
+      margin-bottom: 7px;
       color: var(--text-main);
     }
     .card p {
       color: var(--text-sub);
-      font-size: 15px;
-      line-height: 1.65;
+      font-size: 14px;
+      line-height: 1.55;
     }
 
     /* Comparison Table */
@@ -997,14 +1025,14 @@
 
     /* Responsive Breakpoints */
     @media (max-width: 1060px) {
-      .navbar {
+      .navbar-inner {
         flex-direction: column;
-        padding: 12px 16px;
+        padding: 10px 16px;
       }
       .nav-links { justify-content: center; }
       .hero-split {
         grid-template-columns: 1fr;
-        gap: 22px;
+        gap: 20px;
       }
       .hero-left {
         text-align: center;
@@ -1022,7 +1050,9 @@
       .stats-bar {
         grid-template-columns: 1fr;
       }
-      .btn-dl-sub {
+      .btn-dl-sub,
+      .showcase-caption,
+      .stat-label {
         white-space: normal;
       }
       .find-box {
@@ -1033,24 +1063,26 @@
     }
   </style>
 </head>
-<body>
+<body id="top">
   <header class="navbar">
-    <a class="brand" href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/">
-      <img class="brand-logo-img" src="app-logo.png?v=40.7.0" alt="BlockWay Launcher Logo" />
-      <div>
-        <span>BlockWay Launcher</span>
-        <span class="brand-sub">Every World, One Place</span>
-      </div>
-    </a>
-    <nav class="nav-links">
-      <a class="nav-pill" id="navShowcaseLink" href="#showcase">Giao diện v40.7</a>
-      <a class="nav-pill" href="#features">Tính năng</a>
-      <a class="nav-pill" href="#compare">So sánh</a>
-      <a class="nav-pill" href="#faq">Hỏi đáp</a>
-      <a class="nav-pill" href="#find-repo">Mở máy mới</a>
-      <button class="nav-pill" id="btnToggleWebTheme" type="button" title="Đổi chủ đề màu trang web (Trắng Sáng / Trắng Hồng / BlockWay Dark)">🌸 Trắng Hồng</button>
-      <a class="nav-pill emerald" id="navVerPill" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">⬇ Tải v40.7.0 PRO</a>
-    </nav>
+    <div class="navbar-inner">
+      <a class="brand" href="#top">
+        <img class="brand-logo-img" src="app-logo.png?v=40.7.0" alt="BlockWay Launcher Logo" />
+        <div>
+          <span>BlockWay Launcher</span>
+          <span class="brand-sub">Every World, One Place</span>
+        </div>
+      </a>
+      <nav class="nav-links">
+        <a class="nav-pill" id="navShowcaseLink" href="#top">Giao diện v40.7</a>
+        <a class="nav-pill" href="#features">Tính năng</a>
+        <a class="nav-pill" href="#compare">So sánh</a>
+        <a class="nav-pill" href="#faq">Hỏi đáp</a>
+        <a class="nav-pill" href="#find-repo">Mở máy mới</a>
+        <button class="nav-pill" id="btnToggleWebTheme" type="button" title="Đổi chủ đề màu trang web (Trắng Sáng / Trắng Hồng / BlockWay Dark)">🌸 Trắng Hồng</button>
+        <a class="nav-pill emerald" id="navVerPill" href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest">⬇ Tải v40.7.0 PRO</a>
+      </nav>
+    </div>
   </header>
 
   <main class="container">
@@ -1079,7 +1111,7 @@
             <span class="btn-dl-icon">🎒</span>
             <span class="btn-dl-text">
               <span class="btn-dl-title">Tải Bản Chạy Ngay (Portable .EXE)</span>
-              <span class="btn-dl-sub" id="portableSizeSub">BlockWay-Portable.exe • Mở chạy liền không cần cài đặt (Quán Net / USB)</span>
+              <span class="btn-dl-sub" id="portableSizeSub">BlockWay-Portable.exe • Không cần cài đặt (Quán Net / USB)</span>
             </span>
           </a>
         </div>
@@ -1098,46 +1130,58 @@
       <!-- INTERACTIVE 7-TAB LIVE UI SCREENSHOT SHOWCASE RIGHT ABOVE THE FOLD -->
       <div class="showcase-box" id="showcase">
         <div class="showcase-tabs" id="showcaseTabsBar">
-          <button class="sc-tab active" data-img="preview-home-light.png?v=40.7.0" data-cap="Giao diện Trắng Sáng (Prism Light) v40.7.0 PRO — Tinh tế, rõ nét từng chi tiết, tự chọn Java 25/21/17/8 &amp; vào thẳng Thế giới 1-Click">☀️ Sáng</button>
+          <button class="sc-tab active" data-img="preview-home-light.png?v=40.7.0" data-cap="Giao diện Trắng Sáng v40.7.0 PRO — Tinh tế, tự chọn Java 25/21/17/8 &amp; vào thẳng Thế giới 1-Click">☀️ Sáng</button>
           <button class="sc-tab" data-img="preview-home-navy.png?v=40.7.0" data-cap="Giao diện BlockWay Dark v40.7.0 PRO — Dịu mắt, Nhân vật 3D sống động &amp; 6 Mod Loader chuẩn gốc">🌙 Tối</button>
-          <button class="sc-tab" data-img="preview-skin-hub.png?v=40.7.0" data-cap="MỚI v40.7.0 — Kho Skin 3D Trực Tuyến Theo Chủ Đề &amp; Đồng Bộ Để Bạn Bè Thấy Đúng Skin Nhau Khi Chơi Offline / LAN">👕 Skin 3D</button>
-          <button class="sc-tab" data-img="preview-pvp-coop.png?v=40.7.0" data-cap="MỚI v40.7.0 — Chế Độ PvP / BedWars 1-Click Phong Cách Lunar + Chơi Chung 3 Chế Độ (LAN • e4mc • Mã Phòng 6 Ký Tự)">⚔️ PvP &amp; Co-op</button>
-          <button class="sc-tab" data-img="preview-world-rescue.png?v=40.7.0" data-cap="MỚI v40.7.0 — Cứu Hộ Thế Giới: Xem &amp; chép Seed, Tọa độ (X, Y, Z), Mở lệnh &amp; Hồi sinh khỏi Hardcore 1-Click">🛠️ Cứu Hộ Map</button>
-          <button class="sc-tab" data-img="preview-tools-replay.png?v=40.7.0" data-cap="MỚI v40.7.0 — Studio Quay Phim 3D Xuất .MP4 Tự Động + Gỡ Trùng Phím Tắt Modpack &amp; Sáng Hang Động 1-Click">🎬 Quay 3D</button>
-          <button class="sc-tab" data-img="preview-settings.png?v=40.7.0" data-cap="Cài Đặt Hệ Thống Thông Minh — Tự chuyển Tiếng Việt (vi_vn), Chế độ Máy Yếu, Tự sao lưu ngầm &amp; 7 Chủ đề màu sắc">⚙️ Cài Đặt</button>
+          <button class="sc-tab" data-img="preview-skin-hub.png?v=40.7.0" data-cap="Kho Skin 3D Trực Tuyến Theo Chủ Đề &amp; Đồng Bộ Bạn Bè Thấy Đúng Skin Nhau Khi Chơi Offline / LAN">👕 Skin 3D</button>
+          <button class="sc-tab" data-img="preview-pvp-coop.png?v=40.7.0" data-cap="Chế Độ Chiến Đấu PvP 1-Click Phong Cách Lunar + Chơi Chung LAN • e4mc • Mã Phòng 6 Ký Tự">⚔️ PvP &amp; Co-op</button>
+          <button class="sc-tab" data-img="preview-world-rescue.png?v=40.7.0" data-cap="Cứu Hộ Thế Giới — Xem &amp; chép Seed, Tọa độ (X, Y, Z), Mở khóa lệnh &amp; Hồi sinh Hardcore 1-Click">🛠️ Cứu Hộ Map</button>
+          <button class="sc-tab" data-img="preview-tools-replay.png?v=40.7.0" data-cap="Studio Quay Phim 3D Xuất .MP4 Tự Động + Gỡ Trùng Phím Tắt Modpack &amp; Sáng Hang Động 1-Click">🎬 Quay 3D</button>
+          <button class="sc-tab" data-img="preview-settings.png?v=40.7.0" data-cap="Cài Đặt Thông Minh — Tự chuyển Tiếng Việt, Chế độ Máy Yếu, Sao lưu ngầm &amp; 7 Chủ đề màu sắc">⚙️ Cài Đặt</button>
         </div>
 
         <div class="showcase-window-bar">
           <div class="swb-dots"><i></i><i></i><i></i></div>
-          <span id="showcaseWindowTitle">BlockWay Launcher v40.7.0 PRO — Giao diện Trắng Sáng</span>
+          <span id="showcaseWindowTitle">BlockWay Launcher v40.7.0 PRO — ☀️ Sáng</span>
           <button type="button" class="swb-zoom-btn" id="btnZoomShowcase">🔍 Phóng to</button>
         </div>
         <div class="showcase-frame" id="showcaseFrameBox" title="Nhấp vào ảnh để phóng to toàn màn hình">
           <img id="showcaseImg" src="preview-home-light.png?v=40.7.0" alt="Giao diện thực tế BlockWay Launcher v40.7.0 PRO" />
         </div>
         <div class="showcase-caption" id="showcaseCap">
-          Giao diện Trắng Sáng (Prism Light) v40.7.0 PRO — Tinh tế, rõ nét từng chi tiết, tự chọn Java 25/21/17/8 &amp; vào thẳng Thế giới 1-Click
+          Giao diện Trắng Sáng v40.7.0 PRO — Tinh tế, tự chọn Java 25/21/17/8 &amp; vào thẳng Thế giới 1-Click
         </div>
       </div>
     </section>
 
-    <!-- STATS BAR -->
+    <!-- COMPACT HORIZONTAL STATS STRIP -->
     <section class="stats-bar">
       <div class="stat-item">
-        <div class="stat-val">40.000+ Pack</div>
-        <div class="stat-label">Modpack, Map, Seed &amp; 77.600+ Mod Việt Hóa</div>
+        <span class="stat-icon">📦</span>
+        <div class="stat-body">
+          <div class="stat-val">40.000+ Pack</div>
+          <div class="stat-label">Modpack, Map &amp; 77.600+ Mod</div>
+        </div>
       </div>
       <div class="stat-item">
-        <div class="stat-val">3 Chế Độ Co-op</div>
-        <div class="stat-label">LAN • Internet e4mc • Mã Phòng 6 Ký Tự + Thấy Skin Nhau</div>
+        <span class="stat-icon">🤝</span>
+        <div class="stat-body">
+          <div class="stat-val">3 Chế Độ Co-op</div>
+          <div class="stat-label">LAN • e4mc • Mã Phòng &amp; Skin</div>
+        </div>
       </div>
       <div class="stat-item">
-        <div class="stat-val">PvP &amp; Replay 3D</div>
-        <div class="stat-label">Giao Diện Chiến Đấu Lunar &amp; Xuất Clip .MP4 1-Click</div>
+        <span class="stat-icon">⚔️</span>
+        <div class="stat-body">
+          <div class="stat-val">PvP &amp; Replay 3D</div>
+          <div class="stat-label">HUD Lunar &amp; Xuất Video .MP4</div>
+        </div>
       </div>
       <div class="stat-item">
-        <div class="stat-val">0% GPU</div>
-        <div class="stat-label">Ngủ Đông Khi Chơi, X3 FPS &amp; Cố Vấn RAM ZGC</div>
+        <span class="stat-icon">🚀</span>
+        <div class="stat-body">
+          <div class="stat-val">0% GPU Ngầm</div>
+          <div class="stat-label">Ngủ Đông, X3 FPS &amp; RAM ZGC</div>
+        </div>
       </div>
     </section>
 
@@ -1145,7 +1189,7 @@
     <section id="features">
       <div class="sec-head">
         <h2 id="featuresHeading">🔥 Hệ Sinh Thái Toàn Diện Trên BlockWay Launcher v40.7 PRO</h2>
-        <p>Kết hợp sức mạnh của Modpack Manager chuyên nghiệp, PvP Client kiểu Lunar và hệ thống cứu hộ / đồng bộ chơi chung hoàn toàn tự động bằng Tiếng Việt.</p>
+        <p>Kết hợp trình quản lý Modpack chuyên nghiệp, chế độ chiến đấu PvP kiểu Lunar và bộ cứu hộ chơi chung hoàn toàn tự động bằng Tiếng Việt.</p>
       </div>
 
       <div class="feat-filter-bar" id="featFilterBar">
@@ -1160,55 +1204,55 @@
         <div class="card is-new" data-fcat="new coop">
           <span class="card-tag emerald-tag">✨ Mới trong v40.7.0 PRO</span>
           <h3>👕 Kho Skin 3D Online &amp; Bạn Bè Thấy Đúng Skin Nhau</h3>
-          <p>Duyệt và mặc 1-Click hàng ngàn mẫu Skin theo chủ đề (<em>Anime, Ngầu, Cute, Hiệp sĩ, YouTuber</em>) hoặc tìm theo tên người chơi. Bấm <strong>Đồng bộ Skin bạn bè</strong> để cả nhóm chơi Offline / LAN đều thấy đúng trang phục &amp; lớp áo nổi 3D của nhau!</p>
+          <p>Duyệt và mặc 1-Click hàng ngàn mẫu Skin theo chủ đề (<em>Anime, Ngầu, Cute, Hiệp sĩ, YouTuber</em>) hoặc tìm theo tên người chơi. Bấm <strong>Đồng bộ Skin bạn bè</strong> để cả nhóm chơi Offline / LAN đều thấy đúng trang phục 3D của nhau!</p>
         </div>
 
         <div class="card is-new" data-fcat="new coop">
           <span class="card-tag emerald-tag">✨ Mới trong v40.7.0 PRO</span>
-          <h3>⚔️ Chế Độ Chiến Đấu PvP / BedWars 1-Click (Lunar Style)</h3>
-          <p>Trang bị 1-Click trọn bộ <strong>Bảng phím bấm Keystrokes + tốc độ nhấp CPS, Tự chạy nhanh (ToggleSprint), Thanh độ bền Giáp &amp; Hiệu ứng Thuốc, Tâm ngắm động, Góc nhìn 360° và Lửa thấp không che màn hình</strong> — tắt 1-Click là về lại Sinh tồn!</p>
+          <h3>⚔️ Chế Độ Chiến Đấu PvP 1-Click (Lunar Style)</h3>
+          <p>Bật 1-Click trọn bộ <strong>Bảng phím Keystrokes + CPS, Tự chạy nhanh (ToggleSprint), Thanh độ bền Giáp &amp; Thuốc, Tâm ngắm động, Góc nhìn 360° và Lửa thấp</strong> — tắt 1-Click là về lại Sinh tồn nguyên bản!</p>
         </div>
 
         <div class="card is-new" data-fcat="new world">
           <span class="card-tag emerald-tag">✨ Mới trong v40.7.0 PRO</span>
           <h3>🛠️ Cứu Hộ Thế Giới Hardcore &amp; Kho Seed Tuyển Chọn</h3>
-          <p>Đọc trực tiếp mã <strong>Seed</strong> và <strong>tọa độ nhân vật (X, Y, Z)</strong> của mọi Map; hỗ trợ <strong>💖 Hồi sinh khỏi Hardcore khi lỡ tử trận</strong>, mở khóa dùng lệnh, bật giữ đồ khi chết, cứu kẹt về Spawn và tạo Map từ <strong>Kho Hạt Giống Đẹp Nhất</strong>.</p>
+          <p>Đọc trực tiếp mã <strong>Seed</strong> và <strong>tọa độ (X, Y, Z)</strong> của mọi Map; hỗ trợ <strong>💖 Hồi sinh khỏi Hardcore khi lỡ tử trận</strong>, mở khóa lệnh, bật giữ đồ khi chết, cứu kẹt về Spawn và tạo Map từ <strong>Kho Seed Đẹp Nhất</strong>.</p>
         </div>
 
         <div class="card is-new" data-fcat="new">
           <span class="card-tag emerald-tag">✨ Mới trong v40.7.0 PRO</span>
           <h3>🎬 Studio Quay Phim 3D Replay &amp; Xuất Video .MP4</h3>
-          <p>Tự động cài trình ghi hình 3D siêu nhẹ (<strong>Flashback / ReplayMod</strong>) + <strong>Camera bay tự do (Freecam)</strong> kèm bộ kết xuất <code>.MP4</code> gọn nhẹ — lúc chiến đấu vẫn mượt 100% FPS, chơi xong mới xoay góc máy điện ảnh đăng TikTok / YouTube!</p>
+          <p>Tự cài trình ghi hình 3D siêu nhẹ (<strong>Flashback / ReplayMod</strong>) + <strong>Camera bay tự do (Freecam)</strong> kèm bộ kết xuất <code>.MP4</code> gọn nhẹ — lúc chiến đấu vẫn mượt 100% FPS, chơi xong xoay góc máy đăng TikTok / YouTube!</p>
         </div>
 
         <div class="card" data-fcat="perf">
           <span class="card-tag">🎛️ Tinh Chỉnh Ngoài Game</span>
-          <h3>Gỡ Trùng Phím Tắt Modpack &amp; Sáng Hang Động 1-Click</h3>
-          <p>Tự quét và <strong>gỡ trùng phím tắt tự động 1-Click</strong> cho các gói nhiều Mod mà giữ nguyên cụm phím <code>WASD</code>. Chỉnh sẵn <strong>FOV, Tầm nhìn chunk, Tắt VSync</strong> và bật <strong>💡 Sáng Hang Động (Fullbright)</strong> ngay trước khi mở game.</p>
+          <h3>⌨️ Gỡ Trùng Phím Tắt Modpack &amp; Sáng Hang Động</h3>
+          <p>Tự quét và <strong>gỡ trùng phím tắt 1-Click</strong> cho gói nhiều Mod mà giữ nguyên cụm phím <code>WASD</code>. Chỉnh sẵn <strong>FOV, Tầm nhìn chunk, Tắt VSync</strong> và bật <strong>💡 Sáng Hang Động (Fullbright)</strong> ngay trước khi mở game.</p>
         </div>
 
         <div class="card" data-fcat="coop">
           <span class="card-tag">🤝 Chơi Chung 3 Chế Độ</span>
-          <h3>LAN • Internet e4mc 1-Click • Mã Phòng 6 Ký Tự + Voice</h3>
+          <h3>🌐 LAN • Internet e4mc 1-Click • Mã Phòng 6 Ký Tự</h3>
           <p>Mở thế giới đơn qua Internet không cần mở Port bằng <strong>e4mc 1-Click</strong>, trang bị <strong>Simple Voice Chat</strong> nói chuyện theo khoảng cách trong game và gửi <strong>Mã Phòng 6 ký tự</strong> để bạn bè tự tải khớp 100% Mod &amp; Skin!</p>
         </div>
 
         <div class="card" data-fcat="world">
           <span class="card-tag">📦 5 Nguồn Modpack &amp; Kho Map</span>
-          <h3>Cài Modpack, Bản Đồ, Datapack &amp; Hoàn Tác Mod 1-Click</h3>
-          <p>Tải trực tiếp từ <strong>Modrinth • CurseForge • FTB • Technic • ATLauncher</strong> và <strong>Kho Bản Đồ Xây Sẵn</strong>. Hỗ trợ kiểm tra cập nhật hàng loạt kèm <strong>⏪ Hoàn tác 1-Click</strong> về bản cũ và xuất gói <code>.mrpack</code> mang đi quán Net.</p>
+          <h3>📚 Tải Modpack, Bản Đồ, Datapack &amp; Hoàn Tác Mod</h3>
+          <p>Tải trực tiếp từ <strong>Modrinth • CurseForge • FTB • Technic • ATLauncher</strong> và <strong>Kho Bản Đồ Xây Sẵn</strong>. Hỗ trợ cập nhật hàng loạt kèm <strong>⏪ Hoàn tác 1-Click</strong> về bản cũ và xuất gói <code>.mrpack</code> mang đi quán Net.</p>
         </div>
 
         <div class="card" data-fcat="world">
           <span class="card-tag">🏝️ OneBlock / SkyBlock Chuẩn</span>
-          <h3>Tự Động Đảo Void &amp; Vào Thẳng Thế Giới 1-Click</h3>
-          <p>Cài gói <strong>OneBlock / SkyBlock</strong> và tạo thế giới mới ngoài Launcher là nhảy thẳng vào đúng Đảo bay giữa khoảng không không cần qua Menu. Khi thoát game, Launcher <strong>tự sao lưu ngầm</strong> giữ gọn 3 bản gần nhất.</p>
+          <h3>🏝️ Tự Động Đảo Void &amp; Vào Thẳng Thế Giới 1-Click</h3>
+          <p>Cài gói <strong>OneBlock / SkyBlock</strong> và tạo Map mới ngoài Launcher là nhảy thẳng vào Đảo bay giữa khoảng không không cần qua Menu. Khi thoát game, Launcher <strong>tự sao lưu ngầm</strong> giữ gọn 3 bản gần nhất.</p>
         </div>
 
         <div class="card" data-fcat="perf">
           <span class="card-tag">🩺 Bác Sĩ Crash &amp; 3 Tài Khoản</span>
-          <h3>Tự Sửa Lỗi Tiếng Việt, Cố Vấn RAM ZGC &amp; Cloud 24/7</h3>
-          <p>Tích hợp <strong>Bác Sĩ Crash Tiếng Việt</strong> tự cài thư viện thiếu / tắt Mod xung đột, <strong>Cố vấn RAM Generational ZGC</strong> chống giật khựng, cùng 3 chế độ: <strong>Bản quyền Microsoft • Offline/Crack • Cloud ID 24/7 (OTP Gmail)</strong>.</p>
+          <h3>🩺 Bác Sĩ Crash Tiếng Việt, RAM ZGC &amp; Cloud 24/7</h3>
+          <p>Tích hợp <strong>Bác Sĩ Crash Tiếng Việt</strong> tự cài thư viện thiếu / tắt Mod xung đột, <strong>Cố vấn RAM Generational ZGC</strong> chống giật khựng, cùng 3 chế độ: <strong>Bản quyền Microsoft • Offline/Crack • Cloud ID 24/7</strong>.</p>
         </div>
       </div>
     </section>
