@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "40.4.2",
-  "generatedAt": "2026-10-28T09:19:24.842Z",
-  "filesCount": 17,
+  "version": "40.5.0",
+  "generatedAt": "2026-10-28T11:04:09.358Z",
+  "filesCount": 18,
   "files": [
     {
       "path": "package.json",
       "size": 2142,
-      "sha256": "ed06800cf2f1e2111c8d5447eb5c9dc45f40bdc8afe90a521ec43aa1f48a307c"
+      "sha256": "1696198b83b49a05315683369d515929d640349f52a933571141380558df2661"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,13 +16,13 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 255231,
-      "sha256": "6756361dc9520d016b660f96c7292de51482bb80f30008672b79ef73867e419c"
+      "size": 257105,
+      "sha256": "6eafced66572060f399ea93dd7b7f24ac12bb3f0f9f2c6c6cece970df3bdcb0e"
     },
     {
       "path": "src/main.js",
       "size": 69012,
-      "sha256": "5b38815dd51bb8c8f6612fc94a3be6e9bf8009cb958d357a1ed6f76aff12430e"
+      "sha256": "3b43ea513afac1577e0a65ca5bab95fbae0dc8e2550fadfeaad47bf531400236"
     },
     {
       "path": "src/microsoft-auth.js",
@@ -56,13 +56,13 @@
     },
     {
       "path": "src/ui/index.html",
-      "size": 176170,
-      "sha256": "c81906a743718f6f70dc3efbae1979eeec3771a7c4c47c61cedf3b0bc19ec6e3"
+      "size": 176752,
+      "sha256": "8e828d328f1ff9857f0390a4d23b1d2b35e16a615f0a300e655dad77e9d7d84f"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 154715,
-      "sha256": "37f1be476ec9ade67fd8be325607cb598df848afb96f24dae526daf50dbad645"
+      "size": 155866,
+      "sha256": "6c1b465f91058bee4452731bd6ca2d26993212b4970ad034922dc7e163083810"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -71,8 +71,8 @@
     },
     {
       "path": "src/ui/renderer.js",
-      "size": 125722,
-      "sha256": "439b5981551d7b65700a61023080d5a0c62f40f5b84be8de20d8add412abd1ca"
+      "size": 126717,
+      "sha256": "b672b1bf3be92e90e8ff3e6c62dc97f381610e9358047042c3340a013f41dc60"
     },
     {
       "path": "src/ui/skinview3d.bundle.js",
@@ -81,13 +81,18 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 242073,
-      "sha256": "b592fa6a99ce6c7d0c8704aea721230d81d641f90cd6f185d7d5f1f9ca372b06"
+      "size": 249357,
+      "sha256": "0b7ecb3a3694db1675a1c490a78f9f9d8a0ba2add52ea31e5288c5752d85ef77"
     },
     {
       "path": "src/ui/styles.css",
       "size": 113452,
       "sha256": "91e27a0370d8242019359db18242ac1d2e7eb455550fb0d9a614b46c462095bd"
+    },
+    {
+      "path": "src/world-creator.js",
+      "size": 23338,
+      "sha256": "679b7b6624050df035f3e8d7ec3794ddaa2e6f0336956e73382dbd8ec7274b79"
     }
   ]
 }

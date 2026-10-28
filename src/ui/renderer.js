@@ -34,7 +34,7 @@ const state = {
   favoriteServers: [...DEFAULT_FEATURED_SERVERS],
   winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
   activeLaunchContext: null, lastLaunchContext: null,
-  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
+  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
   playtimeStats: { totalSeconds: 0, sessionsCount: 0, byInstance: {}, byVersion: {} }
 };
 
@@ -65,6 +65,8 @@ window.updatePlaytimeUI = updatePlaytimeUI;
 function syncAutoBackupAndDiscordUI() {
   const autoOn = state.autoBackupWorlds !== false;
   const discOn = state.discordRpcEnabled !== false;
+  const chkAutoWorld = document.getElementById('autoCreateFirstWorldCheck');
+  if (chkAutoWorld) chkAutoWorld.checked = state.autoCreateFirstWorld !== false;
   const chkAuto = document.getElementById('autoBackupWorldsCheck');
   if (chkAuto) chkAuto.checked = autoOn;
   const btnAuto = document.getElementById('btnToggleAutoBackupWorlds');
@@ -740,6 +742,7 @@ function saveCurrentConfig() {
       discordRpcEnabled: state.discordRpcEnabled !== false,
       autoViLang: state.autoViLang !== false,
       potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+      autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
       playtimeTotalSec: Number(state.playtimeStats?.totalSeconds) || 0,
       installedVersions: Array.isArray(state.installedVersions) ? state.installedVersions.slice(0, 40) : []
     }));
@@ -755,6 +758,7 @@ function saveCurrentConfig() {
     capeType: state.capeType, winResolution: state.winResolution, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
     autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+    autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
     uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated)
   });
 }
@@ -1117,7 +1121,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.4.2'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.5.0'}`), 2000);
       }
     }
     return;
@@ -1819,6 +1823,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     const targetDir = (typeof window.getModStoreTarget === 'function' ? window.getModStoreTarget().dir : '') || state.gameDir;
     window.aetherAPI.openSubFolder(targetDir, folderMap[state.activeModStoreType] || 'mods');
   };
+
+  const autoCreateWorldCheck = document.getElementById('autoCreateFirstWorldCheck');
+  if (autoCreateWorldCheck) {
+    autoCreateWorldCheck.onchange = (e) => {
+      state.autoCreateFirstWorld = Boolean(e.target.checked);
+      saveCurrentConfig();
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(
+          state.autoCreateFirstWorld
+            ? '🌍 Đã bật: Gói Modpack chưa có thế giới sẽ tự tạo sẵn & vào thẳng khi bấm Chơi!'
+            : '⏸ Đã tắt tự tạo thế giới — bấm Chơi sẽ mở Menu chính như bình thường.',
+          'info',
+          3500
+        );
+      }
+    };
+  }
 
   const autoBackupCheck = document.getElementById('autoBackupWorldsCheck');
   if (autoBackupCheck) {

@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const { execSync, exec, spawn } = require('child_process');
 const msAuth = require('./microsoft-auth');
+const worldCreator = require('./world-creator');
 
 https.globalAgent.maxSockets = 64;
 http.globalAgent.maxSockets = 64;
@@ -2033,8 +2034,10 @@ async function launchMinecraft(config, callbacks = {}) {
     winResolution = '1280x720',
     worldFolderName = '',
     autoViLang = false,
-    potatoGraphicsPreset = false
+    potatoGraphicsPreset = false,
+    autoCreateWorld = null
   } = config;
+  let effectiveWorldFolder = worldFolderName;
 
   fastSkipEnabled = Boolean(fastSkipHash);
 
@@ -2190,13 +2193,47 @@ async function launchMinecraft(config, callbacks = {}) {
     const [host, port] = serverIp.trim().split(':');
     launchOpts.quickPlay = { type: 'multiplayer', identifier: serverIp.trim() };
     launchOpts.server = { host, port: port || '25565' };
-  } else if (worldFolderName && String(worldFolderName).trim()) {
-    const cleanWorldFolder = path.basename(String(worldFolderName).trim());
-    if (cleanWorldFolder && supportsQuickPlaySingleplayer(mcVersion)) {
-      launchOpts.quickPlay = { type: 'singleplayer', identifier: cleanWorldFolder };
-      callbacks.onStatus?.(`⚡ Đang mở thẳng vào thế giới "${cleanWorldFolder}" (MC ${mcVersion})...`);
-    } else if (cleanWorldFolder) {
-      callbacks.onStatus?.(`ℹ️ Phiên bản MC ${mcVersion} (< 1.20) mở ra Menu chính — hãy chọn thế giới "${cleanWorldFolder}" trong Chơi đơn.`);
+  } else {
+    // Tự tạo sẵn thế giới mới (lần chơi đầu tiên hoặc bấm "Thế giới mới") rồi vào thẳng
+    if (!(effectiveWorldFolder && String(effectiveWorldFolder).trim()) && autoCreateWorld && typeof autoCreateWorld === 'object') {
+      const wantCreate = autoCreateWorld.force || !worldCreator.savesHasWorlds(gameDirectory);
+      if (wantCreate && worldCreator.supportsQuickWorldCreation(mcVersion)) {
+        callbacks.onStatus?.('🌍 Đang tạo sẵn thế giới mới cho bạn...');
+        const created = await worldCreator.createQuickWorld({
+          rootDir,
+          gameDirectory,
+          mcVersion,
+          loaderType,
+          levelName: autoCreateWorld.levelName || config.packName || 'Thế giới mới',
+          gameMode: autoCreateWorld.gameMode,
+          difficulty: autoCreateWorld.difficulty,
+          hardcore: autoCreateWorld.hardcore,
+          allowCommands: autoCreateWorld.allowCommands,
+          seed: autoCreateWorld.seed,
+          bonusChest: autoCreateWorld.bonusChest,
+          keepInventory: autoCreateWorld.keepInventory,
+          alwaysDay: autoCreateWorld.alwaysDay,
+          fetchJson,
+          downloadVerified,
+          onStatus: callbacks.onStatus
+        });
+        if (created.ok) {
+          effectiveWorldFolder = created.folderName;
+          callbacks.onWorldCreated?.(created);
+          callbacks.onStatus?.(`✅ Đã tạo thế giới “${created.levelName}” (${created.worldType}) — đang vào thẳng...`);
+        } else {
+          callbacks.onStatus?.(`ℹ️ Chưa tạo được thế giới tự động (${created.error}). Game sẽ mở Menu chính như bình thường.`);
+        }
+      }
+    }
+    if (effectiveWorldFolder && String(effectiveWorldFolder).trim()) {
+      const cleanWorldFolder = path.basename(String(effectiveWorldFolder).trim());
+      if (cleanWorldFolder && supportsQuickPlaySingleplayer(mcVersion)) {
+        launchOpts.quickPlay = { type: 'singleplayer', identifier: cleanWorldFolder };
+        callbacks.onStatus?.(`⚡ Đang mở thẳng vào thế giới "${cleanWorldFolder}" (MC ${mcVersion})...`);
+      } else if (cleanWorldFolder) {
+        callbacks.onStatus?.(`ℹ️ Phiên bản MC ${mcVersion} (< 1.20) mở ra Menu chính — hãy chọn thế giới "${cleanWorldFolder}" trong Chơi đơn.`);
+      }
     }
   }
 

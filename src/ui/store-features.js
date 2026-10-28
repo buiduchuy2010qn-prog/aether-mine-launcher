@@ -2533,7 +2533,7 @@ async function refreshPackInstances() {
       : '';
     const isIslandCandidate = /(sky\s*block|one\s*block)/i.test(inst.name || '') && !inst.autoIslandMode && !(inst.worldsCount > 0);
     const islandBadge = inst.autoIslandMode
-      ? ` • <strong style="color:#10b981;">🏝️ Đã tích hợp Đảo ${inst.autoIslandMode === 'oneblock' ? 'OneBlock' : 'SkyBlock'} (Vào Chơi Đơn → Tạo Thế Giới Mới)</strong>`
+      ? ` • <strong style="color:#10b981;">🏝️ Đã tích hợp Đảo ${inst.autoIslandMode === 'oneblock' ? 'OneBlock' : 'SkyBlock'} (Bấm 🌍 Thế giới mới để vào thẳng đảo)</strong>`
       : '';
     return `<div class="pack-inst-row">
       ${packIconHtml(inst.iconUrl, 'pack-inst-icon')}
@@ -2550,7 +2550,8 @@ async function refreshPackInstances() {
         <button class="srv-icon-btn" data-piact="mods" data-pii="${i}" title="Mở thư mục mods">🧩</button>
         <button class="srv-icon-btn danger" data-piact="delete" data-pii="${i}" title="Xóa gói">🗑</button>
         <button class="vtype-btn pir-coop" data-piact="coop" data-pii="${i}" title="Mở phòng chơi chung gói này qua Internet (e4mc + Mã Phòng BlockWay)">🤝 Mở Phòng</button>
-        <button class="btn-install-mod pir-play" data-piact="play" data-pii="${i}">▶ Chơi</button>
+        <button class="vtype-btn pir-newworld" data-piact="new-world" data-pii="${i}" title="Tạo thế giới mới (chọn chế độ, độ khó, seed, giữ đồ khi chết...) rồi vào thẳng">🌍 Thế giới mới</button>
+        <button class="btn-install-mod pir-play" data-piact="play" data-pii="${i}" title="${inst.worldsCount > 0 ? 'Mở gói này' : 'Gói chưa có thế giới — bấm Chơi sẽ tự tạo sẵn & vào thẳng (nếu đang bật trong Cài đặt)'}">▶ Chơi</button>
       </div>
     </div>`;
   }).join('');
@@ -2560,6 +2561,7 @@ async function refreshPackInstances() {
       const inst = insts[Number(b.dataset.pii)];
       const act = b.dataset.piact;
       if (act === 'play') launchPackInstance(inst);
+      else if (act === 'new-world') openQuickWorldModal(inst);
       else if (act === 'add-mods') {
         state.modTargetInstanceDir = inst.dir;
         if (typeof window.switchMainTab === 'function') window.switchMainTab('mods');
@@ -2614,7 +2616,99 @@ async function refreshPackInstances() {
   });
 }
 
-async function launchPackInstance(inst, customServerIp = '', customWorldFolder = '', customWorldTitle = '') {
+/* ---------- Tạo thế giới mới & vào thẳng ---------- */
+function quickWorldSupported(mcVersion) {
+  const m = String(mcVersion || '').match(/^(\d+)\.(\d+)/);
+  if (!m) return false;
+  const major = Number(m[1]);
+  const minor = Number(m[2]);
+  return major >= 2 || (major === 1 && minor >= 20);
+}
+
+function openQuickWorldModal(inst) {
+  if (!inst) return;
+  const supported = quickWorldSupported(inst.mcVersion);
+  const islandName = inst.autoIslandMode === 'oneblock' ? 'Đảo OneBlock giữa khoảng không' : inst.autoIslandMode ? 'Đảo SkyBlock giữa khoảng không' : '';
+  const worldTypeLabel = islandName ? `🏝️ ${islandName}` : '🌳 Kiểu thế giới mặc định của gói';
+  const defaultName = String(inst.name || 'Thế giới mới').slice(0, 40);
+  const card = packOpenModal(`
+    <div class="modal-head"><span class="card-dot emerald"></span><h3>🌍 Tạo thế giới mới — ${escapeHtml(inst.name || 'Modpack')}</h3></div>
+    <div class="modal-body qw-body">
+      ${supported ? '' : `<p class="pack-modal-hint">⚠️ Tạo thế giới tự động cần Minecraft <strong>1.20 trở lên</strong> (gói này là MC ${escapeHtml(inst.mcVersion || '?')}). Hãy bấm <strong>▶ Chơi</strong> rồi tạo thế giới trong game nhé.</p>`}
+      <p class="pack-modal-hint">Kiểu thế giới: <strong>${worldTypeLabel}</strong> • MC ${escapeHtml(inst.mcVersion || '?')}. Bấm tạo xong là game mở thẳng vào thế giới, không cần qua Menu.</p>
+      <label class="qw-label">Tên thế giới</label>
+      <input type="text" id="qwName" class="pro-input" maxlength="40" value="${escapeHtml(defaultName)}" />
+      <label class="qw-label">Chế độ chơi</label>
+      <div class="qw-seg" data-qwgroup="mode">
+        <button type="button" class="vtype-btn active" data-v="survival">⚔️ Sinh tồn</button>
+        <button type="button" class="vtype-btn" data-v="creative">🎨 Sáng tạo</button>
+        <button type="button" class="vtype-btn" data-v="adventure">🧭 Phiêu lưu</button>
+        <button type="button" class="vtype-btn" data-v="hardcore">💀 Hardcore</button>
+      </div>
+      <label class="qw-label">Độ khó</label>
+      <div class="qw-seg" data-qwgroup="difficulty">
+        <button type="button" class="vtype-btn" data-v="peaceful">🕊️ Hòa bình</button>
+        <button type="button" class="vtype-btn" data-v="easy">🙂 Dễ</button>
+        <button type="button" class="vtype-btn active" data-v="normal">😐 Thường</button>
+        <button type="button" class="vtype-btn" data-v="hard">😈 Khó</button>
+      </div>
+      <label class="qw-label">Seed <span class="qw-sub">(để trống = ngẫu nhiên; nhập số hoặc chữ đều được)</span></label>
+      <input type="text" id="qwSeed" class="pro-input" maxlength="64" placeholder="VD: 123456 hoặc blockway" />
+      <div class="qw-toggles">
+        <label class="settings-opt-item"><input type="checkbox" id="qwKeepInv" /><div class="soi-body"><strong>🎒 Giữ đồ khi chết</strong><span>Chết không bị rơi đồ và kinh nghiệm.</span></div></label>
+        <label class="settings-opt-item"><input type="checkbox" id="qwAlwaysDay" /><div class="soi-body"><strong>☀️ Luôn ban ngày</strong><span>Dừng chu kỳ ngày đêm, quái ít xuất hiện hơn.</span></div></label>
+        <label class="settings-opt-item"><input type="checkbox" id="qwBonusChest" /><div class="soi-body"><strong>🎁 Rương thưởng khởi đầu</strong><span>Có sẵn một rương đồ cơ bản cạnh chỗ xuất hiện.</span></div></label>
+        <label class="settings-opt-item"><input type="checkbox" id="qwCheats" /><div class="soi-body"><strong>⌨️ Cho phép dùng lệnh</strong><span>Dùng được /gamemode, /time, /tp... (tắt khi chọn Hardcore).</span></div></label>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-modal-cancel" data-pmclose>Hủy</button><button class="btn-modal-agree" id="btnQwCreate" ${supported ? '' : 'disabled'}>🚀 Tạo &amp; Vào Thẳng</button></div>`, false);
+  if (!card) return;
+
+  const pick = { mode: 'survival', difficulty: 'normal' };
+  card.querySelectorAll('.qw-seg').forEach((grp) => {
+    grp.querySelectorAll('button[data-v]').forEach((btn) => {
+      btn.onclick = () => {
+        grp.querySelectorAll('button').forEach((x) => x.classList.remove('active'));
+        btn.classList.add('active');
+        pick[grp.dataset.qwgroup] = btn.dataset.v;
+        if (grp.dataset.qwgroup === 'mode') {
+          const isHc = btn.dataset.v === 'hardcore';
+          const cheats = card.querySelector('#qwCheats');
+          if (cheats) { cheats.disabled = isHc; if (isHc) cheats.checked = false; }
+          const diffGrp = card.querySelector('[data-qwgroup="difficulty"]');
+          if (diffGrp) {
+            diffGrp.classList.toggle('qw-disabled', isHc);
+            if (isHc) {
+              diffGrp.querySelectorAll('button').forEach((x) => x.classList.toggle('active', x.dataset.v === 'hard'));
+              pick.difficulty = 'hard';
+            }
+          }
+        }
+      };
+    });
+  });
+
+  card.querySelector('#btnQwCreate').onclick = () => {
+    const isHc = pick.mode === 'hardcore';
+    const opts = {
+      force: true,
+      levelName: (card.querySelector('#qwName').value || '').trim() || defaultName,
+      gameMode: isHc ? 'survival' : pick.mode,
+      hardcore: isHc,
+      difficulty: isHc ? 'hard' : pick.difficulty,
+      seed: (card.querySelector('#qwSeed').value || '').trim(),
+      keepInventory: card.querySelector('#qwKeepInv').checked,
+      alwaysDay: card.querySelector('#qwAlwaysDay').checked,
+      bonusChest: card.querySelector('#qwBonusChest').checked,
+      allowCommands: !isHc && card.querySelector('#qwCheats').checked
+    };
+    packCloseModal();
+    launchPackInstance(inst, '', '', '', opts);
+  };
+  setTimeout(() => card.querySelector('#qwName')?.focus(), 50);
+}
+
+async function launchPackInstance(inst, customServerIp = '', customWorldFolder = '', customWorldTitle = '', newWorldOptions = null) {
   if (state.isLaunching) { packNotify('⚠️ Minecraft đang chạy hoặc đang khởi động. Hãy tắt game trước.', 'error'); return; }
   if (state.authMode === 'microsoft' && !state.msProfile) { packNotify('⚠️ Vui lòng đăng nhập tài khoản Microsoft trước (Trang chủ → Tài khoản).', 'error'); return; }
   if (state.authMode === 'aether' && !state.cloudProfile) { packNotify('⚠️ Vui lòng đăng nhập Aether Cloud trước (Trang chủ → Tài khoản).', 'error'); return; }
@@ -2645,9 +2739,20 @@ async function launchPackInstance(inst, customServerIp = '', customWorldFolder =
   state.activeLaunchContext = launchCtx;
   state.lastLaunchContext = launchCtx;
   if (typeof updateSummaryUI === 'function') updateSummaryUI();
+  // Bấm "Thế giới mới" → luôn tạo; bấm "Chơi" lần đầu (gói chưa có thế giới) → tự tạo nếu đang bật trong Cài đặt
+  let autoCreateWorld = null;
+  if (!customWorldFolder && !customServerIp) {
+    if (newWorldOptions && typeof newWorldOptions === 'object') {
+      autoCreateWorld = newWorldOptions;
+    } else if (state.autoCreateFirstWorld !== false && !(Number(inst.worldsCount) > 0) && quickWorldSupported(inst.mcVersion)) {
+      autoCreateWorld = { force: false, levelName: inst.name || 'Thế giới mới', gameMode: 'survival', difficulty: 'normal' };
+    }
+  }
   const statusMsg = customWorldFolder
     ? `⚡ Đang vào thẳng thế giới “${customWorldTitle || customWorldFolder}” — gói “${inst.name}” (MC ${inst.mcVersion})...`
-    : `🚀 Đang khởi động “${inst.name}” (MC ${inst.mcVersion} • ${String(inst.loader).toUpperCase()} • RAM ${ram} GB)...`;
+    : autoCreateWorld
+      ? `🌍 Đang tạo thế giới “${autoCreateWorld.levelName}” & vào thẳng — gói “${inst.name}” (MC ${inst.mcVersion})...`
+      : `🚀 Đang khởi động “${inst.name}” (MC ${inst.mcVersion} • ${String(inst.loader).toUpperCase()} • RAM ${ram} GB)...`;
   packShowProgress(statusMsg, 5);
   setLaunchUiState('starting', statusMsg);
   const rawActiveSkin = currentSkinDataUrl || state.cachedSkinDataUrl || createFallbackSteveSkinDataUrl();
@@ -2660,6 +2765,7 @@ async function launchPackInstance(inst, customServerIp = '', customWorldFolder =
     ramGB: ram, javaPath: state.javaPath, gameDir: state.gameDir, instanceDir: inst.dir, packName: inst.name || 'Modpack',
     useAikarFlags: state.aikarFlags, fastSkipHash: state.fastSkipHash, hideLauncherOnPlay: state.hideLauncherOnPlay,
     serverIp: customWorldFolder ? '' : (customServerIp || ''), worldFolderName: customWorldFolder || '',
+    autoCreateWorld,
     autoBackupWorlds: state.autoBackupWorlds !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
     cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution

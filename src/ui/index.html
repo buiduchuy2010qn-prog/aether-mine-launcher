@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v40.4.2 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v40.5.0 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,7 +23,7 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v40.4.2</strong>
+          <strong id="titlebarUpdateVer">v40.5.0</strong>
         </button>
       </div>
 
@@ -1445,7 +1445,7 @@
                 📦 GitHub Repo
               </button>
               <button class="btn-sync-skin" id="btnCheckUpdate">
-                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.4.2</span>)
+                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.5.0</span>)
               </button>
             </div>
           </div>
@@ -1563,6 +1563,13 @@
                   <div class="soi-body">
                     <strong>Tự động sao lưu ngầm Thế giới khi thoát game (Giữ 3 bản gần nhất)</strong>
                     <span>Tự nén .zip các Map vừa chơi khi đóng game và tự dọn bản cũ để không bao giờ lo hỏng Map hay đầy ổ cứng.</span>
+                  </div>
+                </label>
+                <label class="settings-opt-item">
+                  <input type="checkbox" id="autoCreateFirstWorldCheck" checked />
+                  <div class="soi-body">
+                    <strong>Tự tạo thế giới & vào thẳng khi chơi gói Modpack lần đầu (MC 1.20+)</strong>
+                    <span>Gói chưa có thế giới nào thì bấm ▶ Chơi là game tự có sẵn thế giới đúng kiểu của gói (VD: Đảo OneBlock giữa khoảng không) và vào thẳng, không cần qua Menu.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">

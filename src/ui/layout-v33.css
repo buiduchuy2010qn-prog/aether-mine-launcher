@@ -5275,6 +5275,66 @@ html:not([data-theme="prism"]):not([data-theme="sakura"]) .pack-src-badge.src-at
   font-weight: 800 !important;
 }
 
+#tab-packs .pir-actions .pir-newworld {
+  height: 36px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  font-weight: 800 !important;
+}
+
+/* Hộp tạo thế giới mới & vào thẳng */
+.qw-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 68vh;
+  overflow-y: auto;
+}
+.qw-label {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-main);
+  margin-top: 6px;
+}
+.qw-sub {
+  font-weight: 500;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.qw-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.qw-seg .vtype-btn {
+  flex: 1 1 auto;
+  min-width: 96px;
+  height: 36px;
+}
+.qw-seg.qw-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.qw-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.qw-toggles .settings-opt-item {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .qw-toggles { grid-template-columns: 1fr; }
+}
+.btn-modal-agree:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Co-op Multiplayer Hub (#tab-servers) */
 .coop-hub-card {
   padding: 16px 18px !important;

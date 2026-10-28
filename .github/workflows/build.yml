@@ -48,6 +48,7 @@ jobs:
           name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place"
           body: |
             ### ⚡ BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place
+            - **🌍 Tạo Thế Giới & Vào Thẳng 1-Click:** Gói Modpack chưa có thế giới thì bấm **▶ Chơi** là có sẵn map đúng kiểu của gói và vào thẳng game. Nút **🌍 Thế giới mới** cho chọn tên, chế độ (Sinh tồn / Sáng tạo / Phiêu lưu / Hardcore), độ khó, Seed, Giữ đồ khi chết, Luôn ban ngày, Rương thưởng và Cho phép dùng lệnh (Minecraft 1.20 → 26.x).
             - **🏝️ Tự Động Đảo Khoảng Không (`Auto Void OneBlock / SkyBlock`):** Cài gói OneBlock hoặc SkyBlock là bấm *Tạo thế giới mới* vào thẳng đảo giữa khoảng không chuẩn 100%, không cần chỉnh tay *World Type*.
             - **✨ Tự Bật Shader / Resource Pack & Tiếng Việt Ngay Trong Game:** Cài Shader hoặc Resource Pack là tự động kích hoạt ngay trong game (kèm tự cài `Sodium` + `Iris`); hỗ trợ tự chuyển ngôn ngữ **Tiếng Việt (`vi_vn`)** và **Chế độ Đồ họa Siêu Mượt cho Máy Yếu**.
             - **📦 Đóng Gói `.mrpack` Chuẩn Quốc Tế & Quét Sâu File `.jar`:** Xuất trọn bộ Mod/Shader/Server đang dùng thành 1 file `.mrpack` gọn nhẹ để gửi bạn bè hoặc mang sang máy khác mở 1-Click; tự nhận diện chuẩn phiên bản mọi file `.jar` tải ngoài.

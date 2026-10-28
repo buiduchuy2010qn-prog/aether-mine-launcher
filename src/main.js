@@ -68,7 +68,7 @@ function getLauncherVersionTitle() {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     if (pkg?.version) return `BlockWay Launcher — v${pkg.version} PRO`;
   } catch (_) {}
-  return 'BlockWay Launcher — v40.4.2 PRO';
+  return 'BlockWay Launcher — v40.5.0 PRO';
 }
 
 let mainWindow;
@@ -266,11 +266,11 @@ function setDiscordLobbyPresence() {
   activeGamePresenceCtx = null;
   updateDiscordPresence({
     details: 'Đang ở sảnh chờ BlockWay Launcher',
-    state: 'Every World, One Place • v40.4.2 PRO',
+    state: 'Every World, One Place • v40.5.0 PRO',
     timestamps: { start: launcherBootEpochSec },
     assets: {
       large_image: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-logo.png',
-      large_text: 'BlockWay Launcher v40.4.2 PRO'
+      large_text: 'BlockWay Launcher v40.5.0 PRO'
     },
     buttons: [
       { label: 'Tải BlockWay Launcher', url: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/' }
@@ -299,7 +299,7 @@ function setDiscordPlayingPresence(ctx = {}) {
     timestamps: { start: activeGamePresenceCtx.startSec },
     assets: {
       large_image: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-logo.png',
-      large_text: 'BlockWay Launcher v40.4.2 PRO'
+      large_text: 'BlockWay Launcher v40.5.0 PRO'
     },
     buttons: [
       { label: 'Tải BlockWay Launcher', url: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/' }
