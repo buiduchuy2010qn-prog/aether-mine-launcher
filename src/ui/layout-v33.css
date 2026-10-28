@@ -5867,3 +5867,316 @@ html:not([data-theme="prism"]):not([data-theme="sakura"]) .pack-src-badge.src-at
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ==========================================================================
+   v40.6.0 PRO — SMART RAM COACH, WORLD STORE, CO-OP COMBO & GAME TWEAKER UI
+   ========================================================================== */
+
+.smart-ram-coach-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.smart-ram-coach-bar.is-warn {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.09), transparent 85%), var(--card-bg);
+}
+
+.smart-ram-coach-bar .src-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 240px;
+}
+
+.smart-ram-coach-bar .src-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bw-ok-bg);
+  color: var(--bw-ok-text);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  white-space: nowrap;
+}
+
+.smart-ram-coach-bar .src-text {
+  font-size: 12.2px;
+  color: var(--text-main);
+  line-height: 1.45;
+}
+
+#worldsDropZoneCard.hidden,
+#worldStorePanel.hidden,
+#btnUpdateAllAddons.hidden {
+  display: none !important;
+}
+
+.worlds-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.world-store-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.world-store-cats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.coop-combo-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+
+.coop-combo-bar .ccb-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.coop-combo-bar .ccb-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.coop-combo-bar .ccb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.addon-upd-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.addon-rb-btn {
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  color: var(--bw-gold-text) !important;
+}
+
+/* Game Tweaker & Keybind Conflict Fixer Modal */
+.tweaker-target-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.07);
+  border: 1px solid var(--border-col);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.tweaker-sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 8px;
+}
+
+.tweaker-field {
+  padding: 8px 11px;
+  border-radius: 11px;
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid var(--border-col);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tweaker-field .tf-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tweaker-field .tf-top strong {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.tweaker-field input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.tweaker-switches-box {
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid var(--border-col);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.tweaker-switches-box label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.tweaker-conflict-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tweaker-conflict-banner > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.tweaker-conflict-banner.warn {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: var(--text-main);
+}
+
+.tweaker-conflict-banner.ok {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: var(--text-main);
+}
+
+.tweaker-key-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tweaker-key-toolbar .pro-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.tweaker-key-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 185px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tweaker-key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid var(--border-col);
+}
+
+.tweaker-key-row.is-conflict {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.tweaker-key-row .tkr-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+  flex: 1;
+}
+
+.tweaker-key-row .tkr-info strong {
+  font-size: 12.3px;
+  color: var(--text-main);
+}
+
+.tweaker-key-row .tkr-info span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tweaker-key-row .tkr-warn {
+  color: #f59e0b;
+}
+
+.tweaker-key-row .tkr-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tweaker-key-row .tkr-select {
+  min-width: 145px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.tweaker-empty-keys {
+  padding: 18px;
+  text-align: center;
+  font-size: 12.2px;
+  color: var(--text-muted);
+  border-radius: 10px;
+  border: 1px dashed var(--border-col);
+}

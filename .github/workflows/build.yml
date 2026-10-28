@@ -48,11 +48,12 @@ jobs:
           name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place"
           body: |
             ### ⚡ BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place
-            - **🌍 Tạo Thế Giới & Vào Thẳng 1-Click:** Gói Modpack chưa có thế giới thì bấm **▶ Chơi** là có sẵn map đúng kiểu của gói và vào thẳng game. Nút **🌍 Thế giới mới** cho chọn tên, chế độ (Sinh tồn / Sáng tạo / Phiêu lưu / Hardcore), độ khó, Seed, Giữ đồ khi chết, Luôn ban ngày, Rương thưởng và Cho phép dùng lệnh (Minecraft 1.20 → 26.x).
-            - **🏝️ Tự Động Đảo Khoảng Không (`Auto Void OneBlock / SkyBlock`):** Cài gói OneBlock hoặc SkyBlock là bấm *Tạo thế giới mới* vào thẳng đảo giữa khoảng không chuẩn 100%, không cần chỉnh tay *World Type*.
-            - **✨ Tự Bật Shader / Resource Pack & Tiếng Việt Ngay Trong Game:** Cài Shader hoặc Resource Pack là tự động kích hoạt ngay trong game (kèm tự cài `Sodium` + `Iris`); hỗ trợ tự chuyển ngôn ngữ **Tiếng Việt (`vi_vn`)** và **Chế độ Đồ họa Siêu Mượt cho Máy Yếu**.
-            - **📦 Đóng Gói `.mrpack` Chuẩn Quốc Tế & Quét Sâu File `.jar`:** Xuất trọn bộ Mod/Shader/Server đang dùng thành 1 file `.mrpack` gọn nhẹ để gửi bạn bè hoặc mang sang máy khác mở 1-Click; tự nhận diện chuẩn phiên bản mọi file `.jar` tải ngoài.
-            - **🧹 Dọn Rác Ổ Cứng Thông Minh & Vào Thẳng Map 1-Click:** Giải phóng bộ nhớ đệm, nhật ký cũ an toàn 100% cho Thế giới (`saves`), kèm tính năng nhảy thẳng vào thế giới chơi đơn và tự sao lưu ngầm khi thoát game.
+            - **🎛️ Trình Gỡ Trùng Phím Tắt Modpack & Tinh Chỉnh Ngoài Game:** Quét phát hiện toàn bộ phím bị đè nhau trong các gói nhiều Mod, gỡ trùng tự động 1-Click, chỉnh sẵn góc nhìn FOV, âm lượng, độ nhạy chuột, giới hạn FPS, khoảng cách nhìn và **Bật Sáng Trong Hang (`Fullbright`)** ngay ngoài Launcher trước khi mở game.
+            - **🔄 Cập Nhật Mod / Shader / Gói Tài Nguyên 1-Click & Hoàn Tác An Toàn:** Tự dò bản cập nhật mới nhất đúng phiên bản Minecraft & Loader cho toàn bộ file đang cài, nâng cấp hàng loạt 1-Click và giữ bản dự phòng để **Hoàn tác 1-Click** ngay nếu bản mới không hợp ý.
+            - **🗺️ Kho Bản Đồ Xây Sẵn & Datapack 1-Click:** Duyệt và tải trực tiếp hàng ngàn Map Phiêu lưu, Parkour, Giải đố, Kinh dị, SkyBlock/OneBlock và Datapack sinh tồn — tự giải nén thẳng vào Thế giới hoặc tạo Thế giới mới gắn sẵn Datapack chỉ với 1 cú nhấp.
+            - **🎙️ Tổ Đội Sinh Tồn & Đàm Thoại Trong Game (`Co-op Voice & Team Pack`):** Tự động trang bị bộ **Đàm thoại khoảng cách gần trong game (`Simple Voice Chat`)** và **Tổ đội sinh tồn** (chia sẻ bản đồ, đánh dấu tọa độ, xem ba lô, hồi sinh đồng đội) cho cả chủ phòng lẫn bạn bè khi mở phòng chơi chung.
+            - **📊 Cố Vấn RAM Tự Động & Chống Giật Khựng Thông Minh:** Tự động tính toán mức RAM chuẩn xác nhất theo dung lượng máy, số lượng Mod và Shader đang bật kèm bộ tham số khởi chạy thế hệ mới giúp triệt tiêu hiện tượng khựng hình khi tải vùng đất mới.
+            - **🌍 Tạo Thế Giới & Vào Thẳng 1-Click (`1.20 → 26.x`):** Gói Modpack chưa có thế giới bấm **▶ Chơi** là tự tạo đảo khoảng không / thế giới chuẩn kiểu của gói và vào thẳng game không cần qua menu.
           files: |
             dist/*.exe
         env:

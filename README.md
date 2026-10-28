@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v40.5.0 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v40.6.0 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,39 +6,33 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.5.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.6.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-6_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
-**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**, **Tạo thế giới & vào thẳng 1-Click**, **Tự động đảo Void OneBlock / SkyBlock**, **Tự bật Shader / Resource Pack & Tiếng Việt ngay trong Game**, **Đóng gói `.mrpack` mang đi mọi máy / quán Net**, **Quét sâu ruột file `.jar`**, **Dọn rác ổ cứng thông minh**, **Vào thẳng thế giới chơi đơn 1-Click**, **Tự sao lưu thế giới ngầm khi thoát game**, **Đếm giờ chơi & Discord Rich Presence**, **Chơi chung 3 chế độ (LAN • Internet 1-Click e4mc • Mã Phòng tự đồng bộ Giỏ Mod)** và **Bác Sĩ Chẩn Đoán & Tự Sửa Lỗi Crash bằng Tiếng Việt**.
+**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**, **Gỡ trùng phím tắt Modpack & Sáng hang động Fullbright 1-Click**, **Cập nhật & Hoàn tác Mod / Shader / Resource Pack 1-Click**, **Kho Bản đồ xây sẵn & Datapack 1-Click**, **Combo Đàm thoại Voice Chat & Tổ đội sinh tồn**, **Cố vấn RAM tự động & Chống giật khựng Generational ZGC**, **Tạo thế giới & vào thẳng 1-Click**, **Tự động đảo Void OneBlock / SkyBlock** và **Bác Sĩ Chẩn Đoán & Tự Sửa Lỗi Crash bằng Tiếng Việt**.
 
 🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/blockway-launcher/](https://buiduchuy2010qn-prog.github.io/blockway-launcher/)**
 
 ---
 
-## 🔥 Tính năng nổi bật trong phiên bản `v40.5.0 PRO`
+## 🔥 Tính năng nổi bật trong phiên bản `v40.6.0 PRO`
 
-1. **🌍 Tạo Thế Giới & Vào Thẳng 1-Click (MỚI `v40.5.0 PRO`):**
-   - **▶ Chơi lần đầu là có map ngay:** Gói Modpack chưa có thế giới nào thì bấm **▶ Chơi** là Launcher tự tạo sẵn thế giới đúng kiểu của gói (VD: **Đảo OneBlock giữa khoảng không**) rồi mở thẳng vào game, không cần qua Menu.
-   - **Nút 🌍 Thế giới mới:** Đặt tên, chọn **Sinh tồn / Sáng tạo / Phiêu lưu / Hardcore**, độ khó, **Seed** (số hoặc chữ), kèm tùy chọn **🎒 Giữ đồ khi chết**, **☀️ Luôn ban ngày**, **🎁 Rương thưởng khởi đầu** và **⌨️ Cho phép dùng lệnh**.
-   - Hỗ trợ Minecraft **1.20 → 1.21.x → 26.x** (tự nhận đúng định dạng thế giới của từng phiên bản); có thể tắt trong *Cài đặt*.
+1. **🎛️ Gỡ Trùng Phím Tắt Modpack & Tinh Chỉnh Cấu Hình Ngoài Game (MỚI `v40.6.0 PRO`):**
+   - **Tự động gỡ trùng phím tắt 1-Click:** Tự quét toàn bộ phím tắt trong `.minecraft` hoặc từng gói Modpack, phát hiện các phím bị đè chức năng và tự dời phím phụ sang phím trống mà giữ nguyên 100% cụm phím di chuyển `WASD` cơ bản; hỗ trợ bấm phím trực tiếp để gán tay ngay ngoài game.
+   - **Tinh chỉnh nhanh & Sáng Hang Động (`Fullbright 1-Click`):** Chỉnh góc nhìn `FOV`, tầm nhìn chunk, trần `FPS`, tắt `VSync` / `Auto-Jump`, bật **Chuột thô chính xác (`Raw Input`)** và bật **💡 Sáng Hang Động 1-Click** ngay trên Launcher.
 
-2. **🏝️ Tự Động hóa Thông Minh Trong Game:**
-   - **🏝️ Tự Động Đảo Khoảng Không (`Auto Void OneBlock / SkyBlock`):** Cài bất kỳ gói OneBlock hay SkyBlock nào là chỉ cần bấm **Tạo thế giới mới → Tạo** để xuất hiện ngay trên đảo giữa khoảng không chuẩn 100%, không bao giờ lo quên chỉnh tay *World Type*.
-   - **✨ Tự Bật Shader / Resource Pack, Tiếng Việt & Tối Ưu Máy Yếu Trong Game (`In-Game Auto-Equip`):** Tải Shader hay Resource Pack là tự động kích hoạt ngay vào `config/iris.properties`, `optionsshaders.txt` và `options.txt` (tự cài kèm `Sodium` + `Iris` nếu thiếu); tự động chuyển ngôn ngữ Minecraft sang **Tiếng Việt (`vi_vn`)** và tùy chọn **Đồ họa Siêu Mượt cho Máy Yếu**.
-   - **📦 Đóng Gói `.mrpack` Mang Đi Quán Net & Quét Sâu Ruột File `.jar` (`Deep .jar Inspector`):** Đóng gói toàn bộ Mod, Shader, Resource Pack và danh sách Server đang dùng thành 1 file `.mrpack` chuẩn quốc tế siêu gọn nhẹ để gửi qua Zalo/Discord; tự đọc `fabric.mod.json` / `neoforge.mods.toml` / `mods.toml` kể cả khi file tải ngoài không ghi số phiên bản.
-   - **🧹 Dọn Rác Ổ Cứng Minecraft Thông Minh (`Smart Disk Cleaner`):** Quét và giải phóng nhật ký nén cũ (`logs/*.gz`), báo cáo Crash cũ và bộ đệm tạm (`remappedJars`, `.tmp`) — giữ an toàn tuyệt đối 100% Thế giới (`saves`), Bản sao lưu, Ảnh chụp và Mod đang bật.
+2. **⬆️ Cập Nhật & Hoàn Tác Mod / Shader / Resource Pack + Kho Bản Đồ 1-Click (MỚI `v40.6.0 PRO`):**
+   - **⬆️ Cập nhật hàng loạt & ⏪ Hoàn tác an toàn 1-Click:** Quét nhanh bản cập nhật mới nhất trên Modrinth cho cả `mods`, `shaderpacks`, `resourcepacks`, tự giữ nguyên trạng thái đang bật trong game và lưu sẵn bản cũ để bấm **⏪ Hoàn tác** về ngay nếu bản mới chưa ưng ý.
+   - **🗺️ Kho Bản Đồ Xây Sẵn & Datapack 1-Click:** Duyệt và tải trực tiếp Map phiêu lưu, Đảo bay, Parkour, Kinh dị, Đại tu địa hình ngay trong mục *Thế giới* với 2 chế độ **🌍 Tạo Map Chơi Ngay** (vào thẳng thế giới mới tích hợp sẵn) hoặc **➕ Gắn Vào Map Có Sẵn**.
 
-3. **🚀 Trải Nghiệm Chơi Đơn & Quản Lý Modpack Chuyên Sâu:**
-   - **⚡ Vào Thẳng Thế Giới Chơi Đơn 1-Click (`Quick Play Singleplayer`):** Bấm trực tiếp vào thẻ Thế giới ở *Trang chủ* hoặc nút **⚡ Vào Thẳng** ở mục *Thế giới* để mở đúng phiên bản / gói Modpack và nhảy thẳng vào Map, áp dụng chuẩn độ phân giải cửa sổ / Toàn màn hình (`winResolution`).
-   - **🧩 Cài Thêm Mod / Shader Cho Từng Gói Modpack (`Per-Instance Mod Installer`):** Chọn trực tiếp gói Modpack ngay trên đầu mục *Mod & Pack* để tìm, kiểm tra tương thích, cài thêm Mod/Shader/Việt hóa và quản lý bật-tắt Mod riêng biệt cho từng gói mà không ảnh hưởng `.minecraft` gốc.
-   - **💾 Tự Động Sao Lưu Ngầm Khi Thoát Game (`Smart Auto-Backup`):** Tự động phát hiện các thế giới bạn vừa chơi và nén `.zip` ngầm khi thoát Minecraft (tự giữ tối đa **3 bản sao lưu gần nhất** cho mỗi thế giới).
-   - **⏱️ Đếm Giờ Chơi & Discord Rich Presence:** Thống kê tổng giờ chơi trên Banner Trang chủ và từng gói Modpack; tự động hiển thị trạng thái phiên bản MC / Modpack / Server / Mã Phòng đang chơi trên Discord.
+3. **🎙️ Combo Đàm Thoại Trong Game & Cố Vấn RAM Chống Giật Khựng (MỚI `v40.6.0 PRO`):**
+   - **🎙️ Combo Chơi Chung Voice Chat & Tổ Đội Sinh Tồn:** Trang bị 1-Click **Simple Voice Chat** (nói chuyện 3D theo khoảng cách trong game) cùng bộ **Minimap Xaero + Jade + Carry On + Waystones**, tự động đồng bộ đủ Mod cho bạn bè qua **Mã Phòng 6 ký tự**.
+   - **📊 Cố Vấn RAM Tự Động & Generational ZGC:** Tự tính toán mức RAM chuẩn vàng dựa trên số lượng Mod + Shader đang bật và lượng RAM trống thực tế của Windows, tự động kích hoạt **Generational ZGC** (Java 21+) siêu mượt `<1ms` cho các gói nhiều Mod.
 
-4. **🩺 Bác Sĩ Chẩn Đoán Crash Tiếng Việt & Chơi Chung 3 Chế Độ:**
-   - **Bác Sĩ Crash & Tự Sửa 1-Click (`Smart Crash Doctor`):** Tự động phân tích báo cáo lỗi (`crash-reports`, `latest.log`) bằng Tiếng Việt, chỉ rõ Mod gây lỗi / thiếu thư viện / xung đột Mod / thiếu RAM và cung cấp nút **Tự động sửa lỗi 1-Click**.
-   - **Chơi Chung 3 Chế Độ (`LAN` • `e4mc 1-Click` • `Mã Phòng 6 ký tự`):** Mở phòng qua Internet không cần mở Port bằng `e4mc`, hoặc tạo Mã Phòng ngắn gọn tự động đồng bộ đúng Phiên bản Minecraft + Loader + Giỏ Mod cho bạn bè!
-   - **6 Core Loaders & Kho Modpack Toàn Cầu 40,000+ Gói:** Hỗ trợ **Vanilla, Fabric, Forge, NeoForge, Quilt, Legacy Fabric** từ `1.7.10` đến `1.21.11`, `26.2` & `26.3` kèm tự động dịch mô tả Mod/Modpack sang Tiếng Việt.
+4. **🌍 Hệ Sinh Thái Tự Động Hóa Toàn Diện:**
+   - **Tạo thế giới & Vào thẳng 1-Click + Tự động Đảo Void OneBlock / SkyBlock** không cần chỉnh tay *World Type*.
+   - **Tự bật Shader / Resource Pack & Tiếng Việt (`vi_vn`) trong Game**, **Đóng gói `.mrpack` mang đi quán Net**, **Tự sao lưu thế giới ngầm khi thoát game** (giữ 3 bản gần nhất), **Dọn rác ổ cứng thông minh**, **6 Core Loaders** (`Vanilla, Fabric, Forge, NeoForge, Quilt, Legacy Fabric` từ `1.7.10` đến `26.3`) và **Bác Sĩ Crash Tiếng Việt**.
 
 ---
 

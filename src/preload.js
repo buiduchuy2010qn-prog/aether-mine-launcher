@@ -114,6 +114,21 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   scanDiskJunk: (params) => ipcRenderer.invoke('cleaner:scan', params),
   cleanDiskJunk: (params) => ipcRenderer.invoke('cleaner:run', params),
 
+  // v40.6 PRO — Phím Tắt & Cấu Hình Game, Cập Nhật Addon + Rollback, Kho Map/Datapack, Voice Co-op & Cố Vấn RAM
+  readGameTweaker: (params) => ipcRenderer.invoke('tweaker:read', params),
+  saveGameTweaker: (params) => ipcRenderer.invoke('tweaker:save', params),
+  resolveKeybindConflicts: (params) => ipcRenderer.invoke('tweaker:resolve-keys', params),
+  toggleFullbrightPack: (params) => ipcRenderer.invoke('tweaker:fullbright', params),
+  checkAddonUpdates: (params) => ipcRenderer.invoke('addons:check-updates', params),
+  updateLocalAddons: (params) => ipcRenderer.invoke('addons:update', params),
+  rollbackLocalAddon: (params) => ipcRenderer.invoke('addons:rollback', params),
+  searchWorldStore: (params) => ipcRenderer.invoke('worldstore:search', params),
+  installWorldStoreItem: (params) => ipcRenderer.invoke('worldstore:install', params),
+  listWorldDatapacks: (params) => ipcRenderer.invoke('worlds:datapacks-list', params),
+  deleteWorldDatapack: (params) => ipcRenderer.invoke('worlds:datapack-delete', params),
+  installCoopComboPack: (params) => ipcRenderer.invoke('coop:install-combo', params),
+  analyzeSmartRamCoach: (params) => ipcRenderer.invoke('coach:analyze', params),
+
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
   onUpdateProgress: (cb) => ipcRenderer.on('updater:progress', (_e, pct) => cb(pct)),

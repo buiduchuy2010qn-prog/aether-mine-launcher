@@ -29,7 +29,11 @@ const {
   syncAllLocalModsToVersion, buildCoopModBasket, syncCoopModBasket, analyzeMinecraftCrash,
   backupLocalWorld, autoBackupModifiedWorlds, listWorldBackups, restoreWorldBackup, deleteWorldBackup, exportWorldZip, importWorldZip,
   listLocalScreenshots, deleteLocalScreenshot,
-  exportTargetAsMrpack, scanMinecraftJunk, cleanMinecraftJunk
+  exportTargetAsMrpack, scanMinecraftJunk, cleanMinecraftJunk,
+  readGameOptionsAndKeybinds, saveGameOptionsAndKeybinds, autoResolveKeybindConflicts, toggleFullbrightPack,
+  checkLocalAddonsUpdates, updateLocalAddons, rollbackLocalAddon,
+  searchWorldAndDatapackStore, installStoreWorldOrDatapack, listWorldDatapacks, deleteWorldDatapack,
+  installCoopComboPack, computeSmartRamAndJvmAdvice
 } = require('./launcher-engine');
 const {
   loginWithMicrosoftModal,
@@ -68,7 +72,7 @@ function getLauncherVersionTitle() {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     if (pkg?.version) return `BlockWay Launcher — v${pkg.version} PRO`;
   } catch (_) {}
-  return 'BlockWay Launcher — v40.5.0 PRO';
+  return 'BlockWay Launcher — v40.6.0 PRO';
 }
 
 let mainWindow;
@@ -1904,5 +1908,122 @@ ipcMain.handle('cleaner:run', async (_e, { gameDir, includeDisabledMods = false 
     return { ok: false, error: err.message, freedMB: 0, deletedItems: 0 };
   }
 });
+
+/* ============================================================================
+   v40.6 PRO — TWEAKER & KEYBINDS, ADDON UPDATER + ROLLBACK, WORLD STORE,
+               CO-OP VOICE/TEAM PACK & SMART RAM/JVM COACH
+   ============================================================================ */
+ipcMain.handle('tweaker:read', async (_e, params = {}) => {
+  try {
+    return readGameOptionsAndKeybinds(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, conflicts: [], keybinds: [] };
+  }
+});
+
+ipcMain.handle('tweaker:save', async (_e, params = {}) => {
+  try {
+    return saveGameOptionsAndKeybinds(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('tweaker:resolve-keys', async (_e, params = {}) => {
+  try {
+    return autoResolveKeybindConflicts(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, resolvedCount: 0, changes: [] };
+  }
+});
+
+ipcMain.handle('tweaker:fullbright', async (_e, params = {}) => {
+  try {
+    return await toggleFullbrightPack(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('addons:check-updates', async (_e, params = {}) => {
+  try {
+    return await checkLocalAddonsUpdates(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, updatesCount: 0, rollbackCount: 0, itemsMap: {} };
+  }
+});
+
+ipcMain.handle('addons:update', async (_e, params = {}) => {
+  try {
+    return await updateLocalAddons(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message, updated: [], failed: [] };
+  }
+});
+
+ipcMain.handle('addons:rollback', async (_e, params = {}) => {
+  try {
+    return rollbackLocalAddon(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worldstore:search', async (_e, params = {}) => {
+  try {
+    return await searchWorldAndDatapackStore(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message, total: 0, items: [] };
+  }
+});
+
+ipcMain.handle('worldstore:install', async (_e, params = {}) => {
+  try {
+    return await installStoreWorldOrDatapack(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worlds:datapacks-list', async (_e, { gameDir, worldNameOrPath } = {}) => {
+  try {
+    return listWorldDatapacks(gameDir, worldNameOrPath);
+  } catch (err) {
+    return { ok: false, error: err.message, items: [] };
+  }
+});
+
+ipcMain.handle('worlds:datapack-delete', async (_e, { gameDir, worldNameOrPath, fileName } = {}) => {
+  try {
+    return deleteWorldDatapack(gameDir, worldNameOrPath, fileName);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('coop:install-combo', async (_e, params = {}) => {
+  try {
+    return await installCoopComboPack(params || {}, (st) => {
+      mainWindow?.webContents.send('mc:status', st);
+    });
+  } catch (err) {
+    return { ok: false, error: err.message, installed: [] };
+  }
+});
+
+ipcMain.handle('coach:analyze', async (_e, params = {}) => {
+  try {
+    return computeSmartRamAndJvmAdvice(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 
 

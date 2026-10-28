@@ -410,6 +410,7 @@ async function createQuickWorld({
   bonusChest = false,
   keepInventory = false,
   alwaysDay = false,
+  extraDatapackZips = [],
   fetchJson,
   downloadVerified,
   onStatus
@@ -425,7 +426,20 @@ async function createQuickWorld({
 
     const loader = String(loaderType || 'vanilla').toLowerCase();
     const modScan = loader === 'vanilla' ? { enabled: new Set(), disabled: new Set(), normalOverride: null } : scanModDataPacks(path.join(gameDir, 'mods'));
-    const presetRaw = modScan.normalOverride || info.normalPresetRaw;
+    let dpNormalOverride = null;
+    const validExtraZips = [];
+    for (const rawZp of Array.isArray(extraDatapackZips) ? extraDatapackZips : []) {
+      const zp = String(rawZp || '').trim();
+      if (!zp || !fs.existsSync(zp)) continue;
+      validExtraZips.push(zp);
+      try {
+        const z = openZip(zp);
+        const normTxt = readZipText(z, 'data/minecraft/worldgen/world_preset/normal.json');
+        if (normTxt) dpNormalOverride = normTxt;
+      } catch (_) {}
+    }
+
+    const presetRaw = dpNormalOverride || modScan.normalOverride || info.normalPresetRaw;
     if (!presetRaw) return { ok: false, error: 'Phiên bản này chưa có dữ liệu kiểu thế giới mặc định.' };
     let preset;
     try { preset = JSON.parse(presetRaw); } catch (_) { return { ok: false, error: 'Dữ liệu kiểu thế giới bị lỗi.' }; }
@@ -434,10 +448,12 @@ async function createQuickWorld({
     const overworldGen = preset.dimensions['minecraft:overworld']?.generator || {};
     const genType = String(overworldGen.type || '');
     let worldType = 'Mặc định';
-    if (modScan.normalOverride) {
+    if (dpNormalOverride || modScan.normalOverride) {
       if (/one\s*_?block/i.test(genType)) worldType = 'Đảo OneBlock giữa khoảng không';
       else if (/sky|void|island/i.test(genType)) worldType = 'Đảo SkyBlock giữa khoảng không';
       else worldType = 'Kiểu thế giới riêng của gói';
+    } else if (validExtraZips.length > 0) {
+      worldType = `Tích hợp ${validExtraZips.length} Datapack`;
     }
 
     const savesDir = path.join(gameDir, 'saves');
@@ -459,6 +475,17 @@ async function createQuickWorld({
       if (['minecraft', 'java', 'fabricloader', 'quilt_loader', 'forge', 'neoforge'].includes(id)) continue;
       if (!enabledPacks.includes(id)) enabledPacks.push(id);
       if (loader === 'neoforge') enabledPacks.push(`mod/${id}`);
+    }
+    if (validExtraZips.length > 0) {
+      const worldDpDir = path.join(worldDir, 'datapacks');
+      fs.mkdirSync(worldDpDir, { recursive: true });
+      for (const zp of validExtraZips) {
+        const dpFileName = path.basename(zp).replace(/[^A-Za-z0-9._+-]/g, '_');
+        if (!dpFileName) continue;
+        fs.copyFileSync(zp, path.join(worldDpDir, dpFileName));
+        const packToken = `file/${dpFileName}`;
+        if (!enabledPacks.includes(packToken)) enabledPacks.push(packToken);
+      }
     }
     const rulesPackId = writeRulesDatapack(worldDir, info, { keepInventory, alwaysDay });
     if (rulesPackId) enabledPacks.push(rulesPackId);

@@ -836,6 +836,11 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'wi-zoom': ['wi-zoom-', 'wizoom-'],
   'xaeros-minimap': ['xaeros_minimap_', 'xaeros-minimap-'],
   'xaeros-world-map': ['xaerosworldmap_', 'xaeros-world-map-'],
+  'simple-voice-chat': ['voicechat-fabric-', 'voicechat-forge-', 'voicechat-neoforge-', 'voicechat-quilt-', 'voicechat-'],
+  'plasmo-voice': ['plasmovoice-'],
+  'carry-on': ['carryon-'],
+  'waystones': ['waystones-'],
+  'sound-physics-remastered': ['sound-physics-remastered-', 'soundphysics-'],
   'jei': ['jei-'],
   'rei': ['roughlyenoughitems-'],
   'emi': ['emi-'],
@@ -1722,6 +1727,13 @@ function scanSavesDirEntries(savesDir, extraMeta = {}) {
         if (fs.existsSync(iconPath)) {
           try { iconDataUrl = `data:image/png;base64,${fs.readFileSync(iconPath).toString('base64')}`; } catch (_) {}
         }
+        let datapacksCount = 0;
+        const dpDir = path.join(wPath, 'datapacks');
+        if (fs.existsSync(dpDir)) {
+          try {
+            datapacksCount = fs.readdirSync(dpDir).filter((x) => /\.zip$/i.test(x) && x !== 'blockway-rules.zip').length;
+          } catch (_) {}
+        }
         return {
           name: d.name,
           folderName: d.name,
@@ -1731,6 +1743,7 @@ function scanSavesDirEntries(savesDir, extraMeta = {}) {
           version,
           gameMode,
           iconDataUrl,
+          datapacksCount,
           instanceDir: extraMeta.instanceDir || '',
           instanceName: extraMeta.instanceName || '',
           instanceMcVersion: extraMeta.instanceMcVersion || '',
@@ -2035,6 +2048,7 @@ async function launchMinecraft(config, callbacks = {}) {
     worldFolderName = '',
     autoViLang = false,
     potatoGraphicsPreset = false,
+    smartRamCoach = true,
     autoCreateWorld = null
   } = config;
   let effectiveWorldFolder = worldFolderName;
@@ -2153,7 +2167,23 @@ async function launchMinecraft(config, callbacks = {}) {
   }
 
   const resolvedJava = await ensureJavaRuntime(rootDir, mcVersion, javaPath, callbacks.onStatus);
-  const customArgs = useAikarFlags ? buildMultiCoreSmoothExitArgs(ramGB, cpuCores) : [];
+  const ramCoach = computeSmartRamAndJvmAdvice({
+    gameDir: rootDir,
+    instanceDir: gameDirectory !== rootDir ? gameDirectory : '',
+    mcVersion,
+    loaderType,
+    requestedRamGB: ramGB,
+    smartRamAuto: Boolean(smartRamCoach),
+    javaPath: resolvedJava,
+    cpuCores
+  });
+  const effectiveRamGB = smartRamCoach ? ramCoach.effectiveRamGB : (Number(ramGB) || 4);
+  if (smartRamCoach && Math.abs(effectiveRamGB - (Number(ramGB) || 4)) >= 0.5) {
+    callbacks.onStatus?.(`🧠 Cố vấn RAM thông minh: Tự cân chỉnh ${effectiveRamGB} GB (${ramCoach.gcModeLabel}) phù hợp ${ramCoach.modsCount} Mod & RAM trống hệ thống.`);
+  }
+  const customArgs = useAikarFlags
+    ? (smartRamCoach && Array.isArray(ramCoach.jvmArgs) && ramCoach.jvmArgs.length ? ramCoach.jvmArgs : buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores))
+    : [];
 
   const launcher = new Client();
 
@@ -2165,7 +2195,7 @@ async function launchMinecraft(config, callbacks = {}) {
       type: mcVersion.includes('w') || mcVersion.includes('pre') || mcVersion.includes('rc') ? 'snapshot' : 'release'
     },
     memory: {
-      max: `${Math.max(1024, Math.round(ramGB * 1024))}M`,
+      max: `${Math.max(1024, Math.round(effectiveRamGB * 1024))}M`,
       min: '512M'
     },
     javaPath: resolvedJava === 'java' ? undefined : resolvedJava,
@@ -4551,15 +4581,26 @@ function scanLanWorlds(timeoutMs = 2200) {
   });
 }
 
-async function prepareCoopHostMods({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir, instanceDir, enableE4mc = true, enableCustomLan = true }, onStatus) {
+async function prepareCoopHostMods({
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  gameDir,
+  instanceDir,
+  mode = 'e4mc',
+  enableE4mc = true,
+  enableCustomLan = true,
+  enableVoiceChat = false,
+  enableTeamQol = false
+}, onStatus) {
   const targetDir = (instanceDir && fs.existsSync(instanceDir))
     ? instanceDir
     : (gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir());
   const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
   const installed = [];
   const warnings = [];
+  const wantE4mc = mode === 'lan' ? false : Boolean(enableE4mc);
 
-  if (enableE4mc) {
+  if (wantE4mc) {
     onStatus?.(`🌐 Đang cài đặt Mod mở phòng Internet (e4mc) cho MC ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
     try {
       const r = await installModrinthProject({
@@ -4601,6 +4642,21 @@ async function prepareCoopHostMods({ mcVersion = '1.21.4', loaderType = 'fabric'
           break;
         }
       } catch (_) {}
+    }
+  }
+
+  if (enableVoiceChat || enableTeamQol) {
+    const combo = await installCoopComboPack({
+      gameDir: targetDir,
+      mcVersion,
+      loaderType: effectiveLoader,
+      includeVoice: Boolean(enableVoiceChat),
+      includeTeamQol: Boolean(enableTeamQol)
+    }, onStatus);
+    if (Array.isArray(combo?.installed)) {
+      for (const fn of combo.installed) {
+        if (!installed.includes(fn)) installed.push(fn);
+      }
     }
   }
 
@@ -4736,7 +4792,16 @@ const COMMON_MODID_TO_MODRINTH_SLUG = {
   ferritecore: 'ferrite-core',
   'ferrite-core': 'ferrite-core',
   entityculling: 'entityculling',
-  immediatelyfast: 'immediatelyfast'
+  immediatelyfast: 'immediatelyfast',
+  voicechat: 'simple-voice-chat',
+  'simple-voice-chat': 'simple-voice-chat',
+  plasmovoice: 'plasmo-voice',
+  xaerominimap: 'xaeros-minimap',
+  xaeroworldmap: 'xaeros-world-map',
+  carryon: 'carry-on',
+  waystones: 'waystones',
+  jade: 'jade',
+  sound_physics_remastered: 'sound-physics-remastered'
 };
 
 async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.21.4', loaderType = 'fabric' }, onStatus) {
@@ -6069,6 +6134,1363 @@ function cleanMinecraftJunk(gameDir, opts = {}) {
   };
 }
 
+/* ============================================================================
+   v40.6 PRO — 5 NÂNG CẤP SIÊU XỊN:
+   1) Trình Gỡ Trùng Phím Tắt Modpack & Tinh Chỉnh Cấu Hình Ngoài Game (options.txt)
+   2) Quản Lý Cập Nhật Mod / Shader / Resource Pack 1-Click & Hoàn Tác Bản Cũ
+   3) Kho Bản Đồ Xây Sẵn & Datapack 1-Click (Tạo Map Chơi Ngay hoặc Gắn Vào Map)
+   4) Combo Chơi Chung Nâng Cao: Đàm Thoại Trong Game (Voice Chat) & Tổ Đội Sinh Tồn
+   5) Cố Vấn RAM Tự Động & Chống Giật Khựng (Generational ZGC / Tuned G1GC)
+   ============================================================================ */
+
+const KEY_CODE_VI_LABELS = {
+  'key.mouse.left': 'Chuột Trái',
+  'key.mouse.right': 'Chuột Phải',
+  'key.mouse.middle': 'Chuột Giữa',
+  'key.mouse.4': 'Chuột Phụ 4',
+  'key.mouse.5': 'Chuột Phụ 5',
+  'key.keyboard.space': 'Phím Cách (Space)',
+  'key.keyboard.left.shift': 'Shift Trái',
+  'key.keyboard.right.shift': 'Shift Phải',
+  'key.keyboard.left.control': 'Ctrl Trái',
+  'key.keyboard.right.control': 'Ctrl Phải',
+  'key.keyboard.left.alt': 'Alt Trái',
+  'key.keyboard.right.alt': 'Alt Phải',
+  'key.keyboard.tab': 'Tab',
+  'key.keyboard.caps.lock': 'Caps Lock',
+  'key.keyboard.escape': 'Esc',
+  'key.keyboard.enter': 'Enter',
+  'key.keyboard.backspace': 'Backspace',
+  'key.keyboard.grave.accent': 'Phím ` (~)',
+  'key.keyboard.left.bracket': 'Phím [',
+  'key.keyboard.right.bracket': 'Phím ]',
+  'key.keyboard.backslash': 'Phím \\',
+  'key.keyboard.semicolon': 'Phím ;',
+  'key.keyboard.apostrophe': 'Phím \'',
+  'key.keyboard.comma': 'Phím ,',
+  'key.keyboard.period': 'Phím .',
+  'key.keyboard.slash': 'Phím /',
+  'key.keyboard.minus': 'Phím -',
+  'key.keyboard.equal': 'Phím =',
+  'key.keyboard.insert': 'Insert',
+  'key.keyboard.delete': 'Delete',
+  'key.keyboard.home': 'Home',
+  'key.keyboard.end': 'End',
+  'key.keyboard.page.up': 'Page Up',
+  'key.keyboard.page.down': 'Page Down'
+};
+
+function formatKeyCodeVi(rawCode) {
+  const full = String(rawCode || '').trim();
+  if (!full || full === 'key.keyboard.unknown' || full === '0' || full.startsWith('key.keyboard.unknown:')) return 'Chưa gán';
+  const [code, modRaw] = full.split(':');
+  const modPrefix = modRaw && modRaw !== 'NONE'
+    ? `${modRaw.replace(/CONTROL/i, 'Ctrl').replace(/SHIFT/i, 'Shift').replace(/ALT/i, 'Alt')} + `
+    : '';
+  if (KEY_CODE_VI_LABELS[code]) return `${modPrefix}${KEY_CODE_VI_LABELS[code]}`;
+  if (code.startsWith('key.keyboard.kp.')) {
+    return `${modPrefix}Numpad ${code.slice(16).toUpperCase()}`;
+  }
+  if (code.startsWith('key.keyboard.')) {
+    const rest = code.slice(13);
+    if (/^[a-z0-9]$/i.test(rest)) return `${modPrefix}Phím ${rest.toUpperCase()}`;
+    if (/^f\d+$/i.test(rest)) return `${modPrefix}${rest.toUpperCase()}`;
+    return `${modPrefix}Phím ${rest.replace(/\./g, ' ').toUpperCase()}`;
+  }
+  return full;
+}
+
+const KEY_ACTION_VI_LABELS = {
+  'key.attack': '⚔️ Đánh / Đập khối',
+  'key.use': '🧱 Đặt khối / Tương tác',
+  'key.forward': '⬆️ Tiến lên',
+  'key.back': '⬇️ Lùi lại',
+  'key.left': '⬅️ Sang trái',
+  'key.right': '➡️ Sang phải',
+  'key.jump': '🦘 Nhảy',
+  'key.sneak': '🧎 Ngồi rón rén (Sneak)',
+  'key.sprint': '🏃 Chạy nhanh (Sprint)',
+  'key.inventory': '🎒 Mở Túi đồ',
+  'key.drop': '📤 Vứt vật phẩm',
+  'key.swapOffhand': '🛡️ Đổi tay phụ (Khiên/Đuốc)',
+  'key.pickItem': '🎯 Chọn khối đang nhìn',
+  'key.chat': '💬 Mở khung Chat',
+  'key.command': '⌨️ Nhập lệnh (/)',
+  'key.playerlist': '📋 Danh sách người chơi',
+  'key.screenshot': '📸 Chụp ảnh màn hình',
+  'key.togglePerspective': '🎥 Đổi góc nhìn (F5)',
+  'key.fullscreen': '🖥️ Toàn màn hình (F11)',
+  'key.advancements': '🏆 Mở Thành tựu',
+  'key.saveToolbarActivator': '🎨 Lưu thanh công cụ Sáng tạo',
+  'key.loadToolbarActivator': '🎨 Tải thanh công cụ Sáng tạo',
+  'key.socialInteractions': '👥 Tương tác xã hội',
+  'key.spectatorOutlines': '👁️ Viền người chơi (Khán giả)',
+  'key.voice_chat': '🎙️ Cài đặt Mic (Voice Chat)',
+  'key.push_to_talk': '🎙️ Giữ để nói (Push-to-Talk)',
+  'key.mute_microphone': '🔇 Tắt/Bật Mic nhanh',
+  'key.disable_voice_chat': '🔕 Tắt âm thanh Voice Chat',
+  'key.voice_chat_group': '👥 Nhóm đàm thoại (Voice Group)',
+  'key.whisper': '🤫 Thì thầm gần (Whisper)',
+  'zoomify.key.zoom': '🔭 Phóng to ống nhòm (Zoomify)',
+  'wi_zoom.zoom': '🔭 Phóng to ống nhòm (WI Zoom)',
+  'key.logical_zoom.zoom': '🔭 Phóng to ống nhòm (Zoom)',
+  'iris.keybind.reload': '✨ Tải lại Shader (Iris)',
+  'iris.keybind.shaderPackSelection': '✨ Chọn gói Shader (Iris)',
+  'iris.keybind.toggleShaders': '✨ Bật/Tắt nhanh Shader'
+};
+
+function describeKeyActionVi(actionId) {
+  const id = String(actionId || '').trim();
+  if (KEY_ACTION_VI_LABELS[id]) return KEY_ACTION_VI_LABELS[id];
+  if (/^key\.hotbar\.(\d+)$/.test(id)) {
+    return `🔢 Ô thanh nóng số ${RegExp.$1}`;
+  }
+  const lower = id.toLowerCase();
+  if (lower.includes('xaero') && lower.includes('waypoint')) return '📍 Tạo/Xem điểm đánh dấu (Xaero Minimap)';
+  if (lower.includes('xaero') && (lower.includes('map') || lower.includes('open'))) return '🗺️ Mở Bản đồ thế giới (Xaero Map)';
+  if (lower.includes('journeymap')) return '🗺️ Bản đồ JourneyMap';
+  if (lower.includes('voice')) return `🎙️ Voice Chat (${id.split('.').pop().replace(/_/g, ' ')})`;
+  if (lower.includes('zoom')) return `🔭 Phóng to tầm nhìn (${id.split('.').pop()})`;
+  if (lower.includes('vein') || lower.includes('ultimine')) return '⛏️ Đào quặng theo mạch (VeinMiner)';
+  if (lower.includes('backpack')) return '🎒 Mở Ba lô đeo lưng (Backpack)';
+  if (lower.includes('waystone')) return '🗿 Dịch chuyển Waystones';
+  if (lower.includes('carry')) return '👐 Bê rương / Bế sinh vật (Carry On)';
+  if (lower.includes('jade') || lower.includes('waila') || lower.includes('wthit')) return '🔍 Bảng thông tin khối (Jade/WTHIT)';
+  if (lower.includes('jei') || lower.includes('rei') || lower.includes('emi')) return `📖 Công thức chế tạo (${id.split('.').pop().replace(/_/g, ' ')})`;
+
+  const parts = id.replace(/^key[._]/i, '').split(/[.:/]/).filter(Boolean);
+  if (parts.length >= 2) {
+    const modTag = parts[0].toUpperCase();
+    const actName = parts.slice(1).join(' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ');
+    return `🧩 [${modTag}] ${actName}`;
+  }
+  return id.replace(/^key\./, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[._-]+/g, ' ');
+}
+
+function getKeyActionPriority(actionId) {
+  const id = String(actionId || '');
+  if (/^key\.(attack|use|forward|back|left|right|jump|sneak|sprint|inventory|drop|swapOffhand|pickItem|chat|command|playerlist|screenshot|togglePerspective|fullscreen|hotbar\.\d+)$/.test(id)) {
+    return 100; // Core Vanilla controls — never move
+  }
+  if (/^(key\.saveToolbarActivator|key\.loadToolbarActivator|key\.socialInteractions|key\.spectatorOutlines|key\.stream)/.test(id)) {
+    return 15; // Rarely-used Vanilla secondary keys (often collide with C, X, P!)
+  }
+  const lower = id.toLowerCase();
+  if (/voice_chat$|push_to_talk|zoom|open_map|world_map|backpack|ultimine|veinminer|toggleshaders/.test(lower)) {
+    return 82; // Primary daily mod hotkeys
+  }
+  if (id.startsWith('key.')) return 60;
+  return 45;
+}
+
+const SAFE_REASSIGN_KEY_POOL = [
+  'key.keyboard.y',
+  'key.keyboard.u',
+  'key.keyboard.i',
+  'key.keyboard.o',
+  'key.keyboard.p',
+  'key.keyboard.h',
+  'key.keyboard.j',
+  'key.keyboard.k',
+  'key.keyboard.n',
+  'key.keyboard.g',
+  'key.keyboard.b',
+  'key.keyboard.r',
+  'key.keyboard.z',
+  'key.keyboard.left.bracket',
+  'key.keyboard.right.bracket',
+  'key.keyboard.semicolon',
+  'key.keyboard.apostrophe',
+  'key.keyboard.comma',
+  'key.keyboard.period',
+  'key.keyboard.backslash',
+  'key.keyboard.grave.accent',
+  'key.keyboard.f6',
+  'key.keyboard.f7',
+  'key.keyboard.f8',
+  'key.keyboard.f9',
+  'key.keyboard.f10',
+  'key.keyboard.insert',
+  'key.keyboard.home',
+  'key.keyboard.end',
+  'key.keyboard.page.up',
+  'key.keyboard.page.down',
+  'key.keyboard.kp.1',
+  'key.keyboard.kp.2',
+  'key.keyboard.kp.3',
+  'key.keyboard.kp.4',
+  'key.keyboard.kp.5',
+  'key.keyboard.kp.6',
+  'key.keyboard.kp.7',
+  'key.keyboard.kp.8',
+  'key.keyboard.kp.9'
+];
+
+function resolveTweakerDir(gameDir, instanceDir = '') {
+  if (instanceDir && String(instanceDir).trim() && fs.existsSync(String(instanceDir).trim())) {
+    return path.resolve(String(instanceDir).trim());
+  }
+  return path.resolve(gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
+}
+
+function readGameOptionsAndKeybinds({ gameDir, instanceDir = '' } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const optsPath = path.join(targetDir, 'options.txt');
+  const exists = fs.existsSync(optsPath);
+  const rawContent = exists ? fs.readFileSync(optsPath, 'utf8') : '';
+  const kv = {};
+  const keybinds = [];
+
+  for (const line of rawContent.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || !trimmed.includes(':')) continue;
+    const idx = trimmed.indexOf(':');
+    const k = trimmed.slice(0, idx).trim();
+    const v = trimmed.slice(idx + 1).trim();
+    kv[k] = v;
+    if (k.startsWith('key_')) {
+      const actionId = k.slice(4);
+      // Skip MC 1.21.9+ / 26.x F3+<key> debug chord sub-keys and Spectator-only hotbar so they never false-collide with normal gameplay keys
+      if (actionId.startsWith('key.debug.') || actionId === 'key.spectatorHotbar') continue;
+      keybinds.push({
+        rawOptionKey: k,
+        actionId,
+        label: describeKeyActionVi(actionId),
+        keyCode: v,
+        keyLabel: formatKeyCodeVi(v),
+        priority: getKeyActionPriority(actionId),
+        isUnbound: !v || v === 'key.keyboard.unknown' || v === '0' || v.startsWith('key.keyboard.unknown:')
+      });
+    }
+  }
+
+  // Normalize FOV: legacy MC <=1.18 stores float (-1.0..1.0 where 0.0 = 70, 1.0 = 110); MC 1.19+ stores degrees (30..110)
+  let fovDegrees = 70;
+  let fovIsLegacyFloat = false;
+  if (kv.fov !== undefined) {
+    const fNum = parseFloat(kv.fov);
+    if (!Number.isNaN(fNum)) {
+      if (kv.fov.includes('.') && fNum >= -1.5 && fNum <= 2.5) {
+        fovIsLegacyFloat = true;
+        fovDegrees = Math.round(70 + fNum * 40);
+      } else {
+        fovDegrees = Math.round(fNum);
+      }
+    }
+  }
+  fovDegrees = Math.max(30, Math.min(110, fovDegrees));
+
+  const gammaVal = kv.gamma !== undefined && !Number.isNaN(parseFloat(kv.gamma)) ? parseFloat(kv.gamma) : 1.0;
+  const equipped = getEquippedAddonsState(targetDir);
+  const hasFullbrightPack = (equipped.activeResourcePacks || []).some((p) => /fullbright/i.test(p));
+
+  const renderDistance = Math.max(2, Math.min(32, parseInt(kv.renderDistance ?? '12', 10) || 12));
+  const simulationDistance = Math.max(5, Math.min(32, parseInt(kv.simulationDistance ?? '8', 10) || 8));
+  const maxFps = Math.max(10, Math.min(260, parseInt(kv.maxFps ?? '120', 10) || 120));
+  const enableVsync = kv.enableVsync !== undefined ? kv.enableVsync === 'true' : false;
+  const autoJump = kv.autoJump !== undefined ? kv.autoJump === 'true' : false;
+  const rawMouseInput = kv.rawMouseInput !== undefined ? kv.rawMouseInput === 'true' : true;
+  const masterVolFloat = kv.soundCategory_master !== undefined && !Number.isNaN(parseFloat(kv.soundCategory_master))
+    ? parseFloat(kv.soundCategory_master)
+    : 1.0;
+  const masterVolume = Math.max(0, Math.min(100, Math.round(masterVolFloat * 100)));
+
+  // Group bound keys to detect conflicts (skip unbound & harmless context-distinct command '/')
+  const byKey = new Map();
+  for (const kb of keybinds) {
+    if (kb.isUnbound) continue;
+    // Only modern key.* codes or numeric codes
+    const normCode = kb.keyCode.toLowerCase();
+    if (!byKey.has(normCode)) byKey.set(normCode, []);
+    byKey.get(normCode).push(kb);
+  }
+
+  const conflicts = [];
+  for (const [normCode, list] of byKey.entries()) {
+    if (list.length < 2) continue;
+    const sorted = [...list].sort((a, b) => b.priority - a.priority);
+    conflicts.push({
+      keyCode: sorted[0].keyCode,
+      keyLabel: sorted[0].keyLabel,
+      count: sorted.length,
+      actions: sorted
+    });
+  }
+  conflicts.sort((a, b) => b.count - a.count);
+
+  return {
+    ok: true,
+    targetDir,
+    optionsExists: exists,
+    fovIsLegacyFloat,
+    settings: {
+      fov: fovDegrees,
+      gamma: Math.round(gammaVal * 100) / 100,
+      fullbright: gammaVal >= 5.0 || hasFullbrightPack,
+      hasFullbrightPack,
+      renderDistance,
+      simulationDistance,
+      maxFps,
+      enableVsync,
+      autoJump,
+      rawMouseInput,
+      masterVolume,
+      lang: kv.lang || 'vi_vn'
+    },
+    totalKeybinds: keybinds.length,
+    conflictsCount: conflicts.length,
+    conflicts,
+    keybinds,
+    availableKeyChoices: [
+      { code: 'key.keyboard.unknown', label: '🚫 Bỏ gán phím (Tắt)' },
+      ...SAFE_REASSIGN_KEY_POOL.map((c) => ({ code: c, label: formatKeyCodeVi(c) })),
+      { code: 'key.keyboard.v', label: 'Phím V' },
+      { code: 'key.keyboard.c', label: 'Phím C' },
+      { code: 'key.keyboard.x', label: 'Phím X' },
+      { code: 'key.keyboard.m', label: 'Phím M' },
+      { code: 'key.keyboard.f', label: 'Phím F' },
+      { code: 'key.keyboard.left.alt', label: 'Alt Trái' },
+      { code: 'key.mouse.4', label: 'Chuột Phụ 4' },
+      { code: 'key.mouse.5', label: 'Chuột Phụ 5' }
+    ]
+  };
+}
+
+function saveGameOptionsAndKeybinds({ gameDir, instanceDir = '', settings = {}, keyChanges = {} } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+  const optsPath = path.join(targetDir, 'options.txt');
+  let content = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
+  const nl = content.includes('\r\n') ? '\r\n' : '\n';
+
+  // Detect if existing options.txt uses legacy float FOV
+  let useLegacyFov = false;
+  const fovMatch = content.match(/^fov:(.*?)\r?$/m);
+  if (fovMatch) {
+    const rawFov = fovMatch[1].trim();
+    const num = parseFloat(rawFov);
+    if (rawFov.includes('.') && !Number.isNaN(num) && num >= -1.5 && num <= 2.5) {
+      useLegacyFov = true;
+    }
+  }
+
+  const upsertLine = (key, val) => {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(`^${escaped}:(.*?)(\\r?)$`, 'm');
+    if (rx.test(content)) {
+      content = content.replace(rx, `${key}:${val}$2`);
+    } else {
+      content += (content && !content.endsWith('\n') ? nl : '') + `${key}:${val}${nl}`;
+    }
+  };
+
+  if (settings && typeof settings === 'object') {
+    if (settings.fov !== undefined) {
+      const deg = Math.max(30, Math.min(110, Math.round(Number(settings.fov) || 70)));
+      upsertLine('fov', useLegacyFov ? ((deg - 70) / 40).toFixed(2) : String(deg));
+    }
+    if (settings.gamma !== undefined) {
+      const g = Math.max(0, Math.min(16, Number(settings.gamma)));
+      if (!Number.isNaN(g)) upsertLine('gamma', g.toFixed(1));
+    } else if (settings.fullbright !== undefined) {
+      upsertLine('gamma', settings.fullbright ? '12.0' : '1.0');
+    }
+    if (settings.renderDistance !== undefined) {
+      upsertLine('renderDistance', String(Math.max(2, Math.min(32, Math.round(Number(settings.renderDistance) || 12)))));
+    }
+    if (settings.simulationDistance !== undefined) {
+      upsertLine('simulationDistance', String(Math.max(5, Math.min(32, Math.round(Number(settings.simulationDistance) || 8)))));
+    }
+    if (settings.maxFps !== undefined) {
+      upsertLine('maxFps', String(Math.max(10, Math.min(260, Math.round(Number(settings.maxFps) || 120)))));
+    }
+    if (settings.enableVsync !== undefined) {
+      upsertLine('enableVsync', settings.enableVsync ? 'true' : 'false');
+    }
+    if (settings.autoJump !== undefined) {
+      upsertLine('autoJump', settings.autoJump ? 'true' : 'false');
+    }
+    if (settings.rawMouseInput !== undefined) {
+      upsertLine('rawMouseInput', settings.rawMouseInput ? 'true' : 'false');
+    }
+    if (settings.masterVolume !== undefined) {
+      const v = Math.max(0, Math.min(100, Number(settings.masterVolume))) / 100;
+      upsertLine('soundCategory_master', v.toFixed(2));
+    }
+  }
+
+  let updatedKeysCount = 0;
+  if (keyChanges && typeof keyChanges === 'object') {
+    for (const [rawKey, newCode] of Object.entries(keyChanges)) {
+      const optKey = rawKey.startsWith('key_') ? rawKey : `key_${rawKey}`;
+      const cleanCode = String(newCode || '').trim();
+      if (!cleanCode) continue;
+      upsertLine(optKey, cleanCode);
+      updatedKeysCount++;
+    }
+  }
+
+  fs.writeFileSync(optsPath, content, 'utf8');
+  return { ok: true, targetDir, updatedKeysCount, state: readGameOptionsAndKeybinds({ gameDir: targetDir }) };
+}
+
+function autoResolveKeybindConflicts({ gameDir, instanceDir = '' } = {}) {
+  const current = readGameOptionsAndKeybinds({ gameDir, instanceDir });
+  if (!current.conflicts.length) {
+    return { ok: true, resolvedCount: 0, changes: [], state: current };
+  }
+
+  const usedKeys = new Set(
+    current.keybinds
+      .filter((k) => !k.isUnbound)
+      .map((k) => k.keyCode.toLowerCase())
+  );
+
+  const keyChanges = {};
+  const changes = [];
+
+  for (const conflict of current.conflicts) {
+    // Keep the highest-priority action on the original key, reassign all lower-priority actions
+    const [, ...losers] = conflict.actions;
+    for (const loser of losers) {
+      // Never forcibly unbind core vanilla movement if somehow duplicated; skip if priority >= 100
+      if (loser.priority >= 100) continue;
+      const freeKey = SAFE_REASSIGN_KEY_POOL.find((candidate) => !usedKeys.has(candidate.toLowerCase()));
+      const assigned = freeKey || 'key.keyboard.unknown';
+      if (assigned !== 'key.keyboard.unknown') {
+        usedKeys.add(assigned.toLowerCase());
+      }
+      keyChanges[loser.rawOptionKey] = assigned;
+      changes.push({
+        actionId: loser.actionId,
+        label: loser.label,
+        fromKey: loser.keyCode,
+        fromLabel: loser.keyLabel,
+        toKey: assigned,
+        toLabel: formatKeyCodeVi(assigned)
+      });
+    }
+  }
+
+  const saved = saveGameOptionsAndKeybinds({
+    gameDir: current.targetDir,
+    keyChanges
+  });
+
+  return {
+    ok: true,
+    resolvedCount: changes.length,
+    changes,
+    state: saved.state
+  };
+}
+
+async function toggleFullbrightPack({ gameDir, instanceDir = '', mcVersion = '1.21.4', enable = true } = {}, onStatus) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  saveGameOptionsAndKeybinds({
+    gameDir: targetDir,
+    settings: { gamma: enable ? 12.0 : 1.0 }
+  });
+
+  const rpDir = path.join(targetDir, 'resourcepacks');
+  if (!fs.existsSync(rpDir)) fs.mkdirSync(rpDir, { recursive: true });
+
+  let existingFb = '';
+  try {
+    existingFb = fs.readdirSync(rpDir).find((f) => /fullbright/i.test(f) && /\.zip$/i.test(f)) || '';
+  } catch (_) {}
+
+  if (enable) {
+    if (existingFb) {
+      equipResourcePackInGame(targetDir, existingFb, true);
+    } else {
+      try {
+        onStatus?.('💡 Đang tải gói Sáng Hang Động (Fullbright UB) chuẩn cho Minecraft...');
+        const r = await installModrinthProject({
+          slug: 'fullbright-ub',
+          projectType: 'resourcepack',
+          mcVersion,
+          loaderType: 'vanilla',
+          gameDir: targetDir
+        }, onStatus);
+        if (r?.fileName) existingFb = r.fileName;
+      } catch (_) {}
+    }
+  } else {
+    try {
+      for (const f of fs.readdirSync(rpDir)) {
+        if (/fullbright/i.test(f) && /\.zip$/i.test(f)) {
+          equipResourcePackInGame(targetDir, f, false);
+        }
+      }
+    } catch (_) {}
+  }
+
+  return {
+    ok: true,
+    enabled: Boolean(enable),
+    packFileName: existingFb,
+    state: readGameOptionsAndKeybinds({ gameDir: targetDir })
+  };
+}
+
+/* ---------------- Upgrade 2: Smart Addon Updater & Safe Rollback ---------------- */
+function getAddonRollbackDir(folderPath) {
+  return path.join(folderPath, '.blockway-rollback');
+}
+
+function readAddonRollbackManifest(folderPath) {
+  try {
+    const p = path.join(getAddonRollbackDir(folderPath), 'manifest.json');
+    if (fs.existsSync(p)) {
+      const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (j && typeof j === 'object') return j;
+    }
+  } catch (_) {}
+  return {};
+}
+
+function writeAddonRollbackManifest(folderPath, manifestObj) {
+  try {
+    const dir = getAddonRollbackDir(folderPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifestObj || {}, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+async function checkLocalAddonsUpdates({
+  gameDir,
+  instanceDir = '',
+  folderType = 'mods',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric'
+} = {}) {
+  const rootDir = resolveTweakerDir(gameDir, instanceDir);
+  const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
+  const dir = path.join(rootDir, safeFolder);
+  if (!fs.existsSync(dir)) {
+    return { ok: true, updatesCount: 0, rollbackCount: 0, itemsMap: {} };
+  }
+
+  const files = fs.readdirSync(dir).filter(
+    (f) => /\.(jar|zip)(\.disabled)?$/i.test(f) && f !== 'AetherSkinSync.zip' && f !== 'zz-blockway-auto-island-preset.jar'
+  );
+  const rollbackManifest = readAddonRollbackManifest(dir);
+  const itemsMap = {};
+  let rollbackCount = 0;
+
+  for (const f of files) {
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const rb = rollbackManifest[cleanName];
+    const hasRbFile = Boolean(rb?.previousFileName && fs.existsSync(path.join(getAddonRollbackDir(dir), rb.previousFileName)));
+    if (hasRbFile) rollbackCount++;
+    itemsMap[cleanName] = {
+      hasUpdate: false,
+      canRollback: hasRbFile,
+      previousFileName: hasRbFile ? rb.previousFileName : '',
+      previousVersion: hasRbFile ? (rb.previousVersion || '') : ''
+    };
+  }
+
+  if (!files.length) {
+    return { ok: true, updatesCount: 0, rollbackCount, itemsMap };
+  }
+
+  const fullPaths = files.map((f) => path.join(dir, f));
+  const { byHash, fileToHash } = await lookupModrinthBySha1Map(fullPaths);
+  const hashes = Object.values(fileToHash).filter(Boolean);
+  if (!hashes.length) {
+    return { ok: true, updatesCount: 0, rollbackCount, itemsMap };
+  }
+
+  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  let loadersForUpdate = [effectiveLoader];
+  if (safeFolder === 'mods') {
+    if (effectiveLoader === 'quilt') loadersForUpdate = ['quilt', 'fabric'];
+    else loadersForUpdate = [effectiveLoader];
+  } else if (safeFolder === 'shaderpacks') {
+    loadersForUpdate = ['iris', 'optifine', 'canvas'];
+  } else {
+    loadersForUpdate = ['minecraft'];
+  }
+
+  let updateMap = {};
+  try {
+    updateMap = await postModrinthJson('/v2/version_files/update', {
+      hashes,
+      algorithm: 'sha1',
+      loaders: loadersForUpdate,
+      game_versions: [mcVersion]
+    });
+  } catch (_) {
+    updateMap = {};
+  }
+
+  let updatesCount = 0;
+  for (const f of files) {
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const full = path.join(dir, f);
+    const curSha1 = fileToHash[full];
+    if (!curSha1) continue;
+    const curVerObj = byHash[curSha1];
+    const latestVerObj = updateMap?.[curSha1];
+    if (!latestVerObj || !Array.isArray(latestVerObj.files) || !latestVerObj.files.length) continue;
+
+    const primaryFile = latestVerObj.files.find((x) => x.primary) || latestVerObj.files[0];
+    const latestSha1 = String(primaryFile?.hashes?.sha1 || '').toLowerCase();
+    if (!latestSha1 || latestSha1 === curSha1.toLowerCase()) continue;
+    if (curVerObj?.id && latestVerObj.id === curVerObj.id) continue;
+    if (curVerObj?.date_published && latestVerObj.date_published) {
+      if (new Date(latestVerObj.date_published).getTime() <= new Date(curVerObj.date_published).getTime()) continue;
+    }
+
+    updatesCount++;
+    itemsMap[cleanName] = {
+      ...(itemsMap[cleanName] || {}),
+      hasUpdate: true,
+      projectId: latestVerObj.project_id || curVerObj?.project_id || '',
+      currentVersion: curVerObj?.version_number || '',
+      latestVersion: latestVerObj.version_number || latestVerObj.name || 'Mới',
+      latestFileName: primaryFile.filename,
+      downloadUrl: primaryFile.url,
+      latestSha1,
+      gameVersions: latestVerObj.game_versions || [mcVersion]
+    };
+  }
+
+  return {
+    ok: true,
+    updatesCount,
+    rollbackCount,
+    itemsMap
+  };
+}
+
+async function updateLocalAddons({
+  gameDir,
+  instanceDir = '',
+  folderType = 'mods',
+  fileNames = [],
+  mcVersion = '1.21.4',
+  loaderType = 'fabric'
+} = {}, onStatus) {
+  const rootDir = resolveTweakerDir(gameDir, instanceDir);
+  const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
+  const dir = path.join(rootDir, safeFolder);
+  if (!fs.existsSync(dir)) return { ok: true, updated: [], failed: [] };
+
+  const checkRes = await checkLocalAddonsUpdates({
+    gameDir: rootDir,
+    folderType: safeFolder,
+    mcVersion,
+    loaderType
+  });
+
+  const targetSet = Array.isArray(fileNames) && fileNames.length > 0
+    ? new Set(fileNames.map((n) => path.basename(String(n)).replace(/\.disabled$/i, '')))
+    : null;
+
+  const candidates = Object.entries(checkRes.itemsMap || {}).filter(([cleanName, info]) => {
+    if (!info?.hasUpdate || !info.downloadUrl || !info.latestFileName) return false;
+    return targetSet ? targetSet.has(cleanName) : true;
+  });
+
+  if (!candidates.length) {
+    return { ok: true, updated: [], failed: [] };
+  }
+
+  const rbDir = getAddonRollbackDir(dir);
+  if (!fs.existsSync(rbDir)) fs.mkdirSync(rbDir, { recursive: true });
+  const rbManifest = readAddonRollbackManifest(dir);
+  const modsMeta = safeFolder === 'mods' ? readModsMetaManifest(dir) : null;
+  const equippedBefore = getEquippedAddonsState(rootDir);
+
+  const updated = [];
+  const failed = [];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const [oldCleanName, info] = candidates[i];
+    const enabledOldPath = path.join(dir, oldCleanName);
+    const disabledOldPath = path.join(dir, `${oldCleanName}.disabled`);
+    const wasDisabled = !fs.existsSync(enabledOldPath) && fs.existsSync(disabledOldPath);
+    const actualOldPath = wasDisabled ? disabledOldPath : enabledOldPath;
+    if (!fs.existsSync(actualOldPath)) continue;
+
+    const safeNewClean = path.basename(info.latestFileName);
+    const finalNewName = wasDisabled ? `${safeNewClean}.disabled` : safeNewClean;
+    const finalNewPath = path.join(dir, finalNewName);
+    const tmpDownloadPath = path.join(rbDir, `.dl-${Date.now()}-${safeNewClean}`);
+
+    try {
+      const parsedUrl = new URL(String(info.downloadUrl));
+      if (parsedUrl.protocol !== 'https:' || !parsedUrl.hostname.endsWith('modrinth.com')) {
+        throw new Error('Nguồn tải không hợp lệ');
+      }
+      onStatus?.(`⬆️ [${i + 1}/${candidates.length}] Đang cập nhật ${oldCleanName} → ${safeNewClean}...`);
+      await downloadVerified([parsedUrl.toString()], tmpDownloadPath, { sha1: info.latestSha1 });
+
+      // Remove previous rollback backup for this same chain if any so disk stays clean
+      const prevRb = rbManifest[oldCleanName];
+      if (prevRb?.previousFileName && prevRb.previousFileName !== oldCleanName) {
+        try { fs.rmSync(path.join(rbDir, prevRb.previousFileName), { force: true }); } catch (_) {}
+      }
+      delete rbManifest[oldCleanName];
+
+      // Move current file into .blockway-rollback/
+      const rbBackupPath = path.join(rbDir, oldCleanName);
+      fs.copyFileSync(actualOldPath, rbBackupPath);
+      try { fs.unlinkSync(actualOldPath); } catch (_) {}
+
+      fs.renameSync(tmpDownloadPath, finalNewPath);
+
+      rbManifest[safeNewClean] = {
+        previousFileName: oldCleanName,
+        previousVersion: info.currentVersion || '',
+        updatedVersion: info.latestVersion || '',
+        wasDisabled,
+        updatedAt: Date.now()
+      };
+
+      if (modsMeta) {
+        const prevMeta = modsMeta[oldCleanName] || {};
+        delete modsMeta[oldCleanName];
+        modsMeta[safeNewClean] = {
+          ...prevMeta,
+          projectId: info.projectId || prevMeta.projectId || '',
+          mcVersion,
+          gameVersions: info.gameVersions || [mcVersion],
+          loader: loaderType === 'vanilla' ? 'fabric' : loaderType,
+          updatedAt: Date.now()
+        };
+      }
+
+      if (!wasDisabled && safeNewClean !== oldCleanName) {
+        if (safeFolder === 'shaderpacks' && equippedBefore.activeShader === oldCleanName) {
+          equipShaderInGame(rootDir, safeNewClean);
+        } else if (safeFolder === 'resourcepacks' && equippedBefore.activeResourcePacks.includes(oldCleanName)) {
+          equipResourcePackInGame(rootDir, oldCleanName, false);
+          equipResourcePackInGame(rootDir, safeNewClean, true);
+        }
+      }
+
+      updated.push({ from: oldCleanName, to: safeNewClean, version: info.latestVersion });
+    } catch (err) {
+      try { if (fs.existsSync(tmpDownloadPath)) fs.unlinkSync(tmpDownloadPath); } catch (_) {}
+      failed.push({ fileName: oldCleanName, error: err.message });
+    }
+  }
+
+  writeAddonRollbackManifest(dir, rbManifest);
+  if (modsMeta) writeModsMetaManifest(dir, modsMeta);
+
+  return {
+    ok: true,
+    updated,
+    failed,
+    updatedCount: updated.length
+  };
+}
+
+function rollbackLocalAddon({ gameDir, instanceDir = '', folderType = 'mods', fileName } = {}) {
+  const rootDir = resolveTweakerDir(gameDir, instanceDir);
+  const safeFolder = ['mods', 'shaderpacks', 'resourcepacks'].includes(folderType) ? folderType : 'mods';
+  const dir = path.join(rootDir, safeFolder);
+  const cleanCurrent = path.basename(String(fileName || '')).replace(/\.disabled$/i, '');
+  if (!cleanCurrent || !fs.existsSync(dir)) {
+    return { ok: false, error: 'Không tìm thấy gói cần hoàn tác.' };
+  }
+
+  const rbDir = getAddonRollbackDir(dir);
+  const rbManifest = readAddonRollbackManifest(dir);
+  const entry = rbManifest[cleanCurrent];
+  if (!entry || !entry.previousFileName) {
+    return { ok: false, error: 'Gói này chưa có bản lưu cũ để hoàn tác.' };
+  }
+
+  const backupPath = path.join(rbDir, path.basename(entry.previousFileName));
+  if (!fs.existsSync(backupPath)) {
+    delete rbManifest[cleanCurrent];
+    writeAddonRollbackManifest(dir, rbManifest);
+    return { ok: false, error: 'Bản lưu cũ đã bị dọn khỏi ổ cứng.' };
+  }
+
+  const curEnabledPath = path.join(dir, cleanCurrent);
+  const curDisabledPath = path.join(dir, `${cleanCurrent}.disabled`);
+  const isCurrentlyDisabled = !fs.existsSync(curEnabledPath) && fs.existsSync(curDisabledPath);
+  const restoredDiskName = isCurrentlyDisabled ? `${entry.previousFileName}.disabled` : entry.previousFileName;
+  const restoredPath = path.join(dir, restoredDiskName);
+
+  const equippedBefore = getEquippedAddonsState(rootDir);
+
+  fs.copyFileSync(backupPath, restoredPath);
+  if (restoredPath !== curEnabledPath && fs.existsSync(curEnabledPath)) {
+    try { fs.unlinkSync(curEnabledPath); } catch (_) {}
+  }
+  if (restoredPath !== curDisabledPath && fs.existsSync(curDisabledPath)) {
+    try { fs.unlinkSync(curDisabledPath); } catch (_) {}
+  }
+  try { fs.unlinkSync(backupPath); } catch (_) {}
+
+  delete rbManifest[cleanCurrent];
+  writeAddonRollbackManifest(dir, rbManifest);
+
+  if (!isCurrentlyDisabled && entry.previousFileName !== cleanCurrent) {
+    if (safeFolder === 'shaderpacks' && equippedBefore.activeShader === cleanCurrent) {
+      equipShaderInGame(rootDir, entry.previousFileName);
+    } else if (safeFolder === 'resourcepacks' && equippedBefore.activeResourcePacks.includes(cleanCurrent)) {
+      equipResourcePackInGame(rootDir, cleanCurrent, false);
+      equipResourcePackInGame(rootDir, entry.previousFileName, true);
+    }
+  }
+
+  return {
+    ok: true,
+    restoredFrom: cleanCurrent,
+    restoredTo: entry.previousFileName
+  };
+}
+
+/* ---------------- Upgrade 3: World & Datapack 1-Click Store ---------------- */
+const WORLD_STORE_CATEGORY_PRESETS = {
+  all: { queries: [''], categories: [] },
+  adventure: { queries: [''], categories: ['adventure'] },
+  parkour: { queries: ['parkour', 'minigame'], categories: [] },
+  horror: { queries: ['horror', 'creepy'], categories: [] },
+  island: { queries: ['skyblock', 'oneblock'], categories: [] },
+  worldgen: { queries: [''], categories: ['worldgen'] },
+  qol: { queries: [''], categories: ['game-mechanics', 'utility'] }
+};
+
+async function searchWorldAndDatapackStore({
+  query = '',
+  category = 'all',
+  mcVersion = '',
+  sortBy = 'downloads',
+  offset = 0,
+  limit = 24
+} = {}) {
+  const preset = WORLD_STORE_CATEGORY_PRESETS[category] || WORLD_STORE_CATEGORY_PRESETS.all;
+  const userQuery = String(query || '').trim();
+  const safeLimit = Math.max(8, Math.min(48, Number(limit) || 24));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const safeSort = ['downloads', 'follows', 'updated', 'newest', 'relevance'].includes(sortBy)
+    ? sortBy
+    : (userQuery ? 'relevance' : 'downloads');
+
+  const buildFacets = (includeVer) => {
+    const f = [['project_type:datapack']];
+    if (includeVer && mcVersion) f.push([`versions:${mcVersion}`]);
+    if (!userQuery && Array.isArray(preset.categories) && preset.categories.length) {
+      f.push(preset.categories.map((c) => `categories:${c}`));
+    }
+    return f;
+  };
+
+  const queryList = userQuery ? [userQuery] : (preset.queries || ['']);
+  const runQueries = async (includeVer) => {
+    const perLimit = queryList.length > 1 ? Math.ceil(safeLimit / queryList.length) + 4 : safeLimit;
+    const responses = await Promise.all(
+      queryList.map((qStr) => fetchJson(
+        `https://api.modrinth.com/v2/search?query=${encodeURIComponent(qStr)}&limit=${perLimit}&offset=${safeOffset}&index=${safeSort}&facets=${encodeURIComponent(JSON.stringify(buildFacets(includeVer)))}`
+      ).catch(() => ({ hits: [], total_hits: 0 })))
+    );
+    const seen = new Set();
+    const mergedHits = [];
+    let totalHits = 0;
+    for (const r of responses) {
+      totalHits += Number(r?.total_hits) || 0;
+      for (const h of r?.hits || []) {
+        if (!h?.project_id || seen.has(h.project_id)) continue;
+        seen.add(h.project_id);
+        mergedHits.push(h);
+      }
+    }
+    if (queryList.length > 1) {
+      mergedHits.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+    }
+    return { hits: mergedHits.slice(0, safeLimit), total_hits: totalHits };
+  };
+
+  let res = await runQueries(Boolean(mcVersion));
+  if ((!res?.hits || res.hits.length < 4) && mcVersion && safeOffset === 0) {
+    const broader = await runQueries(false);
+    if ((broader?.hits?.length || 0) > (res?.hits?.length || 0)) {
+      res = broader;
+    }
+  }
+
+  const items = (res?.hits || []).map((h) => ({
+    source: 'modrinth',
+    projectId: h.project_id,
+    slug: h.slug,
+    title: h.title,
+    description: h.description || '',
+    iconUrl: h.icon_url || '',
+    downloads: h.downloads || 0,
+    follows: h.follows || 0,
+    author: h.author || 'Creator',
+    categories: (h.categories || []).slice(0, 10),
+    versions: (h.versions || []).filter((v) => /^\d/.test(v)).sort((a, b) => compareMcVersions(b, a)),
+    pageUrl: `https://modrinth.com/datapack/${h.slug}`
+  }));
+
+  // Optionally blend CurseForge Worlds when user configured a CurseForge API key
+  if (getCurseForgeApiKey() && safeOffset === 0) {
+    try {
+      const cfRes = await searchCurseForgePacks({
+        query: userQuery || (category === 'parkour' ? 'parkour' : category === 'horror' ? 'horror' : ''),
+        kind: 'world',
+        mcVersion,
+        loader: '',
+        offset: 0,
+        limit: 8
+      });
+      for (const w of cfRes?.items || []) {
+        if (w.allowDistribution === false) continue;
+        items.unshift({
+          source: 'curseforge-world',
+          projectId: String(w.id),
+          slug: w.slug,
+          title: w.title,
+          description: w.summary || '',
+          iconUrl: w.iconUrl || '',
+          downloads: w.downloads || 0,
+          follows: 0,
+          author: w.author || 'Creator',
+          categories: ['world-map'],
+          versions: w.mcVersions || [],
+          pageUrl: w.url || ''
+        });
+      }
+    } catch (_) {}
+  }
+
+  return {
+    ok: true,
+    total: (res?.total_hits || items.length),
+    items
+  };
+}
+
+async function installStoreWorldOrDatapack({
+  gameDir,
+  instanceDir = '',
+  source = 'modrinth',
+  slugOrId,
+  title = '',
+  mcVersion = '1.21.4',
+  loaderType = 'vanilla',
+  mode = 'new-world', // 'new-world' | 'attach-world'
+  targetWorldPath = '',
+  gameMode = 'survival',
+  keepInventory = true
+} = {}, onStatus) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const effectiveGameDir = resolveTweakerDir(rootDir, instanceDir);
+  const tmpDir = path.join(rootDir, 'instances', '.blockway-downloads');
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+  // 1. CurseForge pre-built World Map
+  if (source === 'curseforge-world') {
+    onStatus?.(`🗺️ Đang lấy phiên bản bản đồ "${title || slugOrId}"...`);
+    const details = await getPackHubDetails({ source: 'curseforge', id: slugOrId, kind: 'world' });
+    const chosenVer = (details?.versions || []).find((v) => v.mcVersion === mcVersion) || details?.versions?.[0];
+    if (!chosenVer) throw new Error('Không tìm thấy file bản đồ tương thích để tải.');
+    const instRes = await installPackHub({
+      gameDir: rootDir,
+      instanceDir: instanceDir || undefined,
+      source: 'curseforge',
+      id: slugOrId,
+      versionId: chosenVer.id,
+      kind: 'world',
+      title: title || details.title || 'BlockWay Map'
+    }, (p) => onStatus?.(p?.text || 'Đang tải bản đồ...'));
+    return {
+      ok: true,
+      resultType: 'world',
+      worldName: path.basename(instRes.worldPath),
+      worldPath: instRes.worldPath,
+      mcVersion: chosenVer.mcVersion || mcVersion
+    };
+  }
+
+  // 2. Modrinth Datapack / World Zip
+  onStatus?.(`🔎 Đang tìm bản tương thích MC ${mcVersion} cho "${title || slugOrId}"...`);
+  const allVers = await fetchJson(`https://api.modrinth.com/v2/project/${encodeURIComponent(slugOrId)}/version`);
+  if (!Array.isArray(allVers) || !allVers.length) {
+    throw new Error('Gói này hiện chưa có tệp phát hành trên Modrinth.');
+  }
+
+  const hasZip = (v) => Array.isArray(v.files) && v.files.some((f) => /\.zip$/i.test(f.filename));
+  const baseParts = String(mcVersion).split('-')[0].split('.');
+  const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
+
+  let chosen = allVers.find((v) => hasZip(v) && (v.game_versions || []).includes(mcVersion) && (v.loaders || []).includes('datapack'))
+    || allVers.find((v) => hasZip(v) && (v.game_versions || []).includes(mcVersion))
+    || allVers.find((v) => hasZip(v) && (v.game_versions || []).some((g) => g === familyPrefix || g.startsWith(`${familyPrefix}.`)))
+    || allVers.find((v) => hasZip(v));
+
+  if (!chosen) {
+    throw new Error(`Gói "${title || slugOrId}" chỉ phát hành dưới dạng Mod (.jar), hãy tải trong mục Mod & Pack.`);
+  }
+
+  const fileObj = chosen.files.find((f) => /\.zip$/i.test(f.filename) && f.primary)
+    || chosen.files.find((f) => /\.zip$/i.test(f.filename));
+  const cleanZipName = path.basename(fileObj.filename).replace(/[^A-Za-z0-9._+-]/g, '_');
+  const tmpZipPath = path.join(tmpDir, `${Date.now()}-${cleanZipName}`);
+
+  try {
+    onStatus?.(`⬇ Đang tải "${cleanZipName}" từ Modrinth Official...`);
+    await downloadVerified([fileObj.url], tmpZipPath, { sha1: fileObj.hashes?.sha1, sha512: fileObj.hashes?.sha512 });
+
+    // Check if the downloaded .zip is actually a full Minecraft World Save (contains level.dat)
+    const zip = openPackZip(tmpZipPath);
+    if (findWorldRootInZip(zip) !== null) {
+      const savesDir = path.join(effectiveGameDir, 'saves');
+      const extracted = extractWorldZipToSaves(tmpZipPath, savesDir, title || path.basename(cleanZipName, '.zip'));
+      return {
+        ok: true,
+        resultType: 'world',
+        worldName: extracted.worldName,
+        worldPath: extracted.worldPath,
+        mcVersion
+      };
+    }
+
+    // Mode A: Attach Datapack into an existing World
+    if (mode === 'attach-world' && targetWorldPath) {
+      const { worldPath, cleanWorld } = resolveWorldFolderPath(rootDir, targetWorldPath);
+      const dpDir = path.join(worldPath, 'datapacks');
+      fs.mkdirSync(dpDir, { recursive: true });
+      const destDp = path.join(dpDir, cleanZipName);
+      fs.copyFileSync(tmpZipPath, destDp);
+      return {
+        ok: true,
+        resultType: 'attached-datapack',
+        worldName: cleanWorld,
+        worldPath,
+        datapackFile: cleanZipName,
+        mcVersion
+      };
+    }
+
+    // Mode B: Create a brand-new ready-to-play Singleplayer World with this Datapack pre-enabled!
+    const targetMc = worldCreator.supportsQuickWorldCreation(mcVersion)
+      ? mcVersion
+      : ((chosen.game_versions || []).find((g) => worldCreator.supportsQuickWorldCreation(g)) || '1.21.4');
+
+    onStatus?.(`🌍 Đang khởi tạo thế giới mới tích hợp sẵn "${title || cleanZipName}" (MC ${targetMc})...`);
+    const created = await worldCreator.createQuickWorld({
+      rootDir,
+      gameDirectory: effectiveGameDir,
+      mcVersion: targetMc,
+      loaderType,
+      levelName: title || path.basename(cleanZipName, '.zip'),
+      gameMode,
+      difficulty: 'normal',
+      allowCommands: true,
+      keepInventory: Boolean(keepInventory),
+      extraDatapackZips: [tmpZipPath],
+      fetchJson,
+      downloadVerified,
+      onStatus
+    });
+
+    if (!created?.ok) {
+      throw new Error(created?.error || 'Không thể khởi tạo thế giới tự động cho gói này.');
+    }
+
+    return {
+      ok: true,
+      resultType: 'created-world',
+      worldName: created.folderName,
+      levelName: created.levelName,
+      worldPath: created.worldDir,
+      datapackFile: cleanZipName,
+      mcVersion: targetMc
+    };
+  } finally {
+    try { if (fs.existsSync(tmpZipPath)) fs.unlinkSync(tmpZipPath); } catch (_) {}
+  }
+}
+
+function listWorldDatapacks(gameDir, worldNameOrPath) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const { worldPath, cleanWorld } = resolveWorldFolderPath(rootDir, worldNameOrPath);
+  const dpDir = path.join(worldPath, 'datapacks');
+  if (!fs.existsSync(dpDir)) return { ok: true, worldName: cleanWorld, worldPath, items: [] };
+  const items = [];
+  for (const f of fs.readdirSync(dpDir, { withFileTypes: true })) {
+    if (f.name === 'blockway-rules') continue;
+    const full = path.join(dpDir, f.name);
+    let sizeKB = 0;
+    try {
+      sizeKB = f.isFile() ? Math.max(1, Math.round(fs.statSync(full).size / 1024)) : 4;
+    } catch (_) {}
+    items.push({
+      name: f.name,
+      isDirectory: f.isDirectory(),
+      sizeKB
+    });
+  }
+  return { ok: true, worldName: cleanWorld, worldPath, items };
+}
+
+function deleteWorldDatapack(gameDir, worldNameOrPath, fileName) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const { worldPath } = resolveWorldFolderPath(rootDir, worldNameOrPath);
+  const cleanName = path.basename(String(fileName || ''));
+  if (!cleanName || cleanName === '.' || cleanName === '..') throw new Error('Tên Datapack không hợp lệ.');
+  const target = path.join(worldPath, 'datapacks', cleanName);
+  if (fs.existsSync(target)) {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+  return { ok: true };
+}
+
+/* ---------------- Upgrade 4: Co-op Voice Chat & Team QoL Pack ---------------- */
+async function installCoopComboPack({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  includeVoice = true,
+  includeTeamQol = true
+} = {}, onStatus) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const installed = [];
+  const skipped = [];
+
+  if (includeVoice) {
+    onStatus?.(`🎙️ Đang trang bị Đàm Thoại 3D Trong Game (Simple Voice Chat) cho MC ${mcVersion}...`);
+    let voiceOk = false;
+    for (const slug of ['simple-voice-chat', 'plasmo-voice']) {
+      try {
+        const r = await installModrinthProject({
+          slug,
+          projectType: 'mod',
+          mcVersion,
+          loaderType: effectiveLoader,
+          gameDir: targetDir
+        }, onStatus);
+        if (r?.fileName) {
+          installed.push(r.fileName);
+          voiceOk = true;
+          break;
+        }
+      } catch (_) {}
+    }
+    if (!voiceOk) skipped.push('simple-voice-chat');
+
+    // Ensure voicechat server config allows groups & smooth codec out-of-the-box
+    try {
+      const vcDir = path.join(targetDir, 'config', 'voicechat');
+      const srvProp = path.join(vcDir, 'voicechat-server.properties');
+      if (!fs.existsSync(srvProp)) {
+        fs.mkdirSync(vcDir, { recursive: true });
+        fs.writeFileSync(
+          srvProp,
+          [
+            '# BlockWay Co-op Voice Chat Defaults',
+            'port=24454',
+            'enable_groups=true',
+            'max_voice_distance=48.0',
+            'whisper_distance=24.0',
+            'codec=VOIP',
+            ''
+          ].join('\n'),
+          'utf8'
+        );
+      }
+    } catch (_) {}
+  }
+
+  if (includeTeamQol) {
+    const qolSlugs = ['xaeros-minimap', 'xaeros-world-map', 'jade', 'carry-on', 'waystones'];
+    for (const slug of qolSlugs) {
+      try {
+        onStatus?.(`🧭 Đang trang bị tiện ích tổ đội (${slug}) cho MC ${mcVersion}...`);
+        const r = await installModrinthProject({
+          slug,
+          projectType: 'mod',
+          mcVersion,
+          loaderType: effectiveLoader,
+          gameDir: targetDir
+        }, onStatus);
+        if (r?.fileName) installed.push(r.fileName);
+      } catch (_) {
+        skipped.push(slug);
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    effectiveLoader,
+    targetDir,
+    installed,
+    skipped
+  };
+}
+
+/* ---------------- Upgrade 5: Smart RAM & Generational ZGC / G1GC Coach ---------------- */
+function buildGenerationalZgcArgs(javaMajor, cpuCores = os.cpus().length) {
+  const concThreads = Math.max(2, Math.min(6, Math.floor(cpuCores / 2)));
+  const args = [
+    '-XX:+UnlockExperimentalVMOptions',
+    '-XX:+UseZGC'
+  ];
+  // Java 21-23 requires explicit +ZGenerational; Java 24+ is Generational ZGC by default
+  if (javaMajor >= 21 && javaMajor <= 23) {
+    args.push('-XX:+ZGenerational');
+  }
+  args.push(
+    '-XX:ZUncommitDelay=30',
+    `-XX:ConcGCThreads=${concThreads}`,
+    '-XX:+DisableExplicitGC',
+    '-XX:+PerfDisableSharedMem',
+    '-XX:-OmitStackTraceInFastThrow',
+    '-Dfml.ignoreInvalidMinecraftCertificates=true',
+    '-Dfml.ignorePatchDiscrepancies=true',
+    '-Dminecraft.launcher.brand=BlockWay-Pro'
+  );
+  return args;
+}
+
+function computeSmartRamAndJvmAdvice({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'vanilla',
+  requestedRamGB = 4,
+  smartRamAuto = false,
+  forceRecommend = false,
+  javaPath = '',
+  cpuCores = os.cpus().length
+} = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const totalMemGB = Math.round((os.totalmem() / 1073741824) * 10) / 10;
+  const freeMemGB = Math.round((os.freemem() / 1073741824) * 10) / 10;
+
+  let modsCount = 0;
+  if (loaderType !== 'vanilla') {
+    modsCount = countFilesIn(path.join(targetDir, 'mods'), /\.jar$/i);
+  }
+  const equipped = getEquippedAddonsState(targetDir);
+  const hasShader = Boolean(equipped.activeShader);
+
+  // Sweet-spot RAM formula based on workload
+  let sweetSpotGB = 3;
+  let minSafeRamGB = 2;
+  let profileLabel = 'Vanilla Nhẹ';
+
+  if (modsCount > 220) {
+    sweetSpotGB = 10;
+    minSafeRamGB = 7;
+    profileLabel = `Đại Modpack (${modsCount} Mod)`;
+  } else if (modsCount > 120) {
+    sweetSpotGB = 8;
+    minSafeRamGB = 6;
+    profileLabel = `Modpack Nặng (${modsCount} Mod)`;
+  } else if (modsCount > 40) {
+    sweetSpotGB = hasShader ? 7 : 6;
+    minSafeRamGB = 4.5;
+    profileLabel = `Modpack Vừa (${modsCount} Mod${hasShader ? ' + Shader' : ''})`;
+  } else if (modsCount > 0 || loaderType !== 'vanilla') {
+    sweetSpotGB = hasShader ? 5 : 4;
+    minSafeRamGB = 3;
+    profileLabel = `${modsCount} Mod${hasShader ? ' + Shader' : ''}`;
+  } else {
+    sweetSpotGB = hasShader ? 4 : (compareMcVersions(mcVersion, '1.18') >= 0 ? 3.5 : 2.5);
+    minSafeRamGB = 2;
+    profileLabel = hasShader ? 'Vanilla + Shader' : 'Vanilla Chuẩn';
+  }
+
+  // Reserve at least 2.2 GB for Windows + GPU driver so system never stutters or pagefile-thrashes
+  const maxSafeOsRamGB = Math.max(2, Math.floor((totalMemGB - 2.2) * 2) / 2);
+  const recommendedRamGB = Math.max(2, Math.min(sweetSpotGB, maxSafeOsRamGB));
+
+  const userRam = Math.max(1.5, Number(requestedRamGB) || 4);
+  let effectiveRamGB = userRam;
+  let adjustmentReason = '';
+
+  if (forceRecommend) {
+    effectiveRamGB = recommendedRamGB;
+    adjustmentReason = 'balanced';
+  } else if (smartRamAuto) {
+    if (userRam < minSafeRamGB && maxSafeOsRamGB >= minSafeRamGB) {
+      effectiveRamGB = recommendedRamGB;
+      adjustmentReason = 'boosted-low-ram';
+    } else if (userRam > maxSafeOsRamGB) {
+      effectiveRamGB = maxSafeOsRamGB;
+      adjustmentReason = 'capped-high-ram';
+    }
+  }
+
+  // Determine Java major version for GC selection
+  let javaMajor = 0;
+  if (javaPath && javaPath !== 'java' && fs.existsSync(javaPath)) {
+    javaMajor = getJavaMajorVersion(javaPath);
+  }
+  if (!javaMajor) {
+    if (compareMcVersions(mcVersion, '26.1') >= 0) javaMajor = 25;
+    else if (compareMcVersions(mcVersion, '1.20.5') >= 0) javaMajor = 21;
+    else if (compareMcVersions(mcVersion, '1.17') >= 0) javaMajor = 17;
+    else javaMajor = 8;
+  }
+
+  const useGenZgc = javaMajor >= 21 && cpuCores >= 6 && effectiveRamGB >= 5 && totalMemGB >= 11;
+  const gcMode = useGenZgc ? 'zgc-gen' : 'g1gc-tuned';
+  const gcModeLabel = useGenZgc
+    ? `Generational ZGC (Java ${javaMajor} • Siêu mượt <1ms)`
+    : `Low-Pause G1GC (Đa nhân ${cpuCores} luồng)`;
+
+  let jvmArgs;
+  if (useGenZgc) {
+    jvmArgs = buildGenerationalZgcArgs(javaMajor, cpuCores);
+  } else {
+    jvmArgs = buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores);
+    if (javaMajor >= 17 && !jvmArgs.some((a) => a.startsWith('-XX:G1PeriodicGCInterval='))) {
+      jvmArgs.push('-XX:G1PeriodicGCInterval=15000');
+    }
+  }
+
+  let adviceStatus = 'optimal';
+  let adviceText = `✅ Chuẩn vàng cho ${profileLabel}: Khuyên cấp ${recommendedRamGB} GB RAM (Máy ${totalMemGB} GB, trống ${freeMemGB} GB) • ${gcModeLabel}.`;
+  if (userRam < minSafeRamGB && maxSafeOsRamGB >= minSafeRamGB) {
+    adviceStatus = 'too-low';
+    adviceText = `⚠️ Đang chọn ${userRam} GB hơi thấp cho ${profileLabel} — dễ thiếu bộ nhớ! Mức vàng khuyên dùng: ${recommendedRamGB} GB.`;
+  } else if (userRam > maxSafeOsRamGB) {
+    adviceStatus = 'too-high';
+    adviceText = `⚠️ Đang chọn ${userRam} GB vượt mức an toàn của máy (${totalMemGB} GB) dễ gây khựng Windows! Nên hạ về ${recommendedRamGB} GB.`;
+  } else if (Math.abs(userRam - recommendedRamGB) >= 2 && userRam > recommendedRamGB) {
+    adviceStatus = 'slightly-high';
+    adviceText = `💡 Gợi ý: Cấp thừa RAM (${userRam} GB) cho ${profileLabel} có thể làm GC dọn lâu hơn. Mức tối ưu nhất là ${recommendedRamGB} GB.`;
+  }
+
+  return {
+    ok: true,
+    totalMemGB,
+    freeMemGB,
+    cpuCores,
+    javaMajor,
+    modsCount,
+    hasShader,
+    profileLabel,
+    recommendedRamGB,
+    minSafeRamGB,
+    maxSafeOsRamGB,
+    effectiveRamGB,
+    adjustmentReason,
+    gcMode,
+    gcModeLabel,
+    jvmArgs,
+    adviceStatus,
+    adviceText
+  };
+}
+
 module.exports = {
   fetchVersionManifest,
   fetchLoaderVersions,
@@ -6131,5 +7553,18 @@ module.exports = {
   deleteLocalScreenshot,
   exportTargetAsMrpack,
   scanMinecraftJunk,
-  cleanMinecraftJunk
+  cleanMinecraftJunk,
+  readGameOptionsAndKeybinds,
+  saveGameOptionsAndKeybinds,
+  autoResolveKeybindConflicts,
+  toggleFullbrightPack,
+  checkLocalAddonsUpdates,
+  updateLocalAddons,
+  rollbackLocalAddon,
+  searchWorldAndDatapackStore,
+  installStoreWorldOrDatapack,
+  listWorldDatapacks,
+  deleteWorldDatapack,
+  installCoopComboPack,
+  computeSmartRamAndJvmAdvice
 };

@@ -464,6 +464,7 @@ async function refreshLocalAddonsCount() {
   if (descEl && mainFps.installed) {
     descEl.textContent = `✓ Bộ Mod X3 FPS (${mainFps.count} Mod chuẩn ${mainVer}: Sodium, Lithium, Iris...) đã cài sẵn — Bấm CHƠI NGAY để vào game!`;
   }
+  if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
 }
 
 async function loadModrinthStore(append = false) {
@@ -1201,7 +1202,69 @@ async function loadModrinthStore(append = false) {
   });
 }
 
-async function renderLocalAddonsManager() {
+const addonUpdatesCache = new Map();
+
+function getAddonUpdatesCacheKey(target, folderType) {
+  return `${target?.dir || ''}|${folderType || 'mods'}|${target?.mcVersion || '1.21.4'}|${target?.core || 'fabric'}`;
+}
+
+function invalidateAddonUpdatesCache(target, folderType) {
+  if (!target) {
+    addonUpdatesCache.clear();
+    return;
+  }
+  addonUpdatesCache.delete(getAddonUpdatesCacheKey(target, folderType));
+}
+
+async function refreshAddonUpdatesState(manualNotify = false) {
+  if (typeof window.aetherAPI?.checkAddonUpdates !== 'function') return null;
+  const target = getModStoreTarget();
+  const folderType = state.activeLocalFolder || 'mods';
+  const cacheKey = getAddonUpdatesCacheKey(target, folderType);
+  if (manualNotify) addonUpdatesCache.delete(cacheKey);
+
+  const btnCheck = document.getElementById('btnCheckAddonUpdates');
+  if (btnCheck && manualNotify) {
+    btnCheck.disabled = true;
+    btnCheck.textContent = '⏳ Đang quét SHA-1...';
+  }
+  try {
+    const updRes = await window.aetherAPI.checkAddonUpdates({
+      gameDir: state.gameDir,
+      instanceDir: target.isPack ? target.dir : '',
+      folderType,
+      mcVersion: target.mcVersion || '1.21.4',
+      loaderType: target.core || 'fabric'
+    });
+    if (updRes?.ok) {
+      addonUpdatesCache.set(cacheKey, updRes);
+    }
+    const btnUpdAll = document.getElementById('btnUpdateAllAddons');
+    const cntSpan = document.getElementById('addonUpdatesCount');
+    const count = Number(updRes?.updatesCount) || 0;
+    if (cntSpan) cntSpan.textContent = String(count);
+    if (btnUpdAll) btnUpdAll.classList.toggle('hidden', count <= 0);
+    if (manualNotify && typeof showAetherNotification === 'function') {
+      showAetherNotification(
+        count > 0
+          ? `⬆️ Phát hiện ${count} gói có bản mới hơn trên Modrinth cho MC ${target.mcVersion}!`
+          : `✅ Toàn bộ gói trong thư mục ${folderType} đều đang ở bản mới nhất cho MC ${target.mcVersion}!`,
+        count > 0 ? 'info' : 'success',
+        4200
+      );
+    }
+    return updRes;
+  } catch (_) {
+    return null;
+  } finally {
+    if (btnCheck && manualNotify) {
+      btnCheck.disabled = false;
+      btnCheck.textContent = '🔍 Kiểm Tra Bản Mới';
+    }
+  }
+}
+
+async function renderLocalAddonsManager(skipAutoUpdateScan = false) {
   const listEl = document.getElementById('localAddonsList');
   if (!listEl) return;
   const target = getModStoreTarget();
@@ -1212,6 +1275,18 @@ async function renderLocalAddonsManager() {
     ? allItems.filter((it) => String(it.cleanName || it.name || '').toLowerCase().includes(q))
     : allItems;
   await refreshLocalAddonsCount();
+  const cacheKey = getAddonUpdatesCacheKey(target, state.activeLocalFolder);
+  const cachedUpd = addonUpdatesCache.get(cacheKey);
+  const btnUpdAll = document.getElementById('btnUpdateAllAddons');
+  const cntSpan = document.getElementById('addonUpdatesCount');
+  if (cachedUpd) {
+    const c = Number(cachedUpd.updatesCount) || 0;
+    if (cntSpan) cntSpan.textContent = String(c);
+    if (btnUpdAll) btnUpdAll.classList.toggle('hidden', c <= 0);
+  } else if (btnUpdAll) {
+    btnUpdAll.classList.add('hidden');
+  }
+
   const ownerDesc = target.isPack ? `gói Modpack "${escapeHtml(target.shortName)}"` : '.minecraft';
   if (allItems.length === 0) {
     listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted);">Chưa có file nào trong thư mục <strong>${escapeHtml(state.activeLocalFolder)}</strong> của <strong>${ownerDesc}</strong>.</div>`;
@@ -1223,6 +1298,7 @@ async function renderLocalAddonsManager() {
   }
   const activeVer = target.mcVersion || '1.21.4';
   const canEquipInGame = state.activeLocalFolder === 'shaderpacks' || state.activeLocalFolder === 'resourcepacks';
+  const updMap = cachedUpd?.itemsMap || {};
   listEl.innerHTML = items.map((item) => {
     const rawVerLabel = item.mcVersion || item.mcDepSpec || '';
     const verTag = rawVerLabel
@@ -1236,11 +1312,66 @@ async function renderLocalAddonsManager() {
       : '';
     const safeClean = escapeHtml(item.cleanName);
     const safeName = escapeHtml(item.name);
+    const updInfo = updMap[item.cleanName] || null;
+    const updBadge = updInfo?.hasUpdate
+      ? `<span class="addon-upd-pill" title="Có bản mới ${escapeHtml(updInfo.latestVersion)} trên Modrinth">⬆️ Bản mới: ${escapeHtml(updInfo.latestVersion)}</span>`
+      : '';
+    const updBtn = updInfo?.hasUpdate
+      ? `<button class="btn-install-mod addon-upd-btn" data-updateaddon="${safeClean}" title="Cập nhật lên ${escapeHtml(updInfo.latestFileName || updInfo.latestVersion)} (tự giữ bản cũ để Hoàn tác 1-Click)">⬆️ Cập nhật</button>`
+      : '';
+    const rbBtn = updInfo?.canRollback
+      ? `<button class="vtype-btn addon-rb-btn" data-rollbackaddon="${safeClean}" title="Hoàn tác về bản trước (${escapeHtml(updInfo.previousFileName || 'bản cũ')})">⏪ Hoàn tác</button>`
+      : '';
     const equipBtn = canEquipInGame && item.enabled
       ? `<button class="vtype-btn ${item.equippedInGame ? 'active' : ''}" data-equip="${safeClean}" data-equipped="${item.equippedInGame ? '1' : '0'}" title="Kích hoạt hoặc tắt trực tiếp gói này trong cấu hình Minecraft mà không cần mở menu trong game">${item.equippedInGame ? '✓ Đang dùng' : '✨ Dùng trong Game'}</button>`
       : '';
-    return `<div class="addon-row"><div><strong style="font-size:12.5px;${item.enabled ? '' : 'text-decoration:line-through;opacity:0.6;'}">${safeClean}</strong>${verTag}${loaderTag}${equipBadge}<span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${Number(item.sizeKB) || 0} KB • ${item.enabled ? 'Đang Bật' : 'Đã Tắt (Tự cất)'}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;">${equipBtn}<button class="vtype-btn ${item.enabled ? 'active' : ''}" data-toggle="${safeName}">${item.enabled ? 'Đang Bật' : 'Bật Lại'}</button><button class="vtype-btn" style="color:#ef4444;" data-del="${safeName}">Xóa</button></div></div>`;
+    return `<div class="addon-row"><div><strong style="font-size:12.5px;${item.enabled ? '' : 'text-decoration:line-through;opacity:0.6;'}">${safeClean}</strong>${verTag}${loaderTag}${equipBadge}${updBadge}<span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${Number(item.sizeKB) || 0} KB • ${item.enabled ? 'Đang Bật' : 'Đã Tắt (Tự cất)'}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">${updBtn}${rbBtn}${equipBtn}<button class="vtype-btn ${item.enabled ? 'active' : ''}" data-toggle="${safeName}">${item.enabled ? 'Đang Bật' : 'Bật Lại'}</button><button class="vtype-btn" style="color:#ef4444;" data-del="${safeName}">Xóa</button></div></div>`;
   }).join('');
+  listEl.querySelectorAll('[data-updateaddon]').forEach((b) => {
+    b.onclick = async () => {
+      const cleanFile = b.dataset.updateaddon;
+      b.disabled = true;
+      b.textContent = '⏳ Đang lên...';
+      const r = await window.aetherAPI.updateLocalAddons({
+        gameDir: state.gameDir,
+        instanceDir: target.isPack ? target.dir : '',
+        folderType: state.activeLocalFolder,
+        fileNames: [cleanFile],
+        mcVersion: activeVer,
+        loaderType: target.core || 'fabric'
+      });
+      invalidateAddonUpdatesCache(target, state.activeLocalFolder);
+      await refreshAddonUpdatesState(false);
+      await renderLocalAddonsManager(true);
+      if (r?.ok && r.updatedCount > 0 && typeof showAetherNotification === 'function') {
+        const u = r.updated[0];
+        showAetherNotification(`⬆️ Đã cập nhật "${u.from}" → "${u.to}" (đã cất bản cũ để có thể Hoàn tác 1-Click)!`, 'success', 4800);
+      } else if (typeof showAetherNotification === 'function') {
+        showAetherNotification(`⚠️ Không thể cập nhật "${cleanFile}": ${r?.failed?.[0]?.error || 'Đã ở bản mới nhất'}`, 'error', 4200);
+      }
+    };
+  });
+  listEl.querySelectorAll('[data-rollbackaddon]').forEach((b) => {
+    b.onclick = async () => {
+      const cleanFile = b.dataset.rollbackaddon;
+      b.disabled = true;
+      b.textContent = '⏳ Đang quay lại...';
+      const r = await window.aetherAPI.rollbackLocalAddon({
+        gameDir: state.gameDir,
+        instanceDir: target.isPack ? target.dir : '',
+        folderType: state.activeLocalFolder,
+        fileName: cleanFile
+      });
+      invalidateAddonUpdatesCache(target, state.activeLocalFolder);
+      await refreshAddonUpdatesState(false);
+      await renderLocalAddonsManager(true);
+      if (r?.ok && typeof showAetherNotification === 'function') {
+        showAetherNotification(`⏪ Đã hoàn tác an toàn về bản cũ "${r.restoredTo}"!`, 'success', 4500);
+      } else if (typeof showAetherNotification === 'function') {
+        showAetherNotification(`⚠️ ${r?.error || 'Không thể hoàn tác'}`, 'error', 4000);
+      }
+    };
+  });
   listEl.querySelectorAll('[data-equip]').forEach((b) => {
     b.onclick = async () => {
       const wantEnable = b.dataset.equipped !== '1';
@@ -1259,23 +1390,33 @@ async function renderLocalAddonsManager() {
           3800
         );
       }
-      await renderLocalAddonsManager();
+      if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
+      await renderLocalAddonsManager(true);
     };
   });
   listEl.querySelectorAll('[data-toggle]').forEach((b) => {
     b.onclick = async () => {
       await window.aetherAPI.toggleLocalAddon(target.dir, state.activeLocalFolder, b.dataset.toggle);
-      await renderLocalAddonsManager();
+      await renderLocalAddonsManager(true);
       if (target.isPack && typeof refreshPackInstances === 'function') refreshPackInstances();
     };
   });
   listEl.querySelectorAll('[data-del]').forEach((b) => {
     b.onclick = async () => {
       await window.aetherAPI.deleteLocalAddon(target.dir, state.activeLocalFolder, b.dataset.del);
-      await renderLocalAddonsManager();
+      invalidateAddonUpdatesCache(target, state.activeLocalFolder);
+      await renderLocalAddonsManager(true);
       if (target.isPack && typeof refreshPackInstances === 'function') refreshPackInstances();
     };
   });
+
+  if (!cachedUpd && !skipAutoUpdateScan) {
+    refreshAddonUpdatesState(false).then((u) => {
+      if (u?.ok && (u.updatesCount > 0 || u.rollbackCount > 0)) {
+        renderLocalAddonsManager(true);
+      }
+    }).catch(() => {});
+  }
 }
 
 function renderFavoriteServers() {
@@ -1519,12 +1660,15 @@ async function renderLocalWorlds() {
     container.innerHTML = `<div class="empty-subpage-state">
       <div class="ess-icon">🌍</div>
       <div class="ess-title">Chưa có thế giới chơi đơn nào trong <code>.minecraft/saves</code></div>
-      <div class="ess-desc">Khi bạn tạo Thế giới mới trong game hoặc đồng bộ từ Launcher cũ, bản đồ sẽ tự động xuất hiện tại đây.</div>
+      <div class="ess-desc">Khi bạn tạo Thế giới mới trong game, tải Bản đồ xây sẵn 1-Click hoặc đồng bộ từ Launcher cũ, bản đồ sẽ tự động xuất hiện tại đây.</div>
       <div class="ess-actions">
+        <button class="btn-fps-boost-1click" id="btnEmptyBrowseWorldStore">🗺️ Tải Map Xây Sẵn &amp; Datapack (1-Click)</button>
         <button class="vtype-btn" id="btnEmptyOpenSaves">📂 Mở thư mục Saves</button>
         <button class="vtype-btn active" id="btnEmptyMigrateWorlds">📥 Đồng bộ dữ liệu từ Launcher cũ</button>
       </div>
     </div>`;
+    const bStore = document.getElementById('btnEmptyBrowseWorldStore');
+    if (bStore) bStore.onclick = () => document.getElementById('btnWorldsViewStore')?.click();
     const bSaves = document.getElementById('btnEmptyOpenSaves');
     if (bSaves) bSaves.onclick = () => window.aetherAPI.openSubFolder(state.gameDir, 'saves');
     const bMig = document.getElementById('btnEmptyMigrateWorlds');
@@ -1548,16 +1692,19 @@ async function renderLocalWorlds() {
     const verInfo = w.version ? `Minecraft ${escapeHtml(w.version)}` : 'Chơi đơn';
     const modeInfo = w.gameMode ? ` (${escapeHtml(w.gameMode)})` : '';
     const packBadge = w.instanceName ? ` • <strong style="color:var(--accent);">📦 ${escapeHtml(w.instanceName)}</strong>` : '';
+    const dpCount = Number(w.datapacksCount) || 0;
+    const dpBadge = dpCount > 0 ? ` • <strong style="color:#10b981;">📜 ${dpCount} Datapack</strong>` : '';
     return `<div class="world-card-row">
     <div class="world-left">
       ${safeIcon ? `<img class="world-icon" src="${safeIcon}" alt="" />` : '<div class="world-icon world-icon-fallback">🌍</div>'}
       <div class="world-meta-col">
         <strong class="world-title-text" title="${safeName}">${safeName}</strong>
-        <div class="world-sub-text">🎮 ${verInfo}${modeInfo}${packBadge} • 🕒 Lần chơi cuối: ${safePlayed}</div>
+        <div class="world-sub-text">🎮 ${verInfo}${modeInfo}${packBadge}${dpBadge} • 🕒 Lần chơi cuối: ${safePlayed}</div>
       </div>
     </div>
     <div class="world-card-actions" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
       <button class="btn-install-mod" data-playworld="${safeName}" data-widx="${idx}" title="⚡ Vào thẳng thế giới ${safeName} (${w.instanceName ? `Gói ${escapeHtml(w.instanceName)}` : 'Minecraft'}) chỉ với 1 cú nhấp!">⚡ Vào Thẳng</button>
+      <button class="vtype-btn" data-worlddatapacks="${safePath}" data-worldtitle="${safeName}" title="Quản lý hoặc thêm các gói Datapack đang gắn trong thế giới này">📜 Datapack${dpCount > 0 ? ` (${dpCount})` : ''}</button>
       <button class="vtype-btn" data-backupworld="${safeFolder}" data-worldpath="${safePath}" data-worldtitle="${safeName}" title="Sao lưu 1-Click thế giới này thành bản .zip an toàn">💾 Sao lưu</button>
       <button class="vtype-btn" data-exportworld="${safeFolder}" data-worldpath="${safePath}" data-worldtitle="${safeName}" title="Xuất thế giới này ra file .zip để chia sẻ với bạn bè">📤 Xuất Map</button>
       <button class="vtype-btn" data-openworld="${safePath}" title="Mở thư mục bản đồ này trong Windows Explorer">📂 Mở Thư Mục</button>
@@ -1565,6 +1712,13 @@ async function renderLocalWorlds() {
   </div>`;
   }).join('');
   container.querySelectorAll('[data-openworld]').forEach((btn) => { btn.onclick = () => window.aetherAPI.openGameDir(btn.dataset.openworld); });
+  container.querySelectorAll('[data-worlddatapacks]').forEach((btn) => {
+    btn.onclick = () => {
+      if (typeof window.openWorldDatapacksModal === 'function') {
+        window.openWorldDatapacksModal(btn.dataset.worlddatapacks, btn.dataset.worldtitle);
+      }
+    };
+  });
   container.querySelectorAll('[data-playworld]').forEach((btn) => {
     btn.onclick = () => {
       const w = filteredWorlds[Number(btn.dataset.widx)];
@@ -2545,6 +2699,7 @@ async function refreshPackInstances() {
         ${pending ? `<button class="vtype-btn pir-warn" data-piact="manual" data-pii="${i}">⚠️ ${pending} tệp</button>` : ''}
         ${isIslandCandidate ? `<button class="vtype-btn" data-piact="equip-island" data-pii="${i}" title="Bơm tự động bộ tạo Đảo SkyBlock / OneBlock chơi đơn vào gói này">🏝️ Bơm Đảo Bay</button>` : ''}
         <button class="vtype-btn" data-piact="add-mods" data-pii="${i}" title="Cài thêm Mod / Shader / Resource Pack từ Modrinth trực tiếp vào gói này">➕ Cài thêm Mod</button>
+        <button class="vtype-btn" data-piact="tweaker" data-pii="${i}" title="Chỉnh FOV, Sáng hang động Fullbright & tự gỡ trùng phím tắt cho gói Modpack này">🎛️ Phím tắt</button>
         <button class="srv-icon-btn" data-piact="export-mrpack" data-pii="${i}" title="Xuất gói Modpack này ra file .mrpack gửi bạn bè / mang ra quán Net">📤</button>
         <button class="srv-icon-btn" data-piact="folder" data-pii="${i}" title="Mở thư mục gói">📂</button>
         <button class="srv-icon-btn" data-piact="mods" data-pii="${i}" title="Mở thư mục mods">🧩</button>
@@ -2584,6 +2739,9 @@ async function refreshPackInstances() {
           b.textContent = '🏝️ Bơm Đảo Bay';
           packNotify(`❌ ${r?.error || 'Không thể tích hợp Đảo'}`, 'error', 5500);
         }
+      }
+      else if (act === 'tweaker') {
+        if (typeof window.openGameTweakerModal === 'function') window.openGameTweakerModal(inst.dir);
       }
       else if (act === 'coop') {
         if (typeof hostCoopWithE4mc === 'function') hostCoopWithE4mc(inst);
@@ -2768,6 +2926,7 @@ async function launchPackInstance(inst, customServerIp = '', customWorldFolder =
     autoCreateWorld,
     autoBackupWorlds: state.autoBackupWorlds !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+    smartRamCoach: state.smartRamCoach !== false,
     cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
   });
   if (!res?.ok) {
@@ -3098,11 +3257,15 @@ async function installCoopLanHelperModUI() {
       }
     }
     const prepFn = window.aetherAPI.prepareCoopHost || window.aetherAPI.coopPrepareHost;
+    const enableVoiceChat = Boolean(document.getElementById('chkCoopVoiceChat')?.checked);
+    const enableTeamQol = Boolean(document.getElementById('chkCoopTeamQol')?.checked);
     const res = await prepFn({
       mcVersion: state.selectedVersion,
       loaderType: targetCore,
       gameDir: state.gameDir,
-      mode: 'lan'
+      mode: 'lan',
+      enableVoiceChat,
+      enableTeamQol
     });
     if (res?.ok && res.installed?.length) {
       showAetherNotification(`🔓 Đã cài Mod hỗ trợ LAN (${res.installed.join(', ')}) cho MC ${state.selectedVersion} (${targetCore.toUpperCase()})! Bạn bè dùng tài khoản Offline/Crack có thể vào phòng LAN thoải mái.`, 'success', 5500);
@@ -3144,12 +3307,16 @@ async function hostCoopWithE4mc(customInst = null) {
     }
 
     const prepFn = window.aetherAPI.prepareCoopHost || window.aetherAPI.coopPrepareHost;
+    const enableVoiceChat = Boolean(document.getElementById('chkCoopVoiceChat')?.checked);
+    const enableTeamQol = Boolean(document.getElementById('chkCoopTeamQol')?.checked);
     const prep = await prepFn({
       mcVersion,
       loaderType,
       gameDir: state.gameDir,
       instanceDir,
-      mode: 'e4mc'
+      mode: 'e4mc',
+      enableVoiceChat,
+      enableTeamQol
     });
 
     coopState.hostingActive = true;
@@ -4318,7 +4485,999 @@ function initV402FeaturesUI() {
   }
 }
 
+/* ============================================================================
+   v40.6.0 PRO — 5 NÂNG CẤP SIÊU XỊN (UI CONTROLLERS)
+   1) Trình Gỡ Trùng Phím Tắt Modpack & Tinh Chỉnh Cấu Hình Ngoài Game
+   2) Quản Lý Cập Nhật Mod / Shader / Resource Pack 1-Click & Hoàn Tác Bản Cũ
+   3) Kho Bản Đồ Xây Sẵn & Datapack 1-Click + Quản Lý Datapack Theo Map
+   4) Combo Chơi Chung Nâng Cao: Đàm Thoại Voice Chat & Tổ Đội Sinh Tồn
+   5) Cố Vấn RAM Tự Động & Chống Giật Khựng (Generational ZGC / Tuned G1GC)
+   ============================================================================ */
+
+function domEventToMcKeyCode(e) {
+  if (!e) return '';
+  if (e.type === 'mousedown') {
+    if (e.button === 3) return 'key.mouse.4';
+    if (e.button === 4) return 'key.mouse.5';
+    if (e.button === 2) return 'key.mouse.right';
+    if (e.button === 1) return 'key.mouse.middle';
+    return '';
+  }
+  const code = String(e.code || '');
+  if (code === 'Escape' || code === 'Delete' || code === 'Backspace') return 'key.keyboard.unknown';
+  if (/^Key([A-Z])$/.test(code)) return `key.keyboard.${RegExp.$1.toLowerCase()}`;
+  if (/^Digit([0-9])$/.test(code)) return `key.keyboard.${RegExp.$1}`;
+  if (/^F([1-9]|1[0-2])$/.test(code)) return `key.keyboard.f${RegExp.$1}`;
+  if (/^Numpad([0-9])$/.test(code)) return `key.keyboard.kp.${RegExp.$1}`;
+  const map = {
+    Space: 'key.keyboard.space',
+    ShiftLeft: 'key.keyboard.left.shift',
+    ShiftRight: 'key.keyboard.right.shift',
+    ControlLeft: 'key.keyboard.left.control',
+    ControlRight: 'key.keyboard.right.control',
+    AltLeft: 'key.keyboard.left.alt',
+    AltRight: 'key.keyboard.right.alt',
+    Tab: 'key.keyboard.tab',
+    CapsLock: 'key.keyboard.caps.lock',
+    Backquote: 'key.keyboard.grave.accent',
+    BracketLeft: 'key.keyboard.left.bracket',
+    BracketRight: 'key.keyboard.right.bracket',
+    Backslash: 'key.keyboard.backslash',
+    Semicolon: 'key.keyboard.semicolon',
+    Quote: 'key.keyboard.apostrophe',
+    Comma: 'key.keyboard.comma',
+    Period: 'key.keyboard.period',
+    Slash: 'key.keyboard.slash',
+    Minus: 'key.keyboard.minus',
+    Equal: 'key.keyboard.equal',
+    Insert: 'key.keyboard.insert',
+    Home: 'key.keyboard.home',
+    End: 'key.keyboard.end',
+    PageUp: 'key.keyboard.page.up',
+    PageDown: 'key.keyboard.page.down',
+    Enter: 'key.keyboard.enter'
+  };
+  return map[code] || '';
+}
+
+function formatMcKeyCodeShortVi(rawCode) {
+  const c = String(rawCode || '').trim();
+  if (!c || c === 'key.keyboard.unknown' || c === '0') return 'Chưa gán';
+  if (c.startsWith('key.keyboard.kp.')) return `Numpad ${c.slice(16).toUpperCase()}`;
+  if (c.startsWith('key.keyboard.')) {
+    const rest = c.slice(13);
+    if (/^[a-z0-9]$/i.test(rest)) return `Phím ${rest.toUpperCase()}`;
+    if (/^f\d+$/i.test(rest)) return rest.toUpperCase();
+    const m = {
+      'space': 'Phím Cách',
+      'left.shift': 'Shift Trái',
+      'right.shift': 'Shift Phải',
+      'left.control': 'Ctrl Trái',
+      'right.control': 'Ctrl Phải',
+      'left.alt': 'Alt Trái',
+      'right.alt': 'Alt Phải',
+      'grave.accent': 'Phím ` (~)',
+      'left.bracket': 'Phím [',
+      'right.bracket': 'Phím ]',
+      'backslash': 'Phím \\',
+      'semicolon': 'Phím ;',
+      'apostrophe': 'Phím \'',
+      'comma': 'Phím ,',
+      'period': 'Phím .',
+      'slash': 'Phím /',
+      'minus': 'Phím -',
+      'equal': 'Phím ='
+    };
+    return m[rest] || `Phím ${rest.replace(/\./g, ' ').toUpperCase()}`;
+  }
+  if (c === 'key.mouse.left') return 'Chuột Trái';
+  if (c === 'key.mouse.right') return 'Chuột Phải';
+  if (c === 'key.mouse.middle') return 'Chuột Giữa';
+  if (c === 'key.mouse.4') return 'Chuột Phụ 4';
+  if (c === 'key.mouse.5') return 'Chuột Phụ 5';
+  return c;
+}
+
+let activeKeyCaptureCleanup = null;
+
+async function refreshToolsKeyConflictBadge() {
+  if (typeof window.aetherAPI?.readGameTweaker !== 'function') return;
+  try {
+    const res = await window.aetherAPI.readGameTweaker({ gameDir: state.gameDir });
+    if (!res?.ok) return;
+    const badge = document.getElementById('toolsKeyConflictBadge');
+    if (badge) {
+      badge.textContent = res.conflictsCount > 0
+        ? `⚠️ ${res.conflictsCount} cụm phím đang trùng`
+        : `✓ ${res.totalKeybinds || 0} phím không trùng`;
+    }
+    const btnFb = document.getElementById('btnToolsQuickFullbright');
+    if (btnFb) {
+      const fbOn = Boolean(res.settings?.fullbright);
+      btnFb.classList.toggle('is-ok', fbOn);
+      btnFb.textContent = fbOn
+        ? '💡 Sáng Hang Động (Fullbright): ĐANG BẬT'
+        : '💡 Bật / Tắt Sáng Hang Động (Fullbright 1-Click)';
+    }
+  } catch (_) {}
+}
+window.refreshToolsKeyConflictBadge = refreshToolsKeyConflictBadge;
+
+async function openGameTweakerModal(initialInstanceDir = null) {
+  if (typeof window.aetherAPI?.readGameTweaker !== 'function') return;
+  if (activeKeyCaptureCleanup) {
+    try { activeKeyCaptureCleanup(); } catch (_) {}
+    activeKeyCaptureCleanup = null;
+  }
+  if (!packHub.instances?.length && typeof window.aetherAPI?.packsInstances === 'function') {
+    try {
+      const rInst = await window.aetherAPI.packsInstances(state.gameDir);
+      packHub.instances = rInst?.instances || [];
+    } catch (_) {}
+  }
+
+  const defaultTarget = initialInstanceDir !== null
+    ? String(initialInstanceDir || '')
+    : (typeof getModStoreTarget === 'function' && getModStoreTarget().isPack ? getModStoreTarget().dir : '');
+
+  let currentInstanceDir = defaultTarget;
+  let filterConflictsOnly = false;
+  let searchQuery = '';
+  let pendingKeyChanges = {};
+  let tweakerData = null;
+
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span class="card-dot emerald"></span>
+        <h3>🎛️ Tinh Chỉnh Cấu Hình Ngoài Game &amp; Gỡ Trùng Phím Tắt Modpack</h3>
+      </div>
+      <button class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body" id="tweakerModalBody" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="pack-modal-loading">⏳ Đang đọc cấu hình options.txt &amp; quét xung đột phím tắt...</div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <button class="btn-modal-cancel" data-pmclose>Đóng</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-sync-skin" id="btnTweakerOpenOptsFile">📄 Mở options.txt</button>
+        <button class="btn-modal-agree" id="btnTweakerSaveAll">💾 Lưu Cấu Hình &amp; Phím Tắt</button>
+      </div>
+    </div>`, true);
+  if (!card) return;
+
+  const bodyEl = card.querySelector('#tweakerModalBody');
+
+  const getActiveTargetMeta = () => {
+    if (!currentInstanceDir) {
+      return { instanceDir: '', mcVersion: state.selectedVersion || '1.21.4', label: '🏠 Thư mục chính (.minecraft)' };
+    }
+    const found = (packHub.instances || []).find((x) => x.dir === currentInstanceDir);
+    return {
+      instanceDir: currentInstanceDir,
+      mcVersion: found?.mcVersion || state.selectedVersion || '1.21.4',
+      label: found ? `📦 ${found.name} (MC ${found.mcVersion})` : `📦 ${currentInstanceDir}`
+    };
+  };
+
+  const renderKeybindRows = () => {
+    const listWrap = bodyEl.querySelector('#tweakerKeyListWrap');
+    if (!listWrap || !tweakerData) return;
+
+    const effectiveKeyMap = new Map();
+    const enriched = (tweakerData.keybinds || []).map((kb) => {
+      const code = pendingKeyChanges[kb.rawOptionKey] !== undefined ? pendingKeyChanges[kb.rawOptionKey] : kb.keyCode;
+      const isUnbound = !code || code === 'key.keyboard.unknown' || code === '0';
+      if (!isUnbound) {
+        const norm = code.toLowerCase();
+        effectiveKeyMap.set(norm, (effectiveKeyMap.get(norm) || 0) + 1);
+      }
+      return {
+        ...kb,
+        effectiveCode: code,
+        effectiveLabel: pendingKeyChanges[kb.rawOptionKey] !== undefined ? formatMcKeyCodeShortVi(code) : kb.keyLabel,
+        isUnbound
+      };
+    });
+
+    const filtered = enriched.filter((kb) => {
+      const collides = !kb.isUnbound && (effectiveKeyMap.get(kb.effectiveCode.toLowerCase()) || 0) > 1;
+      if (filterConflictsOnly && !collides) return false;
+      if (searchQuery) {
+        const hay = `${kb.label} ${kb.actionId} ${kb.effectiveLabel}`.toLowerCase();
+        if (!hay.includes(searchQuery)) return false;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      listWrap.innerHTML = `<div class="tweaker-empty-keys">${
+        tweakerData.totalKeybinds === 0
+          ? 'ℹ️ Thư mục này chưa có phím tắt nào trong <code>options.txt</code> (hãy mở game 1 lần để các Mod ghi danh sách phím, sau đó quay lại đây bấm 1-Click gỡ trùng!). Bạn vẫn chỉnh sẵn được toàn bộ Cấu hình Đồ họa &amp; Sáng hang động bên trên!'
+          : filterConflictsOnly
+            ? '🎉 Tuyệt vời! Không có phím tắt nào bị trùng chức năng!'
+            : '🔍 Không tìm thấy phím tắt nào khớp từ khóa.'
+      }</div>`;
+      return;
+    }
+
+    const choices = tweakerData.availableKeyChoices || [];
+    listWrap.innerHTML = filtered.slice(0, 140).map((kb) => {
+      const collides = !kb.isUnbound && (effectiveKeyMap.get(kb.effectiveCode.toLowerCase()) || 0) > 1;
+      const hasCurrentInChoices = choices.some((c) => c.code === kb.effectiveCode);
+      const selectOpts = [
+        ...(hasCurrentInChoices ? [] : [{ code: kb.effectiveCode, label: kb.effectiveLabel }]),
+        ...choices
+      ].map((opt) => `<option value="${escapeHtml(opt.code)}" ${opt.code === kb.effectiveCode ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`).join('');
+
+      return `<div class="tweaker-key-row ${collides ? 'is-conflict' : ''}">
+        <div class="tkr-info">
+          <strong>${escapeHtml(kb.label)}</strong>
+          <span><code>${escapeHtml(kb.actionId)}</code>${collides ? ' • <b class="tkr-warn">⚠️ Đang trùng phím!</b>' : ''}</span>
+        </div>
+        <div class="tkr-controls">
+          <select class="pro-select tkr-select" data-kbselect="${escapeHtml(kb.rawOptionKey)}">${selectOpts}</select>
+          <button type="button" class="vtype-btn tkr-cap-btn" data-kbcapture="${escapeHtml(kb.rawOptionKey)}" title="Bấm nút này rồi nhấn phím bất kỳ trên bàn phím (nhấn Esc để bỏ gán)">⌨️ Bấm phím</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    listWrap.querySelectorAll('[data-kbselect]').forEach((sel) => {
+      sel.onchange = () => {
+        pendingKeyChanges[sel.dataset.kbselect] = sel.value;
+        renderKeybindRows();
+      };
+    });
+
+    listWrap.querySelectorAll('[data-kbcapture]').forEach((btn) => {
+      btn.onclick = (ev) => {
+        ev.stopPropagation();
+        if (activeKeyCaptureCleanup) {
+          try { activeKeyCaptureCleanup(); } catch (_) {}
+          activeKeyCaptureCleanup = null;
+        }
+        const optKey = btn.dataset.kbcapture;
+        btn.classList.add('active');
+        btn.textContent = '👉 Nhấn 1 phím...';
+
+        const finish = (mcCode) => {
+          window.removeEventListener('keydown', onKey, true);
+          window.removeEventListener('mousedown', onMouse, true);
+          activeKeyCaptureCleanup = null;
+          if (mcCode) {
+            pendingKeyChanges[optKey] = mcCode;
+          }
+          renderKeybindRows();
+        };
+        const onKey = (ke) => {
+          ke.preventDefault();
+          ke.stopPropagation();
+          const mapped = domEventToMcKeyCode(ke);
+          if (mapped) finish(mapped);
+        };
+        const onMouse = (me) => {
+          if (me.target === btn) return;
+          const mapped = domEventToMcKeyCode(me);
+          if (mapped && (me.button === 3 || me.button === 4 || me.button === 1)) {
+            me.preventDefault();
+            me.stopPropagation();
+            finish(mapped);
+          } else {
+            finish('');
+          }
+        };
+        activeKeyCaptureCleanup = () => {
+          window.removeEventListener('keydown', onKey, true);
+          window.removeEventListener('mousedown', onMouse, true);
+        };
+        window.addEventListener('keydown', onKey, true);
+        window.addEventListener('mousedown', onMouse, true);
+      };
+    });
+  };
+
+  const loadAndRenderTweaker = async (statusNotice = '') => {
+    const meta = getActiveTargetMeta();
+    pendingKeyChanges = {};
+    tweakerData = await window.aetherAPI.readGameTweaker({
+      gameDir: state.gameDir,
+      instanceDir: meta.instanceDir
+    });
+    if (!tweakerData?.ok) {
+      bodyEl.innerHTML = `<div class="pack-modal-msg warn">⚠️ Không đọc được cấu hình: ${escapeHtml(tweakerData?.error || 'Lỗi không xác định')}</div>`;
+      return;
+    }
+    const s = tweakerData.settings || {};
+    const instOptions = [
+      `<option value="" ${!currentInstanceDir ? 'selected' : ''}>🏠 Thư mục chính (.minecraft — MC ${escapeHtml(state.selectedVersion || '1.21.4')})</option>`,
+      ...(packHub.instances || []).map((inst) => `<option value="${escapeHtml(inst.dir)}" ${currentInstanceDir === inst.dir ? 'selected' : ''}>📦 ${escapeHtml(inst.name)} (MC ${escapeHtml(inst.mcVersion || '?')} • ${escapeHtml(String(inst.loader || '').toUpperCase())})</option>`)
+    ].join('');
+
+    const conflictsCount = Number(tweakerData.conflictsCount) || 0;
+    const conflictSummaryHtml = conflictsCount > 0
+      ? `<div class="tweaker-conflict-banner warn">
+          <div>
+            <strong>⚠️ Phát hiện ${conflictsCount} phím đang bị trùng nhiều chức năng cùng lúc!</strong>
+            <span>Ví dụ: ${tweakerData.conflicts.slice(0, 2).map((c) => `<b>${escapeHtml(c.keyLabel)}</b> (${c.count} lệnh)`).join(', ')}. Bấm nút bên phải để tự động dời các phím phụ sang phím trống, giữ nguyên 100% cụm di chuyển <code>WASD</code>!</span>
+          </div>
+          <button type="button" class="btn-fps-boost-1click" id="btnTweakerAutoResolve">🪄 Tự Động Gỡ Trùng Tất Cả Phím (1-Click)</button>
+        </div>`
+      : `<div class="tweaker-conflict-banner ok">
+          <div>
+            <strong>✅ Không phát hiện xung đột phím tắt (${tweakerData.totalKeybinds || 0} phím đã kiểm tra)</strong>
+            <span>Mọi chức năng trong <code>options.txt</code> đều có phím riêng biệt, sẵn sàng chiến mượt mà!</span>
+          </div>
+        </div>`;
+
+    bodyEl.innerHTML = `
+      <div class="tweaker-target-row">
+        <span>🎯 Đang chỉnh cấu hình &amp; phím tắt cho:</span>
+        <select id="tweakerTargetSelect" class="pro-select" style="flex:1;min-width:240px;">${instOptions}</select>
+        <button type="button" class="btn-fps-boost-1click ${s.fullbright ? 'is-ok' : ''}" id="btnTweakerFullbright">
+          ${s.fullbright ? '💡 Sáng Hang Động (Fullbright): ĐANG BẬT' : '💡 Bật Sáng Hang Động 1-Click (Fullbright)'}
+        </button>
+      </div>
+
+      ${statusNotice ? `<div class="pack-modal-msg" style="border-color:rgba(16,185,129,0.45);background:rgba(16,185,129,0.12);">${statusNotice}</div>` : ''}
+
+      <div class="tweaker-sliders-grid">
+        <div class="tweaker-field">
+          <div class="tf-top"><span>🔭 Góc nhìn (FOV)</span><strong id="twValFov">${s.fov === 110 ? '110 (Quake Pro)' : s.fov === 70 ? '70 (Chuẩn)' : s.fov}</strong></div>
+          <input type="range" id="twInpFov" min="30" max="110" step="1" value="${s.fov}" />
+        </div>
+        <div class="tweaker-field">
+          <div class="tf-top"><span>🏔️ Tầm nhìn (Render Distance)</span><strong id="twValRender">${s.renderDistance} Chunks</strong></div>
+          <input type="range" id="twInpRender" min="2" max="32" step="1" value="${s.renderDistance}" />
+        </div>
+        <div class="tweaker-field">
+          <div class="tf-top"><span>⚙️ Khoảng cách mô phỏng (Simulation)</span><strong id="twValSim">${s.simulationDistance} Chunks</strong></div>
+          <input type="range" id="twInpSim" min="5" max="24" step="1" value="${s.simulationDistance}" />
+        </div>
+        <div class="tweaker-field">
+          <div class="tf-top"><span>🚀 Giới hạn khung hình (Max FPS)</span><strong id="twValFps">${s.maxFps >= 260 ? 'Không giới hạn' : `${s.maxFps} FPS`}</strong></div>
+          <input type="range" id="twInpFps" min="30" max="260" step="10" value="${s.maxFps}" />
+        </div>
+        <div class="tweaker-field">
+          <div class="tf-top"><span>🔊 Âm lượng tổng (Master Volume)</span><strong id="twValVol">${s.masterVolume}%</strong></div>
+          <input type="range" id="twInpVol" min="0" max="100" step="5" value="${s.masterVolume}" />
+        </div>
+        <div class="tweaker-switches-box">
+          <label><input type="checkbox" id="twChkNoVsync" ${!s.enableVsync ? 'checked' : ''} /> <span>⚡ Tắt VSync (Giảm trễ chuột PvP)</span></label>
+          <label><input type="checkbox" id="twChkNoAutoJump" ${!s.autoJump ? 'checked' : ''} /> <span>🦘 Tắt Tự động nhảy (Auto-Jump OFF)</span></label>
+          <label><input type="checkbox" id="twChkRawMouse" ${s.rawMouseInput ? 'checked' : ''} /> <span>🖱️ Chuột thô chính xác (Raw Input)</span></label>
+        </div>
+      </div>
+
+      ${conflictSummaryHtml}
+
+      <div class="tweaker-key-toolbar">
+        <input type="text" id="twKeySearchInput" class="pro-input" placeholder="🔍 Tìm nhanh chức năng hoặc tên phím (vd: Zoom, Voice, Waypoint, Minimap, Phím C)..." value="${escapeHtml(searchQuery)}" />
+        <div class="vtype-group">
+          <button type="button" class="vtype-btn ${!filterConflictsOnly ? 'active' : ''}" id="btnTwFilterAll">Tất cả (${tweakerData.totalKeybinds || 0})</button>
+          <button type="button" class="vtype-btn ${filterConflictsOnly ? 'active' : ''}" id="btnTwFilterConflict">⚠️ Bị trùng (${conflictsCount})</button>
+        </div>
+      </div>
+
+      <div class="tweaker-key-list" id="tweakerKeyListWrap"></div>
+    `;
+
+    bodyEl.querySelector('#tweakerTargetSelect').onchange = (e) => {
+      currentInstanceDir = e.target.value || '';
+      loadAndRenderTweaker();
+    };
+
+    const bindRange = (inpId, valId, fmt) => {
+      const inp = bodyEl.querySelector(`#${inpId}`);
+      const val = bodyEl.querySelector(`#${valId}`);
+      if (inp && val) inp.oninput = () => { val.textContent = fmt(Number(inp.value)); };
+    };
+    bindRange('twInpFov', 'twValFov', (v) => (v === 110 ? '110 (Quake Pro)' : v === 70 ? '70 (Chuẩn)' : `${v}`));
+    bindRange('twInpRender', 'twValRender', (v) => `${v} Chunks`);
+    bindRange('twInpSim', 'twValSim', (v) => `${v} Chunks`);
+    bindRange('twInpFps', 'twValFps', (v) => (v >= 260 ? 'Không giới hạn' : `${v} FPS`));
+    bindRange('twInpVol', 'twValVol', (v) => `${v}%`);
+
+    const btnFb = bodyEl.querySelector('#btnTweakerFullbright');
+    if (btnFb) {
+      btnFb.onclick = async () => {
+        const wantEnable = !tweakerData.settings?.fullbright;
+        btnFb.disabled = true;
+        btnFb.textContent = wantEnable ? '⏳ Đang bật Sáng Hang Động...' : '⏳ Đang tắt...';
+        const r = await window.aetherAPI.toggleFullbrightPack({
+          gameDir: state.gameDir,
+          instanceDir: meta.instanceDir,
+          mcVersion: meta.mcVersion,
+          enable: wantEnable
+        });
+        await refreshToolsKeyConflictBadge();
+        await loadAndRenderTweaker(
+          r?.enabled
+            ? `💡 <strong>Đã bật Sáng Hang Động (Fullbright)!</strong> Đã chỉnh <code>gamma: 12.0</code>${r.packFileName ? ` và tự động kích hoạt gói <code>${escapeHtml(r.packFileName)}</code>` : ''} — vào hang tối hay dưới biển đều sáng rõ 100%!`
+            : '🌙 Đã tắt Sáng Hang Động và trả độ sáng về chuẩn gốc.'
+        );
+      };
+    }
+
+    const btnResolve = bodyEl.querySelector('#btnTweakerAutoResolve');
+    if (btnResolve) {
+      btnResolve.onclick = async () => {
+        btnResolve.disabled = true;
+        btnResolve.textContent = '⏳ Đang tự động gỡ trùng...';
+        const r = await window.aetherAPI.resolveKeybindConflicts({
+          gameDir: state.gameDir,
+          instanceDir: meta.instanceDir
+        });
+        await refreshToolsKeyConflictBadge();
+        const details = (r?.changes || []).slice(0, 5).map(
+          (ch) => `<code>${escapeHtml(ch.label)}</code>: ${escapeHtml(ch.fromLabel)} → <strong>${escapeHtml(ch.toLabel)}</strong>`
+        ).join(' • ');
+        await loadAndRenderTweaker(
+          `🪄 <strong>Đã tự động gỡ trùng ${r?.resolvedCount || 0} phím tắt!</strong> ${details}${(r?.changes?.length || 0) > 5 ? ` (+${r.changes.length - 5} phím khác)` : ''}`
+        );
+      };
+    }
+
+    const searchInp = bodyEl.querySelector('#twKeySearchInput');
+    if (searchInp) {
+      searchInp.oninput = () => {
+        searchQuery = searchInp.value.trim().toLowerCase();
+        renderKeybindRows();
+      };
+    }
+    const bAll = bodyEl.querySelector('#btnTwFilterAll');
+    const bConf = bodyEl.querySelector('#btnTwFilterConflict');
+    if (bAll) {
+      bAll.onclick = () => {
+        filterConflictsOnly = false;
+        bAll.classList.add('active');
+        bConf?.classList.remove('active');
+        renderKeybindRows();
+      };
+    }
+    if (bConf) {
+      bConf.onclick = () => {
+        filterConflictsOnly = true;
+        bConf.classList.add('active');
+        bAll?.classList.remove('active');
+        renderKeybindRows();
+      };
+    }
+
+    renderKeybindRows();
+  };
+
+  card.querySelector('#btnTweakerOpenOptsFile').onclick = () => {
+    const meta = getActiveTargetMeta();
+    window.aetherAPI.openGameDir(meta.instanceDir || state.gameDir);
+  };
+
+  card.querySelector('#btnTweakerSaveAll').onclick = async () => {
+    const meta = getActiveTargetMeta();
+    const btnSave = card.querySelector('#btnTweakerSaveAll');
+    btnSave.disabled = true;
+    btnSave.textContent = '⏳ Đang lưu...';
+    const settingsPayload = {
+      fov: Number(bodyEl.querySelector('#twInpFov')?.value || 70),
+      renderDistance: Number(bodyEl.querySelector('#twInpRender')?.value || 12),
+      simulationDistance: Number(bodyEl.querySelector('#twInpSim')?.value || 8),
+      maxFps: Number(bodyEl.querySelector('#twInpFps')?.value || 120),
+      masterVolume: Number(bodyEl.querySelector('#twInpVol')?.value || 100),
+      enableVsync: !bodyEl.querySelector('#twChkNoVsync')?.checked,
+      autoJump: !bodyEl.querySelector('#twChkNoAutoJump')?.checked,
+      rawMouseInput: Boolean(bodyEl.querySelector('#twChkRawMouse')?.checked)
+    };
+    const r = await window.aetherAPI.saveGameTweaker({
+      gameDir: state.gameDir,
+      instanceDir: meta.instanceDir,
+      settings: settingsPayload,
+      keyChanges: pendingKeyChanges
+    });
+    btnSave.disabled = false;
+    btnSave.textContent = '💾 Lưu Cấu Hình & Phím Tắt';
+    await refreshToolsKeyConflictBadge();
+    if (r?.ok) {
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(`🎛️ Đã lưu cấu hình options.txt${r.updatedKeysCount > 0 ? ` & cập nhật ${r.updatedKeysCount} phím tắt` : ''} cho ${meta.label}!`, 'success', 4200);
+      }
+      await loadAndRenderTweaker(`✅ Đã lưu thành công cấu hình đồ họa${r.updatedKeysCount > 0 ? ` và ${r.updatedKeysCount} thay đổi phím tắt` : ''}!`);
+    }
+  };
+
+  await loadAndRenderTweaker();
+}
+window.openGameTweakerModal = openGameTweakerModal;
+
+/* ---------- Upgrade 3: World & Datapack 1-Click Store + Per-World Datapacks ---------- */
+const worldStoreState = {
+  view: 'local',
+  category: 'all',
+  loadedOnce: false,
+  items: []
+};
+
+function switchWorldsSubView(viewMode = 'local') {
+  worldStoreState.view = viewMode === 'store' ? 'store' : 'local';
+  const btnLocal = document.getElementById('btnWorldsViewLocal');
+  const btnStore = document.getElementById('btnWorldsViewStore');
+  const localCard = document.getElementById('worldsDropZoneCard');
+  const storePanel = document.getElementById('worldStorePanel');
+  const backupsBox = document.getElementById('worldBackupsBox');
+
+  btnLocal?.classList.toggle('active', worldStoreState.view === 'local');
+  btnStore?.classList.toggle('active', worldStoreState.view === 'store');
+  localCard?.classList.toggle('hidden', worldStoreState.view !== 'local');
+  storePanel?.classList.toggle('hidden', worldStoreState.view !== 'store');
+  if (worldStoreState.view === 'store') {
+    backupsBox?.classList.add('hidden');
+    if (!worldStoreState.loadedOnce) {
+      loadWorldStoreUI(true);
+    }
+  }
+}
+window.switchWorldsSubView = switchWorldsSubView;
+
+async function loadWorldStoreUI(reset = true) {
+  const grid = document.getElementById('worldStoreGrid');
+  const badge = document.getElementById('worldStoreTotalBadge');
+  if (!grid || typeof window.aetherAPI?.searchWorldStore !== 'function') return;
+  worldStoreState.loadedOnce = true;
+
+  const query = document.getElementById('worldStoreSearchInput')?.value.trim() || '';
+  if (reset) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);font-weight:700;">⏳ Đang tải Kho Bản Đồ Xây Sẵn &amp; Datapack...</div>';
+  }
+
+  const res = await window.aetherAPI.searchWorldStore({
+    query,
+    category: worldStoreState.category || 'all',
+    mcVersion: state.selectedVersion || '1.21.4',
+    offset: 0,
+    limit: 24
+  });
+
+  const items = res?.items || [];
+  worldStoreState.items = items;
+  if (badge) {
+    badge.textContent = res?.total ? `${Number(res.total).toLocaleString('vi-VN')}+ Gói` : `${items.length} Gói`;
+  }
+
+  if (!items.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);">Không tìm thấy bản đồ hay Datapack nào khớp từ khóa. Hãy thử từ khóa khác (vd: <strong>OneBlock, SkyBlock, Dungeons, Parkour, Terralith</strong>)!</div>';
+    return;
+  }
+
+  grid.innerHTML = items.map((it, idx) => {
+    const dl = it.downloads >= 1e6 ? `${(it.downloads / 1e6).toFixed(1)}M lượt tải`
+      : (it.downloads >= 1e3 ? `${(it.downloads / 1e3).toFixed(1)}K lượt tải` : `${it.downloads || 0} lượt tải`);
+    const safeIcon = /^https?:\/\//i.test(String(it.iconUrl || '')) ? escapeHtml(it.iconUrl) : '';
+    const isCfWorld = it.source === 'curseforge-world';
+    const typePill = isCfWorld
+      ? '<span class="mod-compat-pill ok">🗺️ Bản đồ xây sẵn (CurseForge Map)</span>'
+      : `<span class="mod-compat-pill ok">📜 Gói Thế Giới / Datapack • MC ${escapeHtml(it.versions?.[0] || state.selectedVersion || '1.21.4')}</span>`;
+    const attachBtnHtml = isCfWorld
+      ? ''
+      : `<button type="button" class="vtype-btn" data-wsattach="${idx}" title="Gắn thêm Datapack này vào một Thế giới chơi đơn bạn đang có sẵn">➕ Gắn Vào Map Có Sẵn</button>`;
+
+    return `<div class="mod-card world-store-card">
+      <div class="mod-card-top">
+        ${safeIcon ? `<img class="mod-icon" src="${safeIcon}" alt="" />` : '<div class="mod-icon" style="display:flex;align-items:center;justify-content:center;font-size:22px;">🗺️</div>'}
+        <div class="mod-head-info">
+          <div class="mod-title" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+          <div class="mod-meta">bởi <strong>${escapeHtml(it.author || 'Creator')}</strong> • ${dl}</div>
+        </div>
+      </div>
+      ${typePill}
+      <div class="mod-desc" data-wsdesc="${idx}" title="${escapeHtml(it.description || '')}">${escapeHtml(it.description || 'Gói mở rộng thế giới & thử thách sinh tồn tự động cài đặt 1-Click.')}</div>
+      <div class="mod-card-foot" style="flex-wrap:wrap;gap:6px;justify-content:flex-end;">
+        ${attachBtnHtml}
+        <button type="button" class="btn-install-mod" data-wsnew="${idx}" title="Tải về, tự động khởi tạo Thế giới mới tích hợp sẵn gói này và sẵn sàng vào thẳng chơi ngay!">🌍 Tạo Map Chơi Ngay</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (typeof window.aetherAPI?.translateToVi === 'function') {
+    const toTrans = items.slice(0, 24).filter((x) => x.description);
+    if (toTrans.length) {
+      window.aetherAPI.translateToVi(toTrans.map((x) => x.description)).then((tr) => {
+        if (!tr?.ok || !Array.isArray(tr.results)) return;
+        toTrans.forEach((itemObj, tIdx) => {
+          const origIdx = items.indexOf(itemObj);
+          const vi = tr.results[tIdx];
+          if (vi && origIdx >= 0) {
+            const dEl = grid.querySelector(`[data-wsdesc="${origIdx}"]`);
+            if (dEl) dEl.textContent = vi;
+          }
+        });
+      }).catch(() => {});
+    }
+  }
+
+  grid.querySelectorAll('[data-wsnew]').forEach((btn) => {
+    btn.onclick = async () => {
+      const it = items[Number(btn.dataset.wsnew)];
+      if (!it) return;
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang tạo Map...';
+      try {
+        const r = await window.aetherAPI.installWorldStoreItem({
+          gameDir: state.gameDir,
+          source: it.source,
+          slugOrId: it.source === 'curseforge-world' ? it.projectId : it.slug,
+          title: it.title,
+          mcVersion: state.selectedVersion || '1.21.4',
+          loaderType: state.selectedCore || 'fabric',
+          mode: 'new-world',
+          keepInventory: true
+        });
+        btn.disabled = false;
+        btn.textContent = '✓ Đã tạo Map!';
+        setTimeout(() => { btn.textContent = orig; }, 3000);
+        if (!r?.ok) {
+          showAetherNotification(`⚠️ ${r?.error || 'Không thể tạo bản đồ'}`, 'error', 5000);
+          return;
+        }
+        await renderLocalWorlds();
+        const displayTitle = r.levelName || r.worldName || it.title;
+        const askPlay = await askUserAgreement({
+          title: `🎉 Đã Tạo Xong Thế Giới “${displayTitle}”!`,
+          message: `Thế giới "${displayTitle}" (MC ${r.mcVersion || state.selectedVersion}) đã được cài đặt sẵn sàng vào .minecraft/saves${r.datapackFile ? ` kèm Datapack "${r.datapackFile}" kích hoạt sẵn` : ''}.\n\nBạn có muốn mở Minecraft và vào thẳng thế giới này ngay bây giờ không?`,
+          agreeText: '⚡ Vào Thẳng Thế Giới Ngay',
+          cancelText: '🌍 Xem Trong Danh Sách Map'
+        });
+        if (askPlay.agreed) {
+          quickLaunchWorld({
+            name: displayTitle,
+            folderName: r.worldName,
+            path: r.worldPath,
+            version: r.mcVersion || state.selectedVersion
+          });
+        } else {
+          switchWorldsSubView('local');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = orig;
+        showAetherNotification(`⚠️ ${err.message}`, 'error', 5000);
+      }
+    };
+  });
+
+  grid.querySelectorAll('[data-wsattach]').forEach((btn) => {
+    btn.onclick = () => {
+      const it = items[Number(btn.dataset.wsattach)];
+      if (!it || typeof openWorldPicker !== 'function') return;
+      openWorldPicker(async (worldPath) => {
+        showAetherNotification(`⏳ Đang tải & gắn "${it.title}" vào thế giới đã chọn...`, 'info', 3500);
+        const r = await window.aetherAPI.installWorldStoreItem({
+          gameDir: state.gameDir,
+          source: it.source,
+          slugOrId: it.slug,
+          title: it.title,
+          mcVersion: state.selectedVersion || '1.21.4',
+          loaderType: state.selectedCore || 'fabric',
+          mode: 'attach-world',
+          targetWorldPath: worldPath
+        });
+        if (r?.ok) {
+          await renderLocalWorlds();
+          showAetherNotification(`✅ Đã gắn "${r.datapackFile || it.title}" vào thế giới "${r.worldName}"! Vào lại Map hoặc gõ /reload là chạy ngay.`, 'success', 5200);
+        } else {
+          showAetherNotification(`⚠️ ${r?.error || 'Không thể gắn Datapack'}`, 'error', 4800);
+        }
+      });
+    };
+  });
+}
+window.loadWorldStoreUI = loadWorldStoreUI;
+
+async function openWorldDatapacksModal(worldPath, worldTitle) {
+  if (typeof window.aetherAPI?.listWorldDatapacks !== 'function') return;
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="card-dot emerald"></span>
+        <h3>📜 Gói Datapack Trong Thế Giới “${escapeHtml(worldTitle || 'Map')}”</h3>
+      </div>
+      <button class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body" id="worldDpModalBody">
+      <div class="pack-modal-loading">⏳ Đang đọc danh sách Datapack...</div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <button class="btn-sync-skin" id="btnWorldDpOpenDir">📂 Mở Thư Mục Datapacks</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-modal-cancel" data-pmclose>Đóng</button>
+        <button class="btn-modal-agree" id="btnWorldDpBrowseStore">➕ Tải Thêm Datapack Từ Kho</button>
+      </div>
+    </div>`, false);
+  if (!card) return;
+
+  const body = card.querySelector('#worldDpModalBody');
+  const refreshList = async () => {
+    const res = await window.aetherAPI.listWorldDatapacks({
+      gameDir: state.gameDir,
+      worldNameOrPath: worldPath
+    });
+    const list = res?.items || [];
+    if (!list.length) {
+      body.innerHTML = `<div class="pack-modal-msg">Thế giới này hiện chưa gắn gói Datapack mở rộng nào. Bấm <strong>➕ Tải Thêm Datapack Từ Kho</strong> bên dưới để gắn thêm hầm ngục, chặt cây nhanh hoặc địa hình mới chỉ với 1-Click!</div>`;
+      return;
+    }
+    body.innerHTML = `<div class="pack-manual-list">${list.map((d) => `
+      <div class="pack-manual-row">
+        <div>
+          <strong>📦 ${escapeHtml(d.name)}</strong>
+          <span>${d.isDirectory ? 'Thư mục giải nén' : `${d.sizeKB} KB (.zip)`}</span>
+        </div>
+        <button type="button" class="vtype-btn" style="color:#ef4444;" data-delwdp="${escapeHtml(d.name)}">🗑 Gỡ bỏ</button>
+      </div>`).join('')}</div>`;
+    body.querySelectorAll('[data-delwdp]').forEach((b) => {
+      b.onclick = async () => {
+        await window.aetherAPI.deleteWorldDatapack({
+          gameDir: state.gameDir,
+          worldNameOrPath: worldPath,
+          fileName: b.dataset.delwdp
+        });
+        await refreshList();
+        await renderLocalWorlds();
+      };
+    });
+  };
+
+  card.querySelector('#btnWorldDpOpenDir').onclick = () => {
+    window.aetherAPI.openGameDir(`${worldPath}/datapacks`);
+  };
+  card.querySelector('#btnWorldDpBrowseStore').onclick = () => {
+    packCloseModal();
+    if (typeof window.switchMainTab === 'function') window.switchMainTab('worlds');
+    switchWorldsSubView('store');
+  };
+
+  await refreshList();
+}
+window.openWorldDatapacksModal = openWorldDatapacksModal;
+
+/* ---------- Upgrade 5: Smart RAM & Generational ZGC / G1GC Coach ---------- */
+let smartRamDebounceTimer = null;
+let latestSmartRamAdvice = null;
+
+function refreshSmartRamCoachUI() {
+  if (typeof window.aetherAPI?.analyzeSmartRamCoach !== 'function') return;
+  if (smartRamDebounceTimer) clearTimeout(smartRamDebounceTimer);
+  smartRamDebounceTimer = setTimeout(async () => {
+    try {
+      const ctx = state.activeLaunchContext;
+      const res = await window.aetherAPI.analyzeSmartRamCoach({
+        gameDir: state.gameDir,
+        instanceDir: ctx?.instanceDir || '',
+        mcVersion: ctx?.mcVersion || state.selectedVersion || '1.21.4',
+        loaderType: ctx?.core || state.selectedCore || 'fabric',
+        requestedRamGB: state.ramGB || 4,
+        smartRamAuto: state.smartRamCoach !== false,
+        javaPath: state.javaPath || '',
+        cpuCores: state.cpuCores || 8
+      });
+      if (!res?.ok) return;
+      latestSmartRamAdvice = res;
+      const bar = document.getElementById('smartRamCoachBar');
+      const pill = document.getElementById('smartRamGcPill');
+      const txt = document.getElementById('smartRamAdviceText');
+      const btnApply = document.getElementById('btnApplySmartRam');
+      if (pill) {
+        pill.textContent = res.gcMode === 'zgc-gen' ? '⚡ Generational ZGC' : '🚀 Tuned G1GC';
+      }
+      if (txt) {
+        txt.textContent = res.adviceText;
+      }
+      if (bar) {
+        bar.classList.toggle('is-warn', res.adviceStatus !== 'optimal');
+      }
+      if (btnApply) {
+        const recInt = Math.max(2, Math.round(res.recommendedRamGB || 4));
+        const isMatched = Math.round(Number(state.ramGB) || 4) === recInt;
+        btnApply.textContent = isMatched ? `✓ Chuẩn vàng (${recInt} GB)` : `⚡ Cấp ${recInt} GB Chuẩn`;
+        btnApply.classList.toggle('active', isMatched);
+      }
+    } catch (_) {}
+  }, 140);
+}
+window.refreshSmartRamCoachUI = refreshSmartRamCoachUI;
+
+async function applySmartRamCoachRecommendation(notify = true) {
+  if (typeof window.aetherAPI?.analyzeSmartRamCoach !== 'function') return;
+  const ctx = state.activeLaunchContext;
+  const res = await window.aetherAPI.analyzeSmartRamCoach({
+    gameDir: state.gameDir,
+    instanceDir: ctx?.instanceDir || '',
+    mcVersion: ctx?.mcVersion || state.selectedVersion || '1.21.4',
+    loaderType: ctx?.core || state.selectedCore || 'fabric',
+    requestedRamGB: state.ramGB || 4,
+    forceRecommend: true,
+    javaPath: state.javaPath || '',
+    cpuCores: state.cpuCores || 8
+  });
+  if (!res?.ok) return;
+  const targetRam = Math.max(2, Math.round(res.recommendedRamGB || 4));
+  state.ramGB = targetRam;
+  const slider = document.getElementById('ramSlider');
+  if (slider) slider.value = String(targetRam);
+  const disp = document.getElementById('ramValueDisplay');
+  if (disp) disp.textContent = `${targetRam} GB`;
+  document.getElementById('btnRamAuto')?.classList.add('active');
+  if (typeof updateSummaryUI === 'function') updateSummaryUI();
+  if (typeof saveCurrentConfig === 'function') saveCurrentConfig();
+  if (notify && typeof showAetherNotification === 'function') {
+    showAetherNotification(
+      `📊 Cố vấn RAM đã cân chỉnh ${targetRam} GB cho ${res.profileLabel} (${res.gcModeLabel} • chừa an toàn cho Windows)!`,
+      'success',
+      4200
+    );
+  }
+}
+window.applySmartRamCoachRecommendation = applySmartRamCoachRecommendation;
+
+function initV406FeaturesUI() {
+  // 1. Game Tweaker & Keybind Conflict Fixer buttons
+  ['btnModsGameTweaker', 'btnToolsGameTweaker'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.onclick = () => {
+        const customDir = id === 'btnModsGameTweaker' && typeof getModStoreTarget === 'function' && getModStoreTarget().isPack
+          ? getModStoreTarget().dir
+          : '';
+        openGameTweakerModal(customDir);
+      };
+    }
+  });
+
+  const btnQuickFb = document.getElementById('btnToolsQuickFullbright');
+  if (btnQuickFb) {
+    btnQuickFb.onclick = async () => {
+      const cur = await window.aetherAPI.readGameTweaker({ gameDir: state.gameDir });
+      const wantEnable = !cur?.settings?.fullbright;
+      btnQuickFb.disabled = true;
+      btnQuickFb.textContent = wantEnable ? '⏳ Đang bật Fullbright...' : '⏳ Đang tắt Fullbright...';
+      const r = await window.aetherAPI.toggleFullbrightPack({
+        gameDir: state.gameDir,
+        mcVersion: state.selectedVersion || '1.21.4',
+        enable: wantEnable
+      });
+      btnQuickFb.disabled = false;
+      await refreshToolsKeyConflictBadge();
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(
+          r?.enabled
+            ? '💡 Đã bật Sáng Hang Động 1-Click (Fullbright gamma 12.0 + gói ánh sáng)! Vào hang tối sáng rõ 100%!'
+            : '🌙 Đã tắt Sáng Hang Động (Fullbright) về ánh sáng mặc định.',
+          'success',
+          4200
+        );
+      }
+    };
+  }
+
+  // 2. Smart Addon Updater buttons in #tab-mods (Installed view)
+  const btnCheckUpd = document.getElementById('btnCheckAddonUpdates');
+  if (btnCheckUpd) {
+    btnCheckUpd.onclick = async () => {
+      await refreshAddonUpdatesState(true);
+      await renderLocalAddonsManager(true);
+    };
+  }
+  const btnUpdAll = document.getElementById('btnUpdateAllAddons');
+  if (btnUpdAll) {
+    btnUpdAll.onclick = async () => {
+      const target = getModStoreTarget();
+      btnUpdAll.disabled = true;
+      const origHtml = btnUpdAll.innerHTML;
+      btnUpdAll.textContent = '⏳ Đang cập nhật tất cả...';
+      const r = await window.aetherAPI.updateLocalAddons({
+        gameDir: state.gameDir,
+        instanceDir: target.isPack ? target.dir : '',
+        folderType: state.activeLocalFolder || 'mods',
+        fileNames: [],
+        mcVersion: target.mcVersion || '1.21.4',
+        loaderType: target.core || 'fabric'
+      });
+      btnUpdAll.disabled = false;
+      btnUpdAll.innerHTML = origHtml;
+      invalidateAddonUpdatesCache(target, state.activeLocalFolder);
+      await refreshAddonUpdatesState(false);
+      await renderLocalAddonsManager(true);
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(
+          r?.updatedCount > 0
+            ? `⬆️ Đã cập nhật ${r.updatedCount} gói lên bản mới nhất! Bản cũ được cất an toàn để bạn Hoàn tác 1-Click bất cứ lúc nào.`
+            : 'ℹ️ Tất cả gói đều đã ở phiên bản mới nhất.',
+          'success',
+          5000
+        );
+      }
+    };
+  }
+
+  // 3. World & Datapack 1-Click Store in #tab-worlds
+  const btnWLocal = document.getElementById('btnWorldsViewLocal');
+  const btnWStore = document.getElementById('btnWorldsViewStore');
+  if (btnWLocal) btnWLocal.onclick = () => switchWorldsSubView('local');
+  if (btnWStore) btnWStore.onclick = () => switchWorldsSubView('store');
+
+  const btnWsSearch = document.getElementById('btnWorldStoreSearch');
+  const inpWsSearch = document.getElementById('worldStoreSearchInput');
+  if (btnWsSearch) btnWsSearch.onclick = () => loadWorldStoreUI(true);
+  if (inpWsSearch) {
+    inpWsSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadWorldStoreUI(true);
+    });
+  }
+  document.querySelectorAll('#worldStoreCatBar [data-wscat]').forEach((chip) => {
+    chip.onclick = () => {
+      document.querySelectorAll('#worldStoreCatBar [data-wscat]').forEach((c) => c.classList.toggle('active', c === chip));
+      worldStoreState.category = chip.dataset.wscat || 'all';
+      if (inpWsSearch) inpWsSearch.value = '';
+      loadWorldStoreUI(true);
+    };
+  });
+
+  // 4. Co-op Voice Chat & Team Survival Combo 1-Click in #tab-servers
+  const btnCoopCombo = document.getElementById('btnCoopInstallCombo');
+  if (btnCoopCombo && typeof window.aetherAPI?.installCoopComboPack === 'function') {
+    btnCoopCombo.onclick = async () => {
+      let includeVoice = Boolean(document.getElementById('chkCoopVoiceChat')?.checked);
+      const includeTeamQol = Boolean(document.getElementById('chkCoopTeamQol')?.checked);
+      if (!includeVoice && !includeTeamQol) {
+        includeVoice = true;
+        const vcChk = document.getElementById('chkCoopVoiceChat');
+        if (vcChk) vcChk.checked = true;
+      }
+      let targetCore = state.selectedCore;
+      if (targetCore === 'vanilla') {
+        targetCore = 'fabric';
+        if (typeof window.selectMcVersionAndCore === 'function') {
+          await window.selectMcVersionAndCore(state.selectedVersion, 'fabric');
+        }
+      }
+      btnCoopCombo.disabled = true;
+      const origText = btnCoopCombo.textContent;
+      btnCoopCombo.textContent = '⏳ Đang cài Combo Voice & Tổ Đội...';
+      try {
+        const r = await window.aetherAPI.installCoopComboPack({
+          gameDir: state.gameDir,
+          mcVersion: state.selectedVersion || '1.21.4',
+          loaderType: targetCore,
+          includeVoice,
+          includeTeamQol
+        });
+        await refreshLocalAddonsCount();
+        if (r?.ok && r.installed?.length) {
+          showAetherNotification(
+            `🎙️ Đã trang bị ${r.installed.length} gói (${r.installed.slice(0, 3).join(', ')}${r.installed.length > 3 ? '...' : ''}) cho MC ${state.selectedVersion}! Khi tạo Mã Phòng bạn bè sẽ được tự đồng bộ đủ 100%!`,
+            'success',
+            5500
+          );
+        } else {
+          showAetherNotification(`ℹ️ Phiên bản MC ${state.selectedVersion} chưa có bản phát hành của một số Mod trong Combo trên Modrinth.`, 'info', 4500);
+        }
+      } catch (err) {
+        showAetherNotification(`⚠️ ${err.message}`, 'error', 4500);
+      } finally {
+        btnCoopCombo.disabled = false;
+        btnCoopCombo.textContent = origText;
+      }
+    };
+  }
+
+  // 5. Smart RAM Coach Apply button in #tab-play
+  const btnApplyRam = document.getElementById('btnApplySmartRam');
+  if (btnApplyRam) {
+    btnApplyRam.onclick = () => applySmartRamCoachRecommendation(true);
+  }
+  setTimeout(() => refreshSmartRamCoachUI(), 650);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   initCoopHubUI();
   initV402FeaturesUI();
+  initV406FeaturesUI();
 });

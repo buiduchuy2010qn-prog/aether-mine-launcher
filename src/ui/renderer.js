@@ -34,7 +34,7 @@ const state = {
   favoriteServers: [...DEFAULT_FEATURED_SERVERS],
   winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
   activeLaunchContext: null, lastLaunchContext: null,
-  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
+  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, smartRamCoach: true, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
   playtimeStats: { totalSeconds: 0, sessionsCount: 0, byInstance: {}, byVersion: {} }
 };
 
@@ -80,6 +80,8 @@ function syncAutoBackupAndDiscordUI() {
   if (chkVi) chkVi.checked = state.autoViLang !== false;
   const chkPotato = document.getElementById('potatoGraphicsCheck');
   if (chkPotato) chkPotato.checked = Boolean(state.potatoGraphicsPreset);
+  const chkCoach = document.getElementById('smartRamCoachCheck');
+  if (chkCoach) chkCoach.checked = state.smartRamCoach !== false;
 }
 window.syncAutoBackupAndDiscordUI = syncAutoBackupAndDiscordUI;
 
@@ -437,9 +439,13 @@ function switchMainTab(tabId) {
     if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers();
     if (typeof onCoopHubTabShown === 'function') onCoopHubTabShown();
   }
+  if (targetTab === 'play') {
+    if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
+  }
   if (targetTab === 'tools') {
     if (typeof renderLocalAddonsManager === 'function') renderLocalAddonsManager();
     if (typeof window.runDiskJunkScanUI === 'function') window.runDiskJunkScanUI(false);
+    if (typeof window.refreshToolsKeyConflictBadge === 'function') window.refreshToolsKeyConflictBadge();
   }
 }
 window.switchMainTab = switchMainTab;
@@ -645,6 +651,7 @@ function updateSummaryUI() {
     const srvStr = state.serverIp ? ` • Vào thẳng: ${state.serverIp}` : '';
     playAccMeta.textContent = `Tay ${modelStr} • ${capeStr}${srvStr}`;
   }
+  if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
 }
 
 let activeToastEl = null;
@@ -742,6 +749,7 @@ function saveCurrentConfig() {
       discordRpcEnabled: state.discordRpcEnabled !== false,
       autoViLang: state.autoViLang !== false,
       potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+      smartRamCoach: state.smartRamCoach !== false,
       autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
       playtimeTotalSec: Number(state.playtimeStats?.totalSeconds) || 0,
       installedVersions: Array.isArray(state.installedVersions) ? state.installedVersions.slice(0, 40) : []
@@ -758,6 +766,7 @@ function saveCurrentConfig() {
     capeType: state.capeType, winResolution: state.winResolution, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
     autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+    smartRamCoach: state.smartRamCoach !== false,
     autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
     uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated)
   });
@@ -1121,7 +1130,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.5.0'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.6.0'}`), 2000);
       }
     }
     return;
@@ -1499,6 +1508,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnRamAuto = document.getElementById('btnRamAuto');
   if (btnRamAuto) {
     btnRamAuto.onclick = () => {
+      if (typeof window.applySmartRamCoachRecommendation === 'function') {
+        window.applySmartRamCoachRecommendation(true);
+        return;
+      }
       const autoRam = Math.min(8, Math.max(3, Math.round((state.totalMemGB || 8) * 0.45)));
       state.ramGB = autoRam;
       ramSlider.value = state.ramGB;
@@ -1923,6 +1936,24 @@ window.addEventListener('DOMContentLoaded', async () => {
             : '⏸ Đã tắt chế độ tự tối ưu options.txt cho máy yếu.',
           'info',
           3800
+        );
+      }
+    };
+  }
+  const smartRamCoachCheck = document.getElementById('smartRamCoachCheck');
+  if (smartRamCoachCheck) {
+    smartRamCoachCheck.onchange = (e) => {
+      state.smartRamCoach = Boolean(e.target.checked);
+      syncAutoBackupAndDiscordUI();
+      saveCurrentConfig();
+      if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(
+          state.smartRamCoach
+            ? '📊 Đã bật Cố Vấn RAM Tự Động & Chống Giật Khựng (Generational ZGC / G1GC)!'
+            : '⏸ Đã tắt Cố vấn RAM & JVM tự động.',
+          'info',
+          3600
         );
       }
     };
@@ -2572,6 +2603,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: quickWorldFolder ? '' : state.serverIp,
       worldFolderName: quickWorldFolder || '', autoBackupWorlds: state.autoBackupWorlds !== false,
       autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+      smartRamCoach: state.smartRamCoach !== false,
       cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
     });
 
