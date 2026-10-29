@@ -32,7 +32,7 @@ const state = {
   versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', cachedSkinDataUrl: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
   activeModStoreType: 'mod', activeLocalFolder: 'mods', serverCategoryFilter: 'all',
   favoriteServers: [...DEFAULT_FEATURED_SERVERS],
-  winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
+  winResolution: '1280x720', uiScale: 1.0, outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
   activeLaunchContext: null, lastLaunchContext: null,
   autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, smartRamCoach: true, gentleSmoothMode: true, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
   playtimeStats: { totalSeconds: 0, sessionsCount: 0, byInstance: {}, byVersion: {} }
@@ -84,8 +84,47 @@ function syncAutoBackupAndDiscordUI() {
   if (chkCoach) chkCoach.checked = state.smartRamCoach !== false;
   const chkGentle = document.getElementById('gentleSmoothCheck');
   if (chkGentle) chkGentle.checked = state.gentleSmoothMode !== false;
+  updateSettingsCheckedCountBadge();
 }
 window.syncAutoBackupAndDiscordUI = syncAutoBackupAndDiscordUI;
+
+function updateSettingsCheckedCountBadge() {
+  const inputs = Array.from(document.querySelectorAll('#tab-settings .settings-opt-list input[type="checkbox"]'));
+  if (inputs.length) {
+    const checkedCount = inputs.filter((inp) => inp.checked).length;
+    const badge = document.getElementById('settingsCheckedCountBadge');
+    if (badge) badge.textContent = `${checkedCount}/${inputs.length} đang bật`;
+    inputs.forEach((inp) => {
+      inp.closest('.settings-opt-item')?.classList.toggle('is-checked', Boolean(inp.checked));
+    });
+  }
+  document.querySelectorAll('.booster-check-pill input[type="checkbox"]').forEach((inp) => {
+    inp.closest('.booster-check-pill')?.classList.toggle('is-checked', Boolean(inp.checked));
+  });
+}
+window.updateSettingsCheckedCountBadge = updateSettingsCheckedCountBadge;
+
+function applyUiScaleToUI(scale, notify = false) {
+  const s = Math.max(0.85, Math.min(1.35, Math.round((Number(scale) || 1.0) * 100) / 100));
+  state.uiScale = s;
+  const pct = Math.round(s * 100);
+  const topBadge = document.getElementById('topScaleBadge');
+  if (topBadge) topBadge.textContent = `${pct}%`;
+  const setBadge = document.getElementById('settingsUiScaleBadge');
+  if (setBadge) setBadge.textContent = `Cỡ chữ: ${pct}%`;
+  document.querySelectorAll('[data-uiscale]').forEach((btn) => {
+    const bv = Math.round((Number(btn.dataset.uiscale) || 1) * 100);
+    btn.classList.toggle('active', Math.abs(bv - pct) <= 2);
+  });
+  window.aetherAPI?.setUiScale?.(s);
+  if (notify) {
+    saveCurrentConfig();
+    if (typeof showAetherNotification === 'function') {
+      showAetherNotification(`🔎 Đã chỉnh cỡ chữ & tỉ lệ hiển thị giao diện: ${pct}%!`, 'success', 2800);
+    }
+  }
+}
+window.applyUiScaleToUI = applyUiScaleToUI;
 
 // Pre-paint synchronous boot snapshot (zero flash of wrong theme / StevePlayer / 1.21.4 on startup)
 (function applyBootSnapshotSync() {
@@ -835,6 +874,7 @@ function saveCurrentConfig() {
       smartRamCoach: state.smartRamCoach !== false,
       gentleSmoothMode: state.gentleSmoothMode !== false,
       autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
+      uiScale: Number(state.uiScale) || 1.0,
       customWallpaper: state.customWallpaper || '',
       playtimeTotalSec: Number(state.playtimeStats?.totalSeconds) || 0,
       installedVersions: Array.isArray(state.installedVersions) ? state.installedVersions.slice(0, 40) : []
@@ -848,7 +888,7 @@ function saveCurrentConfig() {
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
     hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl,
-    capeType: state.capeType, winResolution: state.winResolution, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
+    capeType: state.capeType, winResolution: state.winResolution, uiScale: Number(state.uiScale) || 1.0, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
     autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
     smartRamCoach: state.smartRamCoach !== false,
@@ -1135,6 +1175,7 @@ function syncBoosterCheckboxes() {
     const count = [state.aikarFlags, state.hideLauncherOnPlay, state.fastSkipHash].filter(Boolean).length;
     advText.textContent = count > 0 ? `✓ Đang bật ${count}/3 tối ưu` : 'Chế độ tiêu chuẩn';
   }
+  updateSettingsCheckedCountBadge();
 }
 
 function setLaunchUiState(phase, statusMsg) {
@@ -1237,7 +1278,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.9.0'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.9.1'}`), 2000);
       }
     }
     return;
@@ -1345,6 +1386,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('crackSkinSyncToggle').checked = state.crackSkinSync !== false;
 
   setTheme(state.theme || 'lunar');
+  applyUiScaleToUI(state.uiScale || 1.0, false);
   syncBoosterCheckboxes();
   syncAutoBackupAndDiscordUI();
   updatePlaytimeUI();
@@ -1589,10 +1631,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Titlebar quick theme picker (swatches are .ts-chip, so setTheme() keeps them in sync with Settings)
   const btnThemePick = document.getElementById('btnThemePicker');
   const themePop = document.getElementById('themePickerPopover');
+  const btnScalePick = document.getElementById('btnFontScalePicker');
+  const scalePop = document.getElementById('fontScalePopover');
   if (btnThemePick && themePop) {
     btnThemePick.onclick = (e) => {
       e.stopPropagation();
       notifPop?.classList.add('hidden');
+      scalePop?.classList.add('hidden');
       themePop.classList.toggle('hidden');
     };
     document.addEventListener('click', (e) => {
@@ -1601,6 +1646,43 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+  if (btnScalePick && scalePop) {
+    btnScalePick.onclick = (e) => {
+      e.stopPropagation();
+      notifPop?.classList.add('hidden');
+      themePop?.classList.add('hidden');
+      scalePop.classList.toggle('hidden');
+    };
+    document.addEventListener('click', (e) => {
+      if (!scalePop.classList.contains('hidden') && !scalePop.contains(e.target) && !btnScalePick.contains(e.target)) {
+        scalePop.classList.add('hidden');
+      }
+    });
+  }
+  document.querySelectorAll('[data-uiscale]').forEach((btn) => {
+    btn.onclick = () => {
+      const val = Number(btn.dataset.uiscale) || 1.0;
+      applyUiScaleToUI(val, true);
+      scalePop?.classList.add('hidden');
+    };
+  });
+  window.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const steps = [0.9, 1.0, 1.08, 1.15, 1.25];
+    const cur = Number(state.uiScale) || 1.0;
+    if (e.key === '=' || e.key === '+') {
+      e.preventDefault();
+      const next = steps.find((v) => v > cur + 0.015) || 1.25;
+      applyUiScaleToUI(next, true);
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      const prev = [...steps].reverse().find((v) => v < cur - 0.015) || 0.9;
+      applyUiScaleToUI(prev, true);
+    } else if (e.key === '0') {
+      e.preventDefault();
+      applyUiScaleToUI(1.0, true);
+    }
+  });
   if (btnNotifUpd) {
     btnNotifUpd.onclick = () => {
       if (notifPop) notifPop.classList.add('hidden');
@@ -2083,7 +2165,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (typeof showAetherNotification === 'function') {
         showAetherNotification(
           state.autoViLang
-            ? '🇻🇳 Đã bật Tự động chuyển ngôn ngữ trong Minecraft sang Tiếng Việt (vi_vn)!'
+            ? '🌐 Đã bật Tự động chuyển ngôn ngữ trong Minecraft sang Tiếng Việt (vi_vn)!'
             : '⏸ Đã tắt tự động đổi ngôn ngữ Tiếng Việt khi mở game.',
           'info',
           3500
@@ -2095,13 +2177,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (potatoCheck) {
     potatoCheck.onchange = (e) => {
       state.potatoGraphicsPreset = Boolean(e.target.checked);
+      if (state.potatoGraphicsPreset) {
+        state.gentleSmoothMode = false;
+      }
       syncAutoBackupAndDiscordUI();
       saveCurrentConfig();
       if (typeof showAetherNotification === 'function') {
         showAetherNotification(
           state.potatoGraphicsPreset
-            ? '🚀 Đã bật Chế độ Đồ họa Siêu Mượt cho Máy Yếu (tắt VSync, Simulation 5, mở trần 120 FPS)!'
-            : '⏸ Đã tắt chế độ tự tối ưu options.txt cho máy yếu.',
+            ? '🚀 Đã bật Chế độ Siêu Mượt Máy Yếu (bung trần 120 FPS, tắt VSync & tự tắt Khóa FPS Mượt Êm)!'
+            : '⏸ Đã tắt chế độ tự tối ưu options.txt 120 FPS cho máy yếu.',
           'info',
           3800
         );
@@ -2113,6 +2198,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (gentleSmoothCheck) {
     gentleSmoothCheck.onchange = (e) => {
       state.gentleSmoothMode = Boolean(e.target.checked);
+      if (state.gentleSmoothMode) {
+        state.potatoGraphicsPreset = false;
+      }
       syncAutoBackupAndDiscordUI();
       saveCurrentConfig();
       if (typeof showAetherNotification === 'function') {
@@ -2123,6 +2211,31 @@ window.addEventListener('DOMContentLoaded', async () => {
           'info',
           3800
         );
+      }
+    };
+  }
+  const btnCheckRec = document.getElementById('btnSettingsCheckRecommended');
+  if (btnCheckRec) {
+    btnCheckRec.onclick = () => {
+      state.hideLauncherOnPlay = true;
+      state.fastSkipHash = true;
+      state.aikarFlags = true;
+      state.smartRamCoach = true;
+      state.crackSkinSync = true;
+      state.autoBackupWorlds = true;
+      state.autoCreateFirstWorld = true;
+      state.discordRpcEnabled = true;
+      state.autoViLang = true;
+      state.gentleSmoothMode = true;
+      state.potatoGraphicsPreset = false;
+      const crackToggle = document.getElementById('crackSkinSyncToggle');
+      if (crackToggle) crackToggle.checked = true;
+      window.aetherAPI.setDiscordRpcEnabled?.(true);
+      syncBoosterCheckboxes();
+      syncAutoBackupAndDiscordUI();
+      saveCurrentConfig();
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification('✨ Đã bật trọn bộ 10/11 tuỳ chọn Mượt Êm khuyên dùng (không ép máy)!', 'success', 3600);
       }
     };
   }
@@ -2646,7 +2759,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('javaPathInput').oninput = (e) => { state.javaPath = e.target.value.trim() || 'java'; saveCurrentConfig(); };
   document.getElementById('gameDirInput').oninput = (e) => { state.gameDir = e.target.value.trim(); saveCurrentConfig(); };
-  document.getElementById('crackSkinSyncToggle').onchange = (e) => { state.crackSkinSync = e.target.checked; saveCurrentConfig(); };
+  document.getElementById('crackSkinSyncToggle').onchange = (e) => { state.crackSkinSync = e.target.checked; updateSettingsCheckedCountBadge(); saveCurrentConfig(); };
   document.getElementById('btnOpenDir').onclick = () => window.aetherAPI.openGameDir(state.gameDir);
   document.getElementById('btnClearConsole').onclick = () => { document.getElementById('consoleOutput').innerHTML = ''; };
   document.querySelectorAll('#consoleFilterBar [data-logfilter]').forEach((btn) => {

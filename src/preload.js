@@ -159,6 +159,7 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   installOptifineParity: (params) => ipcRenderer.invoke('optifine:install-parity', params),
   pickOptifineJar: (params) => ipcRenderer.invoke('optifine:pick-jar', params),
   handleOptifineJar: (params) => ipcRenderer.invoke('optifine:handle-jar', params),
+  setUiScale: (scale) => ipcRenderer.invoke('ui:set-scale', scale),
 
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),

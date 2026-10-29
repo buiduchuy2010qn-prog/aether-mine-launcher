@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, nativeImage, clipboard, screen } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -439,12 +439,17 @@ function createWindow() {
   } catch (_) {}
 
   let savedTheme = 'lunar';
+  let savedUiScale = 1.0;
   try {
     if (fs.existsSync(configPath)) {
       const rawCfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       if (rawCfg && typeof rawCfg.theme === 'string') savedTheme = rawCfg.theme;
+      if (rawCfg && Number.isFinite(Number(rawCfg.uiScale)) && Number(rawCfg.uiScale) >= 0.85 && Number(rawCfg.uiScale) <= 1.35) {
+        savedUiScale = Number(rawCfg.uiScale);
+      }
     }
   } catch (_) {}
+  global.__bwUserUiScale = savedUiScale;
   const themeBgMap = {
     sakura: '#fdf2f7',
     prism: '#eef3fa',
@@ -456,11 +461,21 @@ function createWindow() {
   };
   const initialBgColor = themeBgMap[savedTheme] || '#0b0d12';
 
+  let workW = 1366;
+  let workH = 840;
+  try {
+    const wa = screen.getPrimaryDisplay()?.workAreaSize;
+    if (wa?.width > 400 && wa?.height > 300) {
+      workW = wa.width;
+      workH = wa.height;
+    }
+  } catch (_) {}
+
   mainWindow = new BrowserWindow({
-    width: 1360,
-    height: 840,
-    minWidth: 1020,
-    minHeight: 660,
+    width: Math.min(1360, workW),
+    height: Math.min(840, workH),
+    minWidth: Math.min(960, workW),
+    minHeight: Math.min(560, workH),
     frame: false,
     title: getLauncherVersionTitle(),
     backgroundColor: initialBgColor,
@@ -493,22 +508,22 @@ function createWindow() {
     }
   });
 
-  // Auto-scale UI: khi cửa sổ nhỏ hơn kích thước thiết kế, thu nhỏ toàn bộ giao diện
-  // theo tỉ lệ (giữ nguyên bố cục như lúc full) thay vì xếp lại các cột.
-  const UI_DESIGN_W = 1380;
-  const UI_DESIGN_H = 875;
+  // v40.9.1 PRO: True-DPI UI Scale — KHÔNG thu nhỏ chữ theo chiều cao cửa sổ (vì mọi tab đều cuộn dọc mượt),
+  // giữ nguyên 100% cỡ chữ sắc nét trên màn hình Laptop DPI 125%–150% (1024×640 DIP) và hỗ trợ tùy chỉnh cỡ chữ!
   let uiZoomTimer = null;
   const applyUiAutoZoom = () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     try {
-      const [cw, ch] = mainWindow.getContentSize();
-      const z = Math.max(0.5, Math.min(1, cw / UI_DESIGN_W, ch / UI_DESIGN_H));
-      const zr = Math.round(z * 1000) / 1000;
+      const [cw] = mainWindow.getContentSize();
+      const baseScale = Math.max(0.85, Math.min(1.35, Number(global.__bwUserUiScale) || 1.0));
+      const narrowGuard = cw > 0 && cw < 880 ? Math.max(0.82, cw / 880) : 1.0;
+      const zr = Math.round(baseScale * narrowGuard * 1000) / 1000;
       if (Math.abs(mainWindow.webContents.getZoomFactor() - zr) > 0.002) {
         mainWindow.webContents.setZoomFactor(zr);
       }
     } catch (_) {}
   };
+  global.__bwApplyUiZoom = applyUiAutoZoom;
   const scheduleUiAutoZoom = () => {
     if (uiZoomTimer) clearTimeout(uiZoomTimer);
     uiZoomTimer = setTimeout(applyUiAutoZoom, 16);
@@ -523,6 +538,9 @@ function createWindow() {
   const revealWindow = () => {
     if (shownOnce || !mainWindow || mainWindow.isDestroyed()) return;
     shownOnce = true;
+    if (!process.env.BW_CAPTURE_HOOK && (workW <= 1280 || workH <= 760)) {
+      try { mainWindow.maximize(); } catch (_) {}
+    }
     applyUiAutoZoom();
     mainWindow.show();
     ensureAppIconSyncedAndApplied();
@@ -636,6 +654,10 @@ ipcMain.handle('cfg:save', async (_e, cfg) => {
   try {
     if (typeof cfg?.hideLauncherOnPlay === 'boolean') {
       hideOnLaunchSetting = cfg.hideLauncherOnPlay;
+    }
+    if (Number.isFinite(Number(cfg?.uiScale)) && Number(cfg.uiScale) >= 0.85 && Number(cfg.uiScale) <= 1.35) {
+      global.__bwUserUiScale = Number(cfg.uiScale);
+      if (typeof global.__bwApplyUiZoom === 'function') global.__bwApplyUiZoom();
     }
     if (typeof cfg?.discordRpcEnabled === 'boolean' && cfg.discordRpcEnabled !== discordRpcEnabled) {
       discordRpcEnabled = cfg.discordRpcEnabled;
@@ -2435,6 +2457,17 @@ ipcMain.handle('optifine:handle-jar', async (_e, params = {}) => {
       return { ok: true, kind: 'installer-launched' };
     }
     return installOptifineJarSmart({ ...(params || {}), gameDir: resolvedGameDir });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('ui:set-scale', async (_e, scale = 1.0) => {
+  try {
+    const clamped = Math.max(0.85, Math.min(1.35, Number(scale) || 1.0));
+    global.__bwUserUiScale = clamped;
+    if (typeof global.__bwApplyUiZoom === 'function') global.__bwApplyUiZoom();
+    return { ok: true, scale: clamped };
   } catch (err) {
     return { ok: false, error: err.message };
   }

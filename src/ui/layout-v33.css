@@ -6970,3 +6970,471 @@ html[data-theme="sakura"] .mc-live-pill.playtime-pill {
 #btnPacksLoadMore.hidden {
   display: none !important;
 }
+
+
+/* ============================================================================
+   v40.9.1 PRO — TRUE-DPI READABILITY, CRISP CHECKBOXES & SETTINGS BENTO FIX
+   ============================================================================ */
+
+/* 1. Crisp Vietnamese badge (replaces broken Windows Segoe UI "VN" flag glyph) */
+.bw-vi-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  margin-right: 4px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fef08a;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  line-height: 1.35;
+  vertical-align: 1px;
+  box-shadow: 0 1px 4px rgba(220, 38, 38, 0.35);
+}
+
+/* 2. Custom High-Visibility Checkboxes Across Entire App & Modals */
+body input[type="checkbox"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  flex: 0 0 20px !important;
+  margin: 0 !important;
+  border-radius: 6px !important;
+  border: 2px solid var(--text-muted) !important;
+  background-color: var(--bg-card) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  display: inline-grid !important;
+  place-content: center !important;
+  vertical-align: middle !important;
+  transition: background-color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, transform 0.1s ease !important;
+}
+
+body input[type="checkbox"]::after {
+  content: "";
+  width: 6px;
+  height: 11px;
+  border: solid #ffffff;
+  border-width: 0 2.6px 2.6px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px) scale(0);
+  transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+body input[type="checkbox"]:hover {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow) !important;
+}
+
+body input[type="checkbox"]:checked {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 2px 8px var(--accent-glow) !important;
+}
+
+body input[type="checkbox"]:checked::after {
+  transform: rotate(45deg) translate(-0.5px, -1px) scale(1);
+}
+
+.settings-opt-item input[type="checkbox"] {
+  margin-top: 2px !important;
+}
+
+.home-controls-2col .booster-check-pill input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  flex: 0 0 18px !important;
+  border-radius: 5px !important;
+}
+
+.home-controls-2col .booster-check-pill input[type="checkbox"]::after {
+  width: 5px;
+  height: 9.5px;
+  border-width: 0 2.4px 2.4px 0;
+}
+
+.settings-opt-item.is-checked,
+.settings-opt-item:has(input[type="checkbox"]:checked) {
+  border-color: var(--accent-border, var(--accent)) !important;
+  background: linear-gradient(135deg, var(--accent-glow), var(--bg-input) 55%) !important;
+}
+
+.home-controls-2col .booster-check-pill.is-checked,
+.home-controls-2col .booster-check-pill:has(input[type="checkbox"]:checked) {
+  border-color: var(--accent-border, var(--accent)) !important;
+}
+
+/* 3. Titlebar Aa Font Scale Picker & Larger Topbar Controls */
+.titlebar .titlebar-update-btn {
+  height: 35px !important;
+  padding: 0 13px !important;
+  gap: 7px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.titlebar .titlebar-update-btn strong {
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+}
+
+.titlebar #globalSearchInput {
+  font-size: 13.5px !important;
+}
+
+.titlebar .titlebar-scale-wrap {
+  position: relative;
+}
+
+.titlebar .titlebar-aa-btn {
+  width: auto !important;
+  height: 36px !important;
+  padding: 0 10px !important;
+  gap: 5px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--border-col) !important;
+  background: var(--bg-input) !important;
+  color: var(--text-main) !important;
+}
+
+.titlebar .titlebar-aa-btn .aa-glyph {
+  font-size: 13.5px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+}
+
+.titlebar .titlebar-aa-btn small {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.titlebar .scale-popover {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: 256px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--bw-card-strong);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  z-index: 210;
+}
+
+.titlebar .scale-pop-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.titlebar .scale-pop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border-col);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.titlebar .scale-pop-btn strong {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.titlebar .scale-pop-btn span {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.titlebar .scale-pop-btn:hover {
+  border-color: var(--accent);
+}
+
+.titlebar .scale-pop-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.titlebar .scale-pop-btn.active span {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* 4. Global Readability Bump Across Sidebar, Home, Cards & Modals
+   (Prevents old @media (max-width: 1320px / 1100px) rules from shrinking text to 10-11px!) */
+.sidebar .sidebar-player-name {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+
+.sidebar .sidebar-auth-tag {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.sidebar .sidebar-nav .nav-item {
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  min-height: 40px !important;
+}
+
+/* On laptop heights (e.g. 1024×640 / 1366×768), hide promo card so all 9 nav items stay roomy */
+@media (max-height: 760px) {
+  .sidebar .sidebar-promo-card {
+    display: none !important;
+  }
+  .workspace > .sidebar {
+    padding: 10px 10px !important;
+    gap: 8px !important;
+  }
+  .sidebar .sidebar-nav {
+    gap: 3px !important;
+  }
+  .sidebar .sidebar-nav .nav-item {
+    min-height: 36px !important;
+    height: 36px !important;
+    font-size: 14px !important;
+  }
+}
+
+#heroBanner .banner-cta-btn {
+  height: 34px !important;
+  padding: 0 13px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+#tab-home .qa-card .qa-text strong {
+  font-size: 14.2px !important;
+}
+
+#tab-home .qa-card .qa-text span {
+  font-size: 12.2px !important;
+}
+
+#dockVersionTitle {
+  font-size: 16.5px !important;
+}
+
+#dockCoreSubtitle {
+  font-size: 13px !important;
+}
+
+.home-controls-2col .core-tab-btn strong {
+  font-size: 13.8px !important;
+}
+
+.home-controls-2col .core-tab-btn > span:not(.core-check-dot) {
+  display: block !important;
+  font-size: 11.8px !important;
+  line-height: 1.25 !important;
+}
+
+.home-controls-2col .booster-check-pill {
+  height: 34px !important;
+  padding: 0 10px !important;
+  gap: 8px !important;
+  font-size: 12.6px !important;
+  font-weight: 700 !important;
+}
+
+.home-controls-2col .booster-check-pill span {
+  font-size: 12.6px !important;
+}
+
+.subpage-title-block h2 {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+}
+
+.subpage-title-block p {
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+}
+
+.main-stage .tab-panel .dsp-head h3 {
+  font-size: 16.5px !important;
+  font-weight: 800 !important;
+}
+
+.app-shell .field-label {
+  font-size: 13px !important;
+}
+
+.app-shell .btn-sync-skin,
+.app-shell .vtype-btn,
+.app-shell .mtype-btn {
+  font-size: 13px !important;
+}
+
+.mod-info h4,
+.pack-card-title,
+.pir-title {
+  font-size: 15px !important;
+}
+
+.mod-desc,
+.pack-card-desc,
+.pir-meta {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+/* 5. #tab-settings Structural Fix (Zero Empty Gaps + Full-Width 2-Col Checkboxes) */
+#tab-settings .settings-bento-4 {
+  max-width: 100% !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  gap: 14px !important;
+}
+
+.settings-card-unit {
+  justify-content: flex-start !important;
+  height: auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  gap: 12px !important;
+  padding: 18px 20px !important;
+}
+
+#tab-settings .settings-card-wide {
+  grid-column: 1 / -1 !important;
+}
+
+#tab-settings .settings-info-pills,
+#tab-settings .settings-subfolder-grid,
+#tab-settings .settings-utility-bar {
+  margin-top: 2px !important;
+}
+
+#tab-settings .settings-info-pills {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 7px !important;
+}
+
+#tab-settings .settings-card-desc {
+  font-size: 13.6px !important;
+  line-height: 1.45 !important;
+}
+
+#tab-settings .sip-item {
+  min-width: 0 !important;
+  flex-wrap: wrap !important;
+  font-size: 12.8px !important;
+  padding: 8px 12px !important;
+}
+
+#tab-settings .sip-item strong {
+  white-space: normal !important;
+}
+
+#tab-settings .settings-subfolder-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+#tab-settings .settings-subfolder-grid .vtype-btn {
+  min-width: 0 !important;
+  height: 36px !important;
+  padding: 0 10px !important;
+  font-size: 12.8px !important;
+}
+
+#ramPresetBar {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto !important;
+}
+
+#ramPresetBar .ram-pill-btn,
+#ramPresetBar .ram-auto-btn {
+  min-width: 0 !important;
+  padding: 0 9px !important;
+  font-size: 12.8px !important;
+  white-space: nowrap !important;
+}
+
+#tab-settings .res-pill-btn {
+  height: 36px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+}
+
+#tab-settings .settings-utility-bar {
+  flex-wrap: wrap !important;
+  padding: 12px 14px !important;
+  gap: 12px !important;
+}
+
+#tab-settings .sub-bar-label {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+  white-space: nowrap !important;
+}
+
+#tab-settings .ui-scale-bar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 7px !important;
+  flex: 1 1 auto !important;
+}
+
+#tab-settings .ts-chip {
+  font-size: 13.5px !important;
+  padding: 6px 12px !important;
+}
+
+#tab-settings .settings-opt-head-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+#tab-settings .settings-opt-list {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+}
+
+#tab-settings .settings-opt-item {
+  padding: 12px 14px !important;
+  gap: 12px !important;
+  border-radius: 11px !important;
+  align-items: flex-start !important;
+}
+
+#tab-settings .settings-opt-item:last-child:nth-child(odd) {
+  grid-column: 1 / -1 !important;
+}
+
+#tab-settings .soi-body strong {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+#tab-settings .soi-body span {
+  font-size: 12.8px !important;
+  line-height: 1.44 !important;
+}
+
+@media (max-width: 920px) {
+  #tab-settings .settings-bento-4,
+  #tab-settings .settings-opt-list {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}

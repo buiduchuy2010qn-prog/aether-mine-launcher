@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v40.9.0 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v40.9.1 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,15 +23,36 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v40.9.0</strong>
+          <strong id="titlebarUpdateVer">v40.9.1</strong>
         </button>
       </div>
 
       <div class="titlebar-right-zone">
         <!-- Global Search Pill -->
         <div class="titlebar-search-pill">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="globalSearchInput" placeholder="Tìm kiếm..." title="Nhập tên Mod, Phiên bản hoặc Thế giới rồi nhấn Enter" />
+        </div>
+
+        <!-- Quick Font Size / UI Scale Picker -->
+        <div class="titlebar-scale-wrap">
+          <button class="titlebar-notif-btn titlebar-aa-btn" id="btnFontScalePicker" title="Chỉnh cỡ chữ & tỉ lệ hiển thị giao diện (Ctrl + / Ctrl - / Ctrl 0)">
+            <span class="aa-glyph">Aa</span>
+            <small id="topScaleBadge">100%</small>
+          </button>
+          <div class="scale-popover hidden" id="fontScalePopover">
+            <div class="notif-pop-head">
+              <strong>🔎 Cỡ chữ giao diện</strong>
+              <span class="theme-pop-hint">Ctrl ± / 0</span>
+            </div>
+            <div class="scale-pop-grid">
+              <button class="scale-pop-btn" data-uiscale="0.9"><strong>90%</strong><span>Nhỏ gọn</span></button>
+              <button class="scale-pop-btn active" data-uiscale="1"><strong>100%</strong><span>Chuẩn sắc nét</span></button>
+              <button class="scale-pop-btn" data-uiscale="1.08"><strong>108%</strong><span>Dễ đọc</span></button>
+              <button class="scale-pop-btn" data-uiscale="1.15"><strong>115%</strong><span>Chữ lớn</span></button>
+              <button class="scale-pop-btn" data-uiscale="1.25"><strong>125%</strong><span>Rất lớn</span></button>
+            </div>
+          </div>
         </div>
 
         <!-- Quick Theme Picker -->
@@ -1054,7 +1075,7 @@
               <button class="btn-sync-skin" id="btnQuickInstallOneBlock" title="Tạo ngay gói Một Ô Đất OneBlock chuẩn (Sinh tồn trên 1 khối đất tự tái tạo)">🧱 Tạo OneBlock (1-Click)</button>
               <button class="btn-sync-skin" id="btnPacksImportFile" title="Nhập .mrpack, CurseForge .zip, Prism/MultiMC .zip, Technic .zip, Map .zip, Datapack .zip">📥 Nhập file pack</button>
               <button class="btn-sync-skin" id="btnPacksImportUrl">🔗 Nhập từ link</button>
-              <button class="btn-sync-skin is-ok" id="btnPacksToggleVi" title="Tự động dịch mô tả Modpack sang Tiếng Việt dễ hiểu">🇻🇳 Mô tả: Tiếng Việt</button>
+              <button class="btn-sync-skin is-ok" id="btnPacksToggleVi" title="Tự động dịch mô tả Modpack sang Tiếng Việt dễ hiểu">🌐 Mô tả: Tiếng Việt</button>
               <button class="btn-sync-skin" id="btnPacksCfKey">🔑 CurseForge: <span id="packsCfKeyState">…</span></button>
               <button class="btn-sync-skin" id="btnPacksOpenRoot">📂 Thư mục gói</button>
             </div>
@@ -1282,7 +1303,7 @@
             <div class="srv-toolbar-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
               <div class="srv-category-bar" id="serverCategoryBar" style="margin-bottom:0;">
                 <button class="vtype-btn active" data-srvcat="all">Tất cả</button>
-                <button class="vtype-btn" data-srvcat="vn">🇻🇳 Server Việt Nam</button>
+                <button class="vtype-btn" data-srvcat="vn">⭐ Server Việt Nam</button>
                 <button class="vtype-btn" data-srvcat="crack">🔓 Quốc Tế (Crack)</button>
                 <button class="vtype-btn" data-srvcat="premium">👑 Bản Quyền</button>
               </div>
@@ -1609,7 +1630,7 @@
               </div>
             </div>
             <div class="console-terminal" id="consoleOutput">
-              <div class="log-entry info">[BlockWay Launcher v40.9.0 PRO] Sẵn sàng khởi chạy.</div>
+              <div class="log-entry info">[BlockWay Launcher v40.9.1 PRO] Sẵn sàng khởi chạy.</div>
             </div>
           </div>
         </section>
@@ -1620,8 +1641,8 @@
         <section class="tab-panel" id="tab-settings">
           <div class="subtab-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
             <div class="subpage-title-block">
-              <h2>⚙️ Cài Đặt Hệ Thống, Java, Hiển Thị &amp; Giao Diện</h2>
-              <p>Quản lý môi trường Java Runtime, thư mục lưu trữ dữ liệu game, độ phân giải cửa sổ, tham số JVM và kiểm tra cập nhật.</p>
+              <h2>⚙️ Cài Đặt Hệ Thống, Cỡ Chữ, Hiển Thị &amp; Tối Ưu</h2>
+              <p>Quản lý Java Runtime, thư mục <code>.minecraft</code>, cỡ chữ hiển thị giao diện, chủ đề màu sắc và các tuỳ chọn tối ưu thông minh.</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <button class="btn-sync-skin" id="btnOpenOfficialWebsite" title="Mở trang web quảng bá chính thức của BlockWay Launcher">
@@ -1631,7 +1652,7 @@
                 📦 GitHub Repo
               </button>
               <button class="btn-sync-skin" id="btnCheckUpdate">
-                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.9.0</span>)
+                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.9.1</span>)
               </button>
             </div>
           </div>
@@ -1673,18 +1694,27 @@
                 <button class="btn-sync-skin" id="btnCopyGameDir">📋 Sao chép</button>
                 <button class="btn-sync-skin" id="btnOpenGameDirSettings">📂 Mở Thư Mục</button>
               </div>
+              <div class="settings-subfolder-grid">
+                <button class="vtype-btn" data-opensub="mods">🧩 Mở Mods</button>
+                <button class="vtype-btn" data-opensub="shaderpacks">✨ Mở Shaders</button>
+                <button class="vtype-btn" data-opensub="resourcepacks">🎨 Mở Pack</button>
+                <button class="vtype-btn" data-opensub="saves">🌍 Mở Saves</button>
+              </div>
             </div>
 
-            <!-- THẺ 3: HIỂN THỊ CỬA SỔ GAME & CHỦ ĐỀ GIAO DIỆN -->
-            <div class="bento-card settings-card-unit">
+            <!-- THẺ 3: HIỂN THỊ CỬA SỔ GAME, CỠ CHỮ & CHỦ ĐỀ GIAO DIỆN -->
+            <div class="bento-card settings-card-unit settings-card-wide">
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot emerald"></span>
-                  <h3>Cửa sổ game &amp; màu giao diện</h3>
+                  <h3>Cửa sổ game, cỡ chữ &amp; màu giao diện</h3>
                 </div>
-                <span class="installed-count-tag" id="settingsResBadge">1280×720 (HD)</span>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span class="installed-count-tag" id="settingsUiScaleBadge">Cỡ chữ: 100%</span>
+                  <span class="installed-count-tag" id="settingsResBadge">1280×720 (HD)</span>
+                </div>
               </div>
-              <p class="settings-card-desc">Chọn kích thước cửa sổ mặc định khi mở Minecraft và bảng màu giao diện Launcher.</p>
+              <p class="settings-card-desc">Chọn kích thước cửa sổ khi mở Minecraft, chỉnh cỡ chữ dễ đọc cho màn hình của bạn và đổi bảng màu giao diện.</p>
               <div class="res-preset-bar" id="winResolutionBar">
                 <button class="res-pill-btn" data-res="854x480">854×480 (Nhẹ)</button>
                 <button class="res-pill-btn active" data-res="1280x720">1280×720 (HD)</button>
@@ -1692,8 +1722,18 @@
                 <button class="res-pill-btn" data-res="1920x1080">1920×1080 (FHD)</button>
                 <button class="res-pill-btn" data-res="fullscreen">Toàn Màn Hình</button>
               </div>
-              <div class="settings-utility-bar" style="margin-top:10px;">
-                <span style="font-size:12px;color:var(--text-muted);">Chủ đề màu sắc:</span>
+              <div class="settings-utility-bar settings-scale-bar">
+                <span class="sub-bar-label">🔎 Cỡ chữ giao diện:</span>
+                <div class="ui-scale-bar" id="uiScaleBar">
+                  <button class="res-pill-btn" data-uiscale="0.9">90% (Nhỏ gọn)</button>
+                  <button class="res-pill-btn active" data-uiscale="1">100% (Chuẩn sắc nét)</button>
+                  <button class="res-pill-btn" data-uiscale="1.08">108% (Dễ đọc)</button>
+                  <button class="res-pill-btn" data-uiscale="1.15">115% (Chữ lớn)</button>
+                  <button class="res-pill-btn" data-uiscale="1.25">125% (Rất lớn)</button>
+                </div>
+              </div>
+              <div class="settings-utility-bar">
+                <span class="sub-bar-label">🎨 Chủ đề màu sắc:</span>
                 <div class="theme-studio-bar">
                   <button class="ts-chip active" data-theme-pick="lunar"><span class="ts-dot" style="background:linear-gradient(135deg,#151922 45%,#3b82f6 45%);"></span>BlockWay Dark</button>
                   <button class="ts-chip" data-theme-pick="mojang"><span class="ts-dot" style="background:linear-gradient(135deg,#1c1f26 45%,#22c55e 45%);"></span>Mojang</button>
@@ -1707,13 +1747,16 @@
             </div>
 
             <!-- THẺ 4: TỐI ƯU HIỆU NĂNG & ĐA NHÂN JVM -->
-            <div class="bento-card settings-card-unit">
+            <div class="bento-card settings-card-unit settings-card-wide settings-card-opts">
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot cyan"></span>
                   <h3>Tối ưu hiệu năng &amp; tiện ích thông minh</h3>
                 </div>
-                <span class="installed-count-tag">Khuyên bật tất cả</span>
+                <div class="settings-opt-head-actions">
+                  <span class="installed-count-tag" id="settingsCheckedCountBadge">10/11 đang bật</span>
+                  <button class="vtype-btn" id="btnSettingsCheckRecommended" title="Bật bộ tuỳ chọn Mượt Êm khuyên dùng (không ép máy)">✨ Bật bộ khuyên dùng</button>
+                </div>
               </div>
               <div class="settings-opt-list">
                 <label class="settings-opt-item">
@@ -1761,7 +1804,7 @@
                 <label class="settings-opt-item">
                   <input type="checkbox" id="autoCreateFirstWorldCheck" checked />
                   <div class="soi-body">
-                    <strong>Tự tạo thế giới & vào thẳng khi chơi gói Modpack lần đầu (MC 1.20+)</strong>
+                    <strong>Tự tạo thế giới &amp; vào thẳng khi chơi gói Modpack lần đầu (MC 1.20+)</strong>
                     <span>Gói chưa có thế giới nào thì bấm ▶ Chơi là game tự có sẵn thế giới đúng kiểu của gói (VD: Đảo OneBlock giữa khoảng không) và vào thẳng, không cần qua Menu.</span>
                   </div>
                 </label>
@@ -1775,7 +1818,7 @@
                 <label class="settings-opt-item">
                   <input type="checkbox" id="autoViLangCheck" checked />
                   <div class="soi-body">
-                    <strong>🇻🇳 Tự động chuyển ngôn ngữ trong Minecraft sang Tiếng Việt (<code>vi_vn</code>)</strong>
+                    <strong><span class="bw-vi-badge">VI</span> Tự động chuyển ngôn ngữ trong Minecraft sang Tiếng Việt (<code>vi_vn</code>)</strong>
                     <span>Tự thiết lập sẵn Tiếng Việt trong <code>options.txt</code> trước khi mở game để menu và vật phẩm hiển thị Tiếng Việt ngay lần đầu.</span>
                   </div>
                 </label>
@@ -1789,8 +1832,8 @@
                 <label class="settings-opt-item">
                   <input type="checkbox" id="potatoGraphicsCheck" />
                   <div class="soi-body">
-                    <strong>🚀 Chế độ Đồ họa Siêu Mượt cho Máy Yếu (Tối ưu <code>options.txt</code>)</strong>
-                    <span>Tự tắt VSync gây trễ chuột, tắt bóng thực thể dư thừa, hạ khoảng cách mô phỏng (Simulation 5) và mở trần 120 FPS cho máy yếu.</span>
+                    <strong>🚀 Chế độ Đồ họa Siêu Mượt cho Máy Yếu (Bung trần 120 FPS)</strong>
+                    <span>Dành cho máy rất yếu muốn mở trần 120 FPS: tự tắt VSync, tắt bóng thực thể và hạ Simulation 5 (tự chuyển từ chế độ Khóa FPS Mượt Êm).</span>
                   </div>
                 </label>
               </div>

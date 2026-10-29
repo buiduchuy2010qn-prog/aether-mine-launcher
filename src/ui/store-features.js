@@ -1508,7 +1508,7 @@ function renderFavoriteServers() {
   document.querySelectorAll('#serverCategoryBar [data-srvcat]').forEach((btn) => {
     const c = btn.dataset.srvcat;
     if (c === 'all') btn.textContent = `Tất cả (${catCounts.all})`;
-    else if (c === 'vn') btn.textContent = `🇻🇳 Việt Nam (${catCounts.vn})`;
+    else if (c === 'vn') btn.textContent = `⭐ Việt Nam (${catCounts.vn})`;
     else if (c === 'crack') btn.textContent = `🔓 Quốc Tế Crack (${catCounts.crack})`;
     else if (c === 'premium') btn.textContent = `👑 Bản Quyền (${catCounts.premium})`;
   });
@@ -1544,7 +1544,7 @@ function renderFavoriteServers() {
       : `<div class="srv-icon-img srv-icon-fallback">🌐</div>`;
     const catBadge = srv.cat === 'premium'
       ? '<span class="srv-cat-pill premium">👑 Bản quyền</span>'
-      : (srv.cat === 'crack' ? '<span class="srv-cat-pill crack">🔓 Crack Quốc Tế</span>' : '<span class="srv-cat-pill vn">🇻🇳 Việt Nam</span>');
+      : (srv.cat === 'crack' ? '<span class="srv-cat-pill crack">🔓 Crack Quốc Tế</span>' : '<span class="srv-cat-pill vn">⭐ Việt Nam</span>');
     const safeSrvName = escapeHtml(srv.name);
     const safeSrvIp = escapeHtml(srv.ip);
     const verNote = pingInfo?.online ? serverVersionMismatchNote(pingInfo.version, state.selectedVersion) : '';
@@ -2584,7 +2584,7 @@ async function openPackDetail(item) {
         </div>
         <div class="pack-desc-toolbar">
           <strong>📝 Mô tả chi tiết gói</strong>
-          <button class="vtype-btn ${packHub.viEnabled ? 'active' : ''}" id="btnPackModalToggleVi">${packHub.viEnabled ? '🇻🇳 Đang dịch Tiếng Việt' : '🌐 Bản gốc (Tiếng Anh)'}</button>
+          <button class="vtype-btn ${packHub.viEnabled ? 'active' : ''}" id="btnPackModalToggleVi">${packHub.viEnabled ? '🌐 Đang dịch Tiếng Việt' : '🌐 Bản gốc (Tiếng Anh)'}</button>
         </div>
         <div class="pack-desc" id="packModalDescText">${packDescToSafeHtml(res.description || item.summary, res.descriptionIsHtml)}</div>
         ${gallery.length ? `<div class="pack-gallery">${gallery.map((g) => `<img src="${escapeHtml(g)}" alt="" loading="lazy" draggable="false" />`).join('')}</div>` : ''}
@@ -2612,13 +2612,13 @@ async function openPackDetail(item) {
       descEl.innerHTML = escapeHtml(rawPlainDesc).replace(/\n/g, '<br>');
       if (btnModalVi) {
         btnModalVi.classList.remove('active');
-        btnModalVi.textContent = '🌐 Bản gốc (Bấm để dịch 🇻🇳)';
+        btnModalVi.textContent = '🌐 Bản gốc (Bấm dịch Tiếng Việt)';
       }
       return;
     }
     if (btnModalVi) {
       btnModalVi.classList.add('active');
-      btnModalVi.textContent = '🇻🇳 Đang dịch Tiếng Việt...';
+      btnModalVi.textContent = '⏳ Đang dịch Tiếng Việt...';
     }
     if (!cachedViDesc && window.aetherAPI?.translateToVi && rawPlainDesc) {
       try {
@@ -2630,7 +2630,7 @@ async function openPackDetail(item) {
       descEl.innerHTML = escapeHtml(cachedViDesc).replace(/\n/g, '<br>');
     }
     if (btnModalVi && showingViModal) {
-      btnModalVi.textContent = '🇻🇳 Tiếng Việt (Bấm xem bản gốc)';
+      btnModalVi.textContent = '✓ Tiếng Việt (Bấm xem bản gốc)';
     }
   };
   if (btnModalVi) {
@@ -3320,7 +3320,7 @@ function initPackHubUI() {
     btnVi.onclick = () => {
       packHub.viEnabled = !packHub.viEnabled;
       btnVi.classList.toggle('active', packHub.viEnabled);
-      btnVi.textContent = packHub.viEnabled ? '🇻🇳 Mô tả: Tiếng Việt' : '🌐 Mô tả: Bản gốc';
+      btnVi.textContent = packHub.viEnabled ? '🌐 Mô tả: Tiếng Việt' : '🌐 Mô tả: Bản gốc';
       packRenderCards(packHub.items, false);
     };
   }

@@ -53,10 +53,10 @@ jobs:
           name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place"
           body: |
             ### 📦 BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place
+            - **🔎 Hiển Thị Sắc Nét Chuẩn Màn Hình Laptop & Nút `Aa` Chỉnh Cỡ Chữ (90%–125%):** Khắc phục triệt để lỗi tự thu nhỏ giao diện trên màn hình Laptop DPI 125%–150%, làm mới bố cục tab Cài Đặt không còn khoảng trống thừa, nâng cấp toàn bộ ô tích (Checkbox) to rõ sắc nét kèm phím tắt `Ctrl ± / 0`.
             - **📦 Đóng Gói & Gửi Bộ Mod Cho Bạn Bè 2.0:** Nút **📦 Đóng gói gửi bạn** rõ ràng tại tab Mod & Pack và trên từng Modpack đã cài; tùy chọn đóng gói Mod, Shader & Resource Pack, Config tinh chỉnh, Phím tắt (mặc định tắt `servers.dat` để giữ riêng tư IP máy chủ), tự mở thư mục chứa tệp `.mrpack` để kéo gửi thẳng qua Zalo / Discord.
             - **🔆 Bộ Chuẩn OptiFine Đời Mới 1-Click & Trợ Lý `OptiFine.jar`:** Trang bị 1-Click trọn bộ tính năng OptiFine (Tăng FPS êm máy, Shader, phím Zoom mượt, Đuốc phát sáng, Kính nối liền, hỗ trợ Fresh Animations EMF+ETF) trên Fabric / Quilt / NeoForge / Forge; kéo-thả tệp `OptiFine_*.jar` tự nhận diện bản MC và tự cất gọn Mod xung đột trên Forge hoặc mở trình cài Java gốc.
-            - **📚 Kho Modpack Thông Minh 2.0:** Xếp hạng thông minh ưu tiên gói `1.20.x` / `1.21+` phổ biến lên hàng đầu, thêm bộ lọc sắp xếp (Đề xuất, Lượt tải, Bản MC mới nhất, Mới cập nhật), dịch mô tả Tiếng Việt theo lô mượt mà và nút Xem thêm gói phân trang chuẩn từng nguồn.
-            - **🍃 Giữ trọn bộ tính năng v40.8 PRO:** Chế độ Mượt Êm không ép máy, Servers 2.0 ping thật & vào thẳng 1-Click, Kéo-thả cài mọi thứ, Tủ đồ Skin & Áo choàng riêng, Chia sẻ log lỗi 1-Click.
+            - **📚 Kho Modpack Thông Minh 2.0 & 🍃 Mượt Êm Không Ép Máy:** Ưu tiên gói `1.20.x` / `1.21+` phổ biến, dịch Tiếng Việt mượt mà, khóa FPS êm máy theo màn hình, Servers 2.0 ping thật & vào thẳng 1-Click.
           files: |
             dist/*.exe
         env:
