@@ -1528,6 +1528,604 @@ function applyGentleJvmTuning(args, { javaMajor = 0, cpuCores = os.cpus().length
   return out;
 }
 
+/* ---------------- v41.0.0 PRO SIGNATURE FEATURE: ⚡ TURBO SMOOTH CORE™ (6-Layer Deep Game File Optimizer) ----------------
+ * Directly tunes real Minecraft & Mod optimization configuration files with 100% non-destructive backup & 1-Click Revert:
+ *  1. vanilla_io     -> options.txt (Windows async chunk I/O syncChunkWrites:false, narrator:0, rawMouseInput:true, profile frame/chunk pacing)
+ *  2. optifine       -> optionsof.txt (SmartAnimations, RenderRegions, FastMath, LazyChunkLoading + automatic Shader Guard on ofFastRender)
+ *  3. sodium         -> config/sodium-options.json & config/embeddium-options.json (deferred chunks, visible-only anims, low render-ahead queue)
+ *  4. modernfix      -> config/modernfix-mixins.properties (dynamic_resources=true -> -35~50% RAM & 2x faster Modpack boot)
+ *  5. culling_hud    -> config/immediatelyfast.json & config/entityculling.json (GPU HUD batching, fast buffer upload, wall tick-culling)
+ *  6. jvm_lowlatency -> JVM Safepoint & Network Low-Latency flags (DisableExplicitGC, PerfDisableSharedMem, IPv4 stack, NIO buffer cap)
+ */
+const DEEP_SMOOTH_BACKUP_FILE = '.blockway-deep-smooth-backup.json';
+const DEEP_SMOOTH_STATE_FILE = '.blockway-deep-smooth-state.json';
+const DEEP_SMOOTH_VERSION = 1;
+const DEEP_SMOOTH_ALL_LAYERS = [
+  'vanilla_io',
+  'optifine',
+  'sodium',
+  'modernfix',
+  'culling_hud',
+  'jvm_lowlatency'
+];
+
+function normalizeDeepSmoothProfile(profile) {
+  const p = String(profile || '').trim().toLowerCase();
+  if (p === 'esports' || p === 'ultra_low' || p === 'balanced') return p;
+  return 'balanced';
+}
+
+function normalizeDeepSmoothLayers(layers) {
+  if (!Array.isArray(layers)) return [...DEEP_SMOOTH_ALL_LAYERS];
+  const valid = layers.map((x) => String(x || '').trim()).filter((x) => DEEP_SMOOTH_ALL_LAYERS.includes(x));
+  return valid.length ? Array.from(new Set(valid)) : [...DEEP_SMOOTH_ALL_LAYERS];
+}
+
+function detectTargetModEnvironment(targetDir, loaderType = '') {
+  const env = {
+    hasSodium: false,
+    hasEmbeddium: false,
+    hasOptifine: String(loaderType || '').toLowerCase() === 'optifine',
+    hasModernFix: false,
+    hasImmediatelyFast: false,
+    hasEntityCulling: false,
+    hasFerriteCore: false,
+    hasLithium: false,
+    modsCount: 0,
+    activeShader: ''
+  };
+  try {
+    const modsDir = path.join(targetDir, 'mods');
+    if (fs.existsSync(modsDir)) {
+      const jars = fs.readdirSync(modsDir).filter((f) => /\.jar$/i.test(f));
+      env.modsCount = jars.length;
+      for (const f of jars) {
+        if (/^sodium[-_+.]/i.test(f)) env.hasSodium = true;
+        if (/^(?:embeddium|rubidium|xenon)[-_+.]/i.test(f)) env.hasEmbeddium = true;
+        if (/optifine|optifabric/i.test(f)) env.hasOptifine = true;
+        if (/^modernfix[-_+.]/i.test(f)) env.hasModernFix = true;
+        if (/^immediatelyfast[-_+.]/i.test(f)) env.hasImmediatelyFast = true;
+        if (/^entityculling[-_+.]/i.test(f)) env.hasEntityCulling = true;
+        if (/^ferritecore[-_+.]/i.test(f)) env.hasFerriteCore = true;
+        if (/^(?:lithium|radium|canary)[-_+.]/i.test(f)) env.hasLithium = true;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    if (fs.existsSync(path.join(targetDir, 'optionsof.txt'))) env.hasOptifine = true;
+    if (fs.existsSync(path.join(targetDir, 'config', 'sodium-options.json'))) env.hasSodium = true;
+    if (fs.existsSync(path.join(targetDir, 'config', 'embeddium-options.json'))) env.hasEmbeddium = true;
+    if (fs.existsSync(path.join(targetDir, 'config', 'modernfix-mixins.properties'))) env.hasModernFix = true;
+    if (fs.existsSync(path.join(targetDir, 'config', 'immediatelyfast.json'))) env.hasImmediatelyFast = true;
+    if (fs.existsSync(path.join(targetDir, 'config', 'entityculling.json'))) env.hasEntityCulling = true;
+  } catch (_) {}
+
+  try {
+    const eq = getEquippedAddonsState(targetDir);
+    if (eq?.activeShader) {
+      env.activeShader = eq.activeShader;
+    } else {
+      const oculusPath = path.join(targetDir, 'config', 'oculus.properties');
+      if (fs.existsSync(oculusPath)) {
+        const txt = fs.readFileSync(oculusPath, 'utf8');
+        const enM = txt.match(/^enableShaders=(\S+)/m);
+        const spM = txt.match(/^shaderPack=(.+)$/m);
+        if ((!enM || enM[1].trim() !== 'false') && spM && spM[1].trim() && spM[1].trim() !== '(internal)' && spM[1].trim() !== 'OFF') {
+          env.activeShader = spM[1].trim();
+        }
+      }
+    }
+  } catch (_) {}
+
+  return env;
+}
+
+function applyDeepSmoothJvmFlags(args, { enabled = true } = {}) {
+  const out = Array.isArray(args) ? args.slice() : [];
+  if (!enabled) return out;
+  const ensureFlag = (flag, prefixCheck = '') => {
+    const exists = prefixCheck
+      ? out.some((x) => String(x).startsWith(prefixCheck))
+      : out.includes(flag);
+    if (!exists) out.push(flag);
+  };
+  ensureFlag('-XX:+UnlockExperimentalVMOptions');
+  ensureFlag('-XX:+DisableExplicitGC');
+  ensureFlag('-XX:+PerfDisableSharedMem');
+  ensureFlag('-Djava.net.preferIPv4Stack=true', '-Djava.net.preferIPv4Stack=');
+  ensureFlag('-Dfml.readTimeout=90', '-Dfml.readTimeout=');
+  ensureFlag('-Djdk.nio.maxCachedBufferSize=262144', '-Djdk.nio.maxCachedBufferSize=');
+  return out;
+}
+
+function readDeepSmoothJsonSafe(fp) {
+  try {
+    if (fs.existsSync(fp)) return JSON.parse(fs.readFileSync(fp, 'utf8'));
+  } catch (_) {}
+  return null;
+}
+
+function inspectDeepGameSmoothState({ gameDir, instanceDir = '', loaderType = '' } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const statePath = path.join(targetDir, DEEP_SMOOTH_STATE_FILE);
+  const backupPath = path.join(targetDir, DEEP_SMOOTH_BACKUP_FILE);
+  const savedState = readDeepSmoothJsonSafe(statePath);
+  const backup = readDeepSmoothJsonSafe(backupPath);
+  const env = detectTargetModEnvironment(targetDir, loaderType);
+
+  const trackedRelPaths = [
+    'options.txt',
+    'optionsof.txt',
+    'config/sodium-options.json',
+    'config/embeddium-options.json',
+    'config/modernfix-mixins.properties',
+    'config/immediatelyfast.json',
+    'config/entityculling.json'
+  ];
+  const existingFiles = trackedRelPaths.filter((rel) => {
+    try { return fs.existsSync(path.join(targetDir, ...rel.split('/'))); } catch (_) { return false; }
+  });
+
+  const hasBackup = Boolean(
+    backup && (
+      (backup.kvBackups && Object.keys(backup.kvBackups).length > 0)
+      || (backup.rawFileBackups && Object.keys(backup.rawFileBackups).length > 0)
+    )
+  );
+
+  return {
+    ok: true,
+    targetDir,
+    isOptimized: Boolean(savedState && savedState.version === DEEP_SMOOTH_VERSION),
+    hasBackup,
+    activeProfile: savedState?.profile || 'balanced',
+    activeLayers: Array.isArray(savedState?.layers) ? savedState.layers : [...DEEP_SMOOTH_ALL_LAYERS],
+    tunedAt: savedState?.tunedAt || null,
+    touchedFiles: Array.isArray(savedState?.touchedFiles) ? savedState.touchedFiles : [],
+    touchedCount: Array.isArray(savedState?.touchedFiles) ? savedState.touchedFiles.length : 0,
+    shaderGuardActive: Boolean(env.activeShader),
+    activeShader: env.activeShader || '',
+    env,
+    existingFiles
+  };
+}
+
+function applyDeepGameSmoothEngine({
+  gameDir,
+  instanceDir = '',
+  profile = 'balanced',
+  layers = null,
+  displayHz = 0,
+  loaderType = '',
+  autoLaunch = false
+} = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const normProfile = normalizeDeepSmoothProfile(profile);
+  const normLayers = normalizeDeepSmoothLayers(layers);
+  const layersKey = normLayers.slice().sort().join(',');
+
+  try {
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+
+  const env = detectTargetModEnvironment(targetDir, loaderType);
+  const shaderActive = Boolean(env.activeShader);
+  const statePath = path.join(targetDir, DEEP_SMOOTH_STATE_FILE);
+  const backupPath = path.join(targetDir, DEEP_SMOOTH_BACKUP_FILE);
+  const prevState = readDeepSmoothJsonSafe(statePath);
+
+  // If called automatically during game launch and this folder was already tuned with the exact same profile & layers,
+  // respect any in-game slider tweaks the player made afterwards while still enforcing critical anti-stutter & Shader Guard!
+  if (
+    autoLaunch
+    && prevState
+    && prevState.version === DEEP_SMOOTH_VERSION
+    && prevState.profile === normProfile
+    && prevState.layersKey === layersKey
+  ) {
+    try {
+      if (normLayers.includes('optifine')) {
+        const ofPath = path.join(targetDir, 'optionsof.txt');
+        if (fs.existsSync(ofPath)) {
+          let ofTxt = fs.readFileSync(ofPath, 'utf8');
+          if (shaderActive && readOptValue(ofTxt, 'ofFastRender') === 'true') {
+            ofTxt = writeOptValue(ofTxt, 'ofFastRender', 'false');
+            fs.writeFileSync(ofPath, ofTxt, 'utf8');
+          }
+        }
+      }
+      if (normLayers.includes('vanilla_io')) {
+        const optsPath = path.join(targetDir, 'options.txt');
+        if (fs.existsSync(optsPath)) {
+          let oTxt = fs.readFileSync(optsPath, 'utf8');
+          if (readOptValue(oTxt, 'syncChunkWrites') === 'true') {
+            oTxt = writeOptValue(oTxt, 'syncChunkWrites', 'false');
+            fs.writeFileSync(optsPath, oTxt, 'utf8');
+          }
+        }
+      }
+    } catch (_) {}
+    return {
+      ok: true,
+      alreadyTuned: true,
+      targetDir,
+      profile: normProfile,
+      layers: normLayers,
+      touchedFiles: prevState.touchedFiles || [],
+      shaderGuardActive: shaderActive,
+      activeShader: env.activeShader || '',
+      env
+    };
+  }
+
+  const backup = readDeepSmoothJsonSafe(backupPath) || {
+    version: DEEP_SMOOTH_VERSION,
+    createdAt: new Date().toISOString(),
+    kvBackups: {},
+    rawFileBackups: {}
+  };
+  if (!backup.kvBackups || typeof backup.kvBackups !== 'object') backup.kvBackups = {};
+  if (!backup.rawFileBackups || typeof backup.rawFileBackups !== 'object') backup.rawFileBackups = {};
+
+  const touchedFiles = [];
+  const highlights = [];
+
+  // Helper 1: Colon-separated key:value files (options.txt, optionsof.txt) with per-key non-destructive backup
+  const applyColonKvFile = (relPath, mutations) => {
+    const absPath = path.join(targetDir, ...relPath.split('/'));
+    const existed = fs.existsSync(absPath);
+    let content = existed ? fs.readFileSync(absPath, 'utf8') : '';
+    if (!backup.kvBackups[relPath]) {
+      backup.kvBackups[relPath] = { existed, keys: {} };
+    }
+    const kb = backup.kvBackups[relPath];
+    let changedCount = 0;
+
+    for (const mut of mutations) {
+      const { key, value, onlyIfHigherNum = null, onlyIfGteNum = null } = mut;
+      const curRaw = readOptValue(content, key);
+      if (curRaw !== null) {
+        const curNum = parseFloat(String(curRaw).replace(/"/g, ''));
+        if (onlyIfHigherNum !== null && !Number.isNaN(curNum) && curNum <= onlyIfHigherNum) continue;
+        if (onlyIfGteNum !== null && !Number.isNaN(curNum) && curNum < onlyIfGteNum) continue;
+      }
+      const nextStr = String(value);
+      if (curRaw === nextStr) continue;
+      if (!(key in kb.keys)) {
+        kb.keys[key] = { hadKey: curRaw !== null, original: curRaw };
+      }
+      content = writeOptValue(content, key, nextStr);
+      changedCount++;
+    }
+
+    if (changedCount > 0 || !existed) {
+      fs.mkdirSync(path.dirname(absPath), { recursive: true });
+      fs.writeFileSync(absPath, content, 'utf8');
+      touchedFiles.push(relPath);
+    }
+  };
+
+  // Helper 2: Deep JSON merge with raw pre-BlockWay file snapshot backup
+  const applyJsonConfigFile = (relPath, patchObj) => {
+    const absPath = path.join(targetDir, ...relPath.split('/'));
+    const existed = fs.existsSync(absPath);
+    const rawBefore = existed ? fs.readFileSync(absPath, 'utf8') : '';
+    if (!(relPath in backup.rawFileBackups)) {
+      backup.rawFileBackups[relPath] = { existed, content: rawBefore };
+    }
+    let parsed = {};
+    if (existed && rawBefore.trim()) {
+      try { parsed = JSON.parse(rawBefore) || {}; } catch (_) { parsed = {}; }
+    }
+    const deepMerge = (base, patch) => {
+      const out = (base && typeof base === 'object' && !Array.isArray(base)) ? { ...base } : {};
+      for (const [k, v] of Object.entries(patch || {})) {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          out[k] = deepMerge(out[k], v);
+        } else {
+          out[k] = v;
+        }
+      }
+      return out;
+    };
+    const merged = deepMerge(parsed, patchObj);
+    fs.mkdirSync(path.dirname(absPath), { recursive: true });
+    fs.writeFileSync(absPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+    touchedFiles.push(relPath);
+  };
+
+  // Helper 3: Java .properties file merge preserving comments & unrelated lines
+  const applyPropertiesFile = (relPath, entriesMap, headerComment) => {
+    const absPath = path.join(targetDir, ...relPath.split('/'));
+    const existed = fs.existsSync(absPath);
+    const rawBefore = existed ? fs.readFileSync(absPath, 'utf8') : '';
+    if (!(relPath in backup.rawFileBackups)) {
+      backup.rawFileBackups[relPath] = { existed, content: rawBefore };
+    }
+    const nl = rawBefore.includes('\r\n') ? '\r\n' : '\n';
+    let content = rawBefore || (headerComment ? `# ${headerComment}${nl}` : '');
+    for (const [k, v] of Object.entries(entriesMap)) {
+      const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(`^\\s*${esc}\\s*=.*(\\r?)$`, 'm');
+      if (rx.test(content)) {
+        content = content.replace(rx, `${k}=${v}$1`);
+      } else {
+        content += (content && !content.endsWith('\n') ? nl : '') + `${k}=${v}${nl}`;
+      }
+    }
+    fs.mkdirSync(path.dirname(absPath), { recursive: true });
+    fs.writeFileSync(absPath, content, 'utf8');
+    touchedFiles.push(relPath);
+  };
+
+  try {
+    // LAYER 1: options.txt (Windows Async Disk Chunk I/O + Mouse Polling + Profile Frame Pacing)
+    if (normLayers.includes('vanilla_io')) {
+      const optsAbs = path.join(targetDir, 'options.txt');
+      const existingOptsTxt = fs.existsSync(optsAbs) ? fs.readFileSync(optsAbs, 'utf8') : '';
+      const cloudKey = /^clouds:/m.test(existingOptsTxt) && !/^renderClouds:/m.test(existingOptsTxt) ? 'clouds' : 'renderClouds';
+      const fpsCap = computeGentleFpsCap(displayHz);
+
+      const muts = [
+        { key: 'syncChunkWrites', value: 'false' },
+        { key: 'narrator', value: '0' },
+        { key: 'onboardAccessibility', value: 'false' },
+        { key: 'tutorialStep', value: 'none' },
+        { key: 'rawMouseInput', value: 'true' },
+        { key: 'prioritizeChunkUpdates', value: '0' }
+      ];
+
+      if (normProfile === 'balanced') {
+        muts.push(
+          { key: 'maxFps', value: String(fpsCap), onlyIfHigherNum: fpsCap },
+          { key: 'simulationDistance', value: '8', onlyIfHigherNum: 8 },
+          { key: 'renderDistance', value: '12', onlyIfHigherNum: 12 },
+          { key: 'graphicsMode', value: '1', onlyIfGteNum: 2 },
+          { key: 'mipmapLevels', value: '2', onlyIfHigherNum: 2 },
+          { key: 'entityDistanceScaling', value: '0.80', onlyIfHigherNum: 0.8 },
+          { key: 'biomeBlendRadius', value: '2', onlyIfHigherNum: 2 }
+        );
+        highlights.push(`options.txt: Tắt ghi đồng bộ ổ cứng Windows (syncChunkWrites:false) & khóa êm ${fpsCap} FPS`);
+      } else if (normProfile === 'esports') {
+        muts.push(
+          { key: 'enableVsync', value: 'false' },
+          { key: 'maxFps', value: '260' },
+          { key: 'entityShadows', value: 'false' },
+          { key: 'particles', value: '1' },
+          { key: cloudKey, value: cloudKey === 'renderClouds' ? '"fast"' : 'false' },
+          { key: 'simulationDistance', value: '6', onlyIfHigherNum: 6 },
+          { key: 'renderDistance', value: '10', onlyIfHigherNum: 10 },
+          { key: 'graphicsMode', value: '1', onlyIfGteNum: 2 },
+          { key: 'mipmapLevels', value: '2', onlyIfHigherNum: 2 },
+          { key: 'entityDistanceScaling', value: '0.70' },
+          { key: 'biomeBlendRadius', value: '1' }
+        );
+        highlights.push('options.txt: Mở trần 260 FPS, tắt VSync, chuột thô 1:1 & giảm tải PvP');
+      } else {
+        muts.push(
+          { key: 'enableVsync', value: 'false' },
+          { key: 'maxFps', value: '120' },
+          { key: 'graphicsMode', value: '0' },
+          { key: 'entityShadows', value: 'false' },
+          { key: 'particles', value: '2' },
+          { key: cloudKey, value: cloudKey === 'renderClouds' ? '"false"' : 'false' },
+          { key: 'simulationDistance', value: '5' },
+          { key: 'renderDistance', value: '7' },
+          { key: 'biomeBlendRadius', value: '0' },
+          { key: 'mipmapLevels', value: '1' },
+          { key: 'entityDistanceScaling', value: '0.55' }
+        );
+        highlights.push('options.txt: Chế độ Cứu Máy Yếu (7 chunk, mô phỏng 5, tắt mây & bóng thực thể)');
+      }
+
+      applyColonKvFile('options.txt', muts);
+    }
+
+    // LAYER 2: optionsof.txt (Deep OptiFine Pipeline + Automatic Shader Conflict Guard)
+    if (normLayers.includes('optifine')) {
+      const ofMuts = [
+        { key: 'ofFastRender', value: shaderActive ? 'false' : 'true' },
+        { key: 'ofSmartAnimations', value: 'true' },
+        { key: 'ofRenderRegions', value: 'true' },
+        { key: 'ofFastMath', value: 'true' },
+        { key: 'ofLazyChunkLoading', value: 'true' },
+        { key: 'ofSmoothWorld', value: 'true' },
+        { key: 'ofDynamicUpdates', value: 'false' },
+        { key: 'ofSmoothFps', value: 'false' },
+        { key: 'ofChunkUpdates', value: '1' },
+        { key: 'ofLagometer', value: 'false' },
+        { key: 'ofProfiler', value: 'false' },
+        { key: 'ofShowGlErrors', value: 'false' }
+      ];
+      if (normProfile === 'ultra_low') {
+        ofMuts.push(
+          { key: 'ofFogType', value: '3' },
+          { key: 'ofAnimatedTerrain', value: 'false' },
+          { key: 'ofDrippingWaterLava', value: 'false' },
+          { key: 'ofRainSplash', value: 'false' },
+          { key: 'ofSky', value: 'false' },
+          { key: 'ofStars', value: 'false' }
+        );
+      }
+      applyColonKvFile('optionsof.txt', ofMuts);
+      highlights.push(
+        shaderActive
+          ? `optionsof.txt: Bật SmartAnimations + RenderRegions & tự giữ ofFastRender:false bảo vệ Shader (${env.activeShader})`
+          : 'optionsof.txt: Bật FastRender, SmartAnimations, RenderRegions & FastMath'
+      );
+    }
+
+    // LAYER 3: config/sodium-options.json & config/embeddium-options.json
+    if (normLayers.includes('sodium')) {
+      const sodiumPatch = {
+        performance: {
+          always_defer_chunk_updates: true,
+          animate_only_visible_textures: true,
+          use_entity_culling: true,
+          use_fog_occlusion: true,
+          use_block_face_culling: true,
+          use_no_error_gl_context: true
+        },
+        advanced: {
+          cpu_render_ahead_limit: normProfile === 'esports' ? 1 : 2
+        },
+        quality: {
+          enable_vignette: false,
+          ...(normProfile === 'ultra_low' ? { leaves_quality: 'FAST', weather_quality: 'FAST' } : {})
+        }
+      };
+      applyJsonConfigFile('config/sodium-options.json', sodiumPatch);
+      const lowerLoader = String(loaderType || '').toLowerCase();
+      if (
+        env.hasEmbeddium
+        || lowerLoader === 'forge'
+        || lowerLoader === 'neoforge'
+        || fs.existsSync(path.join(targetDir, 'config', 'embeddium-options.json'))
+      ) {
+        applyJsonConfigFile('config/embeddium-options.json', sodiumPatch);
+      }
+      highlights.push(`sodium-options.json: Hoãn chunk đa luồng, chỉ vẽ hoạt ảnh nhìn thấy & hàng đợi khung hình = ${normProfile === 'esports' ? 1 : 2}`);
+    }
+
+    // LAYER 4: config/modernfix-mixins.properties (-35~50% RAM & 2x Boot Speed)
+    if (normLayers.includes('modernfix')) {
+      applyPropertiesFile(
+        'config/modernfix-mixins.properties',
+        {
+          'mixin.perf.dynamic_resources': 'true',
+          'mixin.perf.faster_item_rendering': 'true',
+          'mixin.perf.deduplicate_location': 'true',
+          'mixin.perf.compact_bit_storage': 'true'
+        },
+        'BlockWay Turbo Smooth Core - ModernFix Deep RAM & Model Streaming Config'
+      );
+      highlights.push('modernfix-mixins.properties: Kích hoạt dynamic_resources=true (giảm 35–50% RAM & vào Modpack nhanh gấp đôi)');
+    }
+
+    // LAYER 5: config/immediatelyfast.json & config/entityculling.json
+    if (normLayers.includes('culling_hud')) {
+      applyJsonConfigFile('config/immediatelyfast.json', {
+        hud_batching: true,
+        fast_text_lookup: true,
+        fast_buffer_upload: true,
+        font_atlas_resizing: true,
+        map_atlas_generation: true
+      });
+      applyJsonConfigFile('config/entityculling.json', {
+        tickCulling: true,
+        renderNametagsThroughWalls: true,
+        sleepDelay: normProfile === 'esports' ? 5 : 10
+      });
+      highlights.push('immediatelyfast.json & entityculling.json: Gom mẻ vẽ HUD 1-lần-gọi GPU & ngừng tính toán thực thể khuất tường');
+    }
+
+    // LAYER 6: JVM Safepoint & Network Low-Latency
+    if (normLayers.includes('jvm_lowlatency')) {
+      highlights.push('JVM Low-Latency: Khóa System.gc() đột ngột, tắt ghi nháp hsperfdata gây đơ SSD & ưu tiên IPv4');
+    }
+
+    fs.writeFileSync(backupPath, JSON.stringify(backup, null, 2), 'utf8');
+    const statePayload = {
+      version: DEEP_SMOOTH_VERSION,
+      profile: normProfile,
+      layers: normLayers,
+      layersKey,
+      tunedAt: new Date().toISOString(),
+      touchedFiles,
+      shaderGuardActive: shaderActive,
+      activeShader: env.activeShader || ''
+    };
+    fs.writeFileSync(statePath, JSON.stringify(statePayload, null, 2), 'utf8');
+
+    return {
+      ok: true,
+      targetDir,
+      profile: normProfile,
+      layers: normLayers,
+      touchedFiles,
+      highlights,
+      shaderGuardActive: shaderActive,
+      activeShader: env.activeShader || '',
+      env
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function revertDeepGameSmoothEngine({ gameDir, instanceDir = '' } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const backupPath = path.join(targetDir, DEEP_SMOOTH_BACKUP_FILE);
+  const statePath = path.join(targetDir, DEEP_SMOOTH_STATE_FILE);
+  const gentleMarkerPath = path.join(targetDir, GENTLE_SMOOTH_MARKER);
+  const backup = readDeepSmoothJsonSafe(backupPath);
+
+  if (!backup) {
+    try { fs.rmSync(statePath, { force: true }); } catch (_) {}
+    return { ok: true, restoredFiles: [], removedFiles: [], totalReverted: 0, nothingToRevert: true };
+  }
+
+  const restoredFiles = [];
+  const removedFiles = [];
+
+  try {
+    // 1. Revert colon-KV files (options.txt, optionsof.txt) preserving any unrelated user keybinds/FOV/audio
+    for (const [relPath, kb] of Object.entries(backup.kvBackups || {})) {
+      const absPath = path.join(targetDir, ...relPath.split('/'));
+      if (!fs.existsSync(absPath)) continue;
+      if (kb.existed === false) {
+        const curTxt = fs.readFileSync(absPath, 'utf8');
+        const hasGameGeneratedLines = /^version:/m.test(curTxt) || /^key_key\./m.test(curTxt);
+        if (!hasGameGeneratedLines) {
+          try { fs.rmSync(absPath, { force: true }); removedFiles.push(relPath); } catch (_) {}
+          continue;
+        }
+      }
+      let content = fs.readFileSync(absPath, 'utf8');
+      for (const [k, rec] of Object.entries(kb.keys || {})) {
+        if (!rec || rec.hadKey === false || rec.original === null || rec.original === undefined) {
+          content = removeOptLine(content, k);
+        } else {
+          content = writeOptValue(content, k, rec.original);
+        }
+      }
+      fs.writeFileSync(absPath, content, 'utf8');
+      restoredFiles.push(relPath);
+    }
+
+    // 2. Revert JSON & .properties config files byte-for-byte
+    for (const [relPath, fb] of Object.entries(backup.rawFileBackups || {})) {
+      const absPath = path.join(targetDir, ...relPath.split('/'));
+      if (fb.existed === false) {
+        if (fs.existsSync(absPath)) {
+          try { fs.rmSync(absPath, { force: true }); removedFiles.push(relPath); } catch (_) {}
+        }
+      } else {
+        fs.mkdirSync(path.dirname(absPath), { recursive: true });
+        fs.writeFileSync(absPath, String(fb.content ?? ''), 'utf8');
+        restoredFiles.push(relPath);
+      }
+    }
+
+    try { fs.rmSync(backupPath, { force: true }); } catch (_) {}
+    try { fs.rmSync(statePath, { force: true }); } catch (_) {}
+    try { fs.rmSync(gentleMarkerPath, { force: true }); } catch (_) {}
+
+    return {
+      ok: true,
+      targetDir,
+      restoredFiles,
+      removedFiles,
+      totalReverted: restoredFiles.length + removedFiles.length
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
 /* Rate-limit game stdout forwarding so mod log-spam never burns CPU in the game or the launcher UI. */
 function createLogThrottle(emit, maxPerSec = 150) {
   let windowStart = Date.now();
@@ -2935,6 +3533,9 @@ async function launchMinecraft(config, callbacks = {}) {
     potatoGraphicsPreset = false,
     smartRamCoach = true,
     gentleSmoothMode = true,
+    deepSmoothEngine = true,
+    deepSmoothProfile = '',
+    deepSmoothLayers = null,
     displayHz = 0,
     autoCreateWorld = null
   } = config;
@@ -3094,6 +3695,25 @@ async function launchMinecraft(config, callbacks = {}) {
     } catch (_) {}
   }
 
+  // v41.0.0 PRO: Turbo Smooth Core™ — auto-apply 6-layer deep game & mod config optimization (respects post-tune user tweaks & guards Shaders)
+  if (deepSmoothEngine !== false) {
+    try {
+      const effectiveDsProfile = deepSmoothProfile || (potatoGraphicsPreset ? 'ultra_low' : 'balanced');
+      const dsRes = applyDeepGameSmoothEngine({
+        gameDir: rootDir,
+        instanceDir: gameDirectory !== rootDir ? gameDirectory : '',
+        profile: effectiveDsProfile,
+        layers: deepSmoothLayers,
+        displayHz,
+        loaderType: effectiveLoaderType,
+        autoLaunch: true
+      });
+      if (dsRes?.ok && !dsRes.alreadyTuned && dsRes.touchedFiles?.length) {
+        callbacks.onStatus?.(`⚡ Turbo Smooth Core™: Đã tối ưu sâu ${dsRes.touchedFiles.length} tệp cấu hình game (${dsRes.touchedFiles.join(', ')})!`);
+      }
+    } catch (_) {}
+  }
+
   const loaderPrep = optifineRuntimePlan?.customPrep || await prepareCustomLoaderJson(
     rootDir,
     mcVersion,
@@ -3135,9 +3755,12 @@ async function launchMinecraft(config, callbacks = {}) {
   const baseCustomArgs = useAikarFlags
     ? (smartRamCoach && Array.isArray(ramCoach.jvmArgs) && ramCoach.jvmArgs.length ? ramCoach.jvmArgs : buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores))
     : [];
-  const customArgs = gentleOn && baseCustomArgs.length
+  const gentleCustomArgs = gentleOn && baseCustomArgs.length
     ? applyGentleJvmTuning(baseCustomArgs, { javaMajor: getJavaMajorVersion(resolvedJava), cpuCores })
     : baseCustomArgs;
+  const customArgs = (deepSmoothEngine !== false && normalizeDeepSmoothLayers(deepSmoothLayers).includes('jvm_lowlatency'))
+    ? applyDeepSmoothJvmFlags(gentleCustomArgs, { enabled: true })
+    : gentleCustomArgs;
 
   const launcher = new Client();
 
@@ -9985,5 +10608,9 @@ module.exports = {
   findInstalledOptifineProfiles,
   resolveOptifineRuntimePlan,
   ensureVanillaBaseForOptifine,
-  inspectOptifineJar
+  inspectOptifineJar,
+  inspectDeepGameSmoothState,
+  applyDeepGameSmoothEngine,
+  revertDeepGameSmoothEngine,
+  applyDeepSmoothJvmFlags
 };

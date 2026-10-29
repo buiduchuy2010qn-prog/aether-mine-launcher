@@ -162,6 +162,11 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   handleOptifineJar: (params) => ipcRenderer.invoke('optifine:handle-jar', params),
   setUiScale: (scale) => ipcRenderer.invoke('ui:set-scale', scale),
 
+  // v41.0.0 PRO — ⚡ Turbo Smooth Core™ (Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click)
+  inspectDeepSmooth: (params) => ipcRenderer.invoke('deepsmooth:inspect', params),
+  applyDeepSmooth: (params) => ipcRenderer.invoke('deepsmooth:apply', params),
+  revertDeepSmooth: (params) => ipcRenderer.invoke('deepsmooth:revert', params),
+
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
   onUpdateProgress: (cb) => ipcRenderer.on('updater:progress', (_e, pct) => cb(pct)),

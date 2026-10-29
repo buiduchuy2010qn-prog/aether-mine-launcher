@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v40.9.6 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v41.0.0 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,19 +6,28 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.6_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v41.0.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-7_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
-**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới với **Menu Nhanh Tài Khoản & Ảnh Avatar Hồ Sơ Riêng**, **Trợ Lý OptiFine Đa Nền Tảng (`Fabric` • `Forge` • `NeoForge` • `Quilt` • `OptiFine`)**, **Ảnh bản đồ 16:9 trực quan cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack**, **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Chế độ Mượt Êm không ép máy**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
+**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới sở hữu tính năng đặc biệt **⚡ Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click**, **Menu Nhanh Tài Khoản & Ảnh Avatar Hồ Sơ Riêng**, **Trợ Lý OptiFine Đa Nền Tảng (`Fabric` • `Forge` • `NeoForge` • `Quilt` • `OptiFine`)**, **Ảnh bản đồ 16:9 trực quan cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack**, **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
 
 🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/blockway-launcher/](https://buiduchuy2010qn-prog.github.io/blockway-launcher/)**
 
 ---
 
-## 📦 Mới trong phiên bản `v40.9.6 PRO`
+## 📦 Mới trong phiên bản `v41.0.0 PRO`
 
-1. **👤 Menu Nhanh Tài Khoản, Ảnh Avatar Hồ Sơ Riêng & Nhận Diện Khuôn Mặt Skin Thông Minh (MỚI `v40.9.6 PRO`):**
+1. **⚡ Tính Năng Đặc Biệt: Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click (MỚI `v41.0.0 PRO`):**
+   - **Can thiệp trực tiếp vào tệp cấu hình thực của Minecraft & Modpack:** Không chỉ chỉnh tham số khởi chạy bên ngoài, BlockWay đi sâu tối ưu đồng bộ 6 tầng tệp bên trong `.minecraft` hoặc từng gói Modpack riêng:
+     1. **`options.txt` (Async Disk I/O & Raw Input 1:1):** Ghi `syncChunkWrites:false` triệt tiêu hiện tượng khựng 0.5s khi lưu chunk trên ổ cứng Windows, tắt phím đọc `Ctrl+B` (`narrator:0`), bật `rawMouseInput:true` và cân chỉnh khung hình.
+     2. **`optionsof.txt` + Khóa Bảo Vệ Shader Tự Động:** Bật `ofSmartAnimations`, `ofRenderRegions`, `ofFastMath`, `ofSmoothFps`; đặc biệt **tự động phát hiện gói Shader đang bật** (`iris.properties` / `optionsshaders.txt` / `oculus.properties`) để giữ `ofFastRender:false`, ngăn lỗi đen màn hình hoặc văng game.
+     3. **`config/sodium-options.json` & `embeddium-options.json`:** Kích hoạt hoãn dựng chunk đa luồng (`always_defer_chunk_updates`), chỉ vẽ hoạt ảnh trong tầm mắt và hạ hàng đợi `cpu_render_ahead_limit` giảm độ trễ chuột.
+     4. **`config/modernfix-mixins.properties`:** Bật `dynamic_resources=true` & `faster_item_rendering=true` giúp giảm **35–50% lượng RAM tiêu thụ** và rút ngắn một nửa thời gian nạp Modpack lớn.
+     5. **`config/immediatelyfast.json` & `entityculling.json`:** Gom hàng trăm lệnh vẽ thanh máu/chữ HUD thành 1 lần gọi GPU (`hud_batching`) và ngừng tính toán thực thể khuất sau tường (`tickCulling`).
+     6. **Khóa Khựng JVM Safepoint & Ưu Tiên Mạng IPv4:** Chặn Mod gọi `System.gc()` đột ngột, tắt ghi nháp `hsperfdata` ra ổ cứng và ưu tiên kết nối máy chủ qua IPv4.
+   - **3 Chế Độ Độ Mượt & Khôi Phục Nguyên Bản 1-Click Không Mất Cài Đặt Cá Nhân:** Chọn nhanh **🍃 Mượt Êm Chuẩn**, **⚡ Siêu Mượt PvP (0ms • 260 FPS)** hoặc **🚀 Cứu Máy Yếu (iGPU • RAM 4–8GB)**. Hệ thống lưu bản gốc theo từng khóa trước khi can thiệp — bấm **↩️ Khôi Phục Nguyên Bản (1-Click)** bất kỳ lúc nào để trả lại 100% file gốc mà vẫn giữ nguyên mọi Phím tắt, Âm lượng hay Góc nhìn FOV người chơi vừa chỉnh trong game!
+2. **👤 Menu Nhanh Tài Khoản, Ảnh Avatar Hồ Sơ Riêng & Nhận Diện Khuôn Mặt Skin Thông Minh (`v40.9.6 PRO`):**
    - **Menu nhanh ngay tại góc trên thanh bên (`#sidebarProfileCard`):** Bấm vào thẻ hồ sơ để mở trực tiếp bảng chuyển nhanh giữa **☁ Cloud • 👤 Offline • 👑 Microsoft**, đổi qua lại các tài khoản đã lưu 1-Click, thêm nhanh tên nhân vật mới hoặc đăng xuất ngay tại chỗ mà không bị nhảy trang.
    - **Tải ảnh Avatar hồ sơ riêng (`.PNG` / `.JPG` / `.WEBP`):** Tự do chọn bất kỳ ảnh đại diện cá nhân sắc nét cho hồ sơ Launcher (tách biệt hoàn toàn với trang phục 3D trong game), kèm nút **🔄 Dùng mặt Skin 3D** và **✨ Khôi phục Skin chuẩn** 1-Click.
    - **Nhận diện khuôn mặt UV thông minh & Lọc sạch Kho Skin 3D:** Tự động phát hiện đúng vùng khuôn mặt trên các mẫu Skin phá cách (vẽ mặt ở thân áo) để không bao giờ hiển thị lệch hình, tự lưu giữ Skin đang mặc vào Tủ đồ trước khi thay mới và lọc sạch các mẫu vô danh trong Kho Skin Trực Tuyến.

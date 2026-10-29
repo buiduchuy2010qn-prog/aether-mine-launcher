@@ -8654,3 +8654,597 @@ body:not(.theme-prism):not(.theme-sakura) .home-controls-2col .core-tab-btn[data
   border-color: #ef4444;
 }
 
+/* ============================================================================
+   v41.0.0 PRO — ⚡ TURBO SMOOTH CORE™ (6-LAYER DEEP GAME FILE OPTIMIZER)
+   ============================================================================ */
+
+/* 1. Signature Pill & Entry Buttons across Home / Play / Mods / Tools / Settings */
+.ds-sig-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  font-size: 10.2px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(236, 72, 153, 0.16));
+  border: 1px solid var(--bw-gold-border, rgba(251, 191, 36, 0.5));
+  color: var(--bw-gold-text, #fbbf24);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.14);
+}
+
+html[data-theme="prism"] .ds-sig-pill,
+html[data-theme="sakura"] .ds-sig-pill {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(236, 72, 153, 0.11));
+  border-color: rgba(217, 119, 6, 0.42);
+  color: #b45309;
+}
+
+/* Home Play Card header signature pill */
+.home-play-card .hpc-title .turbo-hpc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2.5px 9.5px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--bw-gold-bg, rgba(245, 158, 11, 0.16)), var(--accent-glow));
+  border: 1px solid var(--bw-gold-border, rgba(251, 191, 36, 0.45));
+  color: var(--bw-gold-text, #fbbf24);
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.home-play-card .hpc-title .turbo-hpc-pill.is-active {
+  background: var(--bw-ok-bg, rgba(16, 185, 129, 0.14));
+  border-color: var(--bw-ok-border, rgba(52, 211, 153, 0.45));
+  color: var(--bw-ok-text, #4ade80);
+}
+
+.home-play-card .hpc-title .turbo-hpc-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+/* System telemetry card quick trigger */
+.sys-telemetry-card .card-link-btn.turbo-link-btn {
+  padding: 2.5px 9px !important;
+  border-radius: 999px !important;
+  background: var(--bw-ok-bg, rgba(16, 185, 129, 0.14)) !important;
+  border: 1px solid var(--bw-ok-border, rgba(52, 211, 153, 0.42)) !important;
+  color: var(--bw-ok-text, #4ade80) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.sys-telemetry-card .card-link-btn.turbo-link-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent) !important;
+  background: var(--accent-glow) !important;
+  color: var(--accent) !important;
+}
+
+/* Override 12.2 Secondary Buttons De-Blueing rule for .is-ok & .is-turbo */
+.app-shell .btn-sync-skin.is-ok:not(.aether-btn-login):not(.aether-btn-reg):not(.compat-filter-btn) {
+  background: var(--bw-ok-bg, rgba(22, 163, 74, 0.15)) !important;
+  border: 1px solid var(--bw-ok-border, rgba(34, 197, 94, 0.5)) !important;
+  color: var(--bw-ok-text, #4ade80) !important;
+}
+
+.app-shell .btn-sync-skin.is-turbo:not(.aether-btn-login):not(.aether-btn-reg):not(.compat-filter-btn) {
+  background: linear-gradient(135deg, var(--bw-gold-bg, rgba(245, 158, 11, 0.16)), var(--accent-glow)) !important;
+  border: 1px solid var(--bw-gold-border, rgba(251, 191, 36, 0.48)) !important;
+  color: var(--bw-gold-text, #fbbf24) !important;
+  font-weight: 800 !important;
+}
+
+.app-shell .btn-sync-skin.is-turbo:not(.aether-btn-login):not(.aether-btn-reg):not(.compat-filter-btn):hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  transform: translateY(-1px);
+}
+
+/* 2. Tools Tab Signature Bento Card & Settings Signature Row */
+.app-shell .bento-card.turbo-signature-card {
+  position: relative;
+  border: 1.5px solid var(--accent-border) !important;
+  background:
+    radial-gradient(620px 200px at 95% 0%, var(--accent-glow), transparent 72%),
+    radial-gradient(480px 180px at 0% 100%, var(--bw-ok-bg, rgba(16, 185, 129, 0.1)), transparent 70%),
+    linear-gradient(180deg, var(--bw-surface-top), var(--bw-surface-bot)) !important;
+}
+
+.installed-count-tag.is-turbo-status {
+  font-weight: 800 !important;
+}
+
+.installed-count-tag.is-turbo-status.is-active {
+  background: var(--bw-ok-bg) !important;
+  border-color: var(--bw-ok-border) !important;
+  color: var(--bw-ok-text) !important;
+}
+
+.turbo-layer-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.turbo-mini-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3.5px 9px;
+  border-radius: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  color: var(--text-main);
+  font-size: 11.4px;
+  font-weight: 700;
+}
+
+.turbo-mini-tag code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.8px;
+  color: var(--accent);
+}
+
+.settings-opt-item.is-signature-opt {
+  border: 1.5px solid var(--accent-border) !important;
+  background: linear-gradient(135deg, var(--accent-glow), var(--bg-input) 75%) !important;
+}
+
+/* 3. Turbo Smooth Core™ Studio Modal (#deepSmoothStudioModal) */
+#deepSmoothStudioModal .ds-studio-card {
+  width: min(830px, calc(100vw - 36px)) !important;
+  max-width: 830px !important;
+  max-height: calc(100vh - 34px) !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+}
+
+#deepSmoothStudioModal .ds-studio-head {
+  padding: 12px 18px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid var(--border-col);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bw-strip);
+  flex: 0 0 auto;
+}
+
+.ds-head-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.ds-head-title h3 {
+  margin: 0;
+  font-size: 15.2px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+#deepSmoothStudioModal .ds-studio-body {
+  padding: 12px 18px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.ds-target-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 7px 11px;
+  border-radius: 11px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+}
+
+.ds-target-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.ds-target-lbl {
+  font-size: 11.8px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.ds-target-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px !important;
+  padding: 2px 9px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+}
+
+.ds-target-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ds-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3.5px 9px;
+  border-radius: 999px;
+  font-size: 11.2px;
+  font-weight: 800;
+  background: var(--bg-card);
+  border: 1px solid var(--border-col);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ds-live-badge.is-active {
+  background: var(--bw-ok-bg);
+  border-color: var(--bw-ok-border);
+  color: var(--bw-ok-text);
+}
+
+.ds-shader-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3.5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--bw-info-bg);
+  border: 1px solid var(--bw-info-border);
+  color: var(--bw-info-text);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-shader-pill.hidden {
+  display: none !important;
+}
+
+.ds-auto-launch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3.5px 9px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-col);
+  font-size: 11.2px;
+  font-weight: 700;
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.ds-auto-launch-pill input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.ds-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 1px;
+}
+
+.ds-sec-head strong {
+  font-size: 12.6px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.ds-sec-head span {
+  font-size: 11.2px;
+  color: var(--text-muted);
+}
+
+.ds-check-all-link {
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11.4px;
+  font-weight: 800;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.ds-check-all-link:hover {
+  background: var(--accent-glow);
+}
+
+/* 3 Smoothness Profiles Grid */
+.ds-profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ds-profile-card {
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1.5px solid var(--border-col);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.ds-profile-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.ds-profile-card.active {
+  border-color: var(--accent) !important;
+  background: linear-gradient(155deg, var(--accent-glow), var(--bg-card) 75%) !important;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.dsp-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dsp-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.dsp-top strong {
+  font-size: 12.8px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.dsp-top em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1.5px 6.5px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dsp-top em.dsp-rec,
+.ds-profile-card.active .dsp-top em {
+  background: var(--bw-ok-bg);
+  border-color: var(--bw-ok-border);
+  color: var(--bw-ok-text);
+}
+
+.ds-profile-card p {
+  margin: 0;
+  font-size: 11.2px;
+  line-height: 1.38;
+  color: var(--text-muted);
+}
+
+/* 6 Optimization Layers Grid */
+.ds-layers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.ds-layer-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-col);
+  background: var(--bg-card);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.ds-layer-card:hover {
+  border-color: var(--accent);
+}
+
+.ds-layer-card.is-checked {
+  border-color: var(--accent-border);
+  background: linear-gradient(135deg, var(--accent-glow), var(--bg-card) 82%);
+}
+
+.ds-layer-card input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  flex: 0 0 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.dsl-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
+}
+
+.dsl-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dsl-top strong {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dsl-top code {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.2px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  color: var(--accent);
+}
+
+.dsl-main span {
+  font-size: 11px;
+  line-height: 1.36;
+  color: var(--text-muted);
+}
+
+.dsl-main span code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.4px;
+  color: var(--text-main);
+}
+
+/* Live Feedback & Non-Destructive Backup Banner */
+.ds-feedback-banner {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-col);
+  font-size: 11.5px;
+  line-height: 1.42;
+  color: var(--text-main);
+}
+
+.ds-feedback-banner code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.8px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-col);
+  color: var(--accent);
+}
+
+.ds-feedback-banner.is-tuned {
+  background: var(--bw-ok-bg);
+  border-color: var(--bw-ok-border);
+}
+
+/* Studio Modal Footer */
+#deepSmoothStudioModal .ds-studio-foot {
+  padding: 10px 18px !important;
+  margin: 0 !important;
+  border-top: 1px solid var(--border-col);
+  background: var(--bw-strip);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.ds-foot-left,
+.ds-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+#deepSmoothStudioModal .ds-foot-left .btn-sync-skin {
+  padding: 6px 10px !important;
+  font-size: 11.6px !important;
+  border-radius: 9px !important;
+  white-space: nowrap;
+}
+
+.ds-revert-btn {
+  padding: 7px 12px !important;
+  font-size: 11.8px !important;
+  font-weight: 700 !important;
+  border-radius: 9px !important;
+  white-space: nowrap;
+}
+
+.ds-revert-btn:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+.ds-apply-btn {
+  padding: 7px 14px !important;
+  font-size: 12.2px !important;
+  font-weight: 800 !important;
+  border-radius: 9px !important;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .ds-profiles-grid,
+  .ds-layers-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+

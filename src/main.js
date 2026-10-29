@@ -42,7 +42,8 @@ const {
   getPvpClientModeState, togglePvpClientMode,
   inspectLocalWorldDetails, rescuePatchLocalWorld, getCuratedSeedsVault, createStandaloneQuickWorld,
   getReplayStudioStatus, installReplayStudioPack,
-  saveCustomLocalCape, removeCustomLocalCape, getCustomLocalCape
+  saveCustomLocalCape, removeCustomLocalCape, getCustomLocalCape,
+  inspectDeepGameSmoothState, applyDeepGameSmoothEngine, revertDeepGameSmoothEngine
 } = require('./launcher-engine');
 const {
   loginWithMicrosoftModal,
@@ -2522,6 +2523,39 @@ ipcMain.handle('avatar:upload-custom', async () => {
       fileName: path.basename(fp),
       dataUrl: `data:image/png;base64,${pngBuf.toString('base64')}`
     };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+// v41.0.0 PRO — ⚡ Turbo Smooth Core™ (Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game + Hoàn Tác 1-Click)
+ipcMain.handle('deepsmooth:inspect', async (_e, params = {}) => {
+  try {
+    return inspectDeepGameSmoothState(params || {});
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('deepsmooth:apply', async (_e, params = {}) => {
+  try {
+    let displayHz = Number(params?.displayHz) || 0;
+    if (!displayHz) {
+      try { displayHz = Number(screen.getPrimaryDisplay()?.displayFrequency) || 60; } catch (_) { displayHz = 60; }
+    }
+    return applyDeepGameSmoothEngine({
+      ...(params || {}),
+      displayHz,
+      autoLaunch: Boolean(params?.autoLaunch)
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('deepsmooth:revert', async (_e, params = {}) => {
+  try {
+    return revertDeepGameSmoothEngine(params || {});
   } catch (err) {
     return { ok: false, error: err.message };
   }

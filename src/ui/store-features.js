@@ -3491,6 +3491,9 @@ async function launchPackInstance(inst, customServerIp = '', customWorldFolder =
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
     smartRamCoach: state.smartRamCoach !== false,
     gentleSmoothMode: state.gentleSmoothMode !== false,
+    deepSmoothEngine: state.deepSmoothEngine !== false,
+    deepSmoothProfile: state.deepSmoothProfile || 'balanced',
+    deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
     cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
   });
   if (!res?.ok) {
@@ -7715,10 +7718,370 @@ async function installDroppedPathsUI(paths) {
 }
 window.installDroppedPathsUI = installDroppedPathsUI;
 
+/* ===================== v41.0.0 PRO SIGNATURE FEATURE — ⚡ TURBO SMOOTH CORE™ (6-LAYER DEEP GAME FILE OPTIMIZER) ===================== */
+const DS_ALL_LAYERS = ['vanilla_io', 'optifine', 'sodium', 'modernfix', 'culling_hud', 'jvm_lowlatency'];
+
+function getDeepSmoothProfileLabelVi(profile) {
+  if (profile === 'esports') return '⚡ Siêu Mượt PvP';
+  if (profile === 'ultra_low') return '🚀 Cứu Máy Yếu';
+  return '🍃 Mượt Êm Chuẩn';
+}
+
+async function refreshDeepSmoothBadgesUI(customInstanceDir = null) {
+  if (typeof window.aetherAPI?.inspectDeepSmooth !== 'function') return null;
+  const instanceDir = customInstanceDir !== null ? customInstanceDir : (state.modTargetInstanceDir || '');
+  try {
+    const st = await window.aetherAPI.inspectDeepSmooth({
+      gameDir: state.gameDir,
+      instanceDir,
+      loaderType: state.selectedCore || 'fabric'
+    });
+    if (!st?.ok) return null;
+
+    const autoOn = state.deepSmoothEngine !== false;
+    const profLabel = getDeepSmoothProfileLabelVi(st.isOptimized ? st.activeProfile : (state.deepSmoothProfile || 'balanced'));
+    const toolsBadge = document.getElementById('toolsDeepSmoothBadge');
+    if (toolsBadge) {
+      if (st.isOptimized) {
+        toolsBadge.textContent = `🟢 Đã can thiệp ${st.touchedCount || 5} tệp (${profLabel})`;
+        toolsBadge.classList.add('is-active');
+      } else {
+        toolsBadge.textContent = autoOn ? `🟢 Tự bật khi Chơi • ${profLabel}` : '⚪ Đang tắt tự động';
+        toolsBadge.classList.toggle('is-active', autoOn);
+      }
+    }
+
+    const btnQuickRev = document.getElementById('btnToolsQuickRevertDeepSmooth');
+    if (btnQuickRev) {
+      btnQuickRev.classList.toggle('hidden', !(st.hasBackup || st.isOptimized));
+    }
+
+    const heroBtn = document.getElementById('btnHeroTurboSmooth');
+    if (heroBtn) {
+      heroBtn.textContent = st.isOptimized
+        ? `⚡ Turbo Smooth™: ${st.touchedCount || 5} tệp`
+        : (autoOn ? '⚡ Turbo Smooth™ • BẬT' : '⚡ Turbo Smooth™');
+      heroBtn.classList.toggle('is-active', Boolean(st.isOptimized || autoOn));
+    }
+
+    const sysBtn = document.getElementById('btnSysOptimize');
+    if (sysBtn) {
+      sysBtn.textContent = st.isOptimized ? `⚡ Đã mượt (${st.touchedCount || 5}) >` : '⚡ File Mượt >';
+    }
+    return st;
+  } catch (_) {
+    return null;
+  }
+}
+window.refreshDeepSmoothBadgesUI = refreshDeepSmoothBadgesUI;
+
+async function populateDeepSmoothTargetSelect(selectEl, preferredDir = '') {
+  if (!selectEl) return;
+  let instances = [];
+  try {
+    if (typeof window.aetherAPI?.packsInstances === 'function') {
+      const r = await window.aetherAPI.packsInstances(state.gameDir);
+      instances = Array.isArray(r?.items) ? r.items : (Array.isArray(r) ? r : []);
+    }
+  } catch (_) {}
+
+  const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
+  const mcLbl = `${state.selectedVersion || '1.21.4'} • ${String(state.selectedCore || 'fabric').toUpperCase()}`;
+  let html = `<option value="">🏠 Thư mục chính (.minecraft — MC ${esc(mcLbl)})</option>`;
+  for (const inst of instances) {
+    if (!inst?.dir) continue;
+    const tag = `${inst.name || 'Modpack'} (MC ${inst.mcVersion || '?'} • ${String(inst.loader || 'mod').toUpperCase()})`;
+    html += `<option value="${esc(inst.dir)}">📦 ${esc(tag)}</option>`;
+  }
+  selectEl.innerHTML = html;
+  if (preferredDir && [...selectEl.options].some((o) => o.value === preferredDir)) {
+    selectEl.value = preferredDir;
+  } else {
+    selectEl.value = '';
+  }
+}
+
+async function openDeepSmoothStudioModal(preferredInstanceDir = null) {
+  const modal = document.getElementById('deepSmoothStudioModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const selTarget = document.getElementById('dsTargetDirSelect');
+  const startInstance = preferredInstanceDir !== null ? preferredInstanceDir : (state.modTargetInstanceDir || '');
+  await populateDeepSmoothTargetSelect(selTarget, startInstance);
+
+  const syncModalStateFromDisk = async () => {
+    const instDir = selTarget?.value || '';
+    const st = await window.aetherAPI.inspectDeepSmooth({
+      gameDir: state.gameDir,
+      instanceDir: instDir,
+      loaderType: state.selectedCore || 'fabric'
+    });
+    if (!st?.ok) return;
+
+    const activeProf = st.isOptimized ? st.activeProfile : (state.deepSmoothProfile || 'balanced');
+    document.querySelectorAll('#dsProfilesGrid .ds-profile-card').forEach((card) => {
+      card.classList.toggle('active', card.dataset.dsprofile === activeProf);
+    });
+
+    const curLayers = Array.isArray(state.deepSmoothLayers) && state.deepSmoothLayers.length
+      ? state.deepSmoothLayers
+      : (Array.isArray(st.activeLayers) && st.activeLayers.length ? st.activeLayers : DS_ALL_LAYERS);
+    document.querySelectorAll('#dsLayersGrid input[data-dslayer]').forEach((chk) => {
+      const on = curLayers.includes(chk.dataset.dslayer);
+      chk.checked = on;
+      chk.closest('.ds-layer-card')?.classList.toggle('is-checked', on);
+    });
+
+    const chkAuto = document.getElementById('dsAutoOnLaunchCheck');
+    if (chkAuto) chkAuto.checked = state.deepSmoothEngine !== false;
+
+    const liveBadge = document.getElementById('dsLiveStateBadge');
+    if (liveBadge) {
+      if (st.isOptimized) {
+        liveBadge.textContent = `🟢 Đã can thiệp ${st.touchedCount || st.touchedFiles?.length || 5} tệp (${getDeepSmoothProfileLabelVi(st.activeProfile)})`;
+        liveBadge.classList.add('is-active');
+      } else {
+        liveBadge.textContent = '⚪ Nguyên bản (Chưa can thiệp)';
+        liveBadge.classList.remove('is-active');
+      }
+    }
+
+    const shaderPill = document.getElementById('dsShaderGuardPill');
+    if (shaderPill) {
+      if (st.shaderGuardActive && st.activeShader) {
+        shaderPill.textContent = `🛡️ Đang bảo vệ Shader: ${st.activeShader}`;
+        shaderPill.classList.remove('hidden');
+      } else {
+        shaderPill.classList.add('hidden');
+      }
+    }
+
+    const sodTag = document.getElementById('dsLayerTagSodium');
+    if (sodTag) {
+      sodTag.textContent = st.env?.hasEmbeddium ? 'sodium & embeddium.json' : 'sodium-options.json';
+    }
+    const ofDesc = document.getElementById('dsLayerDescOptifine');
+    if (ofDesc) {
+      if (st.shaderGuardActive && st.activeShader) {
+        const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
+        ofDesc.innerHTML = `🛡️ Phát hiện Shader <strong>${esc(st.activeShader)}</strong>: tự giữ <code>ofFastRender:false</code> chống lỗi đen hình + bật <code>SmartAnimations</code>.`;
+      } else {
+        ofDesc.innerHTML = 'Bật <code>SmartAnimations</code>, <code>RenderRegions</code>, <code>FastMath</code> &amp; tự nhả <code>ofFastRender:false</code> nếu bật Shader.';
+      }
+    }
+
+    const btnRev = document.getElementById('btnDsRevertNow');
+    if (btnRev) {
+      btnRev.disabled = !(st.hasBackup || st.isOptimized);
+    }
+
+    const fb = document.getElementById('dsFeedbackBanner');
+    if (fb) {
+      const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
+      if (st.isOptimized && Array.isArray(st.touchedFiles) && st.touchedFiles.length) {
+        fb.classList.add('is-tuned');
+        fb.innerHTML = `✅ <strong>Đang kích hoạt ${esc(getDeepSmoothProfileLabelVi(st.activeProfile))}:</strong> Đã can thiệp trực tiếp <strong>${st.touchedFiles.length} tệp</strong> (<code>${st.touchedFiles.map(esc).join('</code>, <code>')}</code>) — bản sao gốc đã được lưu an toàn, bấm <strong>Khôi Phục Nguyên Bản</strong> bất kỳ lúc nào!`;
+      } else {
+        fb.classList.remove('is-tuned');
+        fb.innerHTML = '🛡️ <strong>An toàn tuyệt đối:</strong> BlockWay lưu bản sao nguyên trạng trước khi can thiệp — bấm <strong>Khôi Phục Nguyên Bản (1-Click)</strong> bất kỳ lúc nào để trả lại 100% file gốc mà không ảnh hưởng Phím tắt hay Thế giới.';
+      }
+    }
+  };
+
+  await syncModalStateFromDisk();
+  modal.__syncFromDisk = syncModalStateFromDisk;
+}
+window.openDeepSmoothStudioModal = openDeepSmoothStudioModal;
+
+function initV410TurboSmoothUI() {
+  const modal = document.getElementById('deepSmoothStudioModal');
+  if (!modal || modal.__dsBound) return;
+  modal.__dsBound = true;
+
+  const closeDsModal = () => modal.classList.add('hidden');
+  document.getElementById('btnDsCloseTop')?.addEventListener('click', closeDsModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeDsModal();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeDsModal();
+  });
+
+  // Entry buttons across Home, Play, Mods & Tools
+  ['btnHeroTurboSmooth', 'btnPlayTurboSmooth', 'btnModsTurboSmooth', 'btnToolsOpenDeepSmooth'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => openDeepSmoothStudioModal());
+  });
+
+  const selTarget = document.getElementById('dsTargetDirSelect');
+  selTarget?.addEventListener('change', () => {
+    if (typeof modal.__syncFromDisk === 'function') modal.__syncFromDisk();
+  });
+
+  const chkAuto = document.getElementById('dsAutoOnLaunchCheck');
+  chkAuto?.addEventListener('change', (e) => {
+    state.deepSmoothEngine = Boolean(e.target.checked);
+    if (typeof window.syncAutoBackupAndDiscordUI === 'function') window.syncAutoBackupAndDiscordUI();
+    saveCurrentConfig();
+    refreshDeepSmoothBadgesUI();
+  });
+
+  document.querySelectorAll('#dsProfilesGrid .ds-profile-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const chosen = card.dataset.dsprofile || 'balanced';
+      state.deepSmoothProfile = chosen;
+      document.querySelectorAll('#dsProfilesGrid .ds-profile-card').forEach((c) => c.classList.toggle('active', c === card));
+      saveCurrentConfig();
+      refreshDeepSmoothBadgesUI();
+    });
+  });
+
+  const collectCheckedLayers = () => {
+    const out = [];
+    document.querySelectorAll('#dsLayersGrid input[data-dslayer]').forEach((chk) => {
+      if (chk.checked) out.push(chk.dataset.dslayer);
+    });
+    return out;
+  };
+
+  document.querySelectorAll('#dsLayersGrid input[data-dslayer]').forEach((chk) => {
+    chk.addEventListener('change', () => {
+      const checked = collectCheckedLayers();
+      if (!checked.length) {
+        chk.checked = true;
+        showAetherNotification('ℹ️ Hãy giữ ít nhất 1 tầng tối ưu được chọn (hoặc dùng nút Khôi Phục Nguyên Bản để hoàn tác).', 'info', 3200);
+        return;
+      }
+      chk.closest('.ds-layer-card')?.classList.toggle('is-checked', chk.checked);
+      state.deepSmoothLayers = checked;
+      saveCurrentConfig();
+    });
+  });
+
+  document.getElementById('btnDsSelectAllLayers')?.addEventListener('click', () => {
+    document.querySelectorAll('#dsLayersGrid input[data-dslayer]').forEach((chk) => {
+      chk.checked = true;
+      chk.closest('.ds-layer-card')?.classList.add('is-checked');
+    });
+    state.deepSmoothLayers = [...DS_ALL_LAYERS];
+    saveCurrentConfig();
+  });
+
+  document.getElementById('btnDsTrimRam')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    if (typeof window.runLauncherRamTrim === 'function') {
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang dọn RAM...';
+      await window.runLauncherRamTrim(btn, null);
+      btn.disabled = false;
+      btn.textContent = '✓ Đã dọn sạch RAM!';
+      setTimeout(() => { btn.textContent = orig; }, 1600);
+    }
+  });
+
+  document.getElementById('btnDsOpenConfigDir')?.addEventListener('click', () => {
+    const instDir = selTarget?.value || '';
+    const targetRoot = instDir || state.gameDir;
+    window.aetherAPI.openSubFolder(targetRoot, 'config');
+  });
+
+  const executeApply = async (instanceDir, triggerBtn) => {
+    if (typeof window.aetherAPI?.applyDeepSmooth !== 'function') return;
+    const chosenProfile = state.deepSmoothProfile || 'balanced';
+    const chosenLayers = Array.isArray(state.deepSmoothLayers) && state.deepSmoothLayers.length
+      ? state.deepSmoothLayers
+      : [...DS_ALL_LAYERS];
+    const origText = triggerBtn?.textContent || '';
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.textContent = '⏳ Đang can thiệp sâu tệp cấu hình...';
+    }
+    const res = await window.aetherAPI.applyDeepSmooth({
+      gameDir: state.gameDir,
+      instanceDir: instanceDir || '',
+      profile: chosenProfile,
+      layers: chosenLayers,
+      loaderType: state.selectedCore || 'fabric',
+      autoLaunch: false
+    });
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = origText;
+    }
+    if (res?.ok) {
+      if (typeof modal.__syncFromDisk === 'function' && !modal.classList.contains('hidden')) {
+        await modal.__syncFromDisk();
+      }
+      await refreshDeepSmoothBadgesUI();
+      const count = res.touchedFiles?.length || 0;
+      const shaderNote = res.shaderGuardActive ? ' • Bảo vệ Shader' : '';
+      showAetherNotification(
+        `⚡ Turbo Smooth Core™: Đã can thiệp mượt ${count} tệp (${getDeepSmoothProfileLabelVi(res.profile)}${shaderNote})!`,
+        'success',
+        4500
+      );
+    } else {
+      showAetherNotification(`⚠️ Không thể ghi tệp tối ưu: ${res?.error || 'Lỗi không xác định'}`, 'error', 4500);
+    }
+  };
+
+  const executeRevert = async (instanceDir, triggerBtn) => {
+    if (typeof window.aetherAPI?.revertDeepSmooth !== 'function') return;
+    const origText = triggerBtn?.textContent || '';
+    if (triggerBtn) {
+      triggerBtn.disabled = true;
+      triggerBtn.textContent = '⏳ Đang hoàn tác file gốc...';
+    }
+    const res = await window.aetherAPI.revertDeepSmooth({
+      gameDir: state.gameDir,
+      instanceDir: instanceDir || ''
+    });
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = origText;
+    }
+    if (res?.ok) {
+      if (typeof modal.__syncFromDisk === 'function' && !modal.classList.contains('hidden')) {
+        await modal.__syncFromDisk();
+      }
+      await refreshDeepSmoothBadgesUI();
+      showAetherNotification(
+        res.nothingToRevert
+          ? 'ℹ️ Thư mục này đang ở trạng thái nguyên bản (chưa có tệp nào cần hoàn tác).'
+          : `↩️ Đã khôi phục nguyên trạng 100% (${res.totalReverted} tệp cấu hình gốc) — giữ nguyên toàn bộ Phím tắt & Thế giới!`,
+        'success',
+        4800
+      );
+    } else {
+      showAetherNotification(`⚠️ Không thể hoàn tác: ${res?.error || 'Lỗi không xác định'}`, 'error', 4500);
+    }
+  };
+
+  document.getElementById('btnDsApplyNow')?.addEventListener('click', (e) => {
+    executeApply(selTarget?.value || '', e.currentTarget);
+  });
+  document.getElementById('btnDsRevertNow')?.addEventListener('click', (e) => {
+    executeRevert(selTarget?.value || '', e.currentTarget);
+  });
+  document.getElementById('btnToolsQuickApplyDeepSmooth')?.addEventListener('click', (e) => {
+    executeApply(state.modTargetInstanceDir || '', e.currentTarget);
+  });
+  document.getElementById('btnToolsQuickRevertDeepSmooth')?.addEventListener('click', (e) => {
+    executeRevert(state.modTargetInstanceDir || '', e.currentTarget);
+  });
+
+  setTimeout(() => {
+    refreshDeepSmoothBadgesUI();
+  }, 600);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   initCoopHubUI();
   initV402FeaturesUI();
   initV406FeaturesUI();
   initV407FeaturesUI();
   initUniversalDropUI();
+  initV410TurboSmoothUI();
 });

@@ -34,7 +34,9 @@ const state = {
   favoriteServers: [...DEFAULT_FEATURED_SERVERS],
   winResolution: '1280x720', uiScale: 1.0, outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
   activeLaunchContext: null, lastLaunchContext: null,
-  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, smartRamCoach: true, gentleSmoothMode: true, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
+  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, smartRamCoach: true, gentleSmoothMode: true,
+  deepSmoothEngine: true, deepSmoothProfile: 'balanced', deepSmoothLayers: ['vanilla_io', 'optifine', 'sodium', 'modernfix', 'culling_hud', 'jvm_lowlatency'],
+  autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
   playtimeStats: { totalSeconds: 0, sessionsCount: 0, byInstance: {}, byVersion: {} }
 };
 
@@ -84,7 +86,12 @@ function syncAutoBackupAndDiscordUI() {
   if (chkCoach) chkCoach.checked = state.smartRamCoach !== false;
   const chkGentle = document.getElementById('gentleSmoothCheck');
   if (chkGentle) chkGentle.checked = state.gentleSmoothMode !== false;
+  const chkDeepSmooth = document.getElementById('deepSmoothEngineCheck');
+  if (chkDeepSmooth) chkDeepSmooth.checked = state.deepSmoothEngine !== false;
   updateSettingsCheckedCountBadge();
+  if (typeof window.refreshDeepSmoothBadgesUI === 'function') {
+    window.refreshDeepSmoothBadgesUI();
+  }
 }
 window.syncAutoBackupAndDiscordUI = syncAutoBackupAndDiscordUI;
 
@@ -901,6 +908,9 @@ function saveCurrentConfig() {
       potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
       smartRamCoach: state.smartRamCoach !== false,
       gentleSmoothMode: state.gentleSmoothMode !== false,
+      deepSmoothEngine: state.deepSmoothEngine !== false,
+      deepSmoothProfile: state.deepSmoothProfile || 'balanced',
+      deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
       autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
       uiScale: Number(state.uiScale) || 1.0,
       customWallpaper: state.customWallpaper || '',
@@ -921,6 +931,9 @@ function saveCurrentConfig() {
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
     smartRamCoach: state.smartRamCoach !== false,
     gentleSmoothMode: state.gentleSmoothMode !== false,
+    deepSmoothEngine: state.deepSmoothEngine !== false,
+    deepSmoothProfile: state.deepSmoothProfile || 'balanced',
+    deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
     autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
     uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated),
     customWallpaper: state.customWallpaper || '',
@@ -1314,7 +1327,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.9.2'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '41.0.0'}`), 2000);
       }
     }
     return;
@@ -1508,10 +1521,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  window.runLauncherRamTrim = runRamTrim;
   const btnTrim = document.getElementById('btnTrimRam');
   if (btnTrim) btnTrim.onclick = () => runRamTrim(btnTrim, document.getElementById('ramBoostText'));
   const btnSysOpt = document.getElementById('btnSysOptimize');
-  if (btnSysOpt) btnSysOpt.onclick = () => runRamTrim(btnSysOpt, null);
+  if (btnSysOpt) {
+    btnSysOpt.onclick = () => {
+      if (typeof window.openDeepSmoothStudioModal === 'function') {
+        window.openDeepSmoothStudioModal();
+      } else {
+        runRamTrim(btnSysOpt, null);
+      }
+    };
+  }
 
   document.querySelectorAll('.ts-chip').forEach((chip) => { chip.onclick = () => setTheme(chip.dataset.themePick); });
   document.querySelectorAll('.sidebar-nav .nav-item').forEach((nav) => {
@@ -2530,9 +2552,38 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     };
   }
+  const deepSmoothCheck = document.getElementById('deepSmoothEngineCheck');
+  if (deepSmoothCheck) {
+    deepSmoothCheck.onchange = (e) => {
+      state.deepSmoothEngine = Boolean(e.target.checked);
+      syncAutoBackupAndDiscordUI();
+      saveCurrentConfig();
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(
+          state.deepSmoothEngine
+            ? '⚡ Đã bật Turbo Smooth Core™: tự động tối ưu 6 tầng tệp cấu hình game mỗi khi bấm Chơi!'
+            : '⏸ Đã tạm tắt tự động tối ưu 6 tầng khi bấm Chơi (bạn vẫn có thể bấm Can Thiệp hoặc Hoàn Tác thủ công trong Studio).',
+          'info',
+          3800
+        );
+      }
+    };
+  }
+  const btnSetOpenDs = document.getElementById('btnSettingsOpenDeepSmooth');
+  if (btnSetOpenDs) {
+    btnSetOpenDs.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof window.openDeepSmoothStudioModal === 'function') {
+        window.openDeepSmoothStudioModal();
+      }
+    };
+  }
   const btnCheckRec = document.getElementById('btnSettingsCheckRecommended');
   if (btnCheckRec) {
     btnCheckRec.onclick = () => {
+      state.deepSmoothEngine = true;
+      state.deepSmoothProfile = 'balanced';
       state.hideLauncherOnPlay = true;
       state.fastSkipHash = true;
       state.aikarFlags = true;
@@ -2551,7 +2602,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       syncAutoBackupAndDiscordUI();
       saveCurrentConfig();
       if (typeof showAetherNotification === 'function') {
-        showAetherNotification('✨ Đã bật trọn bộ 10/11 tuỳ chọn Mượt Êm khuyên dùng (không ép máy)!', 'success', 3600);
+        showAetherNotification('✨ Đã bật trọn bộ 11/12 tuỳ chọn Mượt Êm khuyên dùng (kèm Turbo Smooth Core™ 6 tầng)!', 'success', 3600);
       }
     };
   }
@@ -3224,6 +3275,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
       smartRamCoach: state.smartRamCoach !== false,
       gentleSmoothMode: state.gentleSmoothMode !== false,
+      deepSmoothEngine: state.deepSmoothEngine !== false,
+      deepSmoothProfile: state.deepSmoothProfile || 'balanced',
+      deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
       cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
     });
 
