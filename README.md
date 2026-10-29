@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v40.9.5 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v40.9.6 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,19 +6,23 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.5_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.6_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-7_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
-**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới với **Trợ Lý OptiFine Đa Nền Tảng (`Fabric` • `Forge` • `NeoForge` • `Quilt` • `OptiFine`)**, **Ảnh bản đồ 16:9 trực quan cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack**, **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Chế độ Mượt Êm không ép máy**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
+**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới với **Menu Nhanh Tài Khoản & Ảnh Avatar Hồ Sơ Riêng**, **Trợ Lý OptiFine Đa Nền Tảng (`Fabric` • `Forge` • `NeoForge` • `Quilt` • `OptiFine`)**, **Ảnh bản đồ 16:9 trực quan cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack**, **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Chế độ Mượt Êm không ép máy**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
 
 🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/blockway-launcher/](https://buiduchuy2010qn-prog.github.io/blockway-launcher/)**
 
 ---
 
-## 📦 Mới trong phiên bản `v40.9.5 PRO`
+## 📦 Mới trong phiên bản `v40.9.6 PRO`
 
-1. **🔆 Trợ Lý OptiFine Đa Nền Tảng, Tùy Chọn Từng Tính Năng & Hỗ Trợ `OptiFine_*.jar` Mọi Bản MC (MỚI `v40.9.5 PRO`):**
+1. **👤 Menu Nhanh Tài Khoản, Ảnh Avatar Hồ Sơ Riêng & Nhận Diện Khuôn Mặt Skin Thông Minh (MỚI `v40.9.6 PRO`):**
+   - **Menu nhanh ngay tại góc trên thanh bên (`#sidebarProfileCard`):** Bấm vào thẻ hồ sơ để mở trực tiếp bảng chuyển nhanh giữa **☁ Cloud • 👤 Offline • 👑 Microsoft**, đổi qua lại các tài khoản đã lưu 1-Click, thêm nhanh tên nhân vật mới hoặc đăng xuất ngay tại chỗ mà không bị nhảy trang.
+   - **Tải ảnh Avatar hồ sơ riêng (`.PNG` / `.JPG` / `.WEBP`):** Tự do chọn bất kỳ ảnh đại diện cá nhân sắc nét cho hồ sơ Launcher (tách biệt hoàn toàn với trang phục 3D trong game), kèm nút **🔄 Dùng mặt Skin 3D** và **✨ Khôi phục Skin chuẩn** 1-Click.
+   - **Nhận diện khuôn mặt UV thông minh & Lọc sạch Kho Skin 3D:** Tự động phát hiện đúng vùng khuôn mặt trên các mẫu Skin phá cách (vẽ mặt ở thân áo) để không bao giờ hiển thị lệch hình, tự lưu giữ Skin đang mặc vào Tủ đồ trước khi thay mới và lọc sạch các mẫu vô danh trong Kho Skin Trực Tuyến.
+2. **🔆 Trợ Lý OptiFine Đa Nền Tảng, Tùy Chọn Từng Tính Năng & Hỗ Trợ `OptiFine_*.jar` Mọi Bản MC (`v40.9.5 PRO`):**
    - **Chọn tự do Đích cài đặt, Phiên bản MC & Mod Loader:** Không khóa cứng vào một cấu hình cố định — người chơi chọn ngay **Thư mục chính (`.minecraft`) hoặc bất kỳ gói Modpack đã cài**, chọn **mọi phiên bản Minecraft (`1.7.10 → 26.3`)** và chọn tự do nền tảng **`Core OptiFine`**, **`Fabric`**, **`Forge`**, **`NeoForge`** hoặc **`Quilt`**.
    - **Tích chọn từng tính năng lẻ & chọn Mod Zoom ưa thích:** Tự do bật/tắt riêng từng nhóm (*Tăng FPS êm máy, Chạy mọi gói Shader, Phím Zoom ống nhòm, Đuốc cầm tay phát sáng, Kính & Block nối liền, Fresh Animations & Custom Pack*) và chọn Mod Zoom yêu thích (*Zoomify, Logical Zoom, Zume, WI Zoom / Ok Zoomer*).
    - **Hỗ trợ `OptiFine_*.jar` gốc cho mọi phiên bản MC (Vanilla Độc Lập & Forge):** Tự động chuẩn bị sẵn tệp nền Minecraft để cài **Profile OptiFine Độc Lập** chạy trực tiếp như Vanilla cho mọi phiên bản (`1.7.10` → mới nhất), hoặc gắn thẳng vào `mods/` của **Core OptiFine / Forge** và tự cất gọn Mod trùng render.

@@ -244,65 +244,229 @@ function convertSkinTo64x64DataUrl(imgSource) {
   });
 }
 
-function draw2DAvatarFace(imgSource) {
+function hasValidSkinOverlay(octx, rx, ry, rw, rh, imgW, imgH) {
+  if (rx + rw > imgW || ry + rh > imgH) return false;
+  try {
+    const data = octx.getImageData(rx, ry, rw, rh).data;
+    let hasTrans = false;
+    let hasOpaque = false;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 245) hasTrans = true;
+      if (data[i] > 15) hasOpaque = true;
+      if (hasTrans && hasOpaque) return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function evaluateSkinFaceCandidate(octx, baseX, baseY, overX, overY, allowOver, imgW, imgH) {
+  if (baseX + 8 > imgW || baseY + 8 > imgH) return { valid: false, score: -999, solid: false, baseX, baseY, overX, overY, allowOver: false };
+  try {
+    const base = octx.getImageData(baseX, baseY, 8, 8).data;
+    const over = (allowOver && overX + 8 <= imgW && overY + 8 <= imgH) ? octx.getImageData(overX, overY, 8, 8).data : null;
+    const p = new Uint8Array(256);
+    let opaque = 0;
+    for (let i = 0; i < 256; i += 4) {
+      let r = base[i], g = base[i + 1], b = base[i + 2], a = base[i + 3];
+      if (over && over[i + 3] > 15) {
+        const al = over[i + 3] / 255;
+        r = Math.round(over[i] * al + r * (1 - al));
+        g = Math.round(over[i + 1] * al + g * (1 - al));
+        b = Math.round(over[i + 2] * al + b * (1 - al));
+        a = Math.max(a, over[i + 3]);
+      }
+      p[i] = r; p[i + 1] = g; p[i + 2] = b; p[i + 3] = a;
+      if (a > 30) opaque++;
+    }
+    if (opaque < 24) {
+      return { valid: false, score: -999, solid: false, baseX, baseY, overX, overY, allowOver: Boolean(over) };
+    }
+    const r0 = p[0], g0 = p[1], b0 = p[2];
+    let solid = true;
+    for (let i = 0; i < 8 * 6 * 4; i += 4) {
+      if (Math.abs(p[i] - r0) > 12 || Math.abs(p[i + 1] - g0) > 12 || Math.abs(p[i + 2] - b0) > 12) {
+        solid = false;
+        break;
+      }
+    }
+    let mSum = 0, mCnt = 0;
+    for (let y = 2; y <= 6; y++) {
+      for (let x = 0; x < 4; x++) {
+        const l = (y * 8 + x) * 4;
+        const r = (y * 8 + (7 - x)) * 4;
+        mSum += Math.abs(p[l] - p[r]) + Math.abs(p[l + 1] - p[r + 1]) + Math.abs(p[l + 2] - p[r + 2]);
+        mCnt++;
+      }
+    }
+    const mirrorDiff = mSum / mCnt;
+    let flatBottom = 0;
+    for (let y = 5; y <= 7; y++) {
+      let rowMax = 0;
+      const i0 = (y * 8) * 4;
+      for (let x = 1; x < 8; x++) {
+        const ix = (y * 8 + x) * 4;
+        rowMax = Math.max(rowMax, Math.abs(p[ix] - p[i0]) + Math.abs(p[ix + 1] - p[i0 + 1]) + Math.abs(p[ix + 2] - p[i0 + 2]));
+      }
+      if (rowMax <= 4) flatBottom++;
+    }
+    let eyeBonus = 0;
+    for (let y = 2; y <= 6; y++) {
+      const l1 = (y * 8 + 1) * 4, l2 = (y * 8 + 2) * 4;
+      const r1 = (y * 8 + 6) * 4, r2 = (y * 8 + 5) * 4;
+      const c1 = (y * 8 + 3) * 4, c2 = (y * 8 + 4) * 4;
+      const sym1 = Math.abs(p[l1] - p[r1]) + Math.abs(p[l1 + 1] - p[r1 + 1]) + Math.abs(p[l1 + 2] - p[r1 + 2]);
+      const sym2 = Math.abs(p[l2] - p[r2]) + Math.abs(p[l2 + 1] - p[r2 + 1]) + Math.abs(p[l2 + 2] - p[r2 + 2]);
+      const ctr1 = Math.abs(p[l1] - p[c1]) + Math.abs(p[l1 + 1] - p[c1 + 1]) + Math.abs(p[l1 + 2] - p[c1 + 2]);
+      const ctr2 = Math.abs(p[l2] - p[c2]) + Math.abs(p[l2 + 1] - p[c2 + 1]) + Math.abs(p[l2 + 2] - p[c2 + 2]);
+      if ((sym1 < 55 && ctr1 >= 45) || (sym2 < 55 && ctr2 >= 45)) {
+        eyeBonus = 55;
+        break;
+      }
+    }
+    const score = Math.round(120 - mirrorDiff * 0.6 + eyeBonus - (flatBottom >= 3 ? 55 : 0));
+    return {
+      valid: true,
+      solid,
+      r0, g0, b0,
+      eyeBonus,
+      score,
+      baseX, baseY, overX, overY,
+      allowOver: Boolean(over)
+    };
+  } catch (_) {
+    return { valid: true, solid: false, score: 120, baseX, baseY, overX, overY, allowOver: false };
+  }
+}
+
+function renderSmartSkinFaceToCanvas(canvas, img, sharedOffCtx = null) {
+  if (!canvas || !img) return;
+  const imgW = img.width || 64;
+  const imgH = img.height || 64;
+  let octx = sharedOffCtx;
+  if (!octx) {
+    const off = document.createElement('canvas');
+    off.width = imgW;
+    off.height = imgH;
+    octx = off.getContext('2d', { willReadFrequently: true });
+    octx.drawImage(img, 0, 0);
+  }
+  if (canvas.width !== 64 || canvas.height !== 64) {
+    canvas.width = 64;
+    canvas.height = 64;
+  }
+  canvas.classList.remove('is-custom-avatar');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // If image is not a standard 2:1 or 1:1 Minecraft skin (e.g. square HD icon), draw full image cleanly
+  if (imgW > 128 && Math.abs(imgW - imgH) <= 4) {
+    canvas.width = 128;
+    canvas.height = 128;
+    canvas.classList.add('is-custom-avatar');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return;
+  }
+
+  const hatValid = hasValidSkinOverlay(octx, 32, 0, 32, 16, imgW, imgH);
+  const jacketValid = imgH >= 64 && hasValidSkinOverlay(octx, 16, 32, 24, 16, imgW, imgH);
+
+  const headCand = evaluateSkinFaceCandidate(octx, 8, 8, 40, 8, hatValid, imgW, imgH);
+  let chosen = headCand;
+
+  // Smart fallback for mini / chest-face / backwards skins (e.g., head has sideways body stripes while chest (20,20) has the real face)
+  if (!headCand.solid && (!headCand.valid || headCand.score < 100)) {
+    const chestCand = evaluateSkinFaceCandidate(octx, 20, 20, 20, 36, jacketValid, imgW, imgH);
+    const backCand = evaluateSkinFaceCandidate(octx, 24, 8, 56, 8, hatValid, imgW, imgH);
+    for (const alt of [chestCand, backCand]) {
+      if (alt.valid && !alt.solid && alt.eyeBonus > 0 && alt.score >= Math.max(125, headCand.score + 48)) {
+        if (alt.score > chosen.score) chosen = alt;
+      }
+    }
+  }
+
+  if (chosen.solid && chosen === headCand) {
+    const w = canvas.width;
+    ctx.fillStyle = `rgb(${chosen.r0}, ${chosen.g0}, ${chosen.b0})`;
+    ctx.fillRect(0, 0, w, w);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(w * 0.14), Math.round(w * 0.14), Math.round(w * 0.72), Math.round(w * 0.72));
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
+    ctx.fillRect(Math.round(w * 0.60), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
+    ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.62), Math.round(w * 0.44), Math.round(w * 0.10));
+    ctx.fillRect(Math.round(w * 0.21), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
+    ctx.fillRect(Math.round(w * 0.69), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
+    return;
+  }
+
+  const bx = chosen.valid ? chosen.baseX : 8;
+  const by = chosen.valid ? chosen.baseY : 8;
+  ctx.drawImage(img, bx, by, 8, 8, 0, 0, canvas.width, canvas.height);
+  if (chosen.valid && chosen.allowOver) {
+    ctx.drawImage(img, chosen.overX, chosen.overY, 8, 8, 0, 0, canvas.width, canvas.height);
+  }
+}
+window.renderSmartSkinFaceToCanvas = renderSmartSkinFaceToCanvas;
+
+function draw2DAvatarFace(imgSource, opts = {}) {
   const canvases = [
     document.getElementById('avatar2dCanvas'),
     document.getElementById('msCardAvatarCanvas'),
-    document.getElementById('playTabAvatarCanvas')
+    document.getElementById('playTabAvatarCanvas'),
+    document.getElementById('popoverAvatarCanvas')
   ].filter(Boolean);
+
+  const customAvatar = (typeof state === 'object' && state && state.customAvatarDataUrl) ? String(state.customAvatarDataUrl) : '';
+  if (imgSource && imgSource !== customAvatar) {
+    window.__lastSkinFaceSource = imgSource;
+  }
+  if (typeof window.syncCustomAvatarUI === 'function') {
+    window.syncCustomAvatarUI();
+  }
   if (!canvases.length) return;
-  const img = new Image();
-  img.onload = () => {
-    const off = document.createElement('canvas');
-    off.width = img.width || 64;
-    off.height = img.height || 64;
-    const octx = off.getContext('2d', { willReadFrequently: true });
-    octx.drawImage(img, 0, 0);
 
-    for (const canvas of canvases) {
-      const ctx = canvas.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 8, 8, 8, 8, 0, 0, canvas.width, canvas.height);
-
-      try {
-        const hatData = octx.getImageData(32, 0, 32, 16).data;
-        let hasTransparent = false;
-        let hasOpaque = false;
-        for (let i = 3; i < hatData.length; i += 4) {
-          if (hatData[i] < 245) hasTransparent = true;
-          if (hatData[i] > 15) hasOpaque = true;
-        }
-        if (hasTransparent && hasOpaque) {
-          ctx.drawImage(img, 40, 8, 8, 8, 0, 0, canvas.width, canvas.height);
-        }
-
-        const faceData = octx.getImageData(8, 8, 8, 6).data;
-        const r0 = faceData[0], g0 = faceData[1], b0 = faceData[2];
-        let solidHead = true;
-        for (let i = 0; i < faceData.length; i += 4) {
-          if (Math.abs(faceData[i] - r0) > 12 || Math.abs(faceData[i + 1] - g0) > 12 || Math.abs(faceData[i + 2] - b0) > 12) {
-            solidHead = false;
-            break;
-          }
-        }
-        if (solidHead) {
-          const w = canvas.width;
-          ctx.fillStyle = `rgb(${r0}, ${g0}, ${b0})`;
-          ctx.fillRect(0, 0, w, w);
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(Math.round(w * 0.14), Math.round(w * 0.14), Math.round(w * 0.72), Math.round(w * 0.72));
-          ctx.fillStyle = '#0f172a';
-          ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
-          ctx.fillRect(Math.round(w * 0.60), Math.round(w * 0.30), Math.round(w * 0.12), Math.round(w * 0.14));
-          ctx.fillRect(Math.round(w * 0.28), Math.round(w * 0.62), Math.round(w * 0.44), Math.round(w * 0.10));
-          ctx.fillRect(Math.round(w * 0.21), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
-          ctx.fillRect(Math.round(w * 0.69), Math.round(w * 0.54), Math.round(w * 0.10), Math.round(w * 0.10));
-        }
-      } catch (_) {}
-    }
+  const renderSkinFallback = () => {
+    const skinSrc = imgSource || window.__lastSkinFaceSource || (typeof state === 'object' && state?.cachedSkinDataUrl) || createFallbackSteveSkinDataUrl();
+    if (!skinSrc) return;
+    const img = new Image();
+    img.onload = () => {
+      const off = document.createElement('canvas');
+      off.width = img.width || 64;
+      off.height = img.height || 64;
+      const octx = off.getContext('2d', { willReadFrequently: true });
+      octx.drawImage(img, 0, 0);
+      for (const canvas of canvases) {
+        renderSmartSkinFaceToCanvas(canvas, img, octx);
+      }
+    };
+    img.src = skinSrc;
   };
-  img.src = imgSource;
+
+  if (!opts.forceSkin && customAvatar && /^data:image\//i.test(customAvatar)) {
+    const cImg = new Image();
+    cImg.onload = () => {
+      for (const canvas of canvases) {
+        if (canvas.width !== 128 || canvas.height !== 128) {
+          canvas.width = 128;
+          canvas.height = 128;
+        }
+        canvas.classList.add('is-custom-avatar');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(cImg, 0, 0, canvas.width, canvas.height);
+      }
+    };
+    cImg.onerror = renderSkinFallback;
+    cImg.src = customAvatar;
+    return;
+  }
+
+  renderSkinFallback();
 }
 function getModStoreTarget() {
   const wantedDir = String(state.modTargetInstanceDir || '').trim();

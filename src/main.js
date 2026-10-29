@@ -2484,5 +2484,49 @@ ipcMain.handle('ui:set-scale', async (_e, scale = 1.0) => {
   }
 });
 
+ipcMain.handle('avatar:upload-custom', async () => {
+  try {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Chọn ảnh đại diện hồ sơ (Avatar)',
+      properties: ['openFile'],
+      filters: [{ name: 'Ảnh Avatar (.png, .jpg, .webp, .bmp)', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp'] }]
+    });
+    if (res.canceled || !res.filePaths?.length) return { ok: false, canceled: true };
+    const fp = res.filePaths[0];
+    const stat = fs.statSync(fp);
+    if (stat.size > 15 * 1024 * 1024) {
+      return { ok: false, error: 'Ảnh quá lớn (tối đa 15 MB). Vui lòng chọn ảnh gọn hơn.' };
+    }
+    let img = nativeImage.createFromPath(fp);
+    if (img.isEmpty()) {
+      return { ok: false, error: 'Không đọc được tệp ảnh này. Hãy chọn tệp PNG, JPG hoặc WEBP hợp lệ.' };
+    }
+    const sz = img.getSize();
+    const side = Math.min(sz.width || 0, sz.height || 0);
+    if (side < 8) {
+      return { ok: false, error: 'Kích thước ảnh quá nhỏ (cần tối thiểu 8×8 px).' };
+    }
+    if (sz.width !== sz.height) {
+      img = img.crop({
+        x: Math.max(0, Math.floor((sz.width - side) / 2)),
+        y: Math.max(0, Math.floor((sz.height - side) / 2)),
+        width: side,
+        height: side
+      });
+    }
+    const targetSide = Math.min(128, Math.max(64, side));
+    img = img.resize({ width: targetSide, height: targetSide, quality: 'best' });
+    const pngBuf = img.toPNG();
+    return {
+      ok: true,
+      fileName: path.basename(fp),
+      dataUrl: `data:image/png;base64,${pngBuf.toString('base64')}`
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+
 
 

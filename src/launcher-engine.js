@@ -8810,8 +8810,9 @@ function computeSmartRamAndJvmAdvice({
 
 const ONLINE_SKIN_PRESETS = {
   popular: {
-    filter: '',
-    curatedPlayers: ['Technoblade', 'Dream', 'Grian', 'Philza', 'DanTDM', 'Sapnap', 'SB737', 'Mumbo']
+    filter: 'aesthetic',
+    curatedQueries: ['aesthetic', 'hoodie', 'cute', 'knight'],
+    curatedPlayers: ['Technoblade', 'Dream', 'Grian', 'Philza', 'DanTDM', 'Sapnap', 'SB737', 'Mumbo', 'GeminiTay', 'LDShadowLady', 'Shubble', 'TommyInnit']
   },
   anime: {
     filter: 'anime',
@@ -8830,7 +8831,8 @@ const ONLINE_SKIN_PRESETS = {
     curatedQueries: ['knight', 'samurai', 'king', 'warrior']
   },
   youtuber: {
-    filter: '',
+    filter: 'youtuber',
+    curatedQueries: ['youtuber', 'streamer'],
     curatedPlayers: ['Technoblade', 'Dream', 'GeorgeNotFound', 'Sapnap', 'BadBoyHalo', 'TommyInnit', 'Grian', 'Mumbo', 'Philza', 'DanTDM', 'Skeppy', 'SB737']
   }
 };
@@ -8905,12 +8907,21 @@ async function searchOnlineSkins({ query = '', category = 'popular', page = 1 } 
   }
 
   // 3. Query MineSkin gallery API (millions of tagged community 64x64 skins hosted on Mojang CDN)
-  // v40.8: v1 list still filters by name best; v2 is the fallback when v1 is down/empty. Unnamed skins get unique labels.
+  // v40.9.6: Filter out unnamed/troll uploads when browsing category presets so page 1+ only shows curated named skins.
+  const presetQueries = Array.isArray(preset.curatedQueries) && preset.curatedQueries.length
+    ? preset.curatedQueries
+    : [preset.filter || 'aesthetic'];
+  const qOffset = ((safePage - 1) * 2) % presetQueries.length;
   const queriesToRun = cleanQuery
     ? [cleanQuery]
-    : (Array.isArray(preset.curatedQueries) && preset.curatedQueries.length
-      ? preset.curatedQueries.slice(0, 2)
-      : [preset.filter || '']);
+    : [presetQueries[qOffset], presetQueries[(qOffset + 1) % presetQueries.length]].filter((v, i, arr) => v && arr.indexOf(v) === i);
+
+  const isCleanPresetSkinName = (rawName) => {
+    const n = String(rawName || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!n || n.length < 2) return false;
+    if (/^(?:unnamed|blank|invisible|upside|cursed|troll|headless|skin\s*#?\d+|test\s*\d*)$/i.test(n)) return false;
+    return /[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF]/.test(n);
+  };
 
   const prettyLabel = (rawName, qStr, idx) => {
     const n = String(rawName || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -8921,9 +8932,10 @@ async function searchOnlineSkins({ query = '', category = 'popular', page = 1 } 
   await Promise.all(queriesToRun.map(async (qStr) => {
     let added = 0;
     try {
-      const apiUrl = `https://api.mineskin.org/get/list/${safePage}?size=20${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
+      const apiUrl = `https://api.mineskin.org/get/list/${safePage}?size=24${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
       const data = await fetchJson(apiUrl);
       (data?.skins || []).forEach((sk, idx) => {
+        if (!cleanQuery && !isCleanPresetSkinName(sk?.name)) return;
         const rawUrl = String(sk?.url || '');
         const hash = rawUrl.split('/').pop();
         if (!hash || !/^[a-f0-9]{32,68}$/i.test(hash)) return;
@@ -8940,9 +8952,10 @@ async function searchOnlineSkins({ query = '', category = 'popular', page = 1 } 
     } catch (_) {}
     if (added > 0) return;
     try {
-      const v2Url = `https://api.mineskin.org/v2/skins?size=20${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
+      const v2Url = `https://api.mineskin.org/v2/skins?size=24${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
       const data2 = await fetchJson(v2Url);
       (data2?.skins || []).forEach((sk, idx) => {
+        if (!cleanQuery && !isCleanPresetSkinName(sk?.name)) return;
         const hash = String(sk?.texture || '');
         if (!/^[a-f0-9]{32,68}$/i.test(hash)) return;
         pushSkin({
@@ -8951,7 +8964,7 @@ async function searchOnlineSkins({ query = '', category = 'popular', page = 1 } 
           textureUrl: `https://textures.minecraft.net/texture/${hash}`,
           previewUrl: `https://mc-heads.net/body/${hash}/120`,
           faceUrl: `https://mc-heads.net/avatar/${hash}/64`,
-          badge: '🌐 Cộng đồng'
+          badge: qStr ? `#${qStr}` : '🌐 Cộng đồng'
         });
       });
     } catch (_) {}

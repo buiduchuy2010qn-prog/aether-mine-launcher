@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v40.9.5 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v40.9.6 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,7 +23,7 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v40.9.5</strong>
+          <strong id="titlebarUpdateVer">v40.9.6</strong>
         </button>
       </div>
 
@@ -125,11 +125,11 @@
     <div class="workspace">
       <!-- B. LEFT SIDEBAR (SINGLE UNIFIED 8-ITEM NAVIGATION) -->
       <aside class="sidebar">
-        <div class="sidebar-profile-card" id="sidebarProfileCard" title="Bấm để quản lý hoặc chuyển đổi tài khoản">
-          <canvas id="avatar2dCanvas" width="42" height="42" class="avatar-face-canvas"></canvas>
+        <div class="sidebar-profile-card" id="sidebarProfileCard" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false" title="Bấm để đổi nhanh tài khoản, ảnh đại diện (Avatar) hoặc Skin 3D">
+          <canvas id="avatar2dCanvas" width="64" height="64" class="avatar-face-canvas"></canvas>
           <div class="sidebar-profile-info">
             <div class="sidebar-player-name" id="sidebarPlayerName">StevePlayer</div>
-            <div class="sidebar-auth-tag" id="sidebarAuthBadge">OFFLINE</div>
+            <div class="sidebar-auth-tag" id="sidebarAuthBadge" data-badge="offline">👤 OFFLINE</div>
           </div>
           <svg class="sidebar-profile-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -1403,6 +1403,17 @@
                   <button class="wt-upload-btn full-width-btn" id="btnUploadSkinPng" style="margin-top:8px;">
                     <span>📤 Tải File Skin (.PNG 64x64 / 64x32) Từ Máy Tính</span>
                   </button>
+                  <div class="wt-avatar-quick-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+                    <button type="button" class="wt-upload-btn" id="btnTabSkinUploadAvatar" style="flex:1 1 140px;" title="Chọn ảnh .PNG / .JPG / .WEBP bất kỳ làm ảnh đại diện hồ sơ trên Launcher (giữ nguyên Skin 3D trong game)">
+                      <span>🖼️ Đổi Ảnh Avatar Hồ Sơ</span>
+                    </button>
+                    <button type="button" class="wt-upload-btn hidden" id="btnTabSkinResetAvatar" style="flex:1 1 130px;" title="Gỡ ảnh Avatar riêng và dùng lại khuôn mặt từ Skin 3D">
+                      <span>🔄 Dùng Mặt Skin 3D</span>
+                    </button>
+                    <button type="button" class="wt-upload-btn" id="btnTabSkinReloadDefault" style="flex:1 1 130px;" title="Tải lại Skin chuẩn theo tên nhân vật hiện tại (lưu giữ Skin cũ trong Tủ đồ bên dưới)">
+                      <span>✨ Khôi Phục Skin Chuẩn</span>
+                    </button>
+                  </div>
                   <button class="btn-fps-boost-1click" id="btnInstallFriendSkinSync" style="width:100%;margin-top:6px;" title="Tự động trang bị CustomSkinLoader + Lớp Áo 3D + Áo Choàng để khi chơi chung LAN / Internet Offline bạn bè đều nhìn thấy đúng Skin của nhau (không bị trùng thành Steve/Alex)">
                     <span>🤝 Đồng Bộ Để Bạn Bè Thấy Đúng Skin Nhau (Offline / LAN)</span>
                   </button>
@@ -1983,6 +1994,59 @@
           <button class="btn-modal-cancel" id="btnMigrateClose">Đóng</button>
           <button class="btn-modal-agree" id="btnMigrateRunNow">⚡ Đồng Bộ Ngay (1-Click)</button>
         </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACCOUNT & AVATAR POPOVER (v40.9.6 PRO) -->
+    <div class="sidebar-profile-popover hidden" id="sidebarProfilePopover" role="dialog" aria-label="Menu nhanh Tài khoản &amp; Avatar">
+      <div class="spp-head">
+        <div class="spp-avatar-wrap" id="btnPopoverAvatarClick" title="Bấm để tải ảnh Avatar hồ sơ riêng (.PNG / .JPG / .WEBP)">
+          <canvas id="popoverAvatarCanvas" width="96" height="96" class="avatar-face-canvas spp-avatar"></canvas>
+          <span class="spp-avatar-edit-badge">🖼️</span>
+        </div>
+        <div class="spp-meta">
+          <div class="spp-name-row">
+            <strong id="popoverPlayerName">StevePlayer</strong>
+            <span class="spp-mode-pill" id="popoverAuthPill" data-badge="offline">👤 OFFLINE</span>
+          </div>
+          <span class="spp-subtext" id="popoverSubStatus">Chế độ Offline • Không cần mật khẩu</span>
+        </div>
+        <button type="button" class="spp-skin-btn" id="btnPopoverOpenSkin" title="Mở phòng thay đồ Skin &amp; Áo choàng 3D">👕 Skin 3D</button>
+      </div>
+
+      <div class="spp-quick-tools">
+        <button type="button" class="spp-tool-btn" id="btnPopoverUploadAvatar" title="Chọn bất kỳ ảnh .PNG / .JPG / .WEBP làm ảnh đại diện hồ sơ trên Launcher (không làm đổi Skin 3D trong game)">
+          <span>🖼️ Ảnh Avatar riêng</span>
+        </button>
+        <button type="button" class="spp-tool-btn is-accent hidden" id="btnPopoverResetAvatar" title="Gỡ ảnh đại diện riêng và hiển thị lại khuôn mặt Skin 3D">
+          <span>🔄 Mặt Skin 3D</span>
+        </button>
+        <button type="button" class="spp-tool-btn" id="btnPopoverReloadSkin" title="Tải lại Skin gốc chuẩn theo tên nhân vật (khắc phục ngay nếu lỡ mặc nhầm Skin lỗi)">
+          <span>✨ Skin chuẩn</span>
+        </button>
+      </div>
+
+      <div class="spp-section">
+        <div class="spp-sec-label">CHUYỂN NHANH CHẾ ĐỘ TÀI KHOẢN</div>
+        <div class="spp-mode-switch" id="popoverModeSwitch">
+          <button type="button" class="spp-mode-btn" data-popmode="aether">☁ Cloud</button>
+          <button type="button" class="spp-mode-btn active" data-popmode="crack">👤 Offline</button>
+          <button type="button" class="spp-mode-btn" data-popmode="microsoft">👑 Microsoft</button>
+        </div>
+      </div>
+
+      <div class="spp-section">
+        <div class="spp-sec-label">TÀI KHOẢN ĐÃ LƯU (CHUYỂN 1-CLICK)</div>
+        <div class="spp-acc-list" id="popoverAccountsList"></div>
+        <div class="spp-quick-add-row">
+          <input type="text" id="popoverQuickOfflineInput" class="pro-input spp-quick-input" maxlength="16" placeholder="Nhập tên nhân vật Offline mới..." />
+          <button type="button" class="btn-sync-skin spp-add-btn" id="btnPopoverAddOffline">+ Chọn</button>
+        </div>
+      </div>
+
+      <div class="spp-foot">
+        <button type="button" class="spp-foot-btn" id="btnPopoverManageAcc">⚙️ Quản lý tài khoản chi tiết</button>
+        <button type="button" class="spp-foot-btn is-danger hidden" id="btnPopoverLogout">🚪 Đăng xuất</button>
       </div>
     </div>
   </div>

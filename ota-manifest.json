@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "40.9.5",
-  "generatedAt": "2026-10-29T10:23:15.518Z",
+  "version": "40.9.6",
+  "generatedAt": "2026-10-29T14:44:05.303Z",
   "filesCount": 34,
   "files": [
     {
       "path": "package.json",
-      "size": 2216,
-      "sha256": "c308d337b4798795d99491e60caf0c0c3f5a6d8f4558c7f8ce892002011ddc7e"
+      "size": 2194,
+      "sha256": "3c256247c01aee9a2c93d663888f6ae3c0ce08a1f603f444bafd43b691c35fc3"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,13 +16,13 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 410616,
-      "sha256": "280d125699cc1bf8612fb5b5c2b7faecaa56369167b4bf5f263f853bcedc337d"
+      "size": 411515,
+      "sha256": "7fd62e20a12f87b9eb21c9b778acb8c48a99f1eaa692dcb4f9f2f5bab12fa102"
     },
     {
       "path": "src/main.js",
-      "size": 92089,
-      "sha256": "915b4d49d54b07b6d22884649107d87a19a3b0984127423c91475f49fe146da2"
+      "size": 93777,
+      "sha256": "dbdce5f27b06f84713008b0f6cc9aaf2feb7e49905a223dba7d95783c2914094"
     },
     {
       "path": "src/microsoft-auth.js",
@@ -31,8 +31,8 @@
     },
     {
       "path": "src/preload.js",
-      "size": 13053,
-      "sha256": "a9ca1330e605e1158cf54b011bee826e165bd6531241a5816c0f6ae5867d4730"
+      "size": 13125,
+      "sha256": "4f636247b455a01eaecd592340b42435bed0d12b8a0248733040a678bfbcd2cb"
     },
     {
       "path": "src/ui/app-banner-hero.png",
@@ -56,13 +56,13 @@
     },
     {
       "path": "src/ui/index.html",
-      "size": 198841,
-      "sha256": "688b75c636f1ae61ff2ec4e6f05c3bc14e2024eeffc51452cb45cc77c37d5a07"
+      "size": 203344,
+      "sha256": "de6f2abca8d5450f00dcd94ccbde3b1e7427595c03d487e6b682957080120ecf"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 206636,
-      "sha256": "5ccd0c5326207ea54d5194b6c79a27cb6b4c6a9e1f8e784ea39b1feffc976df0"
+      "size": 216884,
+      "sha256": "53e171624dfa6a6e5fcb21df8b985b625223dfffedab479baa059c206b8ba430"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -71,8 +71,8 @@
     },
     {
       "path": "src/ui/renderer.js",
-      "size": 143046,
-      "sha256": "1ed1e80e51ee534b7cccd5817aa351eb44112e5fcb787beac10b941572f3e191"
+      "size": 158337,
+      "sha256": "acc721d945a0c9199446080b93fd8eb46f41466d7cf7ec70b8cd727fa90a00a8"
     },
     {
       "path": "src/ui/seeds/badlands-gold-oasis-icon.png",
@@ -161,13 +161,13 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 411098,
-      "sha256": "c27285dc15305aa2285f6a342b75a4b6d3f38bc98c1d39e703a9152861a5399e"
+      "size": 417548,
+      "sha256": "2a9c7fca4a60bf48abbaf2e1edf43d4b2c637e5a4fcc871af99eed3cd4ab0c22"
     },
     {
       "path": "src/ui/styles.css",
-      "size": 113533,
-      "sha256": "901fdaa07fbd143c651a601c5680e1fc9a2939d6309a9576c2faf5d4d270d04c"
+      "size": 113560,
+      "sha256": "4f1bb32acb703aa49cfb26085cb77abae482ba32c1a487a9de213fa659f57fc0"
     },
     {
       "path": "src/world-creator.js",

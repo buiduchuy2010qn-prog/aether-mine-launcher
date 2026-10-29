@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   cloudResetPassword: (params) => ipcRenderer.invoke('cloud:reset-password', params),
   fetchSkinBase64: (username) => ipcRenderer.invoke('skin:fetch-base64', username),
   uploadLocalSkin: (gameDir, username) => ipcRenderer.invoke('skin:upload-local', gameDir, username),
+  uploadCustomAvatar: () => ipcRenderer.invoke('avatar:upload-custom'),
 
   searchModrinth: (params) => ipcRenderer.invoke('modrinth:search', params),
   installModrinth: (params) => ipcRenderer.invoke('modrinth:install', params),

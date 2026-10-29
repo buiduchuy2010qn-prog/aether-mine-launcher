@@ -2840,8 +2840,9 @@ html[data-theme="cherry"] {
 }
 
 .sidebar-auth-tag {
-  font-size: 10.5px !important;
-  padding: 3px 8px !important;
+  font-size: 10px !important;
+  padding: 2px 7px !important;
+  margin-left: 0 !important;
 }
 
 .sidebar-section-label {

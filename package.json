@@ -1,7 +1,7 @@
 {
   "name": "blockway-launcher",
-  "version": "40.9.5",
-  "description": "BlockWay Launcher v40.9.5 PRO — Every World, One Place (Trợ Lý OptiFine Đa Loader Fabric/Forge/NeoForge/Quilt & Tích chọn tính năng lẻ + OptiFine.jar mọi bản MC, Kho Hạt Giống 16:9, Cỡ chữ lớn Aa 90–125%, Đóng gói gửi Mod 2.0, Mượt Êm không ép máy)",
+  "version": "40.9.6",
+  "description": "BlockWay Launcher v40.9.6 PRO — Every World, One Place (Menu Nhanh Tài Khoản & Ảnh Avatar Riêng .PNG/.JPG, Nhận Diện Khuôn Mặt Skin Thông Minh, Trợ Lý OptiFine Đa Loader Fabric/Forge/NeoForge/Quilt, Kho Hạt Giống 16:9, Cỡ chữ Aa 90–125%)",
   "homepage": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
   "repository": {
     "type": "git",

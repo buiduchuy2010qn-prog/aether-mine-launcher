@@ -29,7 +29,7 @@ const state = {
   versionFilter: 'release', selectedCore: 'fabric', selectedLoaderVersion: '',
   ramGB: 3, totalMemGB: 8, freeMemGB: 4, javaPath: 'java', gameDir: '', serverIp: '',
   fastSkipHash: true, aikarFlags: true, hideLauncherOnPlay: true, cpuCores: 8,
-  versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', cachedSkinDataUrl: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
+  versions: [], installedVersions: [], skinModel: 'default', selectedSkinPreset: '', cachedSkinDataUrl: '', customAvatarDataUrl: '', capeType: 'mojang', backEquipment: 'cape', stageStars: true,
   activeModStoreType: 'mod', activeLocalFolder: 'mods', serverCategoryFilter: 'all',
   favoriteServers: [...DEFAULT_FEATURED_SERVERS],
   winResolution: '1280x720', uiScale: 1.0, outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
@@ -264,6 +264,7 @@ function init3DSkinViewer() {
 
 async function loadCharacterSkin(username) {
   const clean = (username || 'StevePlayer').trim() || 'StevePlayer';
+  preserveOutgoingSkinInCloset();
   syncSkinPresetButtons(clean);
   update3DNameTag(state.authMode === 'microsoft' && state.msProfile?.name ? state.msProfile.name : state.username);
   const res = await window.aetherAPI.fetchSkinBase64(clean);
@@ -285,6 +286,17 @@ async function loadCharacterSkin(username) {
   if (res?.ok && res.dataUrl) rememberSkinInCloset(normalized64Url, clean);
 }
 
+// Preserve active skin into closet BEFORE overwriting so users never lose an earlier skin
+function preserveOutgoingSkinInCloset(fallbackLabel = 'Skin trước đó') {
+  if (!currentSkinDataUrl || !/^data:image\/png/i.test(String(currentSkinDataUrl))) return;
+  const list = Array.isArray(state.skinCloset) ? state.skinCloset : [];
+  if (list.some((s) => s && s.dataUrl === currentSkinDataUrl)) return;
+  state.skinCloset = [
+    { dataUrl: currentSkinDataUrl, name: String(fallbackLabel || 'Skin trước đó').slice(0, 40), model: state.skinModel || 'default', at: Date.now() - 1 },
+    ...list
+  ].slice(0, 12);
+}
+
 // v40.8 Skin closet: the last 12 skins you wore, one click to put back on
 function rememberSkinInCloset(dataUrl, name = 'Skin') {
   if (!dataUrl || !/^data:image\/png/i.test(String(dataUrl))) return;
@@ -301,12 +313,16 @@ function skinFaceFromDataUrl(dataUrl) {
     img.onload = () => {
       try {
         const c = document.createElement('canvas');
-        c.width = 32;
-        c.height = 32;
-        const ctx = c.getContext('2d');
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, 8, 8, 8, 8, 0, 0, 32, 32);
-        ctx.drawImage(img, 40, 8, 8, 8, 0, 0, 32, 32);
+        c.width = 64;
+        c.height = 64;
+        if (typeof window.renderSmartSkinFaceToCanvas === 'function') {
+          window.renderSmartSkinFaceToCanvas(c, img);
+        } else {
+          const ctx = c.getContext('2d');
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, 8, 8, 8, 8, 0, 0, 64, 64);
+          ctx.drawImage(img, 40, 8, 8, 8, 0, 0, 64, 64);
+        }
         resolve(c.toDataURL('image/png'));
       } catch (_) { resolve(''); }
     };
@@ -725,10 +741,13 @@ function updateSummaryUI() {
   if (sbName) sbName.textContent = playerName;
   const sbBadge = document.getElementById('sidebarAuthBadge');
   if (sbBadge) {
-    sbBadge.textContent = (state.authMode === 'microsoft' && state.msProfile?.name)
-      ? '👑 MICROSOFT'
-      : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? '🛡️ CLOUD' : 'OFFLINE');
+    const badgeKind = (state.authMode === 'microsoft' && state.msProfile?.name)
+      ? 'ms'
+      : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? 'cloud' : 'offline');
+    sbBadge.dataset.badge = badgeKind;
+    sbBadge.textContent = badgeKind === 'ms' ? '👑 MICROSOFT' : (badgeKind === 'cloud' ? '🛡️ CLOUD' : '👤 OFFLINE');
   }
+  if (typeof window.renderSidebarProfilePopover === 'function') window.renderSidebarProfilePopover();
   const modeLabel = state.authMode === 'microsoft' ? 'Microsoft' : (state.authMode === 'aether' ? 'BlockWay Cloud' : 'Crack');
   const dockAcc = document.getElementById('dockAccountText');
   if (dockAcc) dockAcc.textContent = `${playerName} (${modeLabel})`;
@@ -872,8 +891,10 @@ function saveCurrentConfig() {
       diskTotalGB: state.diskTotalGB,
       diskUsedGB: state.diskUsedGB,
       skinModel: state.skinModel,
+      selectedSkinPreset: state.selectedSkinPreset || '',
       capeType: state.capeType,
       cachedSkinDataUrl: state.cachedSkinDataUrl,
+      customAvatarDataUrl: state.customAvatarDataUrl || '',
       autoBackupWorlds: state.autoBackupWorlds !== false,
       discordRpcEnabled: state.discordRpcEnabled !== false,
       autoViLang: state.autoViLang !== false,
@@ -894,7 +915,7 @@ function saveCurrentConfig() {
     selectedLoaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB,
     javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
     fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
-    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl,
+    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl, customAvatarDataUrl: state.customAvatarDataUrl || '',
     capeType: state.capeType, winResolution: state.winResolution, uiScale: Number(state.uiScale) || 1.0, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
     autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
@@ -1141,13 +1162,16 @@ function setAuthModeUI(mode) {
     const uuidTag = document.getElementById('uuidPreviewTag');
     if (uuidTag && state.cloudProfile.uuid) uuidTag.textContent = `UUID: ${state.cloudProfile.uuid.slice(0, 8)}...`;
     update3DNameTag(state.cloudProfile.mcUsername);
-    if (state.cloudProfile.skinDataUrl && state.cloudProfile.skinDataUrl.startsWith('data:image/png;base64,')) {
-      currentSkinDataUrl = state.cloudProfile.skinDataUrl;
-      state.cachedSkinDataUrl = state.cloudProfile.skinDataUrl;
+    const cloudSkinUrl = (state.cloudProfile.skinDataUrl && state.cloudProfile.skinDataUrl.startsWith('data:image/png;base64,'))
+      ? state.cloudProfile.skinDataUrl
+      : ((state.cachedSkinDataUrl && state.cachedSkinDataUrl.startsWith('data:image/png;base64,')) ? state.cachedSkinDataUrl : '');
+    if (cloudSkinUrl) {
+      currentSkinDataUrl = cloudSkinUrl;
+      state.cachedSkinDataUrl = cloudSkinUrl;
       if (skinViewer) {
-        skinViewer.loadSkin(state.cloudProfile.skinDataUrl, { model: state.skinModel }).then(() => skinViewer.render()).catch(() => {});
+        skinViewer.loadSkin(cloudSkinUrl, { model: state.skinModel }).then(() => skinViewer.render()).catch(() => {});
       }
-      draw2DAvatarFace(state.cloudProfile.skinDataUrl);
+      draw2DAvatarFace(cloudSkinUrl);
     } else {
       loadCharacterSkin(state.cloudProfile.skinPreset || state.selectedSkinPreset || state.cloudProfile.mcUsername);
     }
@@ -1515,13 +1539,287 @@ window.addEventListener('DOMContentLoaded', async () => {
   const btnExpSkin = document.getElementById('btnExpandSkinStudio');
   if (btnExpSkin) btnExpSkin.onclick = () => switchMainTab('skin');
   const openAccMgr = () => {
+    closeSidebarProfilePopover();
     switchMainTab('play');
     setTimeout(() => {
       document.querySelector('#tab-play .auth-switcher-row')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 80);
   };
   const sbProf = document.getElementById('sidebarProfileCard');
-  if (sbProf) sbProf.onclick = openAccMgr;
+  const sbPopover = document.getElementById('sidebarProfilePopover');
+
+  function syncCustomAvatarUI() {
+    const hasCustom = Boolean(state.customAvatarDataUrl && /^data:image\//i.test(state.customAvatarDataUrl));
+    document.getElementById('btnPopoverResetAvatar')?.classList.toggle('hidden', !hasCustom);
+    document.getElementById('btnTabSkinResetAvatar')?.classList.toggle('hidden', !hasCustom);
+  }
+  window.syncCustomAvatarUI = syncCustomAvatarUI;
+
+  async function handleUploadCustomAvatar() {
+    if (typeof window.aetherAPI?.uploadCustomAvatar !== 'function') return;
+    const res = await window.aetherAPI.uploadCustomAvatar();
+    if (res?.ok && res.dataUrl) {
+      state.customAvatarDataUrl = res.dataUrl;
+      syncCustomAvatarUI();
+      saveCurrentConfig();
+      draw2DAvatarFace(currentSkinDataUrl || state.cachedSkinDataUrl);
+      renderSidebarProfilePopover();
+      showAetherNotification('🖼️ Đã cập nhật ảnh đại diện (Avatar) riêng cho hồ sơ! (Skin 3D trong game vẫn giữ nguyên)', 'success', 4200);
+    } else if (res && !res.canceled && res.error) {
+      showAetherNotification(`⚠️ ${res.error}`, 'error', 4200);
+    }
+  }
+  window.handleUploadCustomAvatar = handleUploadCustomAvatar;
+
+  function handleResetCustomAvatar() {
+    state.customAvatarDataUrl = '';
+    syncCustomAvatarUI();
+    saveCurrentConfig();
+    draw2DAvatarFace(currentSkinDataUrl || state.cachedSkinDataUrl, { forceSkin: true });
+    renderSidebarProfilePopover();
+    showAetherNotification('✓ Đã khôi phục Avatar hồ sơ theo khuôn mặt Skin 3D hiện tại!', 'success', 3400);
+  }
+  window.handleResetCustomAvatar = handleResetCustomAvatar;
+
+  async function handleReloadDefaultSkin() {
+    preserveOutgoingSkinInCloset('Skin trước khi khôi phục');
+    state.selectedSkinPreset = '';
+    document.querySelectorAll('#skinPresetBar .skin-preset-chip').forEach((c) => c.classList.remove('active'));
+    const targetName = (state.authMode === 'microsoft' && state.msProfile?.name)
+      ? state.msProfile.name
+      : ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : (state.username || 'StevePlayer'));
+    await loadCharacterSkin(targetName);
+    syncCloudCosmeticsIfActive(`✨ Đã khôi phục Skin 3D chuẩn cho nhân vật "${targetName}"!`);
+  }
+  window.handleReloadDefaultSkin = handleReloadDefaultSkin;
+
+  function closeSidebarProfilePopover() {
+    if (!sbPopover) return;
+    sbPopover.classList.add('hidden');
+    sbProf?.classList.remove('is-open');
+    sbProf?.setAttribute('aria-expanded', 'false');
+  }
+  window.closeSidebarProfilePopover = closeSidebarProfilePopover;
+
+  function renderSidebarProfilePopover() {
+    if (!sbPopover) return;
+    const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
+    const isMs = Boolean(state.authMode === 'microsoft' && state.msProfile?.name);
+    const isCloud = Boolean(state.authMode === 'aether' && state.cloudProfile?.mcUsername);
+    const activePlayer = isMs ? state.msProfile.name : (isCloud ? state.cloudProfile.mcUsername : (state.username || 'StevePlayer'));
+    const badgeKind = isMs ? 'ms' : (isCloud ? 'cloud' : 'offline');
+
+    const popName = document.getElementById('popoverPlayerName');
+    if (popName) popName.textContent = activePlayer;
+    const popPill = document.getElementById('popoverAuthPill');
+    if (popPill) {
+      popPill.dataset.badge = badgeKind;
+      popPill.textContent = badgeKind === 'ms' ? '👑 MICROSOFT' : (badgeKind === 'cloud' ? '🛡️ CLOUD' : '👤 OFFLINE');
+    }
+    const popSub = document.getElementById('popoverSubStatus');
+    if (popSub) {
+      if (state.authMode === 'microsoft') {
+        popSub.textContent = isMs ? `Bản quyền chính hãng • ${state.msProfile.displayName || state.msProfile.name}` : 'Chưa đăng nhập Microsoft — bấm Quản lý để kết nối';
+      } else if (state.authMode === 'aether') {
+        popSub.textContent = isCloud ? `${state.cloudProfile.loginId || 'Cloud 24/7'} • Đã đồng bộ đám mây` : 'Chưa đăng nhập Cloud — bấm Quản lý để đăng nhập';
+      } else {
+        popSub.textContent = state.customAvatarDataUrl ? 'Chế độ Offline • Đang dùng ảnh Avatar riêng' : 'Chế độ Offline • Chơi ngay không cần mật khẩu';
+      }
+    }
+
+    document.querySelectorAll('#popoverModeSwitch .spp-mode-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.popmode === state.authMode);
+    });
+
+    const btnLogout = document.getElementById('btnPopoverLogout');
+    if (btnLogout) {
+      btnLogout.classList.toggle('hidden', !(isCloud || isMs));
+    }
+
+    syncCustomAvatarUI();
+
+    const listEl = document.getElementById('popoverAccountsList');
+    if (listEl) {
+      const rows = [];
+      if (state.cloudProfile?.mcUsername) {
+        const activeCls = state.authMode === 'aether' ? 'active' : '';
+        rows.push(`<div class="spp-acc-row ${activeCls}" data-switch-kind="aether" title="Chuyển sang tài khoản Cloud: ${esc(state.cloudProfile.mcUsername)}">
+          <span class="spp-acc-icon is-cloud">🛡️</span>
+          <div class="spp-acc-info">
+            <strong>${esc(state.cloudProfile.mcUsername)}</strong>
+            <small>Cloud 24/7 • ${esc(state.cloudProfile.loginId || 'Đã đăng nhập')}</small>
+          </div>
+          ${state.authMode === 'aether' ? '<span class="spp-acc-check">✓ Đang dùng</span>' : '<span class="spp-acc-use">Chọn</span>'}
+        </div>`);
+      }
+      if (state.msProfile?.name) {
+        const activeCls = state.authMode === 'microsoft' ? 'active' : '';
+        rows.push(`<div class="spp-acc-row ${activeCls}" data-switch-kind="microsoft" title="Chuyển sang tài khoản Microsoft: ${esc(state.msProfile.name)}">
+          <span class="spp-acc-icon is-ms">👑</span>
+          <div class="spp-acc-info">
+            <strong>${esc(state.msProfile.name)}</strong>
+            <small>Bản quyền Microsoft</small>
+          </div>
+          ${state.authMode === 'microsoft' ? '<span class="spp-acc-check">✓ Đang dùng</span>' : '<span class="spp-acc-use">Chọn</span>'}
+        </div>`);
+      }
+      const savedOffline = Array.isArray(state.savedAccounts) ? state.savedAccounts : [];
+      savedOffline.forEach((acc) => {
+        const isCurrent = state.authMode === 'crack' && acc.toLowerCase() === String(state.username || '').toLowerCase();
+        const safeAcc = esc(acc);
+        rows.push(`<div class="spp-acc-row ${isCurrent ? 'active' : ''}" data-switch-kind="crack" data-accname="${safeAcc}" title="Chuyển sang nhân vật Offline: ${safeAcc}">
+          <span class="spp-acc-icon is-offline">👤</span>
+          <div class="spp-acc-info">
+            <strong>${safeAcc}</strong>
+            <small>Nhân vật Offline</small>
+          </div>
+          <div class="spp-acc-right">
+            ${isCurrent ? '<span class="spp-acc-check">✓ Đang dùng</span>' : '<span class="spp-acc-use">Chọn</span>'}
+            ${savedOffline.length > 1 ? `<button type="button" class="spp-acc-del" data-deloffline="${safeAcc}" title="Xóa khỏi danh sách lưu">×</button>` : ''}
+          </div>
+        </div>`);
+      });
+      listEl.innerHTML = rows.join('');
+
+      listEl.querySelectorAll('.spp-acc-row').forEach((row) => {
+        row.onclick = (ev) => {
+          const delTarget = ev.target?.closest?.('[data-deloffline]')?.getAttribute('data-deloffline');
+          if (delTarget) {
+            ev.stopPropagation();
+            state.savedAccounts = (state.savedAccounts || []).filter((a) => a !== delTarget);
+            renderSavedAccounts();
+            renderSidebarProfilePopover();
+            saveCurrentConfig();
+            return;
+          }
+          const kind = row.getAttribute('data-switch-kind');
+          if (kind === 'aether') {
+            setAuthModeUI('aether');
+            showAetherNotification(`🛡️ Đã chuyển sang tài khoản Cloud "${state.cloudProfile?.mcUsername}"!`, 'success', 2800);
+          } else if (kind === 'microsoft') {
+            setAuthModeUI('microsoft');
+            showAetherNotification(`👑 Đã chuyển sang tài khoản Microsoft "${state.msProfile?.name}"!`, 'success', 2800);
+          } else if (kind === 'crack') {
+            const chosen = row.getAttribute('data-accname') || 'StevePlayer';
+            state.username = chosen;
+            state.selectedSkinPreset = '';
+            const uInp = document.getElementById('usernameInput');
+            if (uInp) uInp.value = chosen;
+            setAuthModeUI('crack');
+            renderSavedAccounts();
+            showAetherNotification(`👤 Đã chuyển nhanh sang nhân vật Offline "${chosen}"!`, 'success', 2800);
+          }
+          renderSidebarProfilePopover();
+        };
+      });
+    }
+  }
+  window.renderSidebarProfilePopover = renderSidebarProfilePopover;
+
+  function toggleSidebarProfilePopover(forceState) {
+    if (!sbProf || !sbPopover) {
+      openAccMgr();
+      return;
+    }
+    const willOpen = typeof forceState === 'boolean' ? forceState : sbPopover.classList.contains('hidden');
+    if (!willOpen) {
+      closeSidebarProfilePopover();
+      return;
+    }
+    const rect = sbProf.getBoundingClientRect();
+    sbPopover.style.left = `${Math.max(10, Math.round(rect.left))}px`;
+    sbPopover.style.top = `${Math.round(rect.bottom + 8)}px`;
+    renderSidebarProfilePopover();
+    sbPopover.classList.remove('hidden');
+    sbProf.classList.add('is-open');
+    sbProf.setAttribute('aria-expanded', 'true');
+    draw2DAvatarFace(currentSkinDataUrl || state.cachedSkinDataUrl);
+  }
+
+  if (sbProf) {
+    sbProf.onclick = (e) => {
+      e.stopPropagation();
+      toggleSidebarProfilePopover();
+    };
+    sbProf.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleSidebarProfilePopover();
+      } else if (e.key === 'Escape') {
+        closeSidebarProfilePopover();
+      }
+    };
+  }
+  if (sbPopover) {
+    sbPopover.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', (e) => {
+      if (!sbPopover.classList.contains('hidden') && !sbPopover.contains(e.target) && !sbProf?.contains(e.target)) {
+        closeSidebarProfilePopover();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !sbPopover.classList.contains('hidden')) {
+        closeSidebarProfilePopover();
+      }
+    });
+    document.getElementById('btnPopoverAvatarClick')?.addEventListener('click', handleUploadCustomAvatar);
+    document.getElementById('btnPopoverUploadAvatar')?.addEventListener('click', handleUploadCustomAvatar);
+    document.getElementById('btnPopoverResetAvatar')?.addEventListener('click', handleResetCustomAvatar);
+    document.getElementById('btnPopoverReloadSkin')?.addEventListener('click', handleReloadDefaultSkin);
+    document.getElementById('btnPopoverOpenSkin')?.addEventListener('click', () => {
+      closeSidebarProfilePopover();
+      switchMainTab('skin');
+    });
+    document.getElementById('btnPopoverManageAcc')?.addEventListener('click', openAccMgr);
+    document.getElementById('btnPopoverLogout')?.addEventListener('click', () => {
+      if (state.authMode === 'aether' && state.cloudProfile) {
+        document.getElementById('btnAetherLogout')?.click();
+      } else if (state.authMode === 'microsoft' && state.msProfile) {
+        document.getElementById('btnMsLogout')?.click();
+      } else if (state.cloudProfile) {
+        document.getElementById('btnAetherLogout')?.click();
+      } else if (state.msProfile) {
+        document.getElementById('btnMsLogout')?.click();
+      }
+      renderSidebarProfilePopover();
+    });
+    document.querySelectorAll('#popoverModeSwitch .spp-mode-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const m = btn.dataset.popmode || 'crack';
+        setAuthModeUI(m);
+        renderSidebarProfilePopover();
+        if ((m === 'aether' && !state.cloudProfile?.mcUsername) || (m === 'microsoft' && !state.msProfile?.name)) {
+          openAccMgr();
+        }
+      };
+    });
+    const quickOffInp = document.getElementById('popoverQuickOfflineInput');
+    const btnQuickOffAdd = document.getElementById('btnPopoverAddOffline');
+    const submitQuickOffline = () => {
+      const val = (quickOffInp?.value || '').trim().replace(/[^a-zA-Z0-9_]/g, '');
+      if (val.length < 3 || val.length > 16) {
+        showAetherNotification('⚠️ Tên nhân vật cần từ 3–16 ký tự chữ/số/gạch dưới.', 'error', 3200);
+        return;
+      }
+      if (!Array.isArray(state.savedAccounts)) state.savedAccounts = [];
+      if (!state.savedAccounts.some((a) => a.toLowerCase() === val.toLowerCase())) {
+        state.savedAccounts.unshift(val);
+      }
+      state.username = val;
+      state.selectedSkinPreset = '';
+      const uInp = document.getElementById('usernameInput');
+      if (uInp) uInp.value = val;
+      if (quickOffInp) quickOffInp.value = '';
+      setAuthModeUI('crack');
+      renderSavedAccounts();
+      renderSidebarProfilePopover();
+      saveCurrentConfig();
+      showAetherNotification(`✓ Đã thêm & chuyển sang nhân vật Offline "${val}"!`, 'success', 3000);
+    };
+    if (btnQuickOffAdd) btnQuickOffAdd.onclick = submitQuickOffline;
+    if (quickOffInp) quickOffInp.onkeydown = (e) => { if (e.key === 'Enter') submitQuickOffline(); };
+  }
+
   const btnGoAcc = document.getElementById('btnGoAccountManager');
   if (btnGoAcc) btnGoAcc.onclick = openAccMgr;
 
@@ -1957,6 +2255,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   window.applyExternalSkinDataUrl = async (rawDataUrl, skinLabel = 'Skin 3D') => {
     if (!rawDataUrl) return;
+    preserveOutgoingSkinInCloset();
     const normUrl = typeof convertSkinTo64x64DataUrl === 'function'
       ? await convertSkinTo64x64DataUrl(rawDataUrl)
       : rawDataUrl;
@@ -1982,6 +2281,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const targetName = (state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username;
     const res = await window.aetherAPI.uploadLocalSkin(state.gameDir, targetName);
     if (res?.ok && res.dataUrl) {
+      preserveOutgoingSkinInCloset();
       const normUrl = typeof convertSkinTo64x64DataUrl === 'function'
         ? await convertSkinTo64x64DataUrl(res.dataUrl)
         : res.dataUrl;
@@ -2000,6 +2300,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       rememberSkinInCloset(normUrl, 'Skin tải lên');
     }
   };
+  document.getElementById('btnTabSkinUploadAvatar')?.addEventListener('click', handleUploadCustomAvatar);
+  document.getElementById('btnTabSkinResetAvatar')?.addEventListener('click', handleResetCustomAvatar);
+  document.getElementById('btnTabSkinReloadDefault')?.addEventListener('click', handleReloadDefaultSkin);
+  syncCustomAvatarUI();
 
   // v40.8: custom cape upload / remove (shown in-game via CustomSkinLoader LocalSkin/capes)
   const capeOwnerName = () => ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username);
