@@ -1970,57 +1970,116 @@ function parkOptifineConflictsInMods(modsDir, mode = 'for-parity') {
   return parked;
 }
 
-async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir, instanceDir = '' } = {}, onStatus) {
+function buildZoomSlugCandidates(zoomMod = 'auto', loader = 'fabric') {
+  const pref = String(zoomMod || 'auto').toLowerCase().trim();
+  const isForgeLike = loader === 'forge' || loader === 'neoforge';
+  const base = isForgeLike
+    ? ['zume', 'zoomify', 'just-zoom', 'ok-zoomer']
+    : ['zoomify', 'logical-zoom', 'zume', 'wi-zoom', 'ok-zoomer'];
+  if (!pref || pref === 'auto') return base;
+  const map = {
+    zoomify: 'zoomify',
+    'logical-zoom': 'logical-zoom',
+    zume: 'zume',
+    'wi-zoom': 'wi-zoom',
+    'ok-zoomer': 'ok-zoomer'
+  };
+  const chosen = map[pref] || pref;
+  return [chosen, ...base.filter((s) => s !== chosen)];
+}
+
+async function installOptifineParityPack({
+  mcVersion = '1.21.4',
+  loaderType = 'fabric',
+  gameDir,
+  instanceDir = '',
+  features = null,
+  zoomMod = 'auto'
+} = {}, onStatus) {
   const rootDir = (instanceDir && fs.existsSync(String(instanceDir)))
     ? String(instanceDir)
     : (gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
-  const rawLoader = String(loaderType || 'fabric').toLowerCase();
-  const effectiveLoader = ['forge', 'neoforge', 'quilt', 'fabric'].includes(rawLoader) ? rawLoader : 'fabric';
+  const normalizedLoader = normalizeModrinthLoader(loaderType, mcVersion);
+  const effectiveLoader = ['forge', 'neoforge', 'quilt', 'fabric'].includes(normalizedLoader) ? normalizedLoader : 'fabric';
   const modsDir = path.join(rootDir, 'mods');
   fs.mkdirSync(modsDir, { recursive: true });
 
-  // Park any existing OptiFine / OptiFabric jar so Sodium + Iris never collide
-  const parkedConflicts = parkOptifineConflictsInMods(modsDir, 'for-parity');
+  const ALL_FEATURES = ['fps', 'shader', 'zoom', 'lights', 'ctm', 'entities'];
+  const pickedSet = new Set(
+    Array.isArray(features) && features.length > 0
+      ? features.map((f) => String(f || '').toLowerCase().trim()).filter((f) => ALL_FEATURES.includes(f))
+      : ALL_FEATURES
+  );
+  if (pickedSet.size === 0) {
+    return { ok: false, error: 'Hãy chọn ít nhất 1 tính năng trong Bộ Chuẩn OptiFine để cài đặt.', installed: [], alreadyPresent: [] };
+  }
+
+  // Park any existing OptiFine / OptiFabric jar when FPS or Shader engine is installed so Sodium + Iris never collide
+  const parkedConflicts = (pickedSet.has('fps') || pickedSet.has('shader'))
+    ? parkOptifineConflictsInMods(modsDir, 'for-parity')
+    : [];
 
   const groups = [];
-  if (effectiveLoader === 'forge') {
-    groups.push(['embeddium']);
-    groups.push(['oculus']);
-    groups.push(['zume']);
-    groups.push(['fusion-connected-textures', 'continuity']);
-    groups.push(['entity-model-features']);
-    groups.push(['entitytexturefeatures']);
-    groups.push(['polytone']);
-    groups.push(['entityculling']);
-    groups.push(['ferrite-core']);
-  } else if (effectiveLoader === 'neoforge') {
-    groups.push(['sodium', 'embeddium']);
-    groups.push(['sodium-extra']);
-    groups.push(['reeses-sodium-options']);
-    groups.push(['iris', 'oculus']);
-    groups.push(['zume']);
-    groups.push(['lambdynamiclights', 'sodium-dynamic-lights']);
-    groups.push(['fusion-connected-textures', 'continuity']);
-    groups.push(['entity-model-features']);
-    groups.push(['entitytexturefeatures']);
-    groups.push(['polytone']);
-    groups.push(['entityculling']);
-    groups.push(['ferrite-core']);
-  } else {
+  const needRenderBase = pickedSet.has('fps') || pickedSet.has('shader');
+
+  if (effectiveLoader === 'fabric') {
     groups.push(['fabric-api']);
-    groups.push(['sodium']);
-    if (compareMcVersions(mcVersion, '1.21.2') < 0) groups.push(['indium']);
-    groups.push(['sodium-extra']);
-    groups.push(['reeses-sodium-options']);
-    groups.push(['iris']);
-    groups.push(['zume', 'logical-zoom', 'zoomify']);
-    groups.push(['lambdynamiclights', 'sodium-dynamic-lights']);
-    groups.push(['continuity', 'fusion-connected-textures']);
-    groups.push(['entity-model-features']);
-    groups.push(['entitytexturefeatures']);
-    groups.push(['polytone', 'cit-resewn']);
-    groups.push(['entityculling']);
-    groups.push(['ferrite-core']);
+  } else if (effectiveLoader === 'quilt') {
+    groups.push(['qsl', 'fabric-api']);
+  }
+
+  if (effectiveLoader === 'forge') {
+    if (needRenderBase) groups.push(['embeddium', 'rubidium']);
+    if (pickedSet.has('fps')) {
+      groups.push(['entityculling']);
+      groups.push(['ferrite-core']);
+    }
+    if (pickedSet.has('shader')) groups.push(['oculus']);
+    if (pickedSet.has('zoom')) groups.push(buildZoomSlugCandidates(zoomMod, 'forge'));
+    if (pickedSet.has('lights')) groups.push(['ryoamiclights', 'embeddium-dynamic-lights', 'dynamiclights-reforged', 'sodium-dynamic-lights']);
+    if (pickedSet.has('ctm')) groups.push(['fusion-connected-textures', 'continuity']);
+    if (pickedSet.has('entities')) {
+      groups.push(['entity-model-features']);
+      groups.push(['entitytexturefeatures']);
+      groups.push(['polytone']);
+    }
+  } else if (effectiveLoader === 'neoforge') {
+    if (needRenderBase) groups.push(['sodium', 'embeddium']);
+    if (pickedSet.has('fps')) {
+      groups.push(['sodium-extra']);
+      groups.push(['reeses-sodium-options']);
+      groups.push(['entityculling']);
+      groups.push(['ferrite-core']);
+    }
+    if (pickedSet.has('shader')) groups.push(['iris', 'oculus']);
+    if (pickedSet.has('zoom')) groups.push(buildZoomSlugCandidates(zoomMod, 'neoforge'));
+    if (pickedSet.has('lights')) groups.push(['lambdynamiclights', 'sodium-dynamic-lights', 'ryoamiclights']);
+    if (pickedSet.has('ctm')) groups.push(['fusion-connected-textures', 'continuity']);
+    if (pickedSet.has('entities')) {
+      groups.push(['entity-model-features']);
+      groups.push(['entitytexturefeatures']);
+      groups.push(['polytone']);
+    }
+  } else {
+    if (needRenderBase) {
+      groups.push(['sodium']);
+      if (compareMcVersions(mcVersion, '1.21.2') < 0) groups.push(['indium']);
+    }
+    if (pickedSet.has('fps')) {
+      groups.push(['sodium-extra']);
+      groups.push(['reeses-sodium-options']);
+      groups.push(['entityculling']);
+      groups.push(['ferrite-core']);
+    }
+    if (pickedSet.has('shader')) groups.push(['iris']);
+    if (pickedSet.has('zoom')) groups.push(buildZoomSlugCandidates(zoomMod, effectiveLoader));
+    if (pickedSet.has('lights')) groups.push(['lambdynamiclights', 'sodium-dynamic-lights', 'ryoamiclights']);
+    if (pickedSet.has('ctm')) groups.push(['continuity', 'fusion-connected-textures']);
+    if (pickedSet.has('entities')) {
+      groups.push(['entity-model-features']);
+      groups.push(['entitytexturefeatures']);
+      groups.push(['polytone', 'cit-resewn']);
+    }
   }
 
   const installed = [];
@@ -2032,7 +2091,7 @@ async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'f
     let lastErr = '';
     for (const slug of candidates) {
       try {
-        onStatus?.(`🔆 [${i + 1}/${groups.length}] Đang trang bị gói Chuẩn OptiFine: ${slug.toUpperCase()} (${mcVersion})...`);
+        onStatus?.(`🔆 [${i + 1}/${groups.length}] Đang trang bị gói Chuẩn OptiFine (${effectiveLoader.toUpperCase()}): ${slug.toUpperCase()} (${mcVersion})...`);
         const res = await installModrinthProject(
           { slug, projectType: 'mod', mcVersion, loaderType: effectiveLoader, gameDir: rootDir, strictMcVersion: true },
           onStatus
@@ -2057,8 +2116,47 @@ async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'f
     parkedConflicts,
     parkedOptifine: parkedConflicts,
     errors,
-    recommendedCore: effectiveLoader
+    recommendedCore: effectiveLoader,
+    selectedFeatures: Array.from(pickedSet)
   };
+}
+
+async function ensureVanillaBaseForOptifine(gameDir, mcVersion, onStatus) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  fs.mkdirSync(rootDir, { recursive: true });
+  const profilesPath = path.join(rootDir, 'launcher_profiles.json');
+  if (!fs.existsSync(profilesPath)) {
+    try {
+      fs.writeFileSync(profilesPath, JSON.stringify({ profiles: {}, selectedProfile: '(Default)', version: 3 }, null, 2), 'utf8');
+    } catch (_) {}
+  }
+  const cleanMc = String(mcVersion || '').trim();
+  if (!cleanMc) return { ok: true, rootDir };
+
+  const verDir = path.join(rootDir, 'versions', cleanMc);
+  const verJsonPath = path.join(verDir, `${cleanMc}.json`);
+  const verJarPath = path.join(verDir, `${cleanMc}.jar`);
+  if (fs.existsSync(verJsonPath) && fs.existsSync(verJarPath)) {
+    return { ok: true, rootDir, preparedVanilla: false };
+  }
+
+  try {
+    onStatus?.(`☕ Đang chuẩn bị tệp nền Minecraft ${cleanMc} để trình cài OptiFine gốc nhận diện ngay...`);
+    const manifest = await fetchJson('https://piston-meta.mojang.com/mc/game/version_manifest_v2.json');
+    const entry = Array.isArray(manifest?.versions) ? manifest.versions.find((v) => v.id === cleanMc) : null;
+    if (!entry?.url) return { ok: true, rootDir, preparedVanilla: false };
+    const vJson = await fetchJson(entry.url);
+    fs.mkdirSync(verDir, { recursive: true });
+    if (!fs.existsSync(verJsonPath)) {
+      fs.writeFileSync(verJsonPath, JSON.stringify(vJson, null, 2), 'utf8');
+    }
+    if (!fs.existsSync(verJarPath) && vJson?.downloads?.client?.url) {
+      await downloadFirstAvailable([vJson.downloads.client.url], verJarPath);
+    }
+    return { ok: true, rootDir, preparedVanilla: true };
+  } catch (_) {
+    return { ok: true, rootDir, preparedVanilla: false };
+  }
 }
 
 function findActiveOptifineForgeJar(modsDir, mcVersion) {
@@ -2176,7 +2274,7 @@ function installOptifineJarSmart({
   const effectiveLoader = String(instMeta?.loader || currentLoader || 'vanilla').toLowerCase();
   const effectiveMc = String(instMeta?.mcVersion || currentMcVersion || '').trim();
 
-  if (action === 'forge' || (action === 'auto' && effectiveLoader === 'forge')) {
+  if (action === 'forge' || action === 'optifine-core' || (action === 'auto' && effectiveLoader === 'forge')) {
     if (instMeta && info.mcVersion && effectiveMc && info.mcVersion !== effectiveMc) {
       return {
         ok: false,
@@ -2202,14 +2300,14 @@ function installOptifineJarSmart({
       mcVersion: targetMc,
       gameVersions: info.mcVersion ? [info.mcVersion] : [targetMc],
       loader: 'forge',
-      inspectedLoaders: ['forge'],
+      inspectedLoaders: ['forge', 'optifine'],
       updatedAt: Date.now()
     };
     writeModsMetaManifest(modsDir, meta);
     setModUserDisabledFlags(modsDir, info.fileName, false);
     return {
       ok: true,
-      kind: 'optifine-forge',
+      kind: action === 'optifine-core' ? 'optifine-core' : 'optifine-forge',
       fileName: info.fileName,
       mcVersion: targetMc,
       parkedConflicts,
@@ -9872,5 +9970,7 @@ module.exports = {
   classifyDroppedFile,
   installDroppedAddonFile,
   findInstalledOptifineProfiles,
-  resolveOptifineRuntimePlan
+  resolveOptifineRuntimePlan,
+  ensureVanillaBaseForOptifine,
+  inspectOptifineJar
 };

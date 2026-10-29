@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "40.9.4",
-  "generatedAt": "2026-10-29T10:01:30.923Z",
+  "version": "40.9.5",
+  "generatedAt": "2026-10-29T10:23:15.518Z",
   "filesCount": 34,
   "files": [
     {
       "path": "package.json",
-      "size": 2230,
-      "sha256": "38d8d02c293f97f339b55821ec6fe5453f3c0318c9cd186d789b40d5ed7983e5"
+      "size": 2216,
+      "sha256": "c308d337b4798795d99491e60caf0c0c3f5a6d8f4558c7f8ce892002011ddc7e"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,13 +16,13 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 406130,
-      "sha256": "7e9f9d7bd7638ebe03c6aa646d2297884b0cc9633a4f8336f9dcd88431dc0df9"
+      "size": 410616,
+      "sha256": "280d125699cc1bf8612fb5b5c2b7faecaa56369167b4bf5f263f853bcedc337d"
     },
     {
       "path": "src/main.js",
-      "size": 91586,
-      "sha256": "9b5dc3fe5e3caf1b22dc1b58fee183d3a8a40dd2dc33505efa49d8c95f1cfd37"
+      "size": 92089,
+      "sha256": "915b4d49d54b07b6d22884649107d87a19a3b0984127423c91475f49fe146da2"
     },
     {
       "path": "src/microsoft-auth.js",
@@ -57,12 +57,12 @@
     {
       "path": "src/ui/index.html",
       "size": 198841,
-      "sha256": "cc596436d7ab4f0400173e78ffb893ad0371985d122e0c28d253d7fcb527fc7d"
+      "sha256": "688b75c636f1ae61ff2ec4e6f05c3bc14e2024eeffc51452cb45cc77c37d5a07"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 203694,
-      "sha256": "915660ecef7ccc58e41f48683a20e4a33bbf89843bd4ce4156b4329387a12ecb"
+      "size": 206636,
+      "sha256": "5ccd0c5326207ea54d5194b6c79a27cb6b4c6a9e1f8e784ea39b1feffc976df0"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -161,8 +161,8 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 399169,
-      "sha256": "544d64627da429f9fd20f521f305e2ca743d430df5b0d93b025eb49439acd323"
+      "size": 411098,
+      "sha256": "c27285dc15305aa2285f6a342b75a4b6d3f38bc98c1d39e703a9152861a5399e"
     },
     {
       "path": "src/ui/styles.css",

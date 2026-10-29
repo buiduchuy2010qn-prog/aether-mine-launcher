@@ -1,7 +1,7 @@
 {
   "name": "blockway-launcher",
-  "version": "40.9.4",
-  "description": "BlockWay Launcher v40.9.4 PRO — Every World, One Place (Ảnh bản đồ 16:9 sắc nét cho Kho Hạt Giống Seed & Kho Map/Datapack + Tự gắn ảnh đại diện Map, Core OptiFine 1-Click tại Trang chủ, Cỡ chữ lớn Aa 90–125%, Đóng gói gửi Mod 2.0, Mượt Êm không ép máy)",
+  "version": "40.9.5",
+  "description": "BlockWay Launcher v40.9.5 PRO — Every World, One Place (Trợ Lý OptiFine Đa Loader Fabric/Forge/NeoForge/Quilt & Tích chọn tính năng lẻ + OptiFine.jar mọi bản MC, Kho Hạt Giống 16:9, Cỡ chữ lớn Aa 90–125%, Đóng gói gửi Mod 2.0, Mượt Êm không ép máy)",
   "homepage": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
   "repository": {
     "type": "git",

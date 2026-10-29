@@ -14,6 +14,8 @@ const {
   installFpsBoostPack,
   installOptifineParityPack,
   installOptifineJarSmart,
+  ensureVanillaBaseForOptifine,
+  inspectOptifineJar,
   listLocalAddons,
   toggleLocalAddon,
   deleteLocalAddon,
@@ -2442,6 +2444,15 @@ ipcMain.handle('optifine:handle-jar', async (_e, params = {}) => {
     if (params.action === 'run-installer') {
       const fp = String(params.filePath || '');
       if (!fp || !fs.existsSync(fp)) return { ok: false, error: 'Không tìm thấy tệp OptiFine.jar.' };
+      const jarInfo = typeof inspectOptifineJar === 'function' ? inspectOptifineJar(fp) : {};
+      const targetMc = String(params.currentMcVersion || jarInfo?.mcVersion || '').trim();
+      if (typeof ensureVanillaBaseForOptifine === 'function') {
+        await ensureVanillaBaseForOptifine(
+          resolvedGameDir,
+          targetMc,
+          (st) => { mainWindow?.webContents.send('mc:status', st); }
+        );
+      }
       const { spawn } = require('child_process');
       let javaBin = detectJavaPath(21, resolvedGameDir) || detectJavaPath(17, resolvedGameDir) || detectJavaPath(8, resolvedGameDir) || 'java';
       if (javaBin && /javaw\.exe$/i.test(javaBin)) {
@@ -2454,7 +2465,7 @@ ipcMain.handle('optifine:handle-jar', async (_e, params = {}) => {
         stdio: 'ignore'
       });
       child.unref();
-      return { ok: true, kind: 'installer-launched' };
+      return { ok: true, kind: 'installer-launched', mcVersion: targetMc };
     }
     return installOptifineJarSmart({ ...(params || {}), gameDir: resolvedGameDir });
   } catch (err) {
