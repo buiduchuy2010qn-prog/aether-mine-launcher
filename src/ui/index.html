@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v41.0.0 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v41.0.1 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,7 +23,7 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v41.0.0</strong>
+          <strong id="titlebarUpdateVer">v41.0.1</strong>
         </button>
       </div>
 
@@ -1503,30 +1503,30 @@
           </div>
 
           <div class="settings-bento-4" style="margin-bottom:16px;">
-            <!-- SIGNATURE FEATURE (v41.0.0 PRO): TURBO SMOOTH CORE™ — 6-LAYER DEEP GAME FILE OPTIMIZER -->
+            <!-- SIGNATURE FEATURE (v41.0.1 PRO): TURBO SMOOTH CORE™ — 6-LAYER DEEP GAME FILE OPTIMIZER -->
             <div class="bento-card settings-card-unit turbo-signature-card" id="turboSmoothSignatureCard" style="grid-column: 1 / -1;">
               <div class="dsp-head">
                 <div class="dsp-head-left" style="flex-wrap:wrap;gap:8px;">
                   <span class="ds-sig-pill">★ TÍNH NĂNG ĐẶC BIỆT</span>
                   <h3>⚡ Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game</h3>
                 </div>
-                <span class="installed-count-tag is-turbo-status" id="toolsDeepSmoothBadge">🟢 Đang bật • 6 tầng sẵn sàng</span>
+                <span class="installed-count-tag is-turbo-status" id="toolsDeepSmoothBadge">🟢 Tự bật khi Chơi</span>
               </div>
               <p class="settings-card-desc">
-                Can thiệp trực tiếp vào tệp cấu hình bên trong <code>.minecraft</code> &amp; Modpack: tắt ghi đồng bộ ổ cứng gây đơ 0.5s trên Windows (<code>options.txt</code>), mở đường ống kết xuất OptiFine kèm khóa bảo vệ Shader tự động (<code>optionsof.txt</code>), tối ưu đa luồng Sodium/Embeddium (<code>sodium-options.json</code>), giải phóng 35–50% RAM bằng ModernFix (<code>modernfix-mixins.properties</code>), gom mẻ vẽ HUD (<code>immediatelyfast.json</code>) và khóa khựng JVM Safepoint — <strong>tự lưu bản gốc, hoàn tác 1-Click bất kỳ lúc nào!</strong>
+                Tối ưu trực tiếp các tệp cấu hình thực bên trong <strong>.minecraft &amp; từng gói Modpack</strong>: triệt tiêu khựng 0.5s khi lưu chunk trên ổ cứng Windows, mở kết xuất nhanh kèm <strong>khóa bảo vệ Shader tự động</strong>, dựng địa hình đa luồng, giảm 35–50% RAM và gom nét vẽ HUD — <strong>tự lưu bản gốc, hoàn tác 1-Click giữ nguyên Phím tắt &amp; Thế giới!</strong>
               </p>
               <div class="turbo-layer-tags-row">
-                <span class="turbo-mini-tag">1. <code>options.txt</code> Async Disk I/O</span>
-                <span class="turbo-mini-tag">2. <code>optionsof.txt</code> + Bảo vệ Shader</span>
-                <span class="turbo-mini-tag">3. <code>sodium-options.json</code></span>
-                <span class="turbo-mini-tag">4. <code>modernfix-mixins</code> (-40% RAM)</span>
-                <span class="turbo-mini-tag">5. <code>immediatelyfast.json</code> HUD</span>
-                <span class="turbo-mini-tag">6. <code>JVM Safepoint &amp; IPv4</code></span>
+                <span class="turbo-mini-tag">⚡ Chống đơ ổ cứng (options.txt)</span>
+                <span class="turbo-mini-tag">🛡️ OptiFine + Bảo vệ Shader</span>
+                <span class="turbo-mini-tag">🧵 Đa luồng Sodium / Embeddium</span>
+                <span class="turbo-mini-tag">🚀 Giảm 40% RAM (ModernFix)</span>
+                <span class="turbo-mini-tag">🎯 Gom vẽ HUD &amp; Ẩn quái khuất</span>
+                <span class="turbo-mini-tag">☕ Khóa khựng JVM &amp; IPv4</span>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-                <button class="btn-fps-boost-1click" id="btnToolsOpenDeepSmooth">⚡ Mở Studio Can Thiệp Sâu (6 Tầng)</button>
-                <button class="btn-sync-skin is-ok" id="btnToolsQuickApplyDeepSmooth">🚀 Can Thiệp Mượt Ngay (1-Click)</button>
-                <button class="btn-sync-skin hidden" id="btnToolsQuickRevertDeepSmooth">↩️ Khôi Phục Nguyên Bản (1-Click)</button>
+                <button class="btn-fps-boost-1click" id="btnToolsOpenDeepSmooth">⚡ Mở Bảng Điều Khiển 6 Tầng</button>
+                <button class="btn-sync-skin is-ok" id="btnToolsQuickApplyDeepSmooth">🚀 Tối Ưu File Ngay (1-Click)</button>
+                <button class="btn-sync-skin hidden" id="btnToolsQuickRevertDeepSmooth">↩️ Khôi Phục Nguyên Bản</button>
               </div>
             </div>
 
@@ -1684,7 +1684,7 @@
               </div>
             </div>
             <div class="console-terminal" id="consoleOutput">
-              <div class="log-entry info">[BlockWay Launcher v41.0.0 PRO] Sẵn sàng khởi chạy.</div>
+              <div class="log-entry info">[BlockWay Launcher v41.0.1 PRO] Sẵn sàng khởi chạy.</div>
             </div>
           </div>
         </section>
@@ -1706,7 +1706,7 @@
                 📦 GitHub Repo
               </button>
               <button class="btn-sync-skin" id="btnCheckUpdate">
-                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v41.0.0</span>)
+                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v41.0.1</span>)
               </button>
             </div>
           </div>
@@ -1816,12 +1816,10 @@
                 <label class="settings-opt-item is-signature-opt">
                   <input type="checkbox" id="deepSmoothEngineCheck" checked />
                   <div class="soi-body">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-                      <strong>⚡ Turbo Smooth Core™ — Tự động Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game</strong>
-                      <button type="button" class="vtype-btn" id="btnSettingsOpenDeepSmooth" style="padding:3px 9px;font-size:11px;">Tùy chỉnh 6 tầng ›</button>
-                    </div>
-                    <span>Tự tối ưu <code>options.txt</code> (chống khựng ổ cứng Windows), <code>optionsof.txt</code> (tự bảo vệ Shader), <code>sodium-options.json</code>, <code>modernfix-mixins.properties</code> (-40% RAM) &amp; <code>immediatelyfast.json</code> — hoàn tác 1-Click.</span>
+                    <strong>⚡ Turbo Smooth™ — Tối ưu 6 tầng cấu hình</strong>
+                    <span>Chống đơ ổ cứng Windows, bảo vệ Shader, giảm 40% RAM &amp; gom vẽ HUD (hoàn tác 1-Click).</span>
                   </div>
+                  <button type="button" class="vtype-btn soi-side-action" id="btnSettingsOpenDeepSmooth" title="Mở bảng tùy chỉnh 3 chế độ &amp; 6 tầng tệp cấu hình game">⚙️ Tùy chỉnh ›</button>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="hideLauncherCheck" checked />
@@ -2096,29 +2094,29 @@
       </div>
     </div>
 
-    <!-- SIGNATURE FEATURE MODAL (v41.0.0 PRO): TURBO SMOOTH CORE™ STUDIO -->
+    <!-- SIGNATURE FEATURE MODAL (v41.0.1 PRO): TURBO SMOOTH CORE™ STUDIO -->
     <div class="modal-backdrop hidden" id="deepSmoothStudioModal">
       <div class="modal-dialog-card ds-studio-card" role="dialog" aria-label="Turbo Smooth Core Studio">
         <div class="modal-head ds-studio-head">
           <div class="ds-head-title">
             <span class="ds-sig-pill">★ ĐẶC BIỆT</span>
-            <h3>⚡ Turbo Smooth Core™ — Can Thiệp Sâu Tệp Cấu Hình Game</h3>
+            <h3>⚡ Turbo Smooth Core™</h3>
+            <span class="ds-live-badge" id="dsLiveStateBadge">⚪ Nguyên bản</span>
           </div>
           <button type="button" class="vtype-btn" id="btnDsCloseTop">✕ Đóng</button>
         </div>
 
         <div class="modal-body ds-studio-body">
-          <!-- TARGET FOLDER + LIVE STATUS + AUTO-ON-LAUNCH -->
+          <!-- SINGLE-ROW TARGET FOLDER + SHADER GUARD + AUTO-ON-LAUNCH -->
           <div class="ds-target-strip">
             <div class="ds-target-left">
-              <span class="ds-target-lbl">🎯 Áp dụng cho:</span>
+              <span class="ds-target-lbl">🎯 Áp dụng:</span>
               <select id="dsTargetDirSelect" class="pro-input ds-target-select" title="Chọn thư mục .minecraft gốc hoặc gói Modpack riêng">
                 <option value="">🏠 Thư mục chính (.minecraft)</option>
               </select>
             </div>
             <div class="ds-target-right">
-              <span class="ds-live-badge" id="dsLiveStateBadge">⚪ Nguyên bản</span>
-              <span class="ds-shader-pill hidden" id="dsShaderGuardPill" title="BlockWay tự động giữ ofFastRender:false khi phát hiện Shader đang bật để chống lỗi đen màn hình">🛡️ Đang bảo vệ Shader</span>
+              <span class="ds-shader-pill hidden" id="dsShaderGuardPill" title="BlockWay tự động giữ Fast Render = TẮT khi phát hiện Shader đang bật để chống lỗi đen màn hình">🛡️ Tự bảo vệ Shader</span>
               <label class="ds-auto-launch-pill" title="Tự động tối ưu ngầm mỗi khi bấm CHƠI (vẫn giữ nguyên các thanh trượt bạn tự chỉnh sau đó)">
                 <input type="checkbox" id="dsAutoOnLaunchCheck" checked />
                 <span>Tự chạy khi bấm Chơi</span>
@@ -2128,8 +2126,8 @@
 
           <!-- 3 SMOOTHNESS PROFILES -->
           <div class="ds-sec-head">
-            <strong>1. Chọn Chế Độ Can Thiệp Độ Mượt</strong>
-            <span>Tương thích mọi phiên bản Minecraft 1.8 → 26.x, Fabric, Forge, NeoForge, OptiFine &amp; Vanilla</span>
+            <strong>1. Chọn Chế Độ Độ Mượt</strong>
+            <span>Tương thích Minecraft 1.8 → 26.x • Mọi Mod Loader &amp; Vanilla</span>
           </div>
           <div class="ds-profiles-grid" id="dsProfilesGrid">
             <button type="button" class="ds-profile-card active" data-dsprofile="balanced">
@@ -2138,29 +2136,29 @@
                 <strong>Mượt Êm Chuẩn</strong>
                 <em class="dsp-rec">Khuyên dùng</em>
               </div>
-              <p>Giữ 100% nét đẹp gốc, khóa FPS khớp tần số màn hình, tắt ghi đồng bộ ổ cứng gây đơ 0.5s &amp; giảm 40% RAM.</p>
+              <p>Giữ 100% nét đẹp gốc, khóa FPS êm máy, chống đơ ổ cứng 0.5s &amp; giảm 40% RAM.</p>
             </button>
             <button type="button" class="ds-profile-card" data-dsprofile="esports">
               <div class="dsp-top">
                 <span class="dsp-icon">⚡</span>
                 <strong>Siêu Mượt PvP</strong>
-                <em>0ms • 260 FPS</em>
+                <em>260 FPS • 0ms</em>
               </div>
-              <p>Tắt VSync, mở trần 260 FPS, chuột thô 1:1, hạ hàng đợi khung hình = 1, giảm hạt &amp; mây nhanh.</p>
+              <p>Tắt VSync, mở trần 260 FPS, chuột nhạy 1:1, giảm trễ khung hình &amp; mây nhanh.</p>
             </button>
             <button type="button" class="ds-profile-card" data-dsprofile="ultra_low">
               <div class="dsp-top">
                 <span class="dsp-icon">🚀</span>
                 <strong>Cứu Máy Yếu</strong>
-                <em>iGPU • RAM 4–8GB</em>
+                <em>RAM 4–8GB</em>
               </div>
-              <p>Giải cứu Laptop văn phòng: Tầm nhìn 7 chunk, mô phỏng 5 chunk, lá cây Fast, tắt bóng thực thể &amp; sương mù.</p>
+              <p>Tầm nhìn 7 chunk, mô phỏng 5 chunk, lá cây nhanh, tắt bóng &amp; hạt cho máy yếu.</p>
             </button>
           </div>
 
           <!-- 6 DEEP FILE OPTIMIZATION LAYERS -->
           <div class="ds-sec-head">
-            <strong>2. 6 Tầng Tệp Cấu Hình Được Can Thiệp Trực Tiếp</strong>
+            <strong>2. 6 Tầng Tệp Cấu Hình Được Tối Ưu Trực Tiếp</strong>
             <button type="button" class="ds-check-all-link" id="btnDsSelectAllLayers">✓ Bật đủ 6 tầng</button>
           </div>
           <div class="ds-layers-grid" id="dsLayersGrid">
@@ -2168,10 +2166,10 @@
               <input type="checkbox" data-dslayer="vanilla_io" checked />
               <div class="dsl-main">
                 <div class="dsl-top">
-                  <strong>Tầng 1 • Chống Đơ Ổ Cứng &amp; Chuột 1:1</strong>
-                  <code>options.txt</code>
+                  <strong>1. Chống đơ ổ cứng &amp; Chuột 1:1</strong>
+                  <span class="dsl-file-pill">options.txt</span>
                 </div>
-                <span>Ghi <code>syncChunkWrites:false</code> triệt tiêu khựng lưu chunk trên Windows, tắt đọc <code>Ctrl+B</code> &amp; bật <code>rawMouseInput:true</code>.</span>
+                <span>Tắt ghi đồng bộ gây khựng 0.5s khi lưu vùng đất mới &amp; tắt phím đọc nhầm Ctrl+B.</span>
               </div>
             </label>
 
@@ -2179,10 +2177,10 @@
               <input type="checkbox" data-dslayer="optifine" checked />
               <div class="dsl-main">
                 <div class="dsl-top">
-                  <strong>Tầng 2 • Đường Ống Kết Xuất OptiFine</strong>
-                  <code id="dsLayerTagOptifine">optionsof.txt</code>
+                  <strong>2. Tăng tốc OptiFine &amp; Giữ Shader</strong>
+                  <span class="dsl-file-pill" id="dsLayerTagOptifine">optionsof.txt</span>
                 </div>
-                <span id="dsLayerDescOptifine">Bật <code>SmartAnimations</code>, <code>RenderRegions</code>, <code>FastMath</code> &amp; tự nhả <code>ofFastRender:false</code> nếu bật Shader.</span>
+                <span id="dsLayerDescOptifine">Mở kết xuất vùng nhanh, hoạt ảnh thông minh &amp; tự khóa Fast Render nếu bật Shader.</span>
               </div>
             </label>
 
@@ -2190,10 +2188,10 @@
               <input type="checkbox" data-dslayer="sodium" checked />
               <div class="dsl-main">
                 <div class="dsl-top">
-                  <strong>Tầng 3 • Đa Luồng Sodium &amp; Embeddium</strong>
-                  <code id="dsLayerTagSodium">sodium-options.json</code>
+                  <strong>3. Đa luồng Sodium / Embeddium</strong>
+                  <span class="dsl-file-pill" id="dsLayerTagSodium">sodium.json</span>
                 </div>
-                <span>Hoãn dựng chunk đa luồng, chỉ vẽ hoạt ảnh trong tầm mắt &amp; giảm hàng đợi <code>cpu_render_ahead_limit</code>.</span>
+                <span>Dựng địa hình đa luồng, chỉ vẽ hoạt ảnh khối đang nhìn thấy &amp; giảm trễ chuột.</span>
               </div>
             </label>
 
@@ -2201,10 +2199,10 @@
               <input type="checkbox" data-dslayer="modernfix" checked />
               <div class="dsl-main">
                 <div class="dsl-top">
-                  <strong>Tầng 4 • Nén 40% RAM ModernFix</strong>
-                  <code id="dsLayerTagModernfix">modernfix-mixins.properties</code>
+                  <strong>4. Giải phóng 40% RAM Modpack</strong>
+                  <span class="dsl-file-pill" id="dsLayerTagModernfix">modernfix</span>
                 </div>
-                <span>Bật <code>dynamic_resources=true</code> &amp; <code>faster_item_rendering</code> — vào Modpack nhanh gấp đôi, giảm 35–50% RAM.</span>
+                <span>Nạp mô hình 3D linh hoạt giúp vào gói nhiều Mod nhanh gấp đôi và nhẹ hẳn RAM.</span>
               </div>
             </label>
 
@@ -2212,10 +2210,10 @@
               <input type="checkbox" data-dslayer="culling_hud" checked />
               <div class="dsl-main">
                 <div class="dsl-top">
-                  <strong>Tầng 5 • Gom Mẻ Vẽ HUD &amp; Culling</strong>
-                  <code id="dsLayerTagCulling">immediatelyfast.json</code>
+                  <strong>5. Gom nét vẽ HUD &amp; Ẩn quái khuất</strong>
+                  <span class="dsl-file-pill" id="dsLayerTagCulling">culling + hud</span>
                 </div>
-                <span>Gom hàng trăm lệnh vẽ thanh máu/chữ thành 1 lần gọi GPU (<code>hud_batching</code>) &amp; tắt tính toán quái khuất tường.</span>
+                <span>Gộp hàng trăm lệnh vẽ thanh máu/chữ &amp; ngừng tính toán thực thể khuất sau tường.</span>
               </div>
             </label>
 
@@ -2223,27 +2221,27 @@
               <input type="checkbox" data-dslayer="jvm_lowlatency" checked />
               <div class="dsl-main">
                 <div class="dsl-top">
-                  <strong>Tầng 6 • Khóa Khựng JVM Safepoint &amp; IPv4</strong>
-                  <code>JVM Flags</code>
+                  <strong>6. Chống khựng RAM &amp; Ưu tiên IPv4</strong>
+                  <span class="dsl-file-pill">JVM Engine</span>
                 </div>
-                <span>Chặn Mod gọi <code>System.gc()</code> đột ngột, tắt ghi nháp <code>hsperfdata</code> ra ổ cứng &amp; vào Server nhanh qua IPv4.</span>
+                <span>Chặn thu gom rác đột ngột gây tụt FPS, tắt ghi nháp ổ cứng &amp; vào máy chủ nhanh.</span>
               </div>
             </label>
           </div>
 
           <div class="ds-feedback-banner" id="dsFeedbackBanner">
-            🛡️ <strong>An toàn tuyệt đối:</strong> BlockWay lưu bản sao nguyên trạng trước khi can thiệp — bấm <strong>Hoàn Tác 1-Click</strong> bất kỳ lúc nào để khôi phục 100% file gốc mà không ảnh hưởng Phím tắt hay Thế giới.
+            🛡️ <strong>An toàn 100%:</strong> Tự lưu bản gốc trước khi tối ưu — bấm <strong>Khôi phục gốc</strong> bất kỳ lúc nào để trả lại nguyên trạng mà không mất Phím tắt hay Thế giới.
           </div>
         </div>
 
         <div class="modal-foot ds-studio-foot">
           <div class="ds-foot-left">
-            <button type="button" class="btn-sync-skin" id="btnDsTrimRam" title="Dọn bộ nhớ đệm RAM hệ thống ngay lập tức">🧹 Dọn RAM Ngay</button>
+            <button type="button" class="btn-sync-skin" id="btnDsTrimRam" title="Dọn bộ nhớ đệm RAM hệ thống ngay lập tức">🧹 Dọn RAM</button>
             <button type="button" class="btn-sync-skin" id="btnDsOpenConfigDir" title="Mở thư mục config của game để xem trực tiếp các tệp đã tối ưu">📂 Mở thư mục config</button>
           </div>
           <div class="ds-foot-right">
-            <button type="button" class="btn-modal-cancel ds-revert-btn" id="btnDsRevertNow" disabled title="Khôi phục nguyên trạng toàn bộ tệp cấu hình trước khi BlockWay can thiệp">↩️ Khôi Phục Nguyên Bản (1-Click)</button>
-            <button type="button" class="btn-modal-agree ds-apply-btn" id="btnDsApplyNow">⚡ Can Thiệp Tối Ưu Ngay (1-Click)</button>
+            <button type="button" class="btn-modal-cancel ds-revert-btn" id="btnDsRevertNow" disabled title="Khôi phục nguyên trạng toàn bộ tệp cấu hình trước khi BlockWay can thiệp">↩️ Khôi phục gốc</button>
+            <button type="button" class="btn-modal-agree ds-apply-btn" id="btnDsApplyNow">⚡ Áp Dụng Tối Ưu Ngay</button>
           </div>
         </div>
       </div>

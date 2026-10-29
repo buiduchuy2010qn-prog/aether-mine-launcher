@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "41.0.0",
-  "generatedAt": "2026-10-29T15:52:32.996Z",
+  "version": "41.0.1",
+  "generatedAt": "2026-10-29T16:11:14.843Z",
   "filesCount": 34,
   "files": [
     {
       "path": "package.json",
       "size": 2176,
-      "sha256": "98f6df287b9728d85abf3ecdcffbfdc1bb9b79731ad682155a12e436f3a38668"
+      "sha256": "5fbc07a8ea6c60ddf855d12226f035934145f97f7ef0987d55e5f03e6c46176e"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -56,13 +56,13 @@
     },
     {
       "path": "src/ui/index.html",
-      "size": 216964,
-      "sha256": "ee07747ea7bec98aa53fa070695445a31252172089e99e832098ea7decd05ca0"
+      "size": 215954,
+      "sha256": "777b5a95b9cca21e4374e2faba56ae614007d60b22dcc960eef16d4e5edfe63c"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 230794,
-      "sha256": "f9a9041018346b60d0c118b26d500ae63eeb9c66a2fb4e9406c27dcac7b15046"
+      "size": 232117,
+      "sha256": "cdf05242c6c299881c33a401ff8b18d24bf5106dae5760b9987614ce37bded0d"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -161,8 +161,8 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 433382,
-      "sha256": "3b32b42a1cb916b680ec90e45b1a3c6a837d463ac0ddccf8ad491881d891fd68"
+      "size": 433339,
+      "sha256": "4fae94bfe0d98c937976d2e0e9d22b844671e3e24b2f538cd708c7c0878beb0a"
     },
     {
       "path": "src/ui/styles.css",

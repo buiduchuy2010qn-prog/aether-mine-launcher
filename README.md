@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v41.0.0 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v41.0.1 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v41.0.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v41.0.1_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-7_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
@@ -16,9 +16,9 @@
 
 ---
 
-## 📦 Mới trong phiên bản `v41.0.0 PRO`
+## 📦 Mới trong phiên bản `v41.0.1 PRO`
 
-1. **⚡ Tính Năng Đặc Biệt: Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click (MỚI `v41.0.0 PRO`):**
+1. **⚡ Tính Năng Đặc Biệt: Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click (MỚI `v41.0.1 PRO`):**
    - **Can thiệp trực tiếp vào tệp cấu hình thực của Minecraft & Modpack:** Không chỉ chỉnh tham số khởi chạy bên ngoài, BlockWay đi sâu tối ưu đồng bộ 6 tầng tệp bên trong `.minecraft` hoặc từng gói Modpack riêng:
      1. **`options.txt` (Async Disk I/O & Raw Input 1:1):** Ghi `syncChunkWrites:false` triệt tiêu hiện tượng khựng 0.5s khi lưu chunk trên ổ cứng Windows, tắt phím đọc `Ctrl+B` (`narrator:0`), bật `rawMouseInput:true` và cân chỉnh khung hình.
      2. **`optionsof.txt` + Khóa Bảo Vệ Shader Tự Động:** Bật `ofSmartAnimations`, `ofRenderRegions`, `ofFastMath`, `ofSmoothFps`; đặc biệt **tự động phát hiện gói Shader đang bật** (`iris.properties` / `optionsshaders.txt` / `oculus.properties`) để giữ `ofFastRender:false`, ngăn lỗi đen màn hình hoặc văng game.

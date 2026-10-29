@@ -7787,7 +7787,7 @@ async function populateDeepSmoothTargetSelect(selectEl, preferredDir = '') {
 
   const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
   const mcLbl = `${state.selectedVersion || '1.21.4'} • ${String(state.selectedCore || 'fabric').toUpperCase()}`;
-  let html = `<option value="">🏠 Thư mục chính (.minecraft — MC ${esc(mcLbl)})</option>`;
+  let html = `<option value="">🏠 Thư mục chính (MC ${esc(mcLbl)})</option>`;
   for (const inst of instances) {
     if (!inst?.dir) continue;
     const tag = `${inst.name || 'Modpack'} (MC ${inst.mcVersion || '?'} • ${String(inst.loader || 'mod').toUpperCase()})`;
@@ -7839,10 +7839,10 @@ async function openDeepSmoothStudioModal(preferredInstanceDir = null) {
     const liveBadge = document.getElementById('dsLiveStateBadge');
     if (liveBadge) {
       if (st.isOptimized) {
-        liveBadge.textContent = `🟢 Đã can thiệp ${st.touchedCount || st.touchedFiles?.length || 5} tệp (${getDeepSmoothProfileLabelVi(st.activeProfile)})`;
+        liveBadge.textContent = `🟢 Đã tối ưu ${st.touchedCount || st.touchedFiles?.length || 5} tệp • ${getDeepSmoothProfileLabelVi(st.activeProfile)}`;
         liveBadge.classList.add('is-active');
       } else {
-        liveBadge.textContent = '⚪ Nguyên bản (Chưa can thiệp)';
+        liveBadge.textContent = '⚪ Nguyên bản';
         liveBadge.classList.remove('is-active');
       }
     }
@@ -7850,7 +7850,8 @@ async function openDeepSmoothStudioModal(preferredInstanceDir = null) {
     const shaderPill = document.getElementById('dsShaderGuardPill');
     if (shaderPill) {
       if (st.shaderGuardActive && st.activeShader) {
-        shaderPill.textContent = `🛡️ Đang bảo vệ Shader: ${st.activeShader}`;
+        shaderPill.textContent = '🛡️ Đang bảo vệ Shader';
+        shaderPill.title = `Phát hiện gói Shader "${st.activeShader}" — tự giữ Fast Render = TẮT để chống lỗi đen màn hình`;
         shaderPill.classList.remove('hidden');
       } else {
         shaderPill.classList.add('hidden');
@@ -7859,15 +7860,15 @@ async function openDeepSmoothStudioModal(preferredInstanceDir = null) {
 
     const sodTag = document.getElementById('dsLayerTagSodium');
     if (sodTag) {
-      sodTag.textContent = st.env?.hasEmbeddium ? 'sodium & embeddium.json' : 'sodium-options.json';
+      sodTag.textContent = st.env?.hasEmbeddium ? '2 tệp .json' : 'sodium.json';
     }
     const ofDesc = document.getElementById('dsLayerDescOptifine');
     if (ofDesc) {
       if (st.shaderGuardActive && st.activeShader) {
         const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
-        ofDesc.innerHTML = `🛡️ Phát hiện Shader <strong>${esc(st.activeShader)}</strong>: tự giữ <code>ofFastRender:false</code> chống lỗi đen hình + bật <code>SmartAnimations</code>.`;
+        ofDesc.innerHTML = `🛡️ Đang bật Shader <strong>${esc(st.activeShader)}</strong>: tự giữ Fast Render tắt để chống đen hình &amp; tối ưu hoạt ảnh.`;
       } else {
-        ofDesc.innerHTML = 'Bật <code>SmartAnimations</code>, <code>RenderRegions</code>, <code>FastMath</code> &amp; tự nhả <code>ofFastRender:false</code> nếu bật Shader.';
+        ofDesc.textContent = 'Mở kết xuất vùng nhanh, hoạt ảnh thông minh & tự khóa Fast Render nếu bật Shader.';
       }
     }
 
@@ -7881,10 +7882,11 @@ async function openDeepSmoothStudioModal(preferredInstanceDir = null) {
       const esc = typeof window.escapeHtml === 'function' ? window.escapeHtml : (s) => String(s ?? '');
       if (st.isOptimized && Array.isArray(st.touchedFiles) && st.touchedFiles.length) {
         fb.classList.add('is-tuned');
-        fb.innerHTML = `✅ <strong>Đang kích hoạt ${esc(getDeepSmoothProfileLabelVi(st.activeProfile))}:</strong> Đã can thiệp trực tiếp <strong>${st.touchedFiles.length} tệp</strong> (<code>${st.touchedFiles.map(esc).join('</code>, <code>')}</code>) — bản sao gốc đã được lưu an toàn, bấm <strong>Khôi Phục Nguyên Bản</strong> bất kỳ lúc nào!`;
+        const shortFiles = st.touchedFiles.map((f) => `<span class="ds-file-chip">${esc(f.replace(/^config\//, ''))}</span>`).join(' ');
+        fb.innerHTML = `✅ <strong>Đang kích hoạt ${esc(getDeepSmoothProfileLabelVi(st.activeProfile))}:</strong> Đã tối ưu <strong>${st.touchedFiles.length} tệp</strong> ${shortFiles} — bấm <strong>Khôi phục gốc</strong> bất kỳ lúc nào!`;
       } else {
         fb.classList.remove('is-tuned');
-        fb.innerHTML = '🛡️ <strong>An toàn tuyệt đối:</strong> BlockWay lưu bản sao nguyên trạng trước khi can thiệp — bấm <strong>Khôi Phục Nguyên Bản (1-Click)</strong> bất kỳ lúc nào để trả lại 100% file gốc mà không ảnh hưởng Phím tắt hay Thế giới.';
+        fb.innerHTML = '🛡️ <strong>An toàn 100%:</strong> Tự lưu bản gốc trước khi tối ưu — bấm <strong>Khôi phục gốc</strong> bất kỳ lúc nào để trả lại nguyên trạng mà không mất Phím tắt hay Thế giới.';
       }
     }
   };
