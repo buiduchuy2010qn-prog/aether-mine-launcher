@@ -1,7 +1,7 @@
 {
   "name": "blockway-launcher",
-  "version": "40.8.0",
-  "description": "BlockWay Launcher v40.8.0 PRO — Every World, One Place (Chế độ Mượt Êm không ép máy, Servers 2.0 ping thật & vào thẳng 1-Click, Kéo-thả cài Mod/Shader/Map/Modpack, Tủ đồ Skin & Áo choàng riêng, Chia sẻ log lỗi 1-Click)",
+  "version": "40.9.0",
+  "description": "BlockWay Launcher v40.9.0 PRO — Every World, One Place (Đóng gói gửi bộ Mod cho bạn bè 2.0, Bộ Chuẩn OptiFine 1-Click & Trợ lý OptiFine.jar, Kho Modpack đề xuất bản mới & dịch Tiếng Việt mượt, Chế độ Mượt Êm không ép máy)",
   "homepage": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
   "repository": {
     "type": "git",

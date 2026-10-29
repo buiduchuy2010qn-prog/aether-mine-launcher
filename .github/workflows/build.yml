@@ -52,13 +52,11 @@ jobs:
           tag_name: v${{ steps.pkg.outputs.version }}
           name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place"
           body: |
-            ### 🍃 BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place
-            - **🍃 Chế Độ "Mượt Êm — Không Ép Máy" (bật sẵn):** Tự giới hạn FPS theo tần số màn hình, chỉnh tầm nhìn / mô phỏng hợp lý và nạp RAM nhẹ nhàng — game mượt đều khung hình mà **không vắt kiệt CPU/GPU, máy mát và êm quạt hơn**. Tắt 1-Click là trả lại nguyên cài đặt cũ.
-            - **🌐 Servers 2.0:** Ping trực tiếp như trong game (độ trễ thật, MOTD, logo server, phiên bản & cảnh báo lệch bản), **⚡ Vào Thẳng** server 1-Click, **📌 Ghim** server yêu thích và **đồng bộ 2 chiều** với danh sách Multiplayer trong Minecraft.
-            - **📥 Kéo-Thả Cài Mọi Thứ:** Thả file Mod `.jar`, Shader / Resource Pack `.zip`, Map `.zip` hoặc Modpack `.mrpack` vào cửa sổ — Launcher tự nhận diện, cài đúng chỗ và bật sẵn.
-            - **🧺 Tủ Đồ Skin & 🦸 Áo Choàng Riêng:** Lưu 12 skin gần nhất để mặc lại 1-Click, tải áo choàng `.png` của riêng bạn — bạn bè chơi Offline / LAN cũng thấy.
-            - **📤 Chia Sẻ Log Lỗi 1-Click:** Bác Sĩ Crash tạo link nhật ký (mclo.gs) đã tự che tên máy & IP để gửi nhóm hỗ trợ.
-            - **🛠️ Sửa Lỗi & Tối Ưu:** Mod đã tắt không còn tự bật lại, sửa thẻ Kho Seed / Kho Map, sửa skin bạn bè trong Modpack, hồi sinh Hardcore an toàn hơn (giữ ngày trong game, tự đưa về điểm hồi sinh nếu rơi Void), sửa ảnh nền từ ảnh chụp, giao diện Sáng / Trắng Hồng rõ chữ hơn, bản Portable tự cập nhật đúng bản Portable.
+            ### 📦 BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place
+            - **📦 Đóng Gói & Gửi Bộ Mod Cho Bạn Bè 2.0:** Nút **📦 Đóng gói gửi bạn** rõ ràng tại tab Mod & Pack và trên từng Modpack đã cài; tùy chọn đóng gói Mod, Shader & Resource Pack, Config tinh chỉnh, Phím tắt (mặc định tắt `servers.dat` để giữ riêng tư IP máy chủ), tự mở thư mục chứa tệp `.mrpack` để kéo gửi thẳng qua Zalo / Discord.
+            - **🔆 Bộ Chuẩn OptiFine Đời Mới 1-Click & Trợ Lý `OptiFine.jar`:** Trang bị 1-Click trọn bộ tính năng OptiFine (Tăng FPS êm máy, Shader, phím Zoom mượt, Đuốc phát sáng, Kính nối liền, hỗ trợ Fresh Animations EMF+ETF) trên Fabric / Quilt / NeoForge / Forge; kéo-thả tệp `OptiFine_*.jar` tự nhận diện bản MC và tự cất gọn Mod xung đột trên Forge hoặc mở trình cài Java gốc.
+            - **📚 Kho Modpack Thông Minh 2.0:** Xếp hạng thông minh ưu tiên gói `1.20.x` / `1.21+` phổ biến lên hàng đầu, thêm bộ lọc sắp xếp (Đề xuất, Lượt tải, Bản MC mới nhất, Mới cập nhật), dịch mô tả Tiếng Việt theo lô mượt mà và nút Xem thêm gói phân trang chuẩn từng nguồn.
+            - **🍃 Giữ trọn bộ tính năng v40.8 PRO:** Chế độ Mượt Êm không ép máy, Servers 2.0 ping thật & vào thẳng 1-Click, Kéo-thả cài mọi thứ, Tủ đồ Skin & Áo choàng riêng, Chia sẻ log lỗi 1-Click.
           files: |
             dist/*.exe
         env:

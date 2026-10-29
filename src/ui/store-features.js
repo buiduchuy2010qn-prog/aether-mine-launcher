@@ -620,6 +620,7 @@ async function loadModrinthStore(append = false) {
     'lambdynamiclights': 'Ánh sáng động chân thực: Cầm đuốc, đèn lồng hoặc vật phát sáng trên tay sẽ tỏa sáng rực rỡ vùng xung quanh khi đi hang tối.',
     'dynamiclights': 'Ánh sáng động: Đuốc và vật phẩm phát sáng khi cầm trên tay hoặc ném ra đất sẽ tự động chiếu sáng môi trường xung quanh.',
     'zoomify': 'Phóng to tầm nhìn (Zoom ống nhòm) siêu mượt với hiệu ứng cuộn chuột phóng xa/gần và làm mượt chuyển động chuột giống OptiFine.',
+    'zume': 'Phóng to ống nhòm (phím C + cuộn chuột xa/gần) siêu nhẹ, hỗ trợ đa nền tảng giống hệt phím Zoom của OptiFine.',
     'wi-zoom': 'Ống nhòm phóng to siêu xa (lên tới 50x) bằng phím C hoặc cuộn chuột mà không cần chế tạo ống nhòm trong game.',
     'logical-zoom': 'Thêm phím tắt phóng to tầm nhìn (Zoom) đơn giản, gọn nhẹ giống hệt phím C của OptiFine.',
     'jei': 'Từ điển công thức chế tạo (Just Enough Items): Xem công thức ghép đồ và cách nung/pha chế của mọi vật phẩm ngay cạnh túi đồ.',
@@ -735,6 +736,8 @@ async function loadModrinthStore(append = false) {
     'no-chat-reports': 'Bảo vệ quyền riêng tư trong khung Chat: Gỡ bỏ chữ ký mã hóa báo cáo tin nhắn để bạn trò chuyện an toàn trên các Server.',
     'entity-model-features': 'Hỗ trợ mô hình sinh vật tùy chỉnh (CEM - Custom Entity Models) giống OptiFine, cần thiết để chạy gói Fresh Animations.',
     'entity-texture-features': 'Hỗ trợ kết cấu sinh vật ngẫu nhiên, phát sáng trong đêm và chớp mắt (OptiFine ETF), dùng chung với Entity Model Features.',
+    'entitytexturefeatures': 'Hỗ trợ kết cấu sinh vật ngẫu nhiên, phát sáng trong đêm và chớp mắt (OptiFine ETF), dùng chung với Entity Model Features.',
+    'oculus': 'Trình chạy gói bóng đổ (Shader Packs) chuẩn OptiFine/Iris tốc độ cao dành cho nền tảng Forge.',
     'cit-resewn': 'Cho phép gói tài nguyên đổi hình dạng vũ khí/vật phẩm khi đổi tên trong Đe (Anvil) hoặc phù phép giống tính năng CIT của OptiFine.',
     'polytone': 'Tùy chỉnh màu sắc bầu trời, sương mù, ánh sáng, màu nước và âm thanh theo từng quần xã cho các gói Resource Pack.',
     'fusion-connected-textures': 'Thư viện kết nối bề mặt khối vuông (Connected Textures) và mô hình nâng cao cho các gói Resource Pack thế hệ mới.',
@@ -2148,7 +2151,9 @@ const packHub = {
   query: '',
   mc: '',
   loader: '',
+  sort: 'smart',
   offset: 0,
+  sourceOffsets: {},
   items: [],
   seen: new Set(),
   loading: false,
@@ -2416,9 +2421,11 @@ function packRenderCards(items, append) {
     if (needTr.length > 0) {
       window.aetherAPI.translateToVi(needTr.map((it) => it.summary)).then((trRes) => {
         if (!trRes?.ok || !Array.isArray(trRes.results)) return;
+        const flags = Array.isArray(trRes.translatedFlags) ? trRes.translatedFlags : null;
         needTr.forEach((it, idx) => {
           const vi = trRes.results[idx];
-          if (vi) {
+          const didTranslate = flags ? Boolean(flags[idx]) : Boolean(vi && vi !== it.summary);
+          if (vi && didTranslate) {
             it.summaryVi = vi;
             if (packHub.viEnabled) {
               const cardEl = grid.querySelector(`.pack-card[data-uid="${CSS.escape(it.uid)}"] .pack-summary`);
@@ -2435,9 +2442,17 @@ async function runPackSearch(reset = true) {
   if (packHub.loading && !reset) return;
   packHub.loading = true;
   const reqId = (packHub.reqId = (packHub.reqId || 0) + 1);
-  const snap = { query: packHub.query, kind: packHub.kind, source: packHub.source, mc: packHub.mc, loader: packHub.loader };
+  const snap = {
+    query: packHub.query,
+    kind: packHub.kind,
+    source: packHub.source,
+    mc: packHub.mc,
+    loader: packHub.loader,
+    sort: packHub.sort || 'smart'
+  };
   if (reset) {
     packHub.offset = 0;
+    packHub.sourceOffsets = {};
     packHub.items = [];
     packHub.seen = new Set();
     const grid = document.getElementById('packsResultsGrid');
@@ -2446,6 +2461,10 @@ async function runPackSearch(reset = true) {
   const meta = document.getElementById('packsResultsMeta');
   if (meta) meta.textContent = '⏳ Đang tìm trên các kho Modpack toàn cầu...';
   const moreBtn = document.getElementById('btnPacksLoadMore');
+  if (moreBtn && !reset) {
+    moreBtn.disabled = true;
+    moreBtn.textContent = '⏳ Đang tải thêm gói Modpack...';
+  }
   try {
     const limit = snap.source === 'all' ? 30 : 24;
     const res = await window.aetherAPI.packsSearch({
@@ -2454,7 +2473,9 @@ async function runPackSearch(reset = true) {
       source: snap.source,
       mcVersion: snap.mc,
       loader: snap.kind === 'modpack' ? snap.loader : '',
+      sort: snap.sort,
       offset: packHub.offset,
+      sourceOffsets: packHub.sourceOffsets,
       limit
     });
     if (reqId !== packHub.reqId) return;
@@ -2464,11 +2485,19 @@ async function runPackSearch(reset = true) {
     packHub.items.push(...fresh);
     packRenderCards(fresh, !reset);
     packHub.offset += limit;
+    if (res.nextOffsets && typeof res.nextOffsets === 'object') {
+      packHub.sourceOffsets = res.nextOffsets;
+    }
 
     const totals = res.totals || {};
-    const parts = Object.entries(totals).map(([k, v]) => `${packSourceMeta(k).label}: ${v === null ? 'lỗi' : packFmtNum(v)}`);
-    const sum = Object.values(totals).reduce((a, b) => a + (Number(b) || 0), 0);
-    if (meta) meta.innerHTML = `🔎 Đang hiển thị <strong>${packHub.items.length}</strong> gói${packHub.query ? ` cho “${escapeHtml(packHub.query)}”` : ' phổ biến'} — ${parts.map((p) => escapeHtml(p)).join(' • ')}`;
+    const fmtSourceTotal = (v) => {
+      if (v === 'no_key') return 'chưa gắn Key';
+      if (v === null || v === undefined) return 'tạm bận';
+      return packFmtNum(v);
+    };
+    const parts = Object.entries(totals).map(([k, v]) => `${packSourceMeta(k).label}: ${fmtSourceTotal(v)}`);
+    const sum = Object.values(totals).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
+    if (meta) meta.innerHTML = `🔎 Đang hiển thị <strong>${packHub.items.length}</strong>${sum > packHub.items.length ? ` / <strong>${packFmtNum(sum)}+</strong>` : ''} gói${packHub.query ? ` cho “${escapeHtml(packHub.query)}”` : ' đề xuất'} — ${parts.map((p) => escapeHtml(p)).join(' • ')}`;
     const badge = document.getElementById('packsTotalBadge');
     if (badge && !packHub.query && !packHub.mc && !packHub.loader && packHub.source === 'all' && packHub.kind === 'modpack' && sum > 40000) badge.textContent = `${packFmtNum(sum)}+ Gói`;
 
@@ -2476,7 +2505,7 @@ async function runPackSearch(reset = true) {
     const warns = res.warnings || [];
     if (notice) {
       if (warns.includes('NO_CF_KEY')) {
-        notice.innerHTML = '🔑 Chưa kết nối <strong>CurseForge</strong> (kho lớn nhất, nhiều gói Zombie / 100 Days). <button class="vtype-btn" id="btnPacksNoticeKey">Nhập API Key</button>';
+        notice.innerHTML = '🔑 Chưa kết nối <strong>CurseForge</strong> (tùy chọn — kho lớn có nhiều gói Zombie / 100 Days). Modrinth, FTB, Technic &amp; ATLauncher vẫn tải trực tiếp bình thường! <button class="vtype-btn" id="btnPacksNoticeKey">Nhập API Key</button>';
         notice.classList.remove('hidden');
         notice.querySelector('#btnPacksNoticeKey').onclick = openCfKeyModal;
       } else if (warns.includes('CF_SEARCH_LIMITED')) {
@@ -2484,15 +2513,22 @@ async function runPackSearch(reset = true) {
         notice.classList.remove('hidden');
       } else {
         const other = warns.filter((w) => !['NO_CF_KEY', 'CF_SEARCH_LIMITED'].includes(w));
-        notice.innerHTML = other.length ? `⚠️ Một số nguồn tạm lỗi: ${other.map((w) => escapeHtml(w)).join(' • ')}` : '';
+        notice.innerHTML = other.length ? `⚠️ Một số nguồn tạm bận: ${other.map((w) => escapeHtml(w)).join(' • ')}` : '';
         notice.classList.toggle('hidden', !other.length);
       }
     }
-    const anyMore = Object.values(totals).some((t) => Number(t) > packHub.offset / (packHub.source === 'all' ? 5 : 1));
-    if (moreBtn) moreBtn.classList.toggle('hidden', !(fresh.length > 0 && anyMore));
+    const anyMore = typeof res.hasMore === 'boolean'
+      ? res.hasMore
+      : Object.values(totals).some((t) => typeof t === 'number' && t > packHub.items.length);
+    if (moreBtn) {
+      moreBtn.disabled = false;
+      moreBtn.textContent = `⬇ Xem thêm gói Modpack (đang hiện ${packHub.items.length}${sum > packHub.items.length ? ` / ${packFmtNum(sum)}+` : ''} gói)`;
+      moreBtn.classList.toggle('hidden', !(fresh.length > 0 && anyMore));
+    }
   } catch (err) {
     if (reqId !== packHub.reqId) return;
     if (meta) meta.textContent = `❌ ${err.message}`;
+    if (moreBtn) { moreBtn.disabled = false; moreBtn.textContent = '⬇ Xem thêm gói Modpack'; }
     if (reset) packRenderCards([], false);
   } finally {
     if (reqId === packHub.reqId) packHub.loading = false;
@@ -2849,7 +2885,7 @@ async function refreshPackInstances() {
         ${isIslandCandidate ? `<button class="vtype-btn" data-piact="equip-island" data-pii="${i}" title="Bơm tự động bộ tạo Đảo SkyBlock / OneBlock chơi đơn vào gói này">🏝️ Bơm Đảo Bay</button>` : ''}
         <button class="vtype-btn" data-piact="add-mods" data-pii="${i}" title="Cài thêm Mod / Shader / Resource Pack từ Modrinth trực tiếp vào gói này">➕ Cài thêm Mod</button>
         <button class="vtype-btn" data-piact="tweaker" data-pii="${i}" title="Chỉnh FOV, Sáng hang động Fullbright & tự gỡ trùng phím tắt cho gói Modpack này">🎛️ Phím tắt</button>
-        <button class="srv-icon-btn" data-piact="export-mrpack" data-pii="${i}" title="Xuất gói Modpack này ra file .mrpack gửi bạn bè / mang ra quán Net">📤</button>
+        <button class="vtype-btn pir-share" data-piact="export-mrpack" data-pii="${i}" title="Đóng gói bộ Mod này ra tệp .mrpack gọn nhẹ để lưu trữ hoặc gửi cho bạn bè qua Zalo / Discord">📦 Đóng gói gửi bạn</button>
         <button class="srv-icon-btn" data-piact="folder" data-pii="${i}" title="Mở thư mục gói">📂</button>
         <button class="srv-icon-btn" data-piact="mods" data-pii="${i}" title="Mở thư mục mods">🧩</button>
         <button class="srv-icon-btn danger" data-piact="delete" data-pii="${i}" title="Xóa gói">🗑</button>
@@ -3274,6 +3310,8 @@ function initPackHubUI() {
   if (mcSel) mcSel.onchange = () => { packHub.mc = mcSel.value; runPackSearch(true); };
   const ldSel = document.getElementById('packsLoaderFilter');
   if (ldSel) ldSel.onchange = () => { packHub.loader = ldSel.value; runPackSearch(true); };
+  const sortSel = document.getElementById('packsSortFilter');
+  if (sortSel) sortSel.onchange = () => { packHub.sort = sortSel.value || 'smart'; runPackSearch(true); };
   const more = document.getElementById('btnPacksLoadMore');
   if (more) more.onclick = () => runPackSearch(false);
 
@@ -4261,65 +4299,192 @@ async function runSyncAllModsUI() {
 }
 window.runSyncAllModsUI = runSyncAllModsUI;
 
-// 3. Xuất / Nhập Giỏ Mod Chơi Chung (.bwmods.json) & Đóng Gói Modpack Chuẩn Quốc Tế (.mrpack)
-async function exportMrpackUI(customOpts = null) {
+// 3. Xuất / Nhập Giỏ Mod Chơi Chung (.bwmods.json) & Đóng Gói Modpack Chuẩn Quốc Tế (.mrpack) — v40.9 PRO Share Pack 2.0
+async function openShareModpackModal(customOpts = null) {
   if (!window.aetherAPI?.exportMrpack) return;
   const target = customOpts || (() => {
     const t = getModStoreTarget();
+    const player = getCurrentPlayerDisplayName();
     return {
       targetDir: t.dir,
-      packName: t.isPack ? (t.shortName || 'BlockWay-Modpack') : `BlockWay-${t.mcVersion}-${t.core}`,
+      packName: t.isPack ? (t.shortName || 'BlockWay-Modpack') : `Bộ Mod ${player} (${t.mcVersion})`,
       mcVersion: t.mcVersion,
       loaderType: t.core === 'vanilla' ? 'fabric' : t.core,
-      loaderVersion: t.isPack ? (t.inst?.loaderVersion || '') : (state.selectedLoaderVersion || '')
+      loaderVersion: t.isPack ? (t.inst?.loaderVersion || '') : (state.selectedLoaderVersion || ''),
+      isPack: t.isPack
     };
   })();
 
-  const btn = document.getElementById('btnExportMrpack');
-  const orig = btn?.textContent;
-  if (btn && !customOpts) {
-    btn.disabled = true;
-    btn.textContent = '⏳ Đang đóng gói .mrpack...';
+  let pv = { modsCount: 0, shadersCount: 0, resourcePacksCount: 0, configsCount: 0, hasKeybinds: false, hasServersDat: false, proprietaryFiles: [] };
+  if (window.aetherAPI?.previewMrpackExport) {
+    try {
+      const r = await window.aetherAPI.previewMrpackExport({ gameDir: state.gameDir, targetDir: target.targetDir });
+      if (r?.ok) pv = r;
+    } catch (_) {}
   }
-  showAetherNotification(`📦 Đang quét SHA-1/SHA-512 trên Modrinth & đóng gói "${target.packName}" thành file .mrpack...`, 'info', 4000);
-  try {
-    const res = await window.aetherAPI.exportMrpack({
-      gameDir: state.gameDir,
-      targetDir: target.targetDir,
-      packName: target.packName,
-      mcVersion: target.mcVersion,
-      loaderType: target.loaderType,
-      loaderVersion: target.loaderVersion || '',
-      authorName: getCurrentPlayerDisplayName()
-    });
-    if (res?.ok) {
-      showAetherNotification(
-        `📦 Đã đóng gói "${target.packName}" thành công (${res.totalItems || 0} gói • ${res.sizeMB || 0} MB)! Gửi file .mrpack này qua Zalo/Discord hoặc mang ra quán Net để mở bằng 1-Click!`,
-        'success',
-        6500
-      );
-    } else if (!res?.canceled) {
-      showAetherNotification(`⚠️ Không thể đóng gói .mrpack: ${res?.error || 'Lỗi không xác định'}`, 'error', 4500);
-    }
-  } catch (err) {
-    showAetherNotification(`⚠️ Lỗi đóng gói .mrpack: ${err.message}`, 'error', 4500);
-  } finally {
-    if (btn && !customOpts) {
-      btn.disabled = false;
-      btn.textContent = orig || '📦 Đóng Gói .mrpack';
-    }
+
+  const shadersAndRpCount = (pv.shadersCount || 0) + (pv.resourcePacksCount || 0);
+  const propList = Array.isArray(pv.proprietaryFiles) ? pv.proprietaryFiles : [];
+
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span class="card-dot emerald"></span>
+        <h3>📦 Đóng Gói &amp; Gửi Bộ Mod Cho Bạn Bè</h3>
+      </div>
+      <button class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body bw-share-pack-body">
+      <p class="pack-modal-hint" style="margin:0;">
+        Đóng gói từ <strong>${escapeHtml(target.isPack ? `Modpack “${target.packName}”` : `Thư mục game MC ${target.mcVersion} (${String(target.loaderType).toUpperCase()})`)}</strong> thành 1 tệp <code>.mrpack</code> gọn nhẹ.
+        Bạn bè chỉ cần <strong>kéo-thả tệp này vào cửa sổ BlockWay</strong> là tự cài đủ phiên bản MC + Loader + Mod!
+      </p>
+
+      <div>
+        <label class="qw-label" style="display:block;margin-bottom:5px;">Tên bộ Mod chia sẻ</label>
+        <input type="text" id="inpSharePackTitle" class="pro-input" maxlength="60" value="${escapeHtml(target.packName)}" placeholder="Nhập tên gói (vd: Bộ Mod Sinh Tồn Nhóm Mình)..." />
+      </div>
+
+      <div class="bw-share-opts-grid">
+        <label class="bw-share-opt-row">
+          <input type="checkbox" id="chkShareMods" ${pv.modsCount > 0 ? 'checked' : ''} />
+          <div>
+            <strong>🧩 Các gói Mod đang bật (<code>mods/*.jar</code>)</strong>
+            <span>Tìm thấy <strong>${pv.modsCount}</strong> Mod — tự ưu tiên lấy link gốc Modrinth giúp tệp siêu nhẹ</span>
+          </div>
+        </label>
+        <label class="bw-share-opt-row">
+          <input type="checkbox" id="chkSharePacks" ${shadersAndRpCount > 0 ? 'checked' : ''} />
+          <div>
+            <strong>✨ Shader &amp; Resource Pack (<code>${pv.shadersCount}</code> Shader • <code>${pv.resourcePacksCount}</code> Resource Pack)</strong>
+            <span>Gửi kèm gói bóng đổ và gói tài nguyên bạn đang dùng</span>
+          </div>
+        </label>
+        <label class="bw-share-opt-row">
+          <input type="checkbox" id="chkShareConfigs" checked />
+          <div>
+            <strong>⚙️ Cấu hình tinh chỉnh Mod (<code>config/</code> — ${pv.configsCount} tệp an toàn)</strong>
+            <span>Giúp bạn bè có sẵn thiết lập Mod đồng nhất, tự loại bỏ mọi tệp chứa tài khoản</span>
+          </div>
+        </label>
+        <label class="bw-share-opt-row">
+          <input type="checkbox" id="chkShareKeybinds" />
+          <div>
+            <strong>⌨️ Phím tắt &amp; góc nhìn FOV trong game (<code>options.txt</code>)</strong>
+            <span>Tùy chọn: đồng bộ bảng phím bấm điều khiển của bạn sang máy người nhận</span>
+          </div>
+        </label>
+        <label class="bw-share-opt-row">
+          <input type="checkbox" id="chkShareServersDat" />
+          <div>
+            <strong>🌐 Danh sách Server đang lưu (<code>servers.dat</code>)</strong>
+            <span>Mặc định tắt để tránh lộ IP máy chủ riêng — chỉ bật khi bạn muốn gửi luôn danh sách Server</span>
+          </div>
+        </label>
+      </div>
+
+      ${propList.length ? `<div class="pack-modal-msg warn" style="margin:0;">ℹ️ Tệp bản quyền đóng (<code>${escapeHtml(propList.join(', '))}</code>) sẽ tự động được bỏ qua khi đóng gói — máy bạn bè có thể bấm 1-Click <strong>🔆 Bộ Chuẩn OptiFine</strong> là chạy mượt tương đương.</div>` : ''}
+      <div id="sharePackLiveMsg" class="pack-modal-msg hidden" style="margin:0;"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <button type="button" class="vtype-btn" id="btnShareQuickBasket" title="Chỉ xuất danh sách tên Mod siêu nhẹ (.bwmods.json vài KB)">📤 Chỉ xuất Giỏ Mod nhẹ (.json)</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn-modal-cancel" data-pmclose>Đóng</button>
+        <button type="button" class="btn-modal-agree" id="btnConfirmExportMrpack">📦 Chọn Nơi Lưu &amp; Đóng Gói (.mrpack)</button>
+      </div>
+    </div>`, false);
+
+  if (!card) return;
+
+  const btnBasket = card.querySelector('#btnShareQuickBasket');
+  if (btnBasket) {
+    btnBasket.onclick = async () => {
+      packCloseModal();
+      await exportModBasketUI(target.targetDir, target.mcVersion, target.loaderType);
+    };
   }
+
+  const btnGo = card.querySelector('#btnConfirmExportMrpack');
+  const msgEl = card.querySelector('#sharePackLiveMsg');
+  btnGo.onclick = async () => {
+    const cleanName = (card.querySelector('#inpSharePackTitle')?.value || '').trim() || target.packName;
+    const includeMods = Boolean(card.querySelector('#chkShareMods')?.checked);
+    const includeShadersAndPacks = Boolean(card.querySelector('#chkSharePacks')?.checked);
+    const includeConfigs = Boolean(card.querySelector('#chkShareConfigs')?.checked);
+    const includeKeybinds = Boolean(card.querySelector('#chkShareKeybinds')?.checked);
+    const includeServersDat = Boolean(card.querySelector('#chkShareServersDat')?.checked);
+
+    if (!includeMods && !includeShadersAndPacks) {
+      if (msgEl) {
+        msgEl.classList.remove('hidden');
+        msgEl.textContent = '⚠️ Hãy tích chọn ít nhất Mục Mod (.jar) hoặc Shader & Resource Pack để đóng gói.';
+      }
+      return;
+    }
+
+    const orig = btnGo.textContent;
+    btnGo.disabled = true;
+    btnGo.textContent = '⏳ Đang kiểm tra Mod & nén gói .mrpack...';
+    if (msgEl) {
+      msgEl.classList.remove('hidden');
+      msgEl.textContent = '🔎 Đang đối chiếu nguồn tải Modrinth & đóng gói tệp chia sẻ...';
+    }
+    try {
+      const res = await window.aetherAPI.exportMrpack({
+        gameDir: state.gameDir,
+        targetDir: target.targetDir,
+        packName: cleanName,
+        mcVersion: target.mcVersion,
+        loaderType: target.loaderType,
+        loaderVersion: target.loaderVersion || '',
+        includeMods,
+        includeShadersAndPacks,
+        includeConfigs,
+        includeKeybinds,
+        includeServersDat,
+        revealInExplorer: true,
+        authorName: getCurrentPlayerDisplayName()
+      });
+      if (res?.ok) {
+        packCloseModal();
+        showAetherNotification(
+          `📦 Đã đóng gói "${res.packName || cleanName}" (${res.totalItems || 0} gói • ${res.sizeMB || 0} MB) và mở sẵn thư mục chứa tệp! Gửi tệp .mrpack qua Zalo/Discord để bạn bè kéo-thả cài 1-Click!`,
+          'success',
+          7000
+        );
+      } else if (!res?.canceled) {
+        if (msgEl) msgEl.textContent = `❌ ${res?.error || 'Không thể đóng gói .mrpack'}`;
+        showAetherNotification(`⚠️ Không thể đóng gói .mrpack: ${res?.error || 'Lỗi không xác định'}`, 'error', 4500);
+      } else if (msgEl) {
+        msgEl.classList.add('hidden');
+      }
+    } catch (err) {
+      if (msgEl) msgEl.textContent = `❌ ${err.message}`;
+      showAetherNotification(`⚠️ Lỗi đóng gói .mrpack: ${err.message}`, 'error', 4500);
+    } finally {
+      btnGo.disabled = false;
+      btnGo.textContent = orig;
+    }
+  };
+}
+
+async function exportMrpackUI(customOpts = null) {
+  return openShareModpackModal(customOpts);
 }
 window.exportMrpackUI = exportMrpackUI;
+window.openShareModpackModal = openShareModpackModal;
 
-async function exportModBasketUI() {
+async function exportModBasketUI(overrideDir = '', overrideMc = '', overrideCore = '') {
   const target = getModStoreTarget();
+  const dir = overrideDir || target.dir;
+  const mcVersion = overrideMc || target.mcVersion;
+  const loaderType = overrideCore || target.core;
   showAetherNotification('⏳ Đang quét danh sách Mod để xuất Giỏ Mod (.bwmods.json)...', 'info', 3000);
   const fn = window.aetherAPI.exportCoopModBasketFile || window.aetherAPI.exportCoopBasketFile;
   const res = await fn({
-    gameDir: target.dir,
-    mcVersion: target.mcVersion,
-    loaderType: target.core,
+    gameDir: dir,
+    mcVersion,
+    loaderType,
     hostName: getCurrentPlayerDisplayName()
   });
   if (res?.ok) {
@@ -4355,6 +4520,242 @@ async function importModBasketUI() {
     showAetherNotification(`⚠️ Lỗi nhập Giỏ Mod: ${res?.error || 'File không hợp lệ'}`, 'error', 4500);
   }
 }
+
+/* ============================================================================
+   3B. v40.9: BỘ CHUẨN OPTIFINE ĐỜI MỚI 1-CLICK & TRỢ LÝ OPTIFINE_*.JAR THÔNG MINH
+   ============================================================================ */
+async function openOptifineHubModal(droppedJar = null) {
+  const target = getModStoreTarget();
+  const currentCore = String(target.core || state.selectedCore || 'vanilla').toLowerCase();
+  const currentMc = String(target.mcVersion || state.selectedVersion || '1.21.4');
+  const targetLabel = target.isPack ? `📦 ${target.label}` : `🏠 Thư mục chính (.minecraft — MC ${currentMc} • ${currentCore.toUpperCase()})`;
+  const effectiveParityLoader = (currentCore === 'vanilla' || currentCore === 'legacyfabric') && !target.isPack ? 'fabric' : currentCore;
+
+  const droppedMc = droppedJar?.mcVersion || currentMc;
+  const droppedName = droppedJar?.fileName ? escapeHtml(droppedJar.fileName) : '';
+
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span class="card-dot gold"></span>
+        <h3>🔆 Trợ Lý OptiFine &amp; Bộ Chuẩn Đồ Họa Đời Mới</h3>
+      </div>
+      <button type="button" class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body bw-share-pack-body">
+      <div class="bw-of-target-pill">
+        🎯 Đích cài đặt: <strong>${escapeHtml(targetLabel)}</strong>
+      </div>
+
+      ${droppedJar?.filePath ? `
+        <div class="bw-of-dropped-banner">
+          <div class="bw-of-dropped-title">📥 Đã nhận diện tệp <code>${droppedName}</code> ${droppedJar.mcVersion ? `(dành cho <strong>MC ${escapeHtml(droppedJar.mcVersion)}</strong>)` : ''}</div>
+          <div class="bw-of-dropped-desc">
+            <code>OptiFine.jar</code> chỉ chạy trực tiếp trong <code>mods/</code> khi dùng <strong>Forge</strong> (hoặc tạo Profile Vanilla riêng). Bạn đang chọn <strong>${escapeHtml(currentCore.toUpperCase())}</strong> — hãy chọn 1 trong 2 hướng bên dưới:
+          </div>
+          <div class="bw-of-dropped-actions">
+            <button type="button" class="btn-sync-skin" id="btnOfSwitchForgeJar">🔨 Chuyển sang Forge ${escapeHtml(droppedMc)} &amp; Bật ${droppedName}</button>
+            <button type="button" class="vtype-btn" id="btnOfRunJavaInstaller" title="Chạy trình cài đặt gốc của OptiFine bằng Java để tạo Profile OptiFine Vanilla">☕ Mở trình cài OptiFine gốc (Java)</button>
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="bw-of-section is-recommended">
+        <div class="bw-of-sec-head">
+          <span class="bw-of-badge">⭐ KHUYÊN DÙNG — MƯỢT ÊM &amp; ĐỦ 100% TÍNH NĂNG</span>
+          <strong>🚀 Cài 1-Click "Bộ Chuẩn OptiFine Đời Mới" (Mã nguồn mở Modrinth)</strong>
+        </div>
+        <p class="bw-of-sec-desc">
+          Thay vì dùng <code>OptiFine</code> đời cũ dễ xung đột Mod và khởi động chậm trên Minecraft mới, gói chuẩn này tự động trang bị trọn bộ tính năng quen thuộc của OptiFine trên <strong>${escapeHtml(effectiveParityLoader.toUpperCase())} • MC ${escapeHtml(currentMc)}</strong> mà <strong>không ép xung CPU/GPU</strong>:
+        </p>
+        <div class="bw-of-feature-grid">
+          <span class="bw-of-feature-pill">⚡ Tăng FPS êm máy (Sodium / Embeddium)</span>
+          <span class="bw-of-feature-pill">✨ Chạy mọi gói Shader (Iris / Oculus)</span>
+          <span class="bw-of-feature-pill">🔍 Phím Zoom ống nhòm mượt (Zume)</span>
+          <span class="bw-of-feature-pill">🕯️ Đuốc cầm tay phát sáng (Dynamic Lights)</span>
+          <span class="bw-of-feature-pill">🪟 Kính nối liền không viền (Continuity / Fusion)</span>
+          <span class="bw-of-feature-pill">🐾 Hỗ trợ Fresh Animations &amp; Custom Pack (EMF + ETF)</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px;">
+          <span style="font-size:11.5px;color:var(--text-muted);">🛡️ Tự động cất gọn <code>OptiFine.jar</code> cũ (nếu có) để tránh văng game.</span>
+          <button type="button" class="btn-modal-agree" id="btnInstallOfParityNow">🔆 Cài Trọn Bộ Chuẩn OptiFine (1-Click)</button>
+        </div>
+      </div>
+
+      <div class="bw-of-section">
+        <div class="bw-of-sec-head">
+          <span class="bw-of-badge subtle">TÙY CHỌN DÀNH CHO BẢN CŨ / FORGE</span>
+          <strong>📥 Dùng tệp <code>OptiFine_*.jar</code> chính chủ từ optifine.net</strong>
+        </div>
+        <p class="bw-of-sec-desc">
+          Do bản quyền của tác giả sp614x, các Launcher hợp pháp không tải lậu trực tiếp tệp <code>OptiFine.jar</code>. Nếu bạn cần chạy đúng tệp <code>OptiFine</code> gốc (ví dụ chơi <code>Forge 1.12.2 / 1.16.5 / 1.20.1</code>), chỉ cần tải tệp <code>.jar</code> từ trang chủ rồi chọn tệp hoặc kéo-thả thẳng vào cửa sổ BlockWay — Launcher sẽ tự động nhận diện phiên bản và tắt các Mod xung đột giúp bạn!
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <button type="button" class="vtype-btn" id="btnOpenOfficialOptifineSite">🌐 Mở trang tải chính chủ (optifine.net)</button>
+          <button type="button" class="btn-sync-skin" id="btnPickLocalOptifineJar">📂 Chọn tệp OptiFine_*.jar đã tải về máy</button>
+        </div>
+      </div>
+
+      <div id="optifineHubStatusMsg" class="pack-modal-msg hidden" style="margin:0;"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-modal-cancel" data-pmclose>Đóng</button>
+    </div>`, false);
+
+  if (!card) return;
+  const statusEl = card.querySelector('#optifineHubStatusMsg');
+  const setStatus = (msg, isWarn = false) => {
+    if (!statusEl) return;
+    statusEl.classList.remove('hidden', 'warn');
+    if (isWarn) statusEl.classList.add('warn');
+    statusEl.innerHTML = msg;
+  };
+
+  const btnParity = card.querySelector('#btnInstallOfParityNow');
+  if (btnParity) {
+    btnParity.onclick = async () => {
+      const orig = btnParity.textContent;
+      btnParity.disabled = true;
+      btnParity.textContent = '⏳ Đang tải & đồng bộ Bộ Chuẩn OptiFine...';
+      try {
+        let loaderToUse = currentCore;
+        if (!target.isPack && (loaderToUse === 'vanilla' || loaderToUse === 'legacyfabric')) {
+          loaderToUse = 'fabric';
+          setStatus(`⚙️ Đang chuyển sang <strong>Fabric • MC ${escapeHtml(currentMc)}</strong> để kích hoạt trọn bộ tính năng đồ họa &amp; Shader...`);
+          if (typeof window.selectMcVersionAndCore === 'function') {
+            await window.selectMcVersionAndCore(currentMc, 'fabric');
+          }
+        } else {
+          setStatus(`⏳ Đang tải các Mod tương thích cho <strong>${escapeHtml(loaderToUse.toUpperCase())} • MC ${escapeHtml(currentMc)}</strong> từ Modrinth...`);
+        }
+
+        const res = await window.aetherAPI.installOptifineParity({
+          gameDir: state.gameDir,
+          instanceDir: target.isPack ? target.dir : '',
+          mcVersion: currentMc,
+          loaderType: loaderToUse
+        });
+
+        if (res?.ok) {
+          await refreshLocalAddonsCount();
+          if (!document.getElementById('localAddonsWrap')?.classList.contains('hidden')) {
+            await renderLocalAddonsManager();
+          }
+          const newCnt = (res.installed || []).length;
+          const keptCnt = (res.alreadyPresent || []).length;
+          const parkedNote = (res.parkedOptifine || []).length
+            ? ` (đã tự động tắt ${res.parkedOptifine.join(', ')} để chống xung đột)`
+            : '';
+          packCloseModal();
+          showAetherNotification(
+            `🔆 Đã trang bị Bộ Chuẩn OptiFine (${newCnt} cài mới, ${keptCnt} có sẵn)${parkedNote}! Vào game có ngay FPS mượt, Shader, Zoom & Đuốc sáng.`,
+            'success',
+            6800
+          );
+        } else {
+          setStatus(`⚠️ ${escapeHtml(res?.error || 'Chưa tìm thấy đủ gói tương thích cho phiên bản này.')}`, true);
+        }
+      } catch (err) {
+        setStatus(`⚠️ Lỗi cài Bộ Chuẩn OptiFine: ${escapeHtml(err.message)}`, true);
+      } finally {
+        btnParity.disabled = false;
+        btnParity.textContent = orig;
+      }
+    };
+  }
+
+  const btnSite = card.querySelector('#btnOpenOfficialOptifineSite');
+  if (btnSite) {
+    btnSite.onclick = () => {
+      window.aetherAPI.openExternal('https://optifine.net/downloads');
+      setStatus('🌐 Đã mở <strong>optifine.net/downloads</strong> trên trình duyệt. Bấm <em>Mirror</em> cạnh phiên bản MC bạn cần để tải tệp <code>OptiFine_*.jar</code> nhanh nhất, sau đó kéo-thả tệp vào BlockWay!');
+    };
+  }
+
+  const btnPick = card.querySelector('#btnPickLocalOptifineJar');
+  if (btnPick) {
+    btnPick.onclick = async () => {
+      const r = await window.aetherAPI.pickOptifineJar({
+        gameDir: state.gameDir,
+        instanceDir: target.isPack ? target.dir : '',
+        currentLoader: state.selectedCore || 'vanilla',
+        currentMcVersion: currentMc,
+        action: 'auto'
+      });
+      if (!r || r.canceled) return;
+      if (!r.ok) {
+        setStatus(`⚠️ ${escapeHtml(r.error || 'Tệp đã chọn không phải OptiFine hợp lệ.')}`, true);
+        return;
+      }
+      if (r.kind === 'optifine-forge') {
+        if (!target.isPack && r.mcVersion && r.mcVersion !== state.selectedVersion && typeof window.selectMcVersionAndCore === 'function') {
+          try { await window.selectMcVersionAndCore(r.mcVersion, 'forge'); } catch (_) {}
+        }
+        await refreshLocalAddonsCount();
+        if (!document.getElementById('localAddonsWrap')?.classList.contains('hidden')) await renderLocalAddonsManager();
+        const parkedMsg = (r.parkedMods || []).length ? ` • Đã tạm tắt ${r.parkedMods.length} Mod trùng render (${r.parkedMods.join(', ')})` : '';
+        packCloseModal();
+        showAetherNotification(`✅ Đã cài ${r.fileName} vào Forge mods/${parkedMsg}!`, 'success', 6500);
+        return;
+      }
+      if (r.kind === 'optifine-choice') {
+        packCloseModal();
+        openOptifineHubModal(r);
+      }
+    };
+  }
+
+  const btnSwitchForge = card.querySelector('#btnOfSwitchForgeJar');
+  if (btnSwitchForge && droppedJar?.filePath) {
+    btnSwitchForge.onclick = async () => {
+      btnSwitchForge.disabled = true;
+      btnSwitchForge.textContent = '⏳ Đang chuyển sang Forge & chép OptiFine...';
+      try {
+        const targetMc = droppedJar.mcVersion || currentMc;
+        if (!droppedJar.isInstance && typeof window.selectMcVersionAndCore === 'function') {
+          await window.selectMcVersionAndCore(targetMc, 'forge');
+        }
+        const r = await window.aetherAPI.handleOptifineJar({
+          gameDir: state.gameDir,
+          instanceDir: droppedJar.isInstance ? droppedJar.targetDir : '',
+          filePath: droppedJar.filePath,
+          currentLoader: 'forge',
+          currentMcVersion: targetMc,
+          action: 'forge'
+        });
+        if (r?.ok) {
+          await refreshLocalAddonsCount();
+          if (!document.getElementById('localAddonsWrap')?.classList.contains('hidden')) await renderLocalAddonsManager();
+          const parkedMsg = (r.parkedMods || []).length ? ` (đã tạm tắt ${r.parkedMods.join(', ')} để tránh xung đột)` : '';
+          packCloseModal();
+          showAetherNotification(`🔨 Đã chuyển sang Forge ${targetMc} & kích hoạt ${r.fileName}${parkedMsg}!`, 'success', 6500);
+        } else {
+          setStatus(`⚠️ ${escapeHtml(r?.error || 'Không thể cài OptiFine vào Forge.')}`, true);
+        }
+      } finally {
+        btnSwitchForge.disabled = false;
+      }
+    };
+  }
+
+  const btnJavaInstaller = card.querySelector('#btnOfRunJavaInstaller');
+  if (btnJavaInstaller && droppedJar?.filePath) {
+    btnJavaInstaller.onclick = async () => {
+      const r = await window.aetherAPI.handleOptifineJar({
+        gameDir: state.gameDir,
+        filePath: droppedJar.filePath,
+        action: 'run-installer'
+      });
+      if (r?.ok) {
+        setStatus('☕ Đã mở cửa sổ cài đặt OptiFine gốc bằng Java! Hãy bấm <strong>Install</strong> trong cửa sổ vừa hiện lên.');
+        showAetherNotification('☕ Đã mở trình cài đặt OptiFine gốc bằng Java!', 'info', 5000);
+      } else {
+        setStatus(`⚠️ ${escapeHtml(r?.error || 'Không mở được trình cài đặt Java.')}`, true);
+      }
+    };
+  }
+}
+window.openOptifineHubModal = openOptifineHubModal;
 
 // 4. Quản Lý Bản Sao Lưu Thế Giới (.zip) & Nhập Map Sinh Tồn
 async function refreshWorldBackupsUI(toggleVisible = false) {
@@ -4630,9 +5031,15 @@ function initV402FeaturesUI() {
     if (el) el.onclick = () => runSyncAllModsUI();
   });
 
-  // Mod Basket Export/Import & .mrpack Export buttons
-  const btnExportMrpack = document.getElementById('btnExportMrpack');
-  if (btnExportMrpack) btnExportMrpack.onclick = () => exportMrpackUI(null);
+  // Mod Basket Export/Import, .mrpack Share Pack 2.0 & OptiFine Hub buttons
+  ['btnExportMrpack', 'btnModsSharePack'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.onclick = () => exportMrpackUI(null);
+  });
+  ['btnModsOptifineHub', 'btnToolsOptifineHub'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.onclick = () => openOptifineHubModal(null);
+  });
   ['btnExportModBasket', 'btnCoopExportBasket'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.onclick = () => exportModBasketUI();
@@ -6435,7 +6842,7 @@ function initUniversalDropUI() {
     overlay.innerHTML = `<div class="bw-drop-card">
       <div class="bw-drop-icon">📥</div>
       <div class="bw-drop-title">Thả file vào đây để cài tự động</div>
-      <div class="bw-drop-sub">Mod <code>.jar</code> • Shader / Resource Pack <code>.zip</code> • Map <code>.zip</code> • Modpack <code>.mrpack</code></div>
+      <div class="bw-drop-sub">Mod &amp; OptiFine <code>.jar</code> • Shader / Resource Pack <code>.zip</code> • Map <code>.zip</code> • Modpack <code>.mrpack</code></div>
     </div>`;
     document.body.appendChild(overlay);
   }
@@ -6473,10 +6880,17 @@ async function installDroppedPathsUI(paths) {
   if (!window.aetherAPI.installDroppedFiles) return;
   const instanceDir = state.modTargetInstanceDir || '';
   showAetherNotification(`📥 Đang nhận diện & cài ${paths.length} file...`, 'info', 2500);
-  const res = await window.aetherAPI.installDroppedFiles({ gameDir: state.gameDir, instanceDir, filePaths: paths });
+  const res = await window.aetherAPI.installDroppedFiles({
+    gameDir: state.gameDir,
+    instanceDir,
+    filePaths: paths,
+    currentLoader: state.selectedCore || 'vanilla',
+    currentMcVersion: state.selectedVersion || '1.21.4'
+  });
   const results = res?.results || [];
   const okMsgs = [];
   let needFabricForShader = false;
+  let pendingOptifineChoice = null;
   for (const r of results) {
     if (r.kind === 'mrpack' && r.deferred && r.filePath) {
       if (packHub.installing) { packNotify('⏳ Đang cài một gói khác...', 'error'); continue; }
@@ -6491,7 +6905,17 @@ async function installDroppedPathsUI(paths) {
       showAetherNotification(`⚠️ ${r.fileName || 'File'}: ${r.error || 'Không cài được'}`, 'error', 6000);
       continue;
     }
-    if (r.kind === 'mod') {
+    if (r.kind === 'optifine-choice') {
+      pendingOptifineChoice = r;
+      continue;
+    }
+    if (r.kind === 'optifine-forge') {
+      if (!instanceDir && r.mcVersion && r.mcVersion !== state.selectedVersion && typeof window.selectMcVersionAndCore === 'function') {
+        try { await window.selectMcVersionAndCore(r.mcVersion, 'forge'); } catch (_) {}
+      }
+      const parkedTag = (r.parkedMods || []).length ? ` (đã tạm tắt ${r.parkedMods.length} Mod trùng render)` : '';
+      okMsgs.push(`🔆 OptiFine ${r.fileName}${parkedTag}`);
+    } else if (r.kind === 'mod') {
       const core = String(state.selectedCore || 'vanilla').toLowerCase();
       const loaders = (r.loaders || []).map((l) => String(l).toLowerCase());
       const mismatch = loaders.length && !instanceDir && core !== 'vanilla' && !loaders.includes(core) && !(core === 'quilt' && loaders.includes('fabric'));
@@ -6510,6 +6934,9 @@ async function installDroppedPathsUI(paths) {
     okMsgs.push('⚙️ Đã chuyển sang Fabric để chạy Shader');
   }
   if (okMsgs.length) showAetherNotification(`✅ Đã cài: ${okMsgs.join(' • ')}`, 'success', 6500);
+  if (pendingOptifineChoice) {
+    openOptifineHubModal(pendingOptifineChoice);
+  }
   try {
     if (typeof refreshLocalAddonsCount === 'function') await refreshLocalAddonsCount();
     if (results.some((r) => r.kind === 'world' && r.ok) && typeof renderLocalWorlds === 'function') renderLocalWorlds();

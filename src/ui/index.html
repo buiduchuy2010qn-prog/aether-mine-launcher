@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v40.8.0 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v40.9.0 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,7 +23,7 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v40.8.0</strong>
+          <strong id="titlebarUpdateVer">v40.9.0</strong>
         </button>
       </div>
 
@@ -918,8 +918,14 @@
               <p>Tự động lọc, cài kèm thư viện bắt buộc (Fabric API, GeckoLib...) và cài thẳng vào <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong> trên máy bạn.</p>
             </div>
             <div class="mods-header-actions">
-              <button class="btn-fps-boost-1click" id="btnStoreFpsBoost" title="Tự động tải bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, Iris)">
+              <button class="btn-fps-boost-1click" id="btnStoreFpsBoost" title="Tự động tải bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, ModernFix, Iris)">
                 <span>⚡ Cài Trọn Bộ Mod X3 FPS</span>
+              </button>
+              <button class="btn-sync-skin is-ok" id="btnModsOptifineHub" title="Trang bị 1-Click trọn bộ tính năng OptiFine (Shader, Zoom phím C, Đuốc sáng hang, Nối kính, Fresh Animations) hoặc cài tệp OptiFine.jar">
+                🔆 Bộ Chuẩn OptiFine
+              </button>
+              <button class="btn-sync-skin" id="btnModsSharePack" title="Đóng gói bộ Mod, Shader, Resource Pack &amp; Cấu hình đang bật để lưu trữ hoặc gửi cho bạn bè">
+                📦 Đóng gói gửi bạn
               </button>
               <button class="btn-sync-skin" id="btnSyncAllModsToVer" title="Tự động nâng cấp & đổi toàn bộ Mod đã cài sang đúng phiên bản Minecraft + Loader đang chọn">
                 🔄 Đồng Bộ Mod Sang Bản Này
@@ -1108,6 +1114,12 @@
                 <option value="forge">Forge</option>
                 <option value="neoforge">NeoForge</option>
                 <option value="quilt">Quilt</option>
+              </select>
+              <select id="packsSortFilter" class="pro-select packs-select" title="Thứ tự sắp xếp gói Modpack">
+                <option value="smart">🔥 Đề xuất (Bản mới &amp; Hot)</option>
+                <option value="downloads">⬇ Lượt tải cao nhất</option>
+                <option value="newest-mc">🆕 Phiên bản MC mới nhất</option>
+                <option value="updated">🕒 Mới cập nhật</option>
               </select>
             </div>
             <div class="packs-quick-cats" id="packsQuickCats">
@@ -1467,9 +1479,10 @@
               </div>
               <p class="settings-card-desc">Giải phóng bộ nhớ đệm hệ thống ngay lập tức (<strong id="ramBadge">RAM trống: -- GB</strong>) hoặc tự động cài trọn bộ Mod tăng X3 FPS.</p>
               <div class="ram-mini-track" style="height:6px;margin-bottom:10px;"><div class="ram-mini-fill" id="ramLiveBarFill" style="width: 45%"></div></div>
-              <div style="display:flex;gap:8px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-sync-skin" id="btnTrimRam" style="flex:1;"><span id="ramBoostText">⚡ Dọn RAM Ngay</span></button>
                 <button class="btn-fps-boost-1click" id="btnOneClickFpsBoost" style="flex:1;">🚀 Cài Gói X3 FPS</button>
+                <button class="btn-sync-skin is-ok" id="btnToolsOptifineHub" style="flex:1;" title="Mở Trợ lý OptiFine: Cài 1-Click trọn bộ tính năng OptiFine hoặc nạp tệp OptiFine.jar">🔆 Chuẩn OptiFine</button>
               </div>
             </div>
 
@@ -1596,7 +1609,7 @@
               </div>
             </div>
             <div class="console-terminal" id="consoleOutput">
-              <div class="log-entry info">[BlockWay Launcher v40.8.0 PRO] Sẵn sàng khởi chạy.</div>
+              <div class="log-entry info">[BlockWay Launcher v40.9.0 PRO] Sẵn sàng khởi chạy.</div>
             </div>
           </div>
         </section>
@@ -1618,7 +1631,7 @@
                 📦 GitHub Repo
               </button>
               <button class="btn-sync-skin" id="btnCheckUpdate">
-                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.8.0</span>)
+                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.9.0</span>)
               </button>
             </div>
           </div>

@@ -840,10 +840,20 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'modmenu': ['modmenu-'],
   'cloth-config': ['cloth-config-'],
   'continuity': ['continuity-'],
+  'fusion-connected-textures': ['fusion-'],
+  'entity-model-features': ['entity_model_features_', 'entity-model-features-'],
+  'entitytexturefeatures': ['entity_texture_features_', 'entitytexturefeatures-'],
+  'polytone': ['polytone-'],
+  'cit-resewn': ['citresewn-', 'cit-resewn-'],
+  'oculus': ['oculus-'],
+  'indium': ['indium-'],
   'appleskin': ['appleskin-'],
-  'SodiumExtra': ['sodium-extra-'],
+  'sodium-extra': ['sodium-extra-'],
   'reeses-sodium-options': ['reeses_sodium_options-', 'reeses-sodium-options-'],
   'lambdynamiclights': ['lambdynamiclights-'],
+  'sodium-dynamic-lights': ['sodium-dynamic-lights-', 'sodiumdynamiclights-'],
+  'zume': ['zume-'],
+  'logical-zoom': ['logical_zoom-', 'logical-zoom-'],
   'zoomify': ['zoomify-'],
   'wi-zoom': ['wi-zoom-', 'wizoom-'],
   'xaeros-minimap': ['xaeros_minimap_', 'xaeros-minimap-'],
@@ -876,6 +886,9 @@ const KNOWN_MOD_SLUG_PREFIXES = {
 function extractMcVerFromFilename(fileName = '') {
   const clean = String(fileName).replace(/\.disabled$/i, '').replace(/\.jar$/i, '');
   if (/^fabric-language-kotlin/i.test(clean)) return '';
+  // 0. OptiFine jar naming (e.g. OptiFine_1.20.1_HD_U_I6, preview_OptiFine_1.21.4_HD_U_J3_pre8)
+  const ofMatch = clean.match(/(?:^|[_-])optifine[_-]((?:2[6-9]\.\d+(?:\.\d+)?|1\.(?:7|8|9|1\d|2\d)(?:\.\d+)?))(?=[_-]|$)/i);
+  if (ofMatch) return ofMatch[1];
   // 1. Explicit mc tag (e.g. -mc26.2, -mc1.21.11, +mc1.21.4)
   const mcTag = clean.match(/(?:^|[+_-])mc[+_-]?((?:2[6-9]\.\d+|1\.(?:7|8|9|1\d|2\d))(?:\.\d+)?)(?=[+_-]|$)/i);
   if (mcTag) return mcTag[1];
@@ -1795,6 +1808,231 @@ async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric'
     }
   }
   return { ok: installed.length > 0, installed, errors, recommendedCore: effectiveLoader };
+}
+
+/* ---------------- v40.9 PRO: OptiFine Parity 1-Click Pack & Smart OptiFine.jar Handler ---------------- */
+function isProprietaryOptifineFile(fileName = '') {
+  return /^(?:preview_)?(?:optifine|optifabric)(?:[-_+.]|\.jar|$)/i.test(path.basename(String(fileName || '')));
+}
+
+function inspectOptifineJar(filePath) {
+  const baseName = path.basename(String(filePath || ''));
+  if (!filePath || !/\.jar$/i.test(baseName) || !fs.existsSync(filePath)) {
+    return { isOptifine: false };
+  }
+  const nameMatches = /^(?:preview_)?optifine(?:[_-]|$|\.jar)/i.test(baseName);
+  let mcVersion = extractMcVerFromFilename(baseName);
+  let hasInstaller = false;
+  let hasTweaker = false;
+  try {
+    const zip = openPackZip(filePath);
+    const entries = zip.getEntries();
+    const names = entries.map((e) => e.entryName.replace(/\\/g, '/'));
+    hasInstaller = names.includes('optifine/Installer.class');
+    hasTweaker = names.some((n) => /^optifine\/OptiFine(?:Forge)?Tweaker\.class$/i.test(n));
+    if (!mcVersion && (nameMatches || hasInstaller || hasTweaker)) {
+      const chg = entries.find((e) => e.entryName === 'changelog.txt' || e.entryName === 'optifine/Installer.class');
+      if (chg) {
+        const raw = chg.getData().toString('latin1');
+        const m = raw.match(/OptiFine[_ ]((?:2[6-9]\.\d+(?:\.\d+)?|1\.\d+(?:\.\d+)?))[_ ]HD/i);
+        if (m) mcVersion = m[1];
+      }
+    }
+  } catch (_) {
+    if (!nameMatches) return { isOptifine: false };
+  }
+  if (!nameMatches && !hasInstaller && !hasTweaker) return { isOptifine: false };
+  return {
+    isOptifine: true,
+    fileName: baseName,
+    mcVersion: mcVersion || '',
+    hasInstaller,
+    isForgeMod: true
+  };
+}
+
+function parkOptifineConflictsInMods(modsDir, mode = 'for-parity') {
+  const parked = [];
+  if (!modsDir || !fs.existsSync(modsDir)) return parked;
+  const rx = mode === 'for-optifine'
+    ? /^(?:sodium|embeddium|rubidium|iris|oculus|sodium[-_]extra|reeses[-_]sodium[-_]options|indium|continuity)(?:[-_+.]|\.jar$)/i
+    : /^(?:preview_)?(?:optifine|optifabric)(?:[-_+.]|\.jar$)/i;
+  try {
+    for (const f of fs.readdirSync(modsDir)) {
+      if (!/\.jar$/i.test(f)) continue;
+      if (!rx.test(f)) continue;
+      try {
+        fs.renameSync(path.join(modsDir, f), path.join(modsDir, `${f}.disabled`));
+        parked.push(f);
+      } catch (_) {}
+    }
+    if (parked.length > 0) setModUserDisabledFlags(modsDir, parked, true);
+  } catch (_) {}
+  return parked;
+}
+
+async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir, instanceDir = '' } = {}, onStatus) {
+  const rootDir = (instanceDir && fs.existsSync(String(instanceDir)))
+    ? String(instanceDir)
+    : (gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
+  const rawLoader = String(loaderType || 'fabric').toLowerCase();
+  const effectiveLoader = ['forge', 'neoforge', 'quilt', 'fabric'].includes(rawLoader) ? rawLoader : 'fabric';
+  const modsDir = path.join(rootDir, 'mods');
+  fs.mkdirSync(modsDir, { recursive: true });
+
+  // Park any existing OptiFine / OptiFabric jar so Sodium + Iris never collide
+  const parkedConflicts = parkOptifineConflictsInMods(modsDir, 'for-parity');
+
+  const groups = [];
+  if (effectiveLoader === 'forge') {
+    groups.push(['embeddium']);
+    groups.push(['oculus']);
+    groups.push(['zume']);
+    groups.push(['fusion-connected-textures', 'continuity']);
+    groups.push(['entity-model-features']);
+    groups.push(['entitytexturefeatures']);
+    groups.push(['polytone']);
+    groups.push(['entityculling']);
+    groups.push(['ferrite-core']);
+  } else if (effectiveLoader === 'neoforge') {
+    groups.push(['sodium', 'embeddium']);
+    groups.push(['sodium-extra']);
+    groups.push(['reeses-sodium-options']);
+    groups.push(['iris', 'oculus']);
+    groups.push(['zume']);
+    groups.push(['lambdynamiclights', 'sodium-dynamic-lights']);
+    groups.push(['fusion-connected-textures', 'continuity']);
+    groups.push(['entity-model-features']);
+    groups.push(['entitytexturefeatures']);
+    groups.push(['polytone']);
+    groups.push(['entityculling']);
+    groups.push(['ferrite-core']);
+  } else {
+    groups.push(['fabric-api']);
+    groups.push(['sodium']);
+    if (compareMcVersions(mcVersion, '1.21.2') < 0) groups.push(['indium']);
+    groups.push(['sodium-extra']);
+    groups.push(['reeses-sodium-options']);
+    groups.push(['iris']);
+    groups.push(['zume', 'logical-zoom', 'zoomify']);
+    groups.push(['lambdynamiclights', 'sodium-dynamic-lights']);
+    groups.push(['continuity', 'fusion-connected-textures']);
+    groups.push(['entity-model-features']);
+    groups.push(['entitytexturefeatures']);
+    groups.push(['polytone', 'cit-resewn']);
+    groups.push(['entityculling']);
+    groups.push(['ferrite-core']);
+  }
+
+  const installed = [];
+  const errors = [];
+  for (let i = 0; i < groups.length; i++) {
+    const candidates = groups[i];
+    let groupSuccess = false;
+    let lastErr = '';
+    for (const slug of candidates) {
+      try {
+        onStatus?.(`🔆 [${i + 1}/${groups.length}] Đang trang bị gói Chuẩn OptiFine: ${slug.toUpperCase()} (${mcVersion})...`);
+        const res = await installModrinthProject(
+          { slug, projectType: 'mod', mcVersion, loaderType: effectiveLoader, gameDir: rootDir },
+          onStatus
+        );
+        if (res?.fileName) {
+          installed.push(res.fileName);
+          groupSuccess = true;
+          break;
+        }
+      } catch (e) {
+        lastErr = `${slug}: ${e.message}`;
+      }
+    }
+    if (!groupSuccess && lastErr) errors.push(lastErr);
+  }
+
+  return {
+    ok: installed.length > 0,
+    installed,
+    alreadyPresent: [],
+    parkedConflicts,
+    parkedOptifine: parkedConflicts,
+    errors,
+    recommendedCore: effectiveLoader
+  };
+}
+
+function installOptifineJarSmart({
+  gameDir,
+  instanceDir = '',
+  filePath,
+  currentLoader = 'fabric',
+  currentMcVersion = '',
+  action = 'auto'
+} = {}) {
+  const rootDir = (instanceDir && fs.existsSync(String(instanceDir)))
+    ? String(instanceDir)
+    : (gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
+  const info = inspectOptifineJar(filePath);
+  if (!info.isOptifine) {
+    return { ok: false, error: 'Tệp này không phải gói OptiFine (.jar) hợp lệ.' };
+  }
+  const instMeta = instanceDir ? (readInstanceMeta(rootDir) || null) : null;
+  const effectiveLoader = String(instMeta?.loader || currentLoader || 'vanilla').toLowerCase();
+  const effectiveMc = String(instMeta?.mcVersion || currentMcVersion || '').trim();
+
+  if (action === 'forge' || (action === 'auto' && effectiveLoader === 'forge')) {
+    if (instMeta && info.mcVersion && effectiveMc && info.mcVersion !== effectiveMc) {
+      return {
+        ok: false,
+        error: `Tệp ${info.fileName} dành cho MC ${info.mcVersion}, không khớp với gói Modpack MC ${effectiveMc}.`
+      };
+    }
+    const modsDir = path.join(rootDir, 'mods');
+    fs.mkdirSync(modsDir, { recursive: true });
+    const dest = path.join(modsDir, info.fileName);
+    if (path.resolve(dest) !== path.resolve(filePath)) {
+      fs.copyFileSync(filePath, dest);
+    }
+    // Remove .disabled copy if one existed
+    if (fs.existsSync(`${dest}.disabled`)) {
+      try { fs.unlinkSync(`${dest}.disabled`); } catch (_) {}
+    }
+    const parkedConflicts = parkOptifineConflictsInMods(modsDir, 'for-optifine');
+    const targetMc = info.mcVersion || effectiveMc || '1.20.1';
+    const meta = readModsMetaManifest(modsDir);
+    meta[info.fileName] = {
+      slug: 'optifine',
+      modId: 'optifine',
+      mcVersion: targetMc,
+      gameVersions: info.mcVersion ? [info.mcVersion] : [targetMc],
+      loader: 'forge',
+      inspectedLoaders: ['forge'],
+      updatedAt: Date.now()
+    };
+    writeModsMetaManifest(modsDir, meta);
+    setModUserDisabledFlags(modsDir, info.fileName, false);
+    return {
+      ok: true,
+      kind: 'optifine-forge',
+      fileName: info.fileName,
+      mcVersion: targetMc,
+      parkedConflicts,
+      parkedMods: parkedConflicts,
+      targetDir: rootDir,
+      isInstance: Boolean(instMeta)
+    };
+  }
+
+  return {
+    ok: true,
+    kind: 'optifine-choice',
+    filePath,
+    fileName: info.fileName,
+    mcVersion: info.mcVersion || effectiveMc || '',
+    hasInstaller: Boolean(info.hasInstaller),
+    currentLoader: effectiveLoader,
+    isInstance: Boolean(instMeta),
+    targetDir: rootDir
+  };
 }
 
 function listLocalAddons(gameDir, folderType = 'mods') {
@@ -3626,6 +3864,34 @@ async function searchAtlPacks({ query, mcVersion, offset, limit }) {
   return { items: items.slice(offset, offset + limit), total: items.length };
 }
 
+function scorePackForModernPlay(it, { query = '', mcVersion = '', sort = '' } = {}) {
+  const dl = Number(it?.downloads) || 0;
+  if (sort === 'downloads') return dl;
+  const topMc = Array.isArray(it?.mcVersions) && it.mcVersions.length ? it.mcVersions[0] : '';
+  const wantsLegacy = Boolean(mcVersion) || /\b1\.(?:6|7|8|12)(?:\.\d+)?\b/.test(query);
+
+  let eraScore = 0;
+  if (topMc) {
+    if (compareMcVersions(topMc, '1.21') >= 0) eraScore = 50;
+    else if (compareMcVersions(topMc, '1.20') >= 0) eraScore = 44;
+    else if (compareMcVersions(topMc, '1.18') >= 0) eraScore = 28;
+    else if (compareMcVersions(topMc, '1.16') >= 0) eraScore = 18;
+    else if (compareMcVersions(topMc, '1.12') >= 0) eraScore = wantsLegacy ? 20 : 3;
+    else eraScore = wantsLegacy ? 20 : -35;
+  }
+
+  const dlScore = dl > 0
+    ? Math.min(38, Math.log10(Math.max(10, dl)) * 6.2)
+    : (it?.source === 'atlauncher' ? (it.featured ? 22 : 12) : 6);
+  const installBonus = it?.installable === false ? -25 : 8;
+  const qLower = String(query || '').trim().toLowerCase();
+  const titleLower = String(it?.title || '').toLowerCase();
+  const titleBonus = qLower && qLower.length >= 3 && titleLower.includes(qLower) ? 10 : 0;
+  const hypixelPenalty = (/\b(sky\s*block|one\s*block)\b/i.test(query) && it?.isHypixelClient) ? -65 : 0;
+
+  return eraScore + dlScore + installBonus + titleBonus + hypixelPenalty;
+}
+
 async function searchPackHub(params = {}) {
   const query = String(params.query || '').trim();
   const kind = ['modpack', 'datapack', 'world'].includes(params.kind) ? params.kind : 'modpack';
@@ -3634,53 +3900,77 @@ async function searchPackHub(params = {}) {
   const source = String(params.source || 'all');
   const offset = Math.max(0, Number(params.offset) || 0);
   const limit = Math.max(6, Math.min(40, Number(params.limit) || 24));
-  const sort = params.sort || '';
+  const sort = String(params.sort || '').trim();
+  const inOffsets = (params.sourceOffsets && typeof params.sourceOffsets === 'object') ? params.sourceOffsets : null;
 
   const sourcesForKind = kind === 'modpack'
     ? ['modrinth', 'curseforge', 'ftb', 'technic', 'atlauncher']
     : ['modrinth', 'curseforge'];
   const active = source === 'all' ? sourcesForKind : sourcesForKind.filter((s) => s === source);
-  const perSource = source === 'all' ? Math.max(6, Math.ceil(limit / Math.max(1, active.length)) + 4) : limit;
-  const perOffset = source === 'all' ? Math.floor(offset / Math.max(1, active.length)) : offset;
+  const hasCfKey = Boolean(getCurseForgeApiKey());
+  const effectiveActiveCount = Math.max(1, active.filter((s) => s !== 'curseforge' || hasCfKey).length);
 
+  const limitForSource = (s) => {
+    if (source !== 'all') return limit;
+    if (s === 'modrinth') return Math.max(16, Math.ceil(limit * 0.65));
+    return Math.max(6, Math.ceil(limit / effectiveActiveCount) + 3);
+  };
+  const offsetForSource = (s) => {
+    if (inOffsets && Number.isFinite(Number(inOffsets[s]))) return Math.max(0, Number(inOffsets[s]));
+    return source === 'all' ? Math.floor(offset / effectiveActiveCount) : offset;
+  };
+
+  const modrinthSort = ['downloads', 'relevance', 'updated', 'newest', 'follows'].includes(sort) ? sort : 'downloads';
   const runners = {
-    modrinth: () => searchModrinthPacks({ query, kind, mcVersion, loader, offset: perOffset, limit: perSource, sort }),
-    curseforge: () => searchCurseForgePacks({ query, kind, mcVersion, loader, offset: perOffset, limit: perSource }),
-    ftb: () => searchFtbPacks({ query, mcVersion, loader, offset: perOffset, limit: perSource }),
-    technic: () => searchTechnicPacks({ query, mcVersion, offset: perOffset, limit: perSource }),
-    atlauncher: () => searchAtlPacks({ query, mcVersion, offset: perOffset, limit: perSource })
+    modrinth: (off, lim) => searchModrinthPacks({ query, kind, mcVersion, loader, offset: off, limit: lim, sort: modrinthSort }),
+    curseforge: (off, lim) => searchCurseForgePacks({ query, kind, mcVersion, loader, offset: off, limit: lim }),
+    ftb: (off, lim) => searchFtbPacks({ query, mcVersion, loader, offset: off, limit: lim }),
+    technic: (off, lim) => searchTechnicPacks({ query, mcVersion, offset: off, limit: lim }),
+    atlauncher: (off, lim) => searchAtlPacks({ query, mcVersion, offset: off, limit: lim })
   };
 
   const totals = {};
+  const nextOffsets = {};
   const warnings = [];
   const groups = await Promise.all(active.map(async (s) => {
+    const srcOff = offsetForSource(s);
+    const srcLim = limitForSource(s);
+    if (s === 'curseforge' && !hasCfKey && source === 'all') {
+      totals[s] = 'no_key';
+      nextOffsets[s] = srcOff;
+      warnings.push('NO_CF_KEY');
+      return [];
+    }
     try {
-      const r = await runners[s]();
+      const r = await runners[s](srcOff, srcLim);
+      const list = Array.isArray(r.items) ? r.items : [];
       totals[s] = r.total;
+      nextOffsets[s] = srcOff + list.length;
       if (s === 'curseforge' && r.limited) warnings.push('CF_SEARCH_LIMITED');
-      return r.items;
+      return list;
     } catch (e) {
-      totals[s] = null;
+      totals[s] = e.code === 'NO_CF_KEY' ? 'no_key' : null;
+      nextOffsets[s] = srcOff;
       warnings.push(e.code === 'NO_CF_KEY' ? 'NO_CF_KEY' : `${s.toUpperCase()}: ${e.message}`);
       return [];
     }
   }));
 
-  let items;
-  if (source === 'all') {
-    // Trộn xen kẽ theo nguồn để kết quả đa dạng, mỗi nguồn giữ thứ tự riêng
-    items = [];
-    const maxLen = Math.max(0, ...groups.map((g) => g.length));
-    for (let i = 0; i < maxLen; i++) {
-      for (const g of groups) if (g[i]) items.push(g[i]);
-    }
-  } else {
-    items = groups[0] || [];
-  }
-  if (kind === 'modpack' && /\b(sky\s*block|one\s*block)\b/i.test(query)) {
+  let items = groups.flat();
+  if (sort === 'newest-mc') {
+    items.sort((a, b) => {
+      const mcA = a.mcVersions?.[0] || '';
+      const mcB = b.mcVersions?.[0] || '';
+      return compareMcVersions(mcB, mcA) || ((Number(b.downloads) || 0) - (Number(a.downloads) || 0));
+    });
+  } else if (source === 'all' || sort === 'downloads' || sort === 'smart' || !sort) {
+    items.sort((a, b) => scorePackForModernPlay(b, { query, mcVersion, sort }) - scorePackForModernPlay(a, { query, mcVersion, sort }));
+  } else if (kind === 'modpack' && /\b(sky\s*block|one\s*block)\b/i.test(query)) {
     items.sort((a, b) => Number(Boolean(a.isHypixelClient)) - Number(Boolean(b.isHypixelClient)));
   }
-  return { ok: true, items, totals, warnings, kind, source };
+
+  const hasMore = active.some((s) => typeof totals[s] === 'number' && totals[s] > (nextOffsets[s] || 0));
+  return { ok: true, items, totals, warnings, kind, source, nextOffsets, hasMore };
 }
 
 /* ---------------- DETAILS / VERSIONS ---------------- */
@@ -4718,7 +5008,7 @@ async function importPackFromFile({ filePath, gameDir, worldTarget } = {}, onPro
       mcVersion: result.mcVersion,
       loader: result.loader || 'vanilla',
       loaderVersion: result.loaderVersion || '',
-      modCount: result.modCount || 0,
+      modCount: countFilesIn(path.join(instanceDir, 'mods'), /\.jar$/i) || result.modCount || 0,
       ramRecommendedGB: recommendRamGB(result.modCount, result.mcVersion),
       manualPending: result.manual || [],
       autoIslandMode
@@ -4867,20 +5157,98 @@ async function translateSingleToVi(rawText, cacheDir = '') {
     if (Array.isArray(data) && Array.isArray(data[0])) {
       const joined = data[0].map((seg) => (Array.isArray(seg) ? seg[0] || '' : '')).join('');
       const polished = polishMinecraftVietnamese(joined);
-      if (polished) {
+      if (polished && polished !== clean) {
         cache[key] = polished;
         scheduleSaveViCache();
         return polished;
       }
+      if (polished) return polished;
     }
   } catch (_) {}
   return clean;
 }
 
+async function translateBatchChunkToVi(texts, cacheDir = '') {
+  if (!texts.length) return [];
+  if (texts.length === 1) return [await translateSingleToVi(texts[0], cacheDir)];
+  const cache = initViTranslationCache(cacheDir);
+  const sep = '\n\n[998877]\n\n';
+  const joinedReq = texts.join(sep);
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(joinedReq)}`;
+    const data = await packFetchJson(url, { timeoutMs: 6500 });
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+      const fullVi = data[0].map((seg) => (Array.isArray(seg) ? seg[0] || '' : '')).join('');
+      const parts = fullVi.split(/\s*\[\s*998877\s*\]\s*/);
+      if (parts.length === texts.length) {
+        return parts.map((p, idx) => {
+          const orig = texts[idx];
+          const polished = polishMinecraftVietnamese(p);
+          if (polished && polished !== orig) {
+            cache[orig.slice(0, 320)] = polished;
+            scheduleSaveViCache();
+          }
+          return polished || orig;
+        });
+      }
+    }
+  } catch (_) {}
+  // Safe fallback: gentle sequential/2-way pool if separator split didn't match
+  const fallbackOut = new Array(texts.length);
+  await runPool(texts.map((t, i) => ({ t, i })), 2, async ({ t, i }) => {
+    fallbackOut[i] = await translateSingleToVi(t, cacheDir);
+  });
+  return fallbackOut;
+}
+
 async function translateTextToVi(input, cacheDir = '') {
   if (Array.isArray(input)) {
-    const out = await Promise.all(input.map((t) => translateSingleToVi(t, cacheDir)));
-    return { ok: true, results: out };
+    const cache = initViTranslationCache(cacheDir);
+    const out = new Array(input.length);
+    const pendingByKey = new Map();
+    input.forEach((raw, idx) => {
+      const clean = String(raw || '').trim().slice(0, 2200);
+      if (!clean || looksAlreadyVietnamese(clean)) {
+        out[idx] = clean;
+        return;
+      }
+      const key = clean.slice(0, 320);
+      if (cache[key]) {
+        out[idx] = cache[key];
+        return;
+      }
+      if (!pendingByKey.has(key)) pendingByKey.set(key, { clean, indices: [] });
+      pendingByKey.get(key).indices.push(idx);
+    });
+
+    const uniqueEntries = Array.from(pendingByKey.values());
+    const batches = [];
+    let cur = [];
+    let curLen = 0;
+    for (const entry of uniqueEntries) {
+      if (cur.length >= 5 || (cur.length > 0 && curLen + entry.clean.length > 1300)) {
+        batches.push(cur);
+        cur = [];
+        curLen = 0;
+      }
+      cur.push(entry);
+      curLen += entry.clean.length;
+    }
+    if (cur.length) batches.push(cur);
+
+    await runPool(batches, 3, async (batch) => {
+      const resList = await translateBatchChunkToVi(batch.map((b) => b.clean), cacheDir);
+      batch.forEach((b, i) => {
+        const val = resList[i] || b.clean;
+        for (const idx of b.indices) out[idx] = val;
+      });
+    });
+
+    const translatedFlags = out.map((val, idx) => {
+      const orig = String(input[idx] || '').trim().slice(0, 2200);
+      return Boolean(val && (val !== orig || looksAlreadyVietnamese(val)));
+    });
+    return { ok: true, results: out, translatedFlags };
   }
   const translated = await translateSingleToVi(input, cacheDir);
   return { ok: true, text: translated };
@@ -6232,7 +6600,105 @@ async function installQuickIslandPack({ gameDir, mode = 'skyblock', mcVersion = 
   }
 }
 
-/* ---------------- 7. v40.4 PRO: 1-Click .mrpack Exporter & Smart Disk Cleaner ---------------- */
+/* ---------------- 7. v40.4 / v40.9 PRO: 1-Click .mrpack Exporter & Smart Disk Cleaner ---------------- */
+const SAFE_CONFIG_EXT_RX = /\.(?:json|json5|toml|cfg|conf|properties|txt|snbt|yml|yaml|ini)$/i;
+const UNSAFE_CONFIG_PATH_RX = /(?:token|secret|account|auth|session|password|apikey|credential|oauth|customskinloader|realms|microsoft|xbox)/i;
+
+function collectSafeConfigFiles(rootDir, maxTotalBytes = 8 * 1024 * 1024) {
+  const cfgRoot = path.join(rootDir, 'config');
+  if (!fs.existsSync(cfgRoot)) return [];
+  const collected = [];
+  let totalBytes = 0;
+  const walk = (dir, depth) => {
+    if (depth > 4 || totalBytes >= maxTotalBytes) return;
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
+    for (const ent of entries) {
+      if (totalBytes >= maxTotalBytes) break;
+      if (ent.name.startsWith('.')) continue;
+      const full = path.join(dir, ent.name);
+      const rel = path.relative(cfgRoot, full).replace(/\\/g, '/');
+      if (UNSAFE_CONFIG_PATH_RX.test(rel)) continue;
+      if (ent.isDirectory()) {
+        walk(full, depth + 1);
+      } else if (ent.isFile() && SAFE_CONFIG_EXT_RX.test(ent.name)) {
+        try {
+          const st = fs.statSync(full);
+          if (st.size > 0 && st.size <= 512 * 1024 && totalBytes + st.size <= maxTotalBytes) {
+            collected.push({ relPath: `config/${rel}`, fullPath: full, size: st.size });
+            totalBytes += st.size;
+          }
+        } catch (_) {}
+      }
+    }
+  };
+  walk(cfgRoot, 0);
+  return collected;
+}
+
+function extractSafeShareableOptionsTxt(rootDir) {
+  const optsPath = path.join(rootDir, 'options.txt');
+  if (!fs.existsSync(optsPath)) return '';
+  try {
+    const raw = fs.readFileSync(optsPath, 'utf8');
+    const safeRx = /^(?:key_|soundCategory_|fov:|gamma:|guiScale:|toggleSprint:|toggleCrouch:|autoJump:|bobView:|entityShadows:|particles:|clouds:|renderDistance:|simulationDistance:)/;
+    const lines = raw
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && safeRx.test(l) && !UNSAFE_CONFIG_PATH_RX.test(l));
+    return lines.length > 0 ? `${lines.join('\n')}\n` : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function previewExportTarget({ gameDir, targetDir } = {}) {
+  const rootDir = (targetDir && fs.existsSync(targetDir))
+    ? targetDir
+    : (gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
+  const instMeta = readInstanceMeta(rootDir) || null;
+  const countValid = (rel, rx) => {
+    const dir = path.join(rootDir, rel);
+    if (!fs.existsSync(dir)) return { count: 0, proprietary: [] };
+    let count = 0;
+    const proprietary = [];
+    try {
+      for (const f of fs.readdirSync(dir)) {
+        if (!rx.test(f) || f === 'AetherSkinSync.zip' || f === 'BlockWay-Fullbright-Gamma.zip') continue;
+        const full = path.join(dir, f);
+        if (!fs.statSync(full).isFile()) continue;
+        if (rel === 'mods' && isProprietaryOptifineFile(f)) {
+          proprietary.push(f);
+          continue;
+        }
+        count++;
+      }
+    } catch (_) {}
+    return { count, proprietary };
+  };
+  const modsInfo = countValid('mods', /\.jar$/i);
+  const shadersInfo = countValid('shaderpacks', /\.zip$/i);
+  const rpInfo = countValid('resourcepacks', /\.zip$/i);
+  const cfgFiles = collectSafeConfigFiles(rootDir);
+  const hasKeybinds = Boolean(extractSafeShareableOptionsTxt(rootDir));
+  const hasServersDat = fs.existsSync(path.join(rootDir, 'servers.dat'));
+  return {
+    ok: true,
+    rootDir,
+    isInstance: Boolean(instMeta),
+    packName: instMeta?.name || '',
+    mcVersion: instMeta?.mcVersion || '',
+    loader: instMeta?.loader || '',
+    modsCount: modsInfo.count,
+    shadersCount: shadersInfo.count,
+    resourcePacksCount: rpInfo.count,
+    configsCount: cfgFiles.length,
+    hasKeybinds,
+    hasServersDat,
+    proprietaryFiles: modsInfo.proprietary
+  };
+}
+
 async function exportTargetAsMrpack({
   gameDir,
   targetDir,
@@ -6240,6 +6706,11 @@ async function exportTargetAsMrpack({
   mcVersion = '1.21.4',
   loaderType = 'fabric',
   loaderVersion = '',
+  includeMods = true,
+  includeShadersAndPacks = true,
+  includeConfigs = true,
+  includeKeybinds = false,
+  includeServersDat = false,
   destFilePath
 } = {}, onStatus) {
   const rootDir = (targetDir && fs.existsSync(targetDir))
@@ -6257,19 +6728,25 @@ async function exportTargetAsMrpack({
     try { finalLoaderVer = await resolveLatestLoaderVersion(finalMc, finalLoader); } catch (_) {}
   }
 
-  const subFolders = [
-    { rel: 'mods', rx: /\.jar$/i },
-    { rel: 'shaderpacks', rx: /\.zip$/i },
-    { rel: 'resourcepacks', rx: /\.zip$/i }
-  ];
+  const subFolders = [];
+  if (includeMods !== false) subFolders.push({ rel: 'mods', rx: /\.jar$/i });
+  if (includeShadersAndPacks !== false) {
+    subFolders.push({ rel: 'shaderpacks', rx: /\.zip$/i });
+    subFolders.push({ rel: 'resourcepacks', rx: /\.zip$/i });
+  }
 
   const candidateFiles = [];
+  const skippedProprietary = [];
   for (const sf of subFolders) {
     const dir = path.join(rootDir, sf.rel);
     if (!fs.existsSync(dir)) continue;
     try {
       for (const f of fs.readdirSync(dir)) {
-        if (!sf.rx.test(f) || f === 'AetherSkinSync.zip') continue;
+        if (!sf.rx.test(f) || f === 'AetherSkinSync.zip' || f === 'BlockWay-Fullbright-Gamma.zip') continue;
+        if (sf.rel === 'mods' && isProprietaryOptifineFile(f)) {
+          skippedProprietary.push(f);
+          continue;
+        }
         const full = path.join(dir, f);
         const st = fs.statSync(full);
         if (st.isFile() && st.size > 0) {
@@ -6318,14 +6795,36 @@ async function exportTargetAsMrpack({
     }
   }
 
-  // Include active shader config & servers.dat (never account tokens!) in overrides
-  const irisCfg = path.join(rootDir, 'config', 'iris.properties');
-  if (fs.existsSync(irisCfg)) {
-    try { zip.addFile('overrides/config/iris.properties', fs.readFileSync(irisCfg)); } catch (_) {}
+  // Include safe mod configs (never auth tokens or private IPs by default!)
+  let includedConfigsCount = 0;
+  if (includeConfigs !== false) {
+    const safeCfgs = collectSafeConfigFiles(rootDir);
+    for (const cfg of safeCfgs) {
+      try {
+        zip.addFile(`overrides/${cfg.relPath}`, fs.readFileSync(cfg.fullPath));
+        includedConfigsCount++;
+      } catch (_) {}
+    }
+  } else if (includeShadersAndPacks !== false) {
+    const irisCfg = path.join(rootDir, 'config', 'iris.properties');
+    if (fs.existsSync(irisCfg)) {
+      try { zip.addFile('overrides/config/iris.properties', fs.readFileSync(irisCfg)); } catch (_) {}
+    }
   }
-  const serversDat = path.join(rootDir, 'servers.dat');
-  if (fs.existsSync(serversDat)) {
-    try { zip.addFile('overrides/servers.dat', fs.readFileSync(serversDat)); } catch (_) {}
+
+  if (includeKeybinds === true) {
+    const safeOpts = extractSafeShareableOptionsTxt(rootDir);
+    if (safeOpts) {
+      try { zip.addFile('overrides/options.txt', Buffer.from(safeOpts, 'utf8')); } catch (_) {}
+    }
+  }
+
+  // v40.9 privacy protection: servers.dat is ONLY included when the user explicitly opts in!
+  if (includeServersDat === true) {
+    const serversDat = path.join(rootDir, 'servers.dat');
+    if (fs.existsSync(serversDat)) {
+      try { zip.addFile('overrides/servers.dat', fs.readFileSync(serversDat)); } catch (_) {}
+    }
   }
 
   const deps = { minecraft: finalMc };
@@ -6360,6 +6859,8 @@ async function exportTargetAsMrpack({
     totalItems: candidateFiles.length,
     modrinthLinkedCount: indexFiles.length,
     overridesCount: embeddedOverridesCount,
+    includedConfigsCount,
+    skippedProprietary,
     sizeMB
   };
 }
@@ -8882,13 +9383,19 @@ function syncServersDat(gameDir, launcherServers = [], { writeToGame = true, wri
   return { ok: true, importedFromGame, addedToGame: wrote ? toAdd.length : 0, gameCount: cur.servers.length };
 }
 
-/* ====================== v40.8 UNIVERSAL DRAG & DROP INSTALL ====================== */
-// Looks inside the dropped file and puts it in the right place (mods / shaderpacks / resourcepacks / saves).
+/* ====================== v40.8 / v40.9 UNIVERSAL DRAG & DROP INSTALL ====================== */
+// Looks inside the dropped file and puts it in the right place (mods / shaderpacks / resourcepacks / saves / OptiFine).
 function classifyDroppedFile(filePath) {
   const lower = String(filePath || '').toLowerCase();
   if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return { kind: 'missing' };
   if (lower.endsWith('.mrpack')) return { kind: 'mrpack' };
   if (!/\.(jar|zip)$/.test(lower)) return { kind: 'unknown' };
+  if (lower.endsWith('.jar')) {
+    const ofInfo = inspectOptifineJar(filePath);
+    if (ofInfo.isOptifine) {
+      return { kind: 'optifine', mcVersion: ofInfo.mcVersion, hasInstaller: ofInfo.hasInstaller };
+    }
+  }
   let Zip = null;
   try { Zip = require('adm-zip'); } catch (_) { return { kind: lower.endsWith('.jar') ? 'mod' : 'unknown' }; }
   let names = [];
@@ -8910,7 +9417,7 @@ function classifyDroppedFile(filePath) {
   return { kind: 'unknown' };
 }
 
-function installDroppedAddonFile({ gameDir, instanceDir = '', filePath } = {}) {
+function installDroppedAddonFile({ gameDir, instanceDir = '', filePath, currentLoader = '', currentMcVersion = '' } = {}) {
   const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
   const targetDir = instanceDir && fs.existsSync(String(instanceDir)) ? String(instanceDir) : rootDir;
   const info = classifyDroppedFile(filePath);
@@ -8923,6 +9430,15 @@ function installDroppedAddonFile({ gameDir, instanceDir = '', filePath } = {}) {
     return dest;
   };
   switch (info.kind) {
+    case 'optifine':
+      return installOptifineJarSmart({
+        gameDir: rootDir,
+        instanceDir,
+        filePath,
+        currentLoader,
+        currentMcVersion,
+        action: 'auto'
+      });
     case 'mod': {
       const dest = copyInto('mods');
       let loaders = [];
@@ -8955,7 +9471,7 @@ function installDroppedAddonFile({ gameDir, instanceDir = '', filePath } = {}) {
     case 'broken':
       return { ok: false, kind: 'broken', fileName: baseName, error: 'File nén bị hỏng hoặc tải chưa xong.' };
     default:
-      return { ok: false, kind: info.kind, fileName: baseName, error: 'Không nhận ra loại file này (hỗ trợ: Mod .jar, Shader/Resource Pack .zip, Map .zip, Modpack .mrpack).' };
+      return { ok: false, kind: info.kind, fileName: baseName, error: 'Không nhận ra loại file này (hỗ trợ: Mod .jar, OptiFine .jar, Shader/Resource Pack .zip, Map .zip, Modpack .mrpack).' };
   }
 }
 
@@ -8969,6 +9485,10 @@ module.exports = {
   searchModrinth,
   installModrinthProject,
   installFpsBoostPack,
+  installOptifineParityPack,
+  inspectOptifineJar,
+  parkOptifineConflictsInMods,
+  installOptifineJarSmart,
   listLocalAddons,
   toggleLocalAddon,
   deleteLocalAddon,
@@ -8992,6 +9512,7 @@ module.exports = {
   setCurseForgeApiKey,
   getCurseForgeApiKey,
   checkCurseForgeKey,
+  scorePackForModernPlay,
   searchPackHub,
   getPackHubDetails,
   installPackHub,
@@ -9022,6 +9543,7 @@ module.exports = {
   importWorldZip,
   listLocalScreenshots,
   deleteLocalScreenshot,
+  previewExportTarget,
   exportTargetAsMrpack,
   scanMinecraftJunk,
   cleanMinecraftJunk,

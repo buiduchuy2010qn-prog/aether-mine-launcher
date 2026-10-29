@@ -154,6 +154,12 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   removeLocalCape: (gameDir, username) => ipcRenderer.invoke('cape:remove-local', gameDir, username),
   shareCrashLog: (params) => ipcRenderer.invoke('crash:share-log', params),
 
+  // v40.9 PRO — Đóng Gói Gửi Bạn 2.0 & Bộ Chuẩn OptiFine + Trợ Lý OptiFine.jar
+  previewMrpackExport: (params) => ipcRenderer.invoke('packs:preview-export', params),
+  installOptifineParity: (params) => ipcRenderer.invoke('optifine:install-parity', params),
+  pickOptifineJar: (params) => ipcRenderer.invoke('optifine:pick-jar', params),
+  handleOptifineJar: (params) => ipcRenderer.invoke('optifine:handle-jar', params),
+
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
   onUpdateProgress: (cb) => ipcRenderer.on('updater:progress', (_e, pct) => cb(pct)),

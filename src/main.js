@@ -12,6 +12,8 @@ const {
   searchModrinth,
   installModrinthProject,
   installFpsBoostPack,
+  installOptifineParityPack,
+  installOptifineJarSmart,
   listLocalAddons,
   toggleLocalAddon,
   deleteLocalAddon,
@@ -29,7 +31,7 @@ const {
   syncAllLocalModsToVersion, buildCoopModBasket, syncCoopModBasket, analyzeMinecraftCrash,
   backupLocalWorld, autoBackupModifiedWorlds, listWorldBackups, restoreWorldBackup, deleteWorldBackup, exportWorldZip, importWorldZip,
   listLocalScreenshots, deleteLocalScreenshot,
-  exportTargetAsMrpack, scanMinecraftJunk, cleanMinecraftJunk,
+  previewExportTarget, exportTargetAsMrpack, scanMinecraftJunk, cleanMinecraftJunk,
   readGameOptionsAndKeybinds, saveGameOptionsAndKeybinds, autoResolveKeybindConflicts, toggleFullbrightPack,
   checkLocalAddonsUpdates, updateLocalAddons, rollbackLocalAddon,
   searchWorldAndDatapackStore, installStoreWorldOrDatapack, listWorldDatapacks, deleteWorldDatapack,
@@ -1987,12 +1989,16 @@ ipcMain.handle('packs:export-mrpack', async (_e, params = {}) => {
       filters: [{ name: 'Modrinth Modpack (.mrpack)', extensions: ['mrpack'] }]
     });
     if (saveRes.canceled || !saveRes.filePath) return { ok: false, canceled: true };
-    return await exportTargetAsMrpack({
+    const out = await exportTargetAsMrpack({
       ...params,
       destFilePath: saveRes.filePath
     }, (st) => {
       mainWindow?.webContents.send('mc:status', st);
     });
+    if (out?.ok && params.revealInExplorer !== false) {
+      try { shell.showItemInFolder(saveRes.filePath); } catch (_) {}
+    }
+    return out;
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -2262,12 +2268,18 @@ ipcMain.handle('cape:remove-local', async (_e, gameDir, username) => {
   try { return removeCustomLocalCape(gameDir, username); } catch (err) { return { ok: false, error: err.message }; }
 });
 
-ipcMain.handle('addons:install-dropped', async (_e, { gameDir, instanceDir = '', filePaths = [] } = {}) => {
+ipcMain.handle('addons:install-dropped', async (_e, { gameDir, instanceDir = '', filePaths = [], currentLoader = '', currentMcVersion = '' } = {}) => {
   const engine = require('./launcher-engine');
   const results = [];
   for (const fp of (Array.isArray(filePaths) ? filePaths : []).slice(0, 20)) {
     try {
-      results.push(engine.installDroppedAddonFile({ gameDir, instanceDir, filePath: String(fp || '') }));
+      results.push(engine.installDroppedAddonFile({
+        gameDir,
+        instanceDir,
+        filePath: String(fp || ''),
+        currentLoader,
+        currentMcVersion
+      }));
     } catch (err) {
       results.push({ ok: false, fileName: path.basename(String(fp || '')), error: err.message });
     }
@@ -2358,6 +2370,71 @@ ipcMain.handle('crash:share-log', async (_e, { gameDir, fallbackText = '' } = {}
     const r = await postToMclogs(content);
     try { clipboard.writeText(r.url); } catch (_) {}
     return { ok: true, url: r.url, id: r.id };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+/* ===================== v40.9 PRO — Đóng Gói Gửi Bạn 2.0 & Trợ Lý OptiFine ===================== */
+ipcMain.handle('packs:preview-export', async (_e, params = {}) => {
+  try {
+    return previewExportTarget({ ...(params || {}), gameDir: resolveUserGameDir(params?.gameDir) });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('optifine:install-parity', async (_e, params = {}) => {
+  try {
+    return await installOptifineParityPack(
+      { ...(params || {}), gameDir: resolveUserGameDir(params?.gameDir) },
+      (st) => { mainWindow?.webContents.send('mc:status', st); }
+    );
+  } catch (err) {
+    return { ok: false, error: err.message, installed: [] };
+  }
+});
+
+ipcMain.handle('optifine:pick-jar', async (_e, params = {}) => {
+  try {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Chọn tệp OptiFine_*.jar đã tải từ optifine.net',
+      properties: ['openFile'],
+      filters: [{ name: 'OptiFine JAR', extensions: ['jar'] }]
+    });
+    if (res.canceled || !res.filePaths?.length) return { ok: false, canceled: true };
+    return installOptifineJarSmart({
+      ...(params || {}),
+      gameDir: resolveUserGameDir(params?.gameDir),
+      filePath: res.filePaths[0],
+      action: params.action || 'auto'
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('optifine:handle-jar', async (_e, params = {}) => {
+  try {
+    const resolvedGameDir = resolveUserGameDir(params?.gameDir);
+    if (params.action === 'run-installer') {
+      const fp = String(params.filePath || '');
+      if (!fp || !fs.existsSync(fp)) return { ok: false, error: 'Không tìm thấy tệp OptiFine.jar.' };
+      const { spawn } = require('child_process');
+      let javaBin = detectJavaPath(21, resolvedGameDir) || detectJavaPath(17, resolvedGameDir) || detectJavaPath(8, resolvedGameDir) || 'java';
+      if (javaBin && /javaw\.exe$/i.test(javaBin)) {
+        const cliJava = javaBin.replace(/javaw\.exe$/i, 'java.exe');
+        if (fs.existsSync(cliJava)) javaBin = cliJava;
+      }
+      const child = spawn(javaBin, ['-jar', fp], {
+        cwd: path.dirname(fp),
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+      return { ok: true, kind: 'installer-launched' };
+    }
+    return installOptifineJarSmart({ ...(params || {}), gameDir: resolvedGameDir });
   } catch (err) {
     return { ok: false, error: err.message };
   }
