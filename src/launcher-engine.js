@@ -512,9 +512,12 @@ async function fetchVersionManifest() {
   };
 }
 
-function normalizeModrinthLoader(loaderType) {
+function normalizeModrinthLoader(loaderType, mcVersion = '') {
   const raw = String(loaderType || '').toLowerCase().trim();
-  if (!raw || raw === 'vanilla' || raw === 'legacyfabric' || raw === 'optifine') return 'fabric';
+  if (!raw || raw === 'vanilla' || raw === 'legacyfabric') return 'fabric';
+  if (raw === 'optifine') {
+    return (mcVersion && compareMcVersions(mcVersion, '1.14') < 0) ? 'forge' : 'fabric';
+  }
   return raw;
 }
 
@@ -565,22 +568,23 @@ async function fetchLoaderVersions(mcVersion, loaderType, gameDir = '') {
   if (loaderType === 'vanilla') return [];
 
   if (loaderType === 'optifine') {
-    const out = [];
+    const out = [
+      {
+        version: 'Auto-Shader-Zoom',
+        stable: true,
+        kind: 'parity',
+        displayLabel: '🔆 Tự động đủ bộ (Shader • Zoom • Đuốc sáng • Hỗ trợ Mod)'
+      }
+    ];
     const installedProfiles = findInstalledOptifineProfiles(gameDir || getDefaultGameDir(), mcVersion);
     for (const p of installedProfiles) {
       out.push({
         version: p.customId,
         stable: true,
         kind: 'standalone',
-        displayLabel: `☕ ${p.shortTag} (OptiFine gốc đã cài)`
+        displayLabel: `☕ ${p.shortTag} (OptiFine gốc độc lập)`
       });
     }
-    out.push({
-      version: 'Auto-Shader-Zoom',
-      stable: true,
-      kind: 'parity',
-      displayLabel: '🔆 Tự động đủ bộ (Shader • Zoom • Đuốc sáng • FPS)'
-    });
     return out;
   }
 
@@ -745,12 +749,10 @@ async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVer
   if (loaderType === 'vanilla') return null;
 
   if (loaderType === 'optifine') {
-    const installedProfiles = findInstalledOptifineProfiles(gameDir, mcVersion);
     if (loaderVersion && loaderVersion !== 'Auto-Shader-Zoom') {
+      const installedProfiles = findInstalledOptifineProfiles(gameDir, mcVersion);
       const exact = installedProfiles.find((p) => p.customId === loaderVersion);
       if (exact) return { type: 'customJson', customId: exact.customId };
-    } else if (installedProfiles.length > 0 && !loaderVersion) {
-      return { type: 'customJson', customId: installedProfiles[0].customId };
     }
     try {
       const fabList = await fetchJson(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(mcVersion)}?limit=4`);
@@ -852,7 +854,7 @@ async function searchModrinth({
   limit = 48,
   allVersions = false
 }) {
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const buildFacets = (strictExactVer) => {
     const f = [[`project_type:${projectType}`]];
     if (mcVersion && !allVersions) {
@@ -1080,7 +1082,7 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   const targetFolder = path.join(rootDir, folderMap[projectType] || 'mods');
   if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
 
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const loaderMatches = (loaders) => {
     if (projectType !== 'mod') return true;
     if (!Array.isArray(loaders)) return false;
@@ -1767,7 +1769,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   const modsFolder = path.join(rootDir, 'mods');
   if (!fs.existsSync(modsFolder)) return;
 
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const meta = readModsMetaManifest(modsFolder);
   let metaDirty = false;
   let files = [];
@@ -1879,7 +1881,8 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   }
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
-  const effectiveLoader = loaderType === 'forge' ? 'forge' : (loaderType === 'neoforge' ? 'neoforge' : 'fabric');
+  const norm = normalizeModrinthLoader(loaderType, mcVersion);
+  const effectiveLoader = norm === 'forge' ? 'forge' : (norm === 'neoforge' ? 'neoforge' : 'fabric');
   // v40.8 PRO: + ModernFix (faster loading & lower RAM/CPU usage — lighter on the PC, not heavier)
   const packSlugs =
     effectiveLoader === 'forge'
@@ -2074,19 +2077,18 @@ function findActiveOptifineForgeJar(modsDir, mcVersion) {
 }
 
 async function resolveOptifineRuntimePlan({ rootDir, gameDirectory, mcVersion, loaderVersion }, onStatus) {
-  const standaloneProfiles = findInstalledOptifineProfiles(rootDir, mcVersion);
-  const pickedStandalone = loaderVersion && loaderVersion !== 'Auto-Shader-Zoom'
-    ? standaloneProfiles.find((p) => p.customId === loaderVersion)
-    : standaloneProfiles[0];
-
-  if (pickedStandalone && (loaderVersion === pickedStandalone.customId || !loaderVersion)) {
-    onStatus?.(`🔆 Đang mở cấu hình OptiFine gốc "${pickedStandalone.shortTag}" cho MC ${mcVersion}...`);
-    return {
-      mode: 'standalone',
-      effectiveLoader: 'vanilla',
-      effectiveLoaderVersion: '',
-      customPrep: { type: 'customJson', customId: pickedStandalone.customId }
-    };
+  if (loaderVersion && loaderVersion !== 'Auto-Shader-Zoom') {
+    const standaloneProfiles = findInstalledOptifineProfiles(rootDir, mcVersion);
+    const pickedStandalone = standaloneProfiles.find((p) => p.customId === loaderVersion);
+    if (pickedStandalone) {
+      onStatus?.(`🔆 Đang mở cấu hình OptiFine gốc "${pickedStandalone.shortTag}" cho MC ${mcVersion}...`);
+      return {
+        mode: 'standalone',
+        effectiveLoader: 'vanilla',
+        effectiveLoaderVersion: '',
+        customPrep: { type: 'customJson', customId: pickedStandalone.customId }
+      };
+    }
   }
 
   const modsDir = path.join(gameDirectory, 'mods');
@@ -5596,7 +5598,7 @@ async function prepareCoopHostMods({
   const targetDir = (instanceDir && fs.existsSync(instanceDir))
     ? instanceDir
     : (gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir());
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const installed = [];
   const warnings = [];
   const wantE4mc = mode === 'lan' ? false : Boolean(enableE4mc);
@@ -5812,7 +5814,7 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
   const modsFolder = path.join(rootDir, 'mods');
   if (!fs.existsSync(modsFolder)) fs.mkdirSync(modsFolder, { recursive: true });
 
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const meta = readModsMetaManifest(modsFolder);
   let allFiles = [];
   try {
@@ -6071,7 +6073,7 @@ async function syncCoopModBasket({ gameDir, instanceDir, mcVersion = '1.21.4', l
     } catch (_) {}
   }
 
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const items = Array.isArray(modBasket) ? modBasket : [];
   if (!items.length) return { ok: true, installed: [], alreadyHad: [], failed: [], installedCount: 0, skippedCount: 0 };
 
@@ -6388,7 +6390,7 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     type: 'sync-all-mods',
     label: `🔄 Đồng bộ & Kiểm tra toàn bộ Mod theo bản ${mcVersion} (${loaderType.toUpperCase()})`
   });
-  if ((loaderType === 'fabric' || loaderType === 'quilt') && !activeMods.some((f) => /fabric-api/i.test(f))) {
+  if ((loaderType === 'fabric' || loaderType === 'quilt' || (loaderType === 'optifine' && compareMcVersions(mcVersion, '1.14') >= 0)) && !activeMods.some((f) => /fabric-api/i.test(f))) {
     addAction({
       type: 'install-mod',
       slug: 'fabric-api',
@@ -7888,7 +7890,7 @@ async function checkLocalAddonsUpdates({
     return { ok: true, updatesCount: 0, rollbackCount, itemsMap };
   }
 
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   let loadersForUpdate = [effectiveLoader];
   if (safeFolder === 'mods') {
     if (effectiveLoader === 'quilt') loadersForUpdate = ['quilt', 'fabric'];
@@ -8467,7 +8469,7 @@ async function installCoopComboPack({
   includeTeamQol = true
 } = {}, onStatus) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const installed = [];
   const skipped = [];
 
@@ -8921,7 +8923,7 @@ async function installFriendSkinSyncPack({
   friendNames = []
 } = {}, onStatus) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const installed = [];
   const skipped = [];
 
@@ -9030,7 +9032,7 @@ async function togglePvpClientMode({
   enable = true
 } = {}, onStatus) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const modsDir = path.join(targetDir, 'mods');
   fs.mkdirSync(modsDir, { recursive: true });
   const prevManifest = readPvpModeManifest(targetDir);
@@ -9354,7 +9356,7 @@ async function installReplayStudioPack({
 } = {}, onStatus) {
   const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
   const targetDir = resolveTweakerDir(rootDir, instanceDir);
-  const effectiveLoader = normalizeModrinthLoader(loaderType);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const installed = [];
 
   // Prefer Flashback (super lightweight & intuitive UI), fallback to ReplayMod — try both on every loader

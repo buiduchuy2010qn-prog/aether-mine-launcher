@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "40.9.3",
-  "generatedAt": "2026-10-29T09:28:30.757Z",
+  "version": "40.9.4",
+  "generatedAt": "2026-10-29T10:01:30.923Z",
   "filesCount": 34,
   "files": [
     {
       "path": "package.json",
       "size": 2230,
-      "sha256": "38d70f6a23658416bfc5d7936c09d2864d24cf51fed0a495d3df1e043cec0de3"
+      "sha256": "38d8d02c293f97f339b55821ec6fe5453f3c0318c9cd186d789b40d5ed7983e5"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,8 +16,8 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 405955,
-      "sha256": "c74ffcc536cd6e115ab3360aaba2a18debe5538018c2888ddc184a672529123d"
+      "size": 406130,
+      "sha256": "7e9f9d7bd7638ebe03c6aa646d2297884b0cc9633a4f8336f9dcd88431dc0df9"
     },
     {
       "path": "src/main.js",
@@ -57,12 +57,12 @@
     {
       "path": "src/ui/index.html",
       "size": 198841,
-      "sha256": "559b8d33c8252160888ef63b93abf0ef59a3a067aa83870e6917025b5b46aff3"
+      "sha256": "cc596436d7ab4f0400173e78ffb893ad0371985d122e0c28d253d7fcb527fc7d"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 203415,
-      "sha256": "f4f2519854d235305c7864787d3d5feccf598cfc43b5b42395bbf4e95ef27121"
+      "size": 203694,
+      "sha256": "915660ecef7ccc58e41f48683a20e4a33bbf89843bd4ce4156b4329387a12ecb"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -71,8 +71,8 @@
     },
     {
       "path": "src/ui/renderer.js",
-      "size": 142780,
-      "sha256": "13948a5d1248d802b7f8548c07c85ca5541c5e3361c30c518080eb30b29a7a26"
+      "size": 143046,
+      "sha256": "1ed1e80e51ee534b7cccd5817aa351eb44112e5fcb787beac10b941572f3e191"
     },
     {
       "path": "src/ui/seeds/badlands-gold-oasis-icon.png",
@@ -161,8 +161,8 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 393048,
-      "sha256": "2a39626f7601a93493896f073b0a157bd1f5f9a5695189f1193ac959378dfbb3"
+      "size": 399169,
+      "sha256": "544d64627da429f9fd20f521f305e2ca743d430df5b0d93b025eb49439acd323"
     },
     {
       "path": "src/ui/styles.css",

@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v40.9.3 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v40.9.4 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.3_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.4_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-7_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
@@ -16,9 +16,9 @@
 
 ---
 
-## 📦 Mới trong phiên bản `v40.9.3 PRO`
+## 📦 Mới trong phiên bản `v40.9.4 PRO`
 
-1. **🖼️ Ảnh Bản Đồ 16:9 Cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack (MỚI `v40.9.3 PRO`):**
+1. **🖼️ Ảnh Bản Đồ 16:9 Cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack (MỚI `v40.9.4 PRO`):**
    - Toàn bộ 8 hạt giống tuyển chọn trong **🌱 Kho Hạt Giống (Seed Đẹp)** đều hiển thị **ảnh phong cảnh 16:9 sắc nét**, tọa độ nổi bật, tiêu đề đầy đủ dễ đọc và hỗ trợ **🔍 Phóng to xem chi tiết**.
    - Cửa sổ **+ Tạo Thế Giới Mới** tích hợp đầy đủ 8 thẻ chọn nhanh Seed kèm **khung xem trước ảnh bản đồ trực tiếp**, đồng thời **tự động gắn ảnh đại diện (`icon.png` + ảnh bìa rộng 16:9)** vào thư mục `.minecraft/saves` ngay khi tạo thế giới mới.
    - **🗺️ Kho Bản Đồ Xây Sẵn & Datapack** và nhánh **Bản đồ (Map)** trong Kho Modpack đồng bộ hiển thị ảnh chụp màn hình 16:9 từ Modrinth & CurseForge.

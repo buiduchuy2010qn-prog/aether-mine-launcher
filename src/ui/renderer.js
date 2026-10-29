@@ -535,7 +535,7 @@ function switchMainTab(tabId) {
       const tgt = typeof window.getModStoreTarget === 'function'
         ? window.getModStoreTarget()
         : { dir: state.gameDir, mcVersion: state.selectedVersion, core: state.selectedCore };
-      const modKey = `${tgt.dir}|${tgt.mcVersion}|${tgt.core}`;
+      const modKey = `${tgt.dir}|${tgt.mcVersion}|${tgt.core}|${tgt.isPack ? '' : (state.selectedLoaderVersion || '')}`;
       if (!state.modAccumulatedHits?.length || state._lastModStoreKey !== modKey) {
         state._lastModStoreKey = modKey;
         loadModrinthStore(false);
@@ -999,11 +999,13 @@ async function refreshLoaderBuilds() {
     loaderSelect.innerHTML = '<option value="">Chưa hỗ trợ bản này</option>';
     state.selectedLoaderVersion = ''; return;
   }
-  loaderSelect.innerHTML = res.data.map((item, idx) => {
+  const keepExisting = state.selectedLoaderVersion && res.data.some((it) => it.version === state.selectedLoaderVersion);
+  const chosenVer = keepExisting ? state.selectedLoaderVersion : res.data[0].version;
+  loaderSelect.innerHTML = res.data.map((item) => {
     const labelText = item.displayLabel || `${item.version} ${item.stable ? '(Ổn định)' : ''}`;
-    return `<option value="${item.version}" ${idx === 0 ? 'selected' : ''}>${labelText}</option>`;
+    return `<option value="${item.version}" ${item.version === chosenVer ? 'selected' : ''}>${labelText}</option>`;
   }).join('');
-  state.selectedLoaderVersion = res.data[0].version;
+  state.selectedLoaderVersion = chosenVer;
   updateSummaryUI();
 }
 

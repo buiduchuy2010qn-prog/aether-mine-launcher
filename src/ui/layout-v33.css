@@ -5089,9 +5089,28 @@ html:not([data-theme="prism"]):not([data-theme="sakura"]) .pack-src-badge.src-at
 .mcnb-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   flex: 1;
+}
+
+.mcnb-icon {
+  font-size: 17px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.mcnb-left > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mcnb-left > div > span {
+  font-size: 12px;
+  color: var(--text-sub, var(--text-muted));
+  line-height: 1.42;
 }
 
 .mcnb-dot {

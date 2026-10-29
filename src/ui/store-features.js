@@ -404,6 +404,9 @@ async function runOneClickFpsBoost(btnElement) {
     btnElement.innerHTML = `<span>✓ Đã cài ${res.installed.length} Mod FPS!</span>`;
     if (descEl) descEl.textContent = `Đã cài thành công: ${res.installed.join(', ')}`;
     await refreshLocalAddonsCount();
+    if (document.getElementById('tab-mods')?.classList.contains('active') && state.activeModStoreType !== 'installed') {
+      loadModrinthStore(false);
+    }
     if (target.isPack && typeof refreshPackInstances === 'function') refreshPackInstances();
   } else {
     btnElement.innerHTML = '<span>⚠ Thử lại</span>';
@@ -465,6 +468,20 @@ async function refreshLocalAddonsCount() {
     descEl.textContent = `✓ Bộ Mod X3 FPS (${mainFps.count} Mod chuẩn ${mainVer}: Sodium, Lithium, Iris...) đã cài sẵn — Bấm CHƠI NGAY để vào game!`;
   }
   if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
+}
+
+function isMcPre114(ver) {
+  const m = String(ver || '').match(/^1\.(\d+)(?:\.|\b)/);
+  return Boolean(m && Number(m[1]) < 14);
+}
+
+function resolveUnderlyingModLoaderForCore(coreName, mcVer, loaderVer = '', isPack = false) {
+  const c = String(coreName || 'fabric').toLowerCase();
+  if (c === 'optifine' && !isPack) {
+    if (loaderVer && loaderVer !== 'Auto-Shader-Zoom') return 'optifine-standalone';
+    return isMcPre114(mcVer) ? 'forge' : 'fabric';
+  }
+  return c;
 }
 
 async function loadModrinthStore(append = false) {
@@ -921,6 +938,56 @@ async function loadModrinthStore(append = false) {
           if (typeof window.setCore === 'function') window.setCore(b.dataset.switchcore);
         };
       });
+    } else if (state.activeModStoreType === 'mod' && activeCore === 'optifine') {
+      const ofUnderlying = resolveUnderlyingModLoaderForCore(activeCore, activeVer, state.selectedLoaderVersion, target.isPack);
+      if (ofUnderlying === 'optifine-standalone') {
+        compatNoticeEl.className = 'mod-compat-notice-bar is-warn';
+        compatNoticeEl.innerHTML = `
+          <div class="mcnb-left">
+            <span class="mcnb-icon">☕</span>
+            <div>
+              <strong>Bạn đang chọn hồ sơ OptiFine Java độc lập (${escapeHtml(state.selectedLoaderVersion)}) — Chưa nạp Mod (.jar)!</strong>
+              <span>Hồ sơ OptiFine Java gốc chỉ chạy Shader, không nạp thư mục <code>mods/</code>. Hãy bật chế độ <strong>OptiFine Hỗ Trợ Mod</strong> hoặc <strong>Forge</strong> bên phải:</span>
+            </div>
+          </div>
+          <div class="mcnb-actions">
+            <button type="button" class="vtype-btn active" id="btnEnableOptifineModMode">🔆 Bật OptiFine Hỗ Trợ Mod (Khuyên dùng)</button>
+            <button type="button" class="vtype-btn" data-switchcore="forge">🔨 Bật Forge</button>
+          </div>`;
+        const btnOfModMode = compatNoticeEl.querySelector('#btnEnableOptifineModMode');
+        if (btnOfModMode) {
+          btnOfModMode.onclick = async () => {
+            state.selectedLoaderVersion = 'Auto-Shader-Zoom';
+            const sel = document.getElementById('loaderVersionSelect');
+            if (sel) sel.value = 'Auto-Shader-Zoom';
+            if (typeof updateSummaryUI === 'function') updateSummaryUI();
+            if (typeof saveCurrentConfig === 'function') saveCurrentConfig();
+            loadModrinthStore(false);
+          };
+        }
+        compatNoticeEl.querySelectorAll('[data-switchcore]').forEach((b) => {
+          b.onclick = () => {
+            if (typeof window.setCore === 'function') window.setCore(b.dataset.switchcore);
+          };
+        });
+      } else {
+        const runtimeLabel = (PACK_LOADER_LABEL[ofUnderlying] || ofUnderlying).toUpperCase();
+        compatNoticeEl.className = 'mod-compat-notice-bar is-ok';
+        compatNoticeEl.innerHTML = `
+          <div class="mcnb-left">
+            <span class="mcnb-icon">🔆</span>
+            <div>
+              <strong>Đang bật cấu hình: Minecraft ${escapeHtml(activeVer)} • OPTIFINE (Shader • Zoom — Chạy trực tiếp Mod ${escapeHtml(runtimeLabel)})</strong>
+              <span>Mọi Mod ${escapeHtml(runtimeLabel)} bên dưới đều tương thích 100% và cài thẳng vào cấu hình OptiFine hiện tại mà không cần đổi Core.</span>
+            </div>
+          </div>
+          <div class="mcnb-actions">
+            <button type="button" class="vtype-btn" id="btnModNoticeOptifineHub">🔆 Bộ Chuẩn OptiFine</button>
+            <button type="button" class="vtype-btn" id="btnModNoticeSwitchAll">${state.modAllVersions ? `🎯 Lọc riêng MC ${escapeHtml(activeVer)}` : '🌐 Xem mọi phiên bản MC'}</button>
+          </div>`;
+        compatNoticeEl.querySelector('#btnModNoticeOptifineHub')?.addEventListener('click', () => openOptifineHubModal(null));
+        compatNoticeEl.querySelector('#btnModNoticeSwitchAll')?.addEventListener('click', () => document.getElementById('btnToggleModAllVersions')?.click());
+      }
     } else if (state.activeModStoreType === 'mod') {
       compatNoticeEl.className = 'mod-compat-notice-bar is-ok';
       compatNoticeEl.innerHTML = `
@@ -959,7 +1026,10 @@ async function loadModrinthStore(append = false) {
   const cardsHtml = state.modAccumulatedHits.map((item) => {
     const dl = item.downloads > 1000000 ? `${(item.downloads / 1000000).toFixed(1)}M tải` : `${Math.max(1, Math.round(item.downloads / 1000))}K tải`;
     const userCore = String(activeCore || 'fabric').toLowerCase();
-    const activeLoaderKey = userCore === 'vanilla' || userCore === 'legacyfabric' ? 'fabric' : userCore;
+    const underlyingCore = resolveUnderlyingModLoaderForCore(userCore, activeVer, state.selectedLoaderVersion, target.isPack);
+    const activeLoaderKey = (underlyingCore === 'vanilla' || underlyingCore === 'legacyfabric' || underlyingCore === 'optifine-standalone')
+      ? (isMcPre114(activeVer) ? 'forge' : 'fabric')
+      : underlyingCore;
     const rawCats = [...(item.categories || []), ...(item.displayCategories || [])]
       .map((c) => String(c || '').toLowerCase())
       .filter((c, idx, arr) => c && !HIDDEN_RETRO_TAGS.has(c) && arr.indexOf(c) === idx);
@@ -1003,9 +1073,11 @@ async function loadModrinthStore(append = false) {
     const bestMcVer = pickBestReleaseVer(modVers, activeVer);
 
     const loaderCompatibleWith = (core) => {
+      if (core === 'optifine-standalone') return false;
       if (!loaderCats.length) return true;
       if (loaderCats.includes(core)) return true;
       if (core === 'quilt' && loaderCats.includes('fabric')) return true;
+      if (core === 'forge' && loaderCats.includes('neoforge') && !isMcPre114(activeVer)) return true;
       return false;
     };
     const prefLoader = loaderCompatibleWith(activeLoaderKey)
@@ -1024,11 +1096,20 @@ async function loadModrinthStore(append = false) {
       targetInstallCore = prefLoader;
       needsConfigSwitch = true;
       compatBadgeHtml = `<div class="mod-compat-pill warn">🔧 Cần Loader ${(PACK_LOADER_LABEL[prefLoader] || prefLoader).toUpperCase()} • MC ${escapeHtml(targetInstallVer)} (Tự bật khi cài)</div>`;
-    } else if (supportsFamilyVer && loaderCompatibleWith(userCore)) {
+    } else if (underlyingCore === 'optifine-standalone') {
+      targetInstallVer = supportsFamilyVer ? activeVer : bestMcVer;
+      const defaultOfRuntime = isMcPre114(targetInstallVer) ? 'forge' : 'fabric';
+      targetInstallCore = (supportsFamilyVer && loaderCompatibleWith(defaultOfRuntime)) ? 'optifine' : prefLoader;
+      needsConfigSwitch = true;
+      compatBadgeHtml = `<div class="mod-compat-pill warn">🔆 Cần bật chế độ OptiFine Hỗ Trợ Mod (${escapeHtml((PACK_LOADER_LABEL[prefLoader] || prefLoader).toUpperCase())})</div>`;
+    } else if (supportsFamilyVer && loaderCompatibleWith(underlyingCore)) {
       targetInstallVer = activeVer;
       targetInstallCore = userCore;
-      compatBadgeHtml = `<div class="mod-compat-pill ok">✅ Chơi được ngay trên ${target.isPack ? `gói ${escapeHtml(target.shortName)}` : `MC ${escapeHtml(activeVer)}`} (${escapeHtml((PACK_LOADER_LABEL[userCore] || userCore).toUpperCase())})</div>`;
-    } else if (supportsFamilyVer && !loaderCompatibleWith(userCore)) {
+      const coreBadgeLabel = userCore === 'optifine'
+        ? `OPTIFINE • ${(PACK_LOADER_LABEL[underlyingCore] || underlyingCore).toUpperCase()}`
+        : (PACK_LOADER_LABEL[userCore] || userCore).toUpperCase();
+      compatBadgeHtml = `<div class="mod-compat-pill ok">✅ Chơi được ngay trên ${target.isPack ? `gói ${escapeHtml(target.shortName)}` : `MC ${escapeHtml(activeVer)}`} (${escapeHtml(coreBadgeLabel)})</div>`;
+    } else if (supportsFamilyVer && !loaderCompatibleWith(underlyingCore)) {
       targetInstallVer = activeVer;
       targetInstallCore = prefLoader;
       needsConfigSwitch = true;
@@ -1146,13 +1227,21 @@ async function loadModrinthStore(append = false) {
           }
           curTarget = getModStoreTarget();
         } else {
+          const isStandaloneOfSwitch = targetCore === 'optifine' && state.selectedCore === 'optifine' && state.selectedLoaderVersion && state.selectedLoaderVersion !== 'Auto-Shader-Zoom';
           const cSwitch = await askUserAgreement({
-            title: '🔄 Tự Động Đổi Cấu Hình Theo Yêu Cầu Của Mod',
-            message: `Mod "${modTitle}" không chạy trên cấu hình hiện tại (${state.selectedVersion} • ${state.selectedCore.toUpperCase()}) mà yêu cầu cấu hình:\n\n• Phiên bản Minecraft: ${targetVer}\n• Mod Loader: ${(PACK_LOADER_LABEL[targetCore] || targetCore).toUpperCase()}\n\nBạn có đồng ý để BlockWay tự động chuyển sang cấu hình MC ${targetVer} (${(PACK_LOADER_LABEL[targetCore] || targetCore).toUpperCase()}) và tải cài đặt Mod này ngay không?`,
-            agreeText: `⚡ Đổi sang MC ${targetVer} (${(PACK_LOADER_LABEL[targetCore] || targetCore).toUpperCase()}) & Cài`,
+            title: isStandaloneOfSwitch ? '🔆 Bật Chế Độ OptiFine Hỗ Trợ Mod' : '🔄 Tự Động Đổi Cấu Hình Theo Yêu Cầu Của Mod',
+            message: isStandaloneOfSwitch
+              ? `Bạn đang chọn hồ sơ OptiFine Java độc lập (${state.selectedLoaderVersion}) nên chưa nạp được Mod "${modTitle}".\n\nBạn có đồng ý bật chế độ "OptiFine Hỗ Trợ Mod (Shader • Zoom • Đuốc sáng)" trên MC ${targetVer} và cài Mod này ngay không?`
+              : `Mod "${modTitle}" không chạy trên cấu hình hiện tại (${state.selectedVersion} • ${state.selectedCore.toUpperCase()}) mà yêu cầu cấu hình:\n\n• Phiên bản Minecraft: ${targetVer}\n• Mod Loader: ${(PACK_LOADER_LABEL[targetCore] || targetCore).toUpperCase()}\n\nBạn có đồng ý để BlockWay tự động chuyển sang cấu hình MC ${targetVer} (${(PACK_LOADER_LABEL[targetCore] || targetCore).toUpperCase()}) và tải cài đặt Mod này ngay không?`,
+            agreeText: isStandaloneOfSwitch
+              ? `🔆 Bật OptiFine Hỗ Trợ Mod (${targetVer}) & Cài`
+              : `⚡ Đổi sang MC ${targetVer} (${(PACK_LOADER_LABEL[targetCore] || targetCore).toUpperCase()}) & Cài`,
             cancelText: '✕ Giữ cấu hình cũ'
           });
           if (!cSwitch.agreed) return;
+          if (targetCore === 'optifine') {
+            state.selectedLoaderVersion = 'Auto-Shader-Zoom';
+          }
           if (typeof window.selectMcVersionAndCore === 'function') {
             await window.selectMcVersionAndCore(targetVer, targetCore);
           }
@@ -2173,7 +2262,7 @@ const PACK_SOURCE_META = {
   atlauncher: { label: 'ATLauncher', cls: 'src-atlauncher' }
 };
 
-const PACK_LOADER_LABEL = { fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge', quilt: 'Quilt', legacyfabric: 'Legacy Fabric', vanilla: 'Vanilla', datapack: 'Datapack' };
+const PACK_LOADER_LABEL = { fabric: 'Fabric', forge: 'Forge', neoforge: 'NeoForge', quilt: 'Quilt', legacyfabric: 'Legacy Fabric', optifine: 'OptiFine', vanilla: 'Vanilla', datapack: 'Datapack' };
 
 function packSourceMeta(src) {
   if (PACK_SOURCE_META[src]) return PACK_SOURCE_META[src];
@@ -4684,6 +4773,8 @@ async function openOptifineHubModal(droppedJar = null) {
           await refreshLocalAddonsCount();
           if (!document.getElementById('localAddonsWrap')?.classList.contains('hidden')) {
             await renderLocalAddonsManager();
+          } else if (document.getElementById('tab-mods')?.classList.contains('active')) {
+            loadModrinthStore(false);
           }
           const newCnt = (res.installed || []).length;
           const keptCnt = (res.alreadyPresent || []).length;
