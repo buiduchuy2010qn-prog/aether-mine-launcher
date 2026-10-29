@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const zlib = require('zlib');
+const net = require('net');
 const { execSync, exec, spawn } = require('child_process');
 const msAuth = require('./microsoft-auth');
 const worldCreator = require('./world-creator');
@@ -77,10 +78,13 @@ Handler.prototype.getAssets = async function () {
   return origGetAssets.call(this);
 };
 
+// v40.8: reuse TLS connections to Modrinth / Mojang (fewer handshakes = faster store pages, less CPU)
+const httpsKeepAliveAgent = new https.Agent({ keepAlive: true, maxSockets: 8, keepAliveMsecs: 15000 });
+
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
-    https
-      .get(url, { headers: { 'User-Agent': 'AetherCraft-Launcher/8.0 (https://github.com/buiduchuy2010qn-prog)' } }, (res) => {
+    const req = https
+      .get(url, { agent: httpsKeepAliveAgent, timeout: 25000, headers: { 'User-Agent': 'AetherCraft-Launcher/8.0 (https://github.com/buiduchuy2010qn-prog)' } }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           const nextUrl = res.headers.location.startsWith('http')
             ? res.headers.location
@@ -103,36 +107,43 @@ function fetchJson(url) {
         });
       })
       .on('error', reject);
+    req.on('timeout', () => req.destroy(new Error(`Hết thời gian chờ: ${url}`)));
   });
 }
 
-function downloadFile(url, destPath) {
+function downloadFile(url, destPath, redirectsLeft = 6) {
+  // v40.8: follow redirects BEFORE opening the file (no two write streams on the same path → no EBUSY on Windows)
   return new Promise((resolve, reject) => {
     const dir = path.dirname(destPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const file = fs.createWriteStream(destPath);
-    https
-      .get(url, { headers: { 'User-Agent': 'AetherCraft-Launcher/8.0' } }, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          file.close();
-          const nextUrl = res.headers.location.startsWith('http')
-            ? res.headers.location
-            : new URL(res.headers.location, url).toString();
-          res.resume();
-          return downloadFile(nextUrl, destPath).then(resolve).catch(reject);
-        }
-        if (res.statusCode !== 200) {
-          file.close();
-          res.resume();
-          return reject(new Error(`Download failed HTTP ${res.statusCode}`));
-        }
-        res.pipe(file);
-        file.on('finish', () => file.close(resolve));
-      })
-      .on('error', (err) => {
-        fs.unlink(destPath, () => {});
-        reject(err);
-      });
+    const req = https.get(url, { agent: httpsKeepAliveAgent, headers: { 'User-Agent': 'BlockWay-Launcher/40.8' }, timeout: 30000 }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        if (redirectsLeft <= 0) return reject(new Error('Download failed: too many redirects'));
+        const nextUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, url).toString();
+        return downloadFile(nextUrl, destPath, redirectsLeft - 1).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`Download failed HTTP ${res.statusCode}`));
+      }
+      const file = fs.createWriteStream(destPath);
+      res.pipe(file);
+      file.on('finish', () => file.close(() => resolve()));
+      const fail = (err) => {
+        try { file.destroy(); } catch (_) {}
+        fs.unlink(destPath, () => reject(err));
+      };
+      file.on('error', fail);
+      res.on('error', fail);
+    });
+    req.on('timeout', () => req.destroy(new Error('Download timeout')));
+    req.on('error', (err) => {
+      fs.unlink(destPath, () => {});
+      reject(err);
+    });
   });
 }
 
@@ -823,6 +834,7 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'ferrite-core': ['ferritecore-'],
   'entityculling': ['entityculling-'],
   'immediatelyfast': ['immediatelyfast-'],
+  'modernfix': ['modernfix-'],
   'iris': ['iris-'],
   'embeddium': ['embeddium-'],
   'modmenu': ['modmenu-'],
@@ -896,6 +908,28 @@ function writeModsMetaManifest(modsFolder, metaObj) {
   try {
     fs.writeFileSync(metaPath, JSON.stringify(metaObj, null, 2), 'utf8');
   } catch (_) {}
+}
+
+// v40.8: remember mods the PLAYER (or PvP Mode) turned off so auto version-sync never re-enables them
+function setModUserDisabledFlags(modsFolder, cleanNames, disabled) {
+  const list = (Array.isArray(cleanNames) ? cleanNames : [cleanNames])
+    .map((n) => path.basename(String(n || '')).replace(/\.disabled$/i, ''))
+    .filter(Boolean);
+  if (!list.length || !fs.existsSync(modsFolder)) return;
+  const meta = readModsMetaManifest(modsFolder);
+  let dirty = false;
+  for (const clean of list) {
+    const cur = meta[clean] || {};
+    if (disabled && !cur.userDisabled) {
+      meta[clean] = { ...cur, userDisabled: true };
+      dirty = true;
+    } else if (!disabled && cur.userDisabled) {
+      const { userDisabled, ...rest } = cur;
+      meta[clean] = rest;
+      dirty = true;
+    }
+  }
+  if (dirty) writeModsMetaManifest(modsFolder, meta);
 }
 
 function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVersion = '') {
@@ -1036,15 +1070,17 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
         equipShaderInGame(rootDir, finalName);
         autoEquipped = true;
       } catch (_) {}
-      // Auto-install Iris + Sodium if user is on Fabric/Quilt/NeoForge and doesn't have a shader mod yet
-      if (!_isDep && ['fabric', 'quilt', 'neoforge'].includes(effectiveLoader)) {
+      // Auto-install a shader loader if the player doesn't have one yet:
+      // Fabric/Quilt/NeoForge → Iris + Sodium, Forge → Oculus + Embeddium (v40.8)
+      if (!_isDep && ['fabric', 'quilt', 'neoforge', 'forge'].includes(effectiveLoader)) {
         try {
           const modsFolder = path.join(rootDir, 'mods');
           const curMods = fs.existsSync(modsFolder) ? fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f)) : [];
           const hasShaderMod = curMods.some((f) => /\b(iris|oculus|optifine|optifabric)\b/i.test(f));
           if (!hasShaderMod) {
-            onStatus?.(`✨ Tự động trang bị trình chạy Shader (Iris + Sodium) cho MC ${mcVersion}...`);
-            for (const depSlug of ['sodium', 'iris']) {
+            const shaderStack = effectiveLoader === 'forge' ? ['embeddium', 'oculus'] : ['sodium', 'iris'];
+            onStatus?.(`✨ Tự động trang bị trình chạy Shader (${shaderStack.join(' + ')}) cho MC ${mcVersion}...`);
+            for (const depSlug of shaderStack) {
               try {
                 const sr = await installModrinthProject({
                   slug: depSlug,
@@ -1073,6 +1109,7 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   if (!fs.existsSync(destPath) && fs.existsSync(disabledPath) && fs.statSync(disabledPath).size > 1024) {
     try {
       fs.renameSync(disabledPath, destPath);
+      if (projectType === 'mod') setModUserDisabledFlags(path.dirname(destPath), fileObj.filename, false);
       const autoEquipped = await finalizeAddonAutoEquip(fileObj.filename);
       onStatus?.(`✓ Đã kích hoạt ngay ${fileObj.filename} (chuẩn ${mcVersion}) có sẵn trong máy!`);
       return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true, installedDeps, autoEquipped };
@@ -1214,7 +1251,7 @@ function getEquippedAddonsState(gameDir) {
   return { ok: true, activeShader, activeResourcePacks };
 }
 
-function applySmartGameOptions(gameDirectory, { autoViLang = false, potatoGraphicsPreset = false } = {}) {
+function applySmartGameOptions(gameDirectory, { autoViLang = false, potatoGraphicsPreset = false, fpsCap = 0 } = {}) {
   if (!autoViLang && !potatoGraphicsPreset) return;
   try {
     if (!fs.existsSync(gameDirectory)) fs.mkdirSync(gameDirectory, { recursive: true });
@@ -1247,11 +1284,161 @@ function applySmartGameOptions(gameDirectory, { autoViLang = false, potatoGraphi
       setOpt('biomeBlendRadius', '1', 1);
       setOpt('particles', '1');
       setOpt('clouds', '"fast"');
-      setOpt('maxFps', '120');
+      // When "Mượt Êm" is on, never lift the FPS cap above the monitor-matched gentle limit
+      setOpt('maxFps', String(fpsCap > 0 ? Math.min(120, fpsCap) : 120));
       setOpt('gamma', '1.0');
     }
     fs.writeFileSync(optsPath, content, 'utf8');
   } catch (_) {}
+}
+
+/* ---------------- v40.8 PRO: "Mượt Êm" — Smooth Without Stressing the PC ----------------
+ * Philosophy: remove *wasted* work instead of pushing hardware harder.
+ *  - Cap FPS to the monitor refresh rate (frames above it are never displayed, only heat the GPU)
+ *  - Trim CPU-heavy simulation distance, Fabulous graphics, extra mipmaps & far entity rendering
+ *  - Never raises CPU priority, never forces the discrete GPU, never unlocks FPS
+ *  - Applied ONCE per game folder (respects later in-game changes) and fully reversible:
+ *    turning it off restores every original value the player has not changed since.
+ */
+const GENTLE_SMOOTH_MARKER = '.blockway-gentle-smooth.json';
+const GENTLE_SMOOTH_VERSION = 1;
+
+function computeGentleFpsCap(displayHz) {
+  const hz = Math.round(Number(displayHz) || 0);
+  if (!hz || hz < 30) return 75;
+  return Math.max(60, Math.min(144, hz));
+}
+
+function readOptValue(content, key) {
+  const m = content.match(new RegExp(`^${key}:(.*?)\\r?$`, 'm'));
+  return m ? m[1].trim() : null;
+}
+
+function writeOptValue(content, key, val) {
+  const rx = new RegExp(`^${key}:(.*?)(\\r?)$`, 'm');
+  if (rx.test(content)) return content.replace(rx, `${key}:${val}$2`);
+  const nl = content.includes('\r\n') ? '\r\n' : '\n';
+  return content + (content && !content.endsWith('\n') ? nl : '') + `${key}:${val}${nl}`;
+}
+
+function removeOptLine(content, key) {
+  return content.replace(new RegExp(`^${key}:.*(\\r?\\n|$)`, 'm'), '');
+}
+
+function applyGentleSmoothOptions(gameDirectory, { enabled = false, displayHz = 0 } = {}) {
+  const optsPath = path.join(gameDirectory, 'options.txt');
+  const markerPath = path.join(gameDirectory, GENTLE_SMOOTH_MARKER);
+  let marker = null;
+  try {
+    if (fs.existsSync(markerPath)) marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+  } catch (_) {
+    marker = null;
+  }
+
+  // Turned OFF → restore originals (only keys the player has not touched since we tuned them)
+  if (!enabled) {
+    if (!marker || !marker.applied) return { ok: true, changed: [], reverted: 0 };
+    let reverted = 0;
+    try {
+      if (fs.existsSync(optsPath)) {
+        let content = fs.readFileSync(optsPath, 'utf8');
+        for (const [key, rec] of Object.entries(marker.applied)) {
+          const cur = readOptValue(content, key);
+          if (cur === null || cur !== String(rec.value)) continue;
+          content = rec.original === null ? removeOptLine(content, key) : writeOptValue(content, key, rec.original);
+          reverted++;
+        }
+        fs.writeFileSync(optsPath, content, 'utf8');
+      }
+    } catch (_) {}
+    try { fs.rmSync(markerPath, { force: true }); } catch (_) {}
+    return { ok: true, changed: [], reverted };
+  }
+
+  // Already tuned once for this folder → respect whatever the player chose afterwards
+  if (marker && marker.version === GENTLE_SMOOTH_VERSION) {
+    return { ok: true, changed: [], alreadyTuned: true, fpsCap: marker.fpsCap };
+  }
+
+  const fpsCap = computeGentleFpsCap(displayHz);
+  // [key, defaultWhenMissing, target, shouldLower(currentNumber)]
+  const rules = [
+    ['maxFps', 120, fpsCap, (v) => v > fpsCap],
+    ['simulationDistance', 12, 8, (v) => v > 8],
+    ['renderDistance', 12, 12, (v) => v > 12],
+    ['graphicsMode', 1, 1, (v) => v >= 2],
+    ['prioritizeChunkUpdates', 0, 0, (v) => v > 0],
+    ['mipmapLevels', 4, 2, (v) => v > 2],
+    ['entityDistanceScaling', 1.0, 0.75, (v) => v > 0.75],
+    ['biomeBlendRadius', 2, 2, (v) => v > 2]
+  ];
+
+  const applied = {};
+  const changed = [];
+  try {
+    if (!fs.existsSync(gameDirectory)) fs.mkdirSync(gameDirectory, { recursive: true });
+    let content = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
+    for (const [key, defVal, target, shouldLower] of rules) {
+      const raw = readOptValue(content, key);
+      const cur = raw === null ? defVal : parseFloat(String(raw).replace(/"/g, ''));
+      if (Number.isNaN(cur) || !shouldLower(cur)) continue;
+      const val = key === 'entityDistanceScaling' ? Number(target).toFixed(2) : String(target);
+      applied[key] = { original: raw, value: val };
+      content = writeOptValue(content, key, val);
+      changed.push(key);
+    }
+    fs.writeFileSync(optsPath, content, 'utf8');
+    fs.writeFileSync(markerPath, JSON.stringify({
+      version: GENTLE_SMOOTH_VERSION,
+      tunedAt: new Date().toISOString(),
+      fpsCap,
+      applied
+    }, null, 2), 'utf8');
+  } catch (e) {
+    return { ok: false, changed: [], error: e.message };
+  }
+  return { ok: true, changed, fpsCap };
+}
+
+/* Gentle JVM tuning: keep background GC threads light so Minecraft never hogs every CPU core,
+ * and use Java 25 compact object headers (less RAM, less work) when available. */
+function applyGentleJvmTuning(args, { javaMajor = 0, cpuCores = os.cpus().length } = {}) {
+  const cores = Math.max(1, Number(cpuCores) || os.cpus().length || 4);
+  const list = Array.isArray(args) ? args.slice() : [];
+  const isZgc = list.includes('-XX:+UseZGC');
+  const concCap = isZgc ? Math.max(2, Math.ceil(cores / 4)) : Math.max(1, Math.ceil(cores / 4));
+  const out = list.map((a) => {
+    const m = String(a).match(/^-XX:ConcGCThreads=(\d+)$/);
+    return m ? `-XX:ConcGCThreads=${Math.min(parseInt(m[1], 10), concCap)}` : a;
+  });
+  if (javaMajor >= 25 && !out.includes('-XX:+UseCompactObjectHeaders')) {
+    out.push('-XX:+UseCompactObjectHeaders');
+  }
+  return out;
+}
+
+/* Rate-limit game stdout forwarding so mod log-spam never burns CPU in the game or the launcher UI. */
+function createLogThrottle(emit, maxPerSec = 150) {
+  let windowStart = Date.now();
+  let count = 0;
+  let dropped = 0;
+  const priorityRx = /error|exception|fatal|crash|LWJGL|OpenAL|Sound engine|Setting user|Stopping!|e4mc|hosted on port/i;
+  return (line) => {
+    const now = Date.now();
+    if (now - windowStart >= 1000) {
+      if (dropped > 0) emit(`[BlockWay] ⏩ Đã gộp bớt ${dropped} dòng log lặp lại trong 1 giây để game chạy êm hơn.`);
+      windowStart = now;
+      count = 0;
+      dropped = 0;
+    }
+    const isPriority = priorityRx.test(line);
+    if (count < maxPerSec || (isPriority && count < maxPerSec * 3)) {
+      count++;
+      emit(line);
+    } else {
+      dropped++;
+    }
+  };
 }
 
 function parseMcVersionTuple(verStr) {
@@ -1525,10 +1712,12 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
     return '';
   };
 
-  // Step 1: Re-enable any cached .jar.disabled files that strictly match target mcVersion + effectiveLoader
+  // Step 1: Re-enable cached .jar.disabled files that strictly match target mcVersion + effectiveLoader
+  // v40.8: …but NEVER the ones the player (or PvP Mode) switched off on purpose
   for (const f of files) {
     if (!f.toLowerCase().endsWith('.disabled')) continue;
     const cleanName = f.replace(/\.disabled$/i, '');
+    if (meta[cleanName]?.userDisabled) continue;
     if (isFileCompatibleWithVersion(cleanName, true)) {
       const enabledPath = path.join(modsFolder, cleanName);
       const disabledPath = path.join(modsFolder, f);
@@ -1582,12 +1771,13 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const effectiveLoader = loaderType === 'forge' ? 'forge' : (loaderType === 'neoforge' ? 'neoforge' : 'fabric');
+  // v40.8 PRO: + ModernFix (faster loading & lower RAM/CPU usage — lighter on the PC, not heavier)
   const packSlugs =
     effectiveLoader === 'forge'
-      ? ['embeddium', 'ferrite-core', 'entityculling', 'immediatelyfast']
+      ? ['embeddium', 'ferrite-core', 'entityculling', 'immediatelyfast', 'modernfix']
       : effectiveLoader === 'neoforge'
-        ? ['sodium', 'lithium', 'ferrite-core', 'entityculling', 'immediatelyfast', 'iris']
-        : ['fabric-api', 'sodium', 'lithium', 'ferrite-core', 'entityculling', 'immediatelyfast', 'iris'];
+        ? ['sodium', 'lithium', 'ferrite-core', 'entityculling', 'immediatelyfast', 'modernfix', 'iris']
+        : ['fabric-api', 'sodium', 'lithium', 'ferrite-core', 'entityculling', 'immediatelyfast', 'modernfix', 'iris'];
 
   const installed = [];
   const errors = [];
@@ -1665,6 +1855,9 @@ function toggleLocalAddon(gameDir, folderType, fileName) {
   const isDisabled = cleanBase.toLowerCase().endsWith('.disabled');
   const nextName = isDisabled ? cleanBase.replace(/\.disabled$/i, '') : `${cleanBase}.disabled`;
   fs.renameSync(fullPath, path.join(rootDir, safeFolder, nextName));
+  if (safeFolder === 'mods') {
+    setModUserDisabledFlags(path.join(rootDir, 'mods'), cleanBase, !isDisabled);
+  }
   return { ok: true, newName: nextName, enabled: isDisabled };
 }
 
@@ -1813,21 +2006,109 @@ function saveCustomLocalSkin(gameDir, username, sourceFilePath) {
   return { ok: true, dataUrl: `data:image/png;base64,${buf.toString('base64')}`, savedPath: targetPng };
 }
 
+// v40.8: CustomSkinLoader 14.x "Legacy" loader needs explicit skin/cape/elytra paths ("root" is ignored).
+// Merge into the existing config instead of wiping the player's own load list on every launch.
+const CSL_LOCAL_SKIN_ENTRY = {
+  name: 'LocalSkin',
+  type: 'Legacy',
+  checkPNG: false,
+  skin: 'LocalSkin/skins/{USERNAME}.png',
+  model: 'auto',
+  cape: 'LocalSkin/capes/{USERNAME}.png',
+  elytra: 'LocalSkin/elytras/{USERNAME}.png'
+};
+
 function configureCrackSkinSupport(gameDir) {
   try {
     const cslDir = path.join(gameDir, 'CustomSkinLoader');
-    if (!fs.existsSync(cslDir)) fs.mkdirSync(cslDir, { recursive: true });
-    const cslConfig = {
-      enable: true,
-      loadlist: [
-        { name: 'LocalSkin', type: 'Legacy', root: 'LocalSkin/' },
-        { name: 'Mojang', type: 'MojangAPI' },
-        { name: 'ElyBy', type: 'ElyByAPI' },
-        { name: 'LittleSkin', type: 'CustomSkinAPI', root: 'https://littleskin.cn/csl/' }
-      ]
-    };
-    fs.writeFileSync(path.join(cslDir, 'CustomSkinLoader.json'), JSON.stringify(cslConfig, null, 2), 'utf8');
+    for (const sub of ['skins', 'capes', 'elytras']) {
+      fs.mkdirSync(path.join(cslDir, 'LocalSkin', sub), { recursive: true });
+    }
+    const cfgPath = path.join(cslDir, 'CustomSkinLoader.json');
+    let cfg = null;
+    try {
+      if (fs.existsSync(cfgPath)) cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    } catch (_) {
+      cfg = null;
+    }
+    const before = cfg ? JSON.stringify(cfg) : '';
+    if (!cfg || typeof cfg !== 'object' || !Array.isArray(cfg.loadlist)) {
+      cfg = {
+        ...(cfg && typeof cfg === 'object' ? cfg : {}),
+        enable: true,
+        loadlist: [
+          { ...CSL_LOCAL_SKIN_ENTRY },
+          { name: 'Mojang', type: 'MojangAPI' },
+          { name: 'ElyBy', type: 'ElyByAPI' },
+          { name: 'LittleSkin', type: 'CustomSkinAPI', root: 'https://littleskin.cn/csl/' }
+        ]
+      };
+    } else {
+      cfg.enable = true;
+      const others = cfg.loadlist.filter((e) => !(e && e.name === 'LocalSkin'));
+      cfg.loadlist = [{ ...CSL_LOCAL_SKIN_ENTRY }, ...others];
+    }
+    const after = JSON.stringify(cfg);
+    if (after !== before) fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf8');
   } catch (_) {}
+}
+
+// v40.8: Modpack instances get the friends' skins & capes saved in the main .minecraft folder too
+function mirrorLocalSkinsIntoInstance(rootDir, instanceDir) {
+  if (!instanceDir || path.resolve(instanceDir) === path.resolve(rootDir)) return;
+  for (const sub of ['skins', 'capes', 'elytras']) {
+    const src = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', sub);
+    if (!fs.existsSync(src)) continue;
+    const dest = path.join(instanceDir, 'CustomSkinLoader', 'LocalSkin', sub);
+    try {
+      fs.mkdirSync(dest, { recursive: true });
+      for (const f of fs.readdirSync(src)) {
+        if (!/\.png$/i.test(f)) continue;
+        const s = path.join(src, f);
+        const d = path.join(dest, f);
+        try {
+          if (!fs.existsSync(d) || fs.statSync(s).mtimeMs > fs.statSync(d).mtimeMs) fs.copyFileSync(s, d);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+}
+
+// v40.8: player-uploaded cape (64x32 or 128x64 PNG) → CustomSkinLoader LocalSkin/capes/<name>.png
+function saveCustomLocalCape(gameDir, username, sourceFilePath) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const cleanName = (username || 'StevePlayer').replace(/[^a-zA-Z0-9_]/g, '') || 'StevePlayer';
+  const buf = fs.readFileSync(sourceFilePath);
+  if (buf.length < 100 || buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) {
+    throw new Error('File áo choàng phải là ảnh PNG hợp lệ.');
+  }
+  const w = buf.readUInt32BE(16);
+  const h = buf.readUInt32BE(20);
+  if (!(w >= 64 && h >= 32 && w === h * 2) || w > 1024) {
+    throw new Error(`Ảnh áo choàng cần tỉ lệ 2:1 (VD 64×32 hoặc 128×64) — ảnh của bạn là ${w}×${h}.`);
+  }
+  const capesDir = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'capes');
+  fs.mkdirSync(capesDir, { recursive: true });
+  const target = path.join(capesDir, `${cleanName}.png`);
+  fs.writeFileSync(target, buf);
+  configureCrackSkinSupport(rootDir);
+  return { ok: true, dataUrl: `data:image/png;base64,${buf.toString('base64')}`, savedPath: target };
+}
+
+function removeCustomLocalCape(gameDir, username) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const cleanName = (username || 'StevePlayer').replace(/[^a-zA-Z0-9_]/g, '') || 'StevePlayer';
+  const target = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'capes', `${cleanName}.png`);
+  try { fs.rmSync(target, { force: true }); } catch (_) {}
+  return { ok: true };
+}
+
+function getCustomLocalCape(gameDir, username) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const cleanName = (username || 'StevePlayer').replace(/[^a-zA-Z0-9_]/g, '') || 'StevePlayer';
+  const target = path.join(rootDir, 'CustomSkinLoader', 'LocalSkin', 'capes', `${cleanName}.png`);
+  if (!fs.existsSync(target)) return { ok: true, dataUrl: '' };
+  return { ok: true, dataUrl: `data:image/png;base64,${fs.readFileSync(target).toString('base64')}` };
 }
 
 const CRC32_TABLE = (() => {
@@ -2103,6 +2384,8 @@ async function launchMinecraft(config, callbacks = {}) {
     autoViLang = false,
     potatoGraphicsPreset = false,
     smartRamCoach = true,
+    gentleSmoothMode = true,
+    displayHz = 0,
     autoCreateWorld = null
   } = config;
   let effectiveWorldFolder = worldFolderName;
@@ -2179,11 +2462,28 @@ async function launchMinecraft(config, callbacks = {}) {
     }
   }
 
+  // v40.8: copy friends' skins & capes from the main folder into the selected Modpack instance
+  if (crackSkinSync && gameDirectory !== rootDir) {
+    try { mirrorLocalSkinsIntoInstance(rootDir, gameDirectory); } catch (_) {}
+  }
+
   // v40.4 PRO: Apply smart in-game options.txt presets (Vietnamese language & Low-PC smooth FPS preset)
+  const gentleOn = gentleSmoothMode !== false;
   applySmartGameOptions(gameDirectory, {
     autoViLang: Boolean(autoViLang),
-    potatoGraphicsPreset: Boolean(potatoGraphicsPreset)
+    potatoGraphicsPreset: Boolean(potatoGraphicsPreset),
+    fpsCap: gentleOn ? computeGentleFpsCap(displayHz) : 0
   });
+
+  // v40.8 PRO: "Mượt Êm" — trim wasted work once per folder (reversible), never stress the hardware
+  try {
+    const gentleRes = applyGentleSmoothOptions(gameDirectory, { enabled: gentleOn, displayHz });
+    if (gentleOn && gentleRes?.changed?.length) {
+      callbacks.onStatus?.(`🍃 Mượt Êm: Đã tinh chỉnh nhẹ ${gentleRes.changed.length} thiết lập (khóa ${gentleRes.fpsCap} FPS theo màn hình, giảm tải CPU mô phỏng) — không ép CPU/GPU.`);
+    } else if (!gentleOn && gentleRes?.reverted) {
+      callbacks.onStatus?.(`↩️ Đã tắt Mượt Êm: khôi phục ${gentleRes.reverted} thiết lập đồ họa gốc của bạn.`);
+    }
+  } catch (_) {}
 
   if (gameDirectory === rootDir) {
     await ensureModsMatchVersion(rootDir, mcVersion, loaderType, callbacks.onStatus);
@@ -2235,9 +2535,12 @@ async function launchMinecraft(config, callbacks = {}) {
   if (smartRamCoach && Math.abs(effectiveRamGB - (Number(ramGB) || 4)) >= 0.5) {
     callbacks.onStatus?.(`🧠 Cố vấn RAM thông minh: Tự cân chỉnh ${effectiveRamGB} GB (${ramCoach.gcModeLabel}) phù hợp ${ramCoach.modsCount} Mod & RAM trống hệ thống.`);
   }
-  const customArgs = useAikarFlags
+  const baseCustomArgs = useAikarFlags
     ? (smartRamCoach && Array.isArray(ramCoach.jvmArgs) && ramCoach.jvmArgs.length ? ramCoach.jvmArgs : buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores))
     : [];
+  const customArgs = gentleOn && baseCustomArgs.length
+    ? applyGentleJvmTuning(baseCustomArgs, { javaMajor: getJavaMajorVersion(resolvedJava), cpuCores })
+    : baseCustomArgs;
 
   const launcher = new Client();
 
@@ -2275,8 +2578,12 @@ async function launchMinecraft(config, callbacks = {}) {
 
   if (serverIp && serverIp.trim()) {
     const [host, port] = serverIp.trim().split(':');
-    launchOpts.quickPlay = { type: 'multiplayer', identifier: serverIp.trim() };
-    launchOpts.server = { host, port: port || '25565' };
+    // v40.8: Quick Play (--quickPlayMultiplayer) only exists on 1.20+; older versions use --server/--port
+    if (supportsQuickPlaySingleplayer(mcVersion)) {
+      launchOpts.quickPlay = { type: 'multiplayer', identifier: serverIp.trim() };
+    } else {
+      launchOpts.server = { host, port: port || '25565' };
+    }
   } else {
     // Tự tạo sẵn thế giới mới (lần chơi đầu tiên hoặc bấm "Thế giới mới") rồi vào thẳng
     if (!(effectiveWorldFolder && String(effectiveWorldFolder).trim()) && autoCreateWorld && typeof autoCreateWorld === 'object') {
@@ -2328,11 +2635,12 @@ async function launchMinecraft(config, callbacks = {}) {
   }
 
   let gameWindowNotified = false;
+  const emitGameLog = createLogThrottle((l) => callbacks.onLog?.(l), 150);
 
-  launcher.on('debug', (msg) => callbacks.onLog?.(`[DEBUG] ${msg}`));
+  launcher.on('debug', (msg) => emitGameLog(`[DEBUG] ${msg}`));
   launcher.on('data', (msg) => {
     const line = String(msg).trim();
-    callbacks.onLog?.(line);
+    emitGameLog(line);
 
     // v40.1: Detect e4mc public internet domain or local LAN port automatically
     const e4mcMatch = line.match(/\b([a-z0-9-]+\.[a-z0-9.-]*e4mc\.link)\b/i);
@@ -2621,12 +2929,13 @@ function copyFolderMergeRecursive(srcDir, destDir) {
     if (entry.isDirectory()) {
       copiedFiles += copyFolderMergeRecursive(sFull, dFull);
     } else if (entry.isFile()) {
-      try { if (!fs.existsSync(dFull)) fs.copyFileSync(sFull, dFull); copiedFiles++; } catch (_) {} if (false) {
-        try {
+      // v40.8: count only files that were really copied (existing files are kept, not overwritten)
+      try {
+        if (!fs.existsSync(dFull)) {
           fs.copyFileSync(sFull, dFull);
           copiedFiles++;
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }
   }
   return copiedFiles;
@@ -4554,7 +4863,7 @@ async function translateSingleToVi(rawText, cacheDir = '') {
 
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(clean)}`;
-    const data = await packFetchJson(url, { timeout: 5500 });
+    const data = await packFetchJson(url, { timeoutMs: 5500 });
     if (Array.isArray(data) && Array.isArray(data[0])) {
       const joined = data[0].map((seg) => (Array.isArray(seg) ? seg[0] || '' : '')).join('');
       const polished = polishMinecraftVietnamese(joined);
@@ -5765,13 +6074,18 @@ function importWorldZip(gameDir, srcZipPath) {
 function listLocalScreenshots(gameDir) {
   const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
   const candidateDirs = [path.join(rootDir, 'screenshots')];
+  const dirLabels = new Map([[candidateDirs[0], '']]);
   const instRoot = path.join(rootDir, 'instances');
   if (fs.existsSync(instRoot)) {
     try {
       for (const d of fs.readdirSync(instRoot, { withFileTypes: true })) {
         if (d.isDirectory()) {
           const sDir = path.join(instRoot, d.name, 'screenshots');
-          if (fs.existsSync(sDir)) candidateDirs.push(sDir);
+          if (fs.existsSync(sDir)) {
+            candidateDirs.push(sDir);
+            // v40.8: show which Modpack the screenshot came from in the gallery / lightbox
+            dirLabels.set(sDir, `📦 ${d.name}`);
+          }
         }
       }
     } catch (_) {}
@@ -5794,6 +6108,7 @@ function listLocalScreenshots(gameDir) {
           name: f,
           fullPath: full,
           fileUrl: safeFileUrl,
+          instanceName: dirLabels.get(dir) || '',
           sizeKB: Math.max(1, Math.round(st.size / 1024)),
           mtimeMs: st.mtimeMs || 0,
           dateLabel: st.mtime.toLocaleString('vi-VN', {
@@ -6434,6 +6749,10 @@ function resolveTweakerDir(gameDir, instanceDir = '') {
   return path.resolve(gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
 }
 
+function normalizeKeyCodeForConflict(code) {
+  return String(code || '').trim().toLowerCase().replace(/:none$/, '');
+}
+
 function readGameOptionsAndKeybinds({ gameDir, instanceDir = '' } = {}) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
   const optsPath = path.join(targetDir, 'options.txt');
@@ -6497,11 +6816,11 @@ function readGameOptionsAndKeybinds({ gameDir, instanceDir = '' } = {}) {
   const masterVolume = Math.max(0, Math.min(100, Math.round(masterVolFloat * 100)));
 
   // Group bound keys to detect conflicts (skip unbound & harmless context-distinct command '/')
+  // v40.8: Forge/NeoForge store "key.keyboard.r:NONE" — ":NONE" means no modifier, so it collides with plain "key.keyboard.r"
   const byKey = new Map();
   for (const kb of keybinds) {
     if (kb.isUnbound) continue;
-    // Only modern key.* codes or numeric codes
-    const normCode = kb.keyCode.toLowerCase();
+    const normCode = normalizeKeyCodeForConflict(kb.keyCode);
     if (!byKey.has(normCode)) byKey.set(normCode, []);
     byKey.get(normCode).push(kb);
   }
@@ -6644,7 +6963,7 @@ function autoResolveKeybindConflicts({ gameDir, instanceDir = '' } = {}) {
   const usedKeys = new Set(
     current.keybinds
       .filter((k) => !k.isUnbound)
-      .map((k) => k.keyCode.toLowerCase())
+      .map((k) => normalizeKeyCodeForConflict(k.keyCode))
   );
 
   const keyChanges = {};
@@ -6656,12 +6975,15 @@ function autoResolveKeybindConflicts({ gameDir, instanceDir = '' } = {}) {
     for (const loser of losers) {
       // Never forcibly unbind core vanilla movement if somehow duplicated; skip if priority >= 100
       if (loser.priority >= 100) continue;
-      const freeKey = SAFE_REASSIGN_KEY_POOL.find((candidate) => !usedKeys.has(candidate.toLowerCase()));
+      const freeKey = SAFE_REASSIGN_KEY_POOL.find((candidate) => !usedKeys.has(normalizeKeyCodeForConflict(candidate)));
       const assigned = freeKey || 'key.keyboard.unknown';
       if (assigned !== 'key.keyboard.unknown') {
-        usedKeys.add(assigned.toLowerCase());
+        usedKeys.add(normalizeKeyCodeForConflict(assigned));
       }
-      keyChanges[loser.rawOptionKey] = assigned;
+      // Keep Forge/NeoForge "<key>:<MODIFIER>" format so the mod loader still parses the binding
+      const usesModifierFormat = /^key\.[a-z]+\.[^:]+:[a-z_]+$/i.test(String(loser.keyCode || ''));
+      const finalValue = usesModifierFormat ? `${assigned}:NONE` : assigned;
+      keyChanges[loser.rawOptionKey] = finalValue;
       changes.push({
         actionId: loser.actionId,
         label: loser.label,
@@ -7697,30 +8019,55 @@ async function searchOnlineSkins({ query = '', category = 'popular', page = 1 } 
   }
 
   // 3. Query MineSkin gallery API (millions of tagged community 64x64 skins hosted on Mojang CDN)
+  // v40.8: v1 list still filters by name best; v2 is the fallback when v1 is down/empty. Unnamed skins get unique labels.
   const queriesToRun = cleanQuery
     ? [cleanQuery]
     : (Array.isArray(preset.curatedQueries) && preset.curatedQueries.length
       ? preset.curatedQueries.slice(0, 2)
       : [preset.filter || '']);
 
+  const prettyLabel = (rawName, qStr, idx) => {
+    const n = String(rawName || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (n && n.length >= 2) return n.slice(0, 28);
+    return `${qStr ? qStr.charAt(0).toUpperCase() + qStr.slice(1) : 'Skin'} #${(safePage - 1) * 20 + idx + 1}`;
+  };
+
   await Promise.all(queriesToRun.map(async (qStr) => {
+    let added = 0;
     try {
       const apiUrl = `https://api.mineskin.org/get/list/${safePage}?size=20${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
       const data = await fetchJson(apiUrl);
-      for (const sk of (data?.skins || [])) {
+      (data?.skins || []).forEach((sk, idx) => {
         const rawUrl = String(sk?.url || '');
         const hash = rawUrl.split('/').pop();
-        if (!hash || !/^[a-f0-9]{32,68}$/i.test(hash)) continue;
-        const cleanLabel = String(sk.name || qStr || 'Skin 3D').trim().slice(0, 28) || 'Skin 3D';
+        if (!hash || !/^[a-f0-9]{32,68}$/i.test(hash)) return;
         pushSkin({
           id: `ms-${sk.id || hash.slice(0, 12)}`,
-          name: cleanLabel,
+          name: prettyLabel(sk.name, qStr, idx),
           textureUrl: `https://textures.minecraft.net/texture/${hash}`,
           previewUrl: `https://mc-heads.net/body/${hash}/120`,
           faceUrl: `https://mc-heads.net/avatar/${hash}/64`,
           badge: qStr ? `#${qStr}` : '🌐 Cộng đồng'
         });
-      }
+        added++;
+      });
+    } catch (_) {}
+    if (added > 0) return;
+    try {
+      const v2Url = `https://api.mineskin.org/v2/skins?size=20${qStr ? `&filter=${encodeURIComponent(qStr)}` : ''}`;
+      const data2 = await fetchJson(v2Url);
+      (data2?.skins || []).forEach((sk, idx) => {
+        const hash = String(sk?.texture || '');
+        if (!/^[a-f0-9]{32,68}$/i.test(hash)) return;
+        pushSkin({
+          id: `ms2-${sk.uuid || hash.slice(0, 12)}`,
+          name: prettyLabel(sk.name, qStr, idx),
+          textureUrl: `https://textures.minecraft.net/texture/${hash}`,
+          previewUrl: `https://mc-heads.net/body/${hash}/120`,
+          faceUrl: `https://mc-heads.net/avatar/${hash}/64`,
+          badge: '🌐 Cộng đồng'
+        });
+      });
     } catch (_) {}
   }));
 
@@ -7792,9 +8139,8 @@ async function installFriendSkinSyncPack({
   const installed = [];
   const skipped = [];
 
-  const slugs = effectiveLoader === 'fabric'
-    ? ['customskinloader', '3dskinlayers', 'capes', 'skinshuffle']
-    : ['customskinloader', '3dskinlayers', 'capes'];
+  // v40.8: SkinShuffle also hooks the player-skin pipeline and fights CustomSkinLoader → don't pair them
+  const slugs = ['customskinloader', '3dskinlayers', 'capes'];
 
   for (const slug of slugs) {
     try {
@@ -7905,6 +8251,7 @@ async function togglePvpClientMode({
 
   if (!enable) {
     let disabledCount = 0;
+    const disabledNames = [];
     for (const f of (prevManifest.installedMods || [])) {
       const clean = path.basename(String(f || '')).replace(/\.disabled$/i, '');
       if (!clean) continue;
@@ -7919,13 +8266,30 @@ async function togglePvpClientMode({
           disabledCount++;
         } catch (_) {}
       }
+      if (fs.existsSync(disPath)) disabledNames.push(clean);
     }
+    // v40.8: keep PvP mods OFF across launches (auto version-sync must not re-enable them)
+    setModUserDisabledFlags(modsDir, disabledNames, true);
     if (prevManifest.lowFirePack) {
       try { equipResourcePackInGame(targetDir, prevManifest.lowFirePack, false); } catch (_) {}
+    }
+    // v40.8: restore the player's own toggleSprint / autoJump / VSync from before PvP Mode
+    if (prevManifest.prevOptions && typeof prevManifest.prevOptions === 'object') {
+      try {
+        const optsPath = path.join(targetDir, 'options.txt');
+        if (fs.existsSync(optsPath)) {
+          let content = fs.readFileSync(optsPath, 'utf8');
+          for (const [k, v] of Object.entries(prevManifest.prevOptions)) {
+            content = v === null ? removeOptLine(content, k) : writeOptValue(content, k, v);
+          }
+          fs.writeFileSync(optsPath, content, 'utf8');
+        }
+      } catch (_) {}
     }
     writePvpModeManifest(targetDir, {
       ...prevManifest,
       enabled: false,
+      prevOptions: null,
       updatedAt: Date.now()
     });
     return {
@@ -7984,9 +8348,18 @@ async function togglePvpClientMode({
   } catch (_) {}
 
   // Set Vanilla ToggleSprint = true, AutoJump = false, VSync = false in options.txt for crisp 0ms input PvP!
+  // v40.8: remember the player's previous values once, so turning PvP off restores them
+  let prevOptions = prevManifest.enabled && prevManifest.prevOptions ? prevManifest.prevOptions : null;
   try {
     const optsPath = path.join(targetDir, 'options.txt');
     let content = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
+    if (!prevOptions) {
+      prevOptions = {
+        toggleSprint: readOptValue(content, 'toggleSprint'),
+        autoJump: readOptValue(content, 'autoJump'),
+        enableVsync: readOptValue(content, 'enableVsync')
+      };
+    }
     const nl = content.includes('\r\n') ? '\r\n' : '\n';
     const setOpt = (k, v) => {
       const rx = new RegExp(`^${k}:.*(\\r?)$`, 'm');
@@ -8000,12 +8373,14 @@ async function togglePvpClientMode({
   } catch (_) {}
 
   const uniqueMods = Array.from(new Set(installedMods));
+  setModUserDisabledFlags(modsDir, uniqueMods, false);
   writePvpModeManifest(targetDir, {
     enabled: true,
     mcVersion,
     loader: effectiveLoader,
     installedMods: uniqueMods,
     lowFirePack,
+    prevOptions,
     updatedAt: Date.now()
   });
 
@@ -8196,10 +8571,9 @@ async function installReplayStudioPack({
   const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
   const installed = [];
 
-  // Prefer Flashback on modern Fabric (super lightweight & intuitive UI), fallback to ReplayMod
-  const recorderCandidates = effectiveLoader === 'fabric'
-    ? ['flashback', 'replaymod']
-    : ['replaymod'];
+  // Prefer Flashback (super lightweight & intuitive UI), fallback to ReplayMod — try both on every loader
+  const recorderCandidates = ['flashback', 'replaymod'];
+  let recorderFile = '';
 
   for (const slug of recorderCandidates) {
     try {
@@ -8213,6 +8587,7 @@ async function installReplayStudioPack({
       }, onStatus);
       if (r?.fileName) {
         installed.push(r.fileName);
+        recorderFile = r.fileName;
         break;
       }
     } catch (_) {}
@@ -8243,7 +8618,9 @@ async function installReplayStudioPack({
   fs.mkdirSync(videosDir, { recursive: true });
 
   return {
-    ok: installed.length > 0,
+    // v40.8: only report success when an actual replay recorder was installed (Freecam alone isn't a replay studio)
+    ok: Boolean(recorderFile),
+    error: recorderFile ? '' : `Chưa có trình quay Replay (Flashback / ReplayMod) hỗ trợ MC ${mcVersion} ${effectiveLoader.toUpperCase()} — hãy thử Fabric hoặc phiên bản MC khác.`,
     effectiveLoader,
     installed,
     ffmpegReady: Boolean(ffmpegInfo?.found),
@@ -8251,7 +8628,341 @@ async function installReplayStudioPack({
   };
 }
 
+/* ====================== v40.8 SERVERS 2.0 — NATIVE STATUS PING & servers.dat SYNC ====================== */
+// Speaks the Minecraft "Server List Ping" protocol directly (like the in-game Multiplayer screen):
+// SRV lookup → handshake → status JSON → ping/pong latency. No third-party website needed.
+function slpWriteVarInt(value) {
+  const bytes = [];
+  let v = value >>> 0;
+  do {
+    let b = v & 0x7f;
+    v >>>= 7;
+    if (v !== 0) b |= 0x80;
+    bytes.push(b);
+  } while (v !== 0);
+  return Buffer.from(bytes);
+}
+
+function slpReadVarInt(buf, offset) {
+  let result = 0;
+  let shift = 0;
+  let pos = offset;
+  while (pos < buf.length) {
+    const b = buf[pos++];
+    result |= (b & 0x7f) << shift;
+    if ((b & 0x80) === 0) return { value: result, size: pos - offset };
+    shift += 7;
+    if (shift > 35) throw new Error('VarInt quá dài');
+  }
+  return null; // need more bytes
+}
+
+function slpPacket(id, payload) {
+  const body = Buffer.concat([slpWriteVarInt(id), payload]);
+  return Buffer.concat([slpWriteVarInt(body.length), body]);
+}
+
+function parseServerAddress(address) {
+  let raw = String(address || '').trim();
+  if (!raw) return null;
+  raw = raw.replace(/^minecraft:\/\//i, '').replace(/\/.*$/, '');
+  let host = raw;
+  let port = 0;
+  const v6 = raw.match(/^\[([^\]]+)\](?::(\d+))?$/);
+  if (v6) {
+    host = v6[1];
+    port = Number(v6[2] || 0);
+  } else if ((raw.match(/:/g) || []).length === 1) {
+    const [h, p] = raw.split(':');
+    host = h;
+    port = Number(p) || 0;
+  }
+  if (!host) return null;
+  return { host: host.toLowerCase(), port: port > 0 && port < 65536 ? port : 0 };
+}
+
+async function resolveMinecraftSrv(host) {
+  const dns = require('dns').promises;
+  if (net.isIP(host) || host === 'localhost') return null;
+  try {
+    const recs = await Promise.race([
+      dns.resolveSrv(`_minecraft._tcp.${host}`),
+      new Promise((_r, rej) => setTimeout(() => rej(new Error('srv-timeout')), 2000))
+    ]);
+    if (Array.isArray(recs) && recs.length) {
+      recs.sort((a, b) => a.priority - b.priority || b.weight - a.weight);
+      return { host: recs[0].name, port: recs[0].port };
+    }
+  } catch (_) {}
+  return null;
+}
+
+function flattenMotd(desc) {
+  if (desc == null) return '';
+  if (typeof desc === 'string') return desc;
+  let out = '';
+  const walk = (node) => {
+    if (node == null) return;
+    if (typeof node === 'string') { out += node; return; }
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (typeof node.text === 'string') out += node.text;
+    else if (typeof node.translate === 'string') out += node.translate;
+    if (Array.isArray(node.extra)) node.extra.forEach(walk);
+  };
+  walk(desc);
+  return out;
+}
+
+function cleanMotdText(s) {
+  return String(s || '')
+    .replace(/§[0-9a-fk-orx]/gi, '')
+    .replace(/[\u0000-\u0009\u000b-\u001f]/g, '')
+    .split('\n').map((l) => l.replace(/\s{2,}/g, ' ').trim()).filter(Boolean).slice(0, 2).join('\n')
+    .slice(0, 160);
+}
+
+function slpStatusOnce(host, port, handshakeHost, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const sock = net.createConnection({ host, port });
+    let buf = Buffer.alloc(0);
+    let statusJson = null;
+    let pingSentAt = 0;
+    let finished = false;
+    const done = (err, val) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      try { sock.destroy(); } catch (_) {}
+      if (err) reject(err); else resolve(val);
+    };
+    const timer = setTimeout(() => {
+      if (statusJson) done(null, { json: statusJson, latencyMs: 0 });
+      else done(new Error('Hết thời gian chờ phản hồi'));
+    }, timeoutMs);
+    sock.setNoDelay(true);
+    sock.on('connect', () => {
+      const hostBuf = Buffer.from(handshakeHost, 'utf8');
+      const portBuf = Buffer.alloc(2);
+      portBuf.writeUInt16BE(port);
+      const handshake = slpPacket(0x00, Buffer.concat([
+        slpWriteVarInt(767), // protocol id is ignored for status requests
+        slpWriteVarInt(hostBuf.length), hostBuf, portBuf,
+        slpWriteVarInt(1)
+      ]));
+      sock.write(Buffer.concat([handshake, slpPacket(0x00, Buffer.alloc(0))]));
+    });
+    sock.on('data', (chunk) => {
+      buf = Buffer.concat([buf, chunk]);
+      try {
+        while (buf.length) {
+          const len = slpReadVarInt(buf, 0);
+          if (!len || buf.length < len.size + len.value) return;
+          const packet = buf.subarray(len.size, len.size + len.value);
+          buf = buf.subarray(len.size + len.value);
+          const pid = slpReadVarInt(packet, 0);
+          if (!pid) continue;
+          if (pid.value === 0x00 && !statusJson) {
+            const strLen = slpReadVarInt(packet, pid.size);
+            const start = pid.size + strLen.size;
+            statusJson = JSON.parse(packet.subarray(start, start + strLen.value).toString('utf8'));
+            const payload = Buffer.alloc(8);
+            payload.writeBigInt64BE(BigInt(Date.now()));
+            pingSentAt = Date.now();
+            sock.write(slpPacket(0x01, payload));
+          } else if (pid.value === 0x01 && statusJson) {
+            done(null, { json: statusJson, latencyMs: Math.max(1, Date.now() - pingSentAt) });
+            return;
+          }
+        }
+      } catch (e) {
+        done(statusJson ? null : e, statusJson ? { json: statusJson, latencyMs: 0 } : undefined);
+      }
+    });
+    sock.on('error', (e) => done(statusJson ? null : e, statusJson ? { json: statusJson, latencyMs: 0 } : undefined));
+    sock.on('close', () => {
+      if (statusJson) done(null, { json: statusJson, latencyMs: pingSentAt ? Math.max(1, Date.now() - pingSentAt) : 0 });
+      else done(new Error('Máy chủ đóng kết nối'));
+    });
+  });
+}
+
+async function pingMinecraftServer(address, { timeoutMs = 4500 } = {}) {
+  const parsed = parseServerAddress(address);
+  if (!parsed) return { ok: false, online: false, error: 'Địa chỉ trống' };
+  let target = { host: parsed.host, port: parsed.port || 25565 };
+  if (!parsed.port) {
+    const srv = await resolveMinecraftSrv(parsed.host);
+    if (srv) target = srv;
+  }
+  const t0 = Date.now();
+  const { json, latencyMs } = await slpStatusOnce(target.host, target.port, parsed.host, timeoutMs);
+  const players = json?.players || {};
+  const sample = Array.isArray(players.sample)
+    ? players.sample.map((p) => cleanMotdText(p?.name || '')).filter((n) => n && !/^\s*$/.test(n)).slice(0, 12)
+    : [];
+  const favicon = typeof json?.favicon === 'string' && /^data:image\/png;base64,/i.test(json.favicon) ? json.favicon : null;
+  return {
+    ok: true,
+    online: true,
+    source: 'native',
+    latencyMs: latencyMs || Math.max(1, Date.now() - t0),
+    motd: cleanMotdText(flattenMotd(json?.description)),
+    version: cleanMotdText(json?.version?.name || ''),
+    protocol: Number(json?.version?.protocol) || 0,
+    playersOnline: Number(players.online) || 0,
+    playersMax: Number(players.max) || 0,
+    playersSample: sample,
+    icon: favicon,
+    resolvedHost: `${target.host}:${target.port}`
+  };
+}
+
+// servers.dat = uncompressed NBT { servers: [ { name, ip, icon?, acceptTextures? } ] }
+function readServersDat(gameDir) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const datPath = path.join(rootDir, 'servers.dat');
+  if (!fs.existsSync(datPath)) return { ok: true, path: datPath, servers: [] };
+  try {
+    let raw = fs.readFileSync(datPath);
+    if (raw[0] === 0x1f && raw[1] === 0x8b) raw = zlib.gunzipSync(raw);
+    const root = worldCreator._internal.readNbtRoot(raw);
+    const list = root?.v?.servers?.v || [];
+    const servers = list
+      .map((c) => ({
+        name: String(c?.v?.name?.v || ''),
+        ip: String(c?.v?.ip?.v || '').trim(),
+        icon: c?.v?.icon?.v ? `data:image/png;base64,${c.v.icon.v}` : ''
+      }))
+      .filter((s) => s.ip);
+    return { ok: true, path: datPath, servers, root };
+  } catch (err) {
+    return { ok: false, path: datPath, servers: [], error: err.message };
+  }
+}
+
+function syncServersDat(gameDir, launcherServers = [], { writeToGame = true, writeList = null } = {}) {
+  const { nbt, TAG, writeNbtRoot } = worldCreator._internal;
+  const cur = readServersDat(gameDir);
+  if (!cur.ok) return { ok: false, error: cur.error, importedFromGame: [] };
+  const norm = (ip) => String(ip || '').trim().toLowerCase().replace(/:25565$/, '');
+  const launcherSet = new Set((launcherServers || []).map((s) => norm(s?.ip)));
+  const gameSet = new Set(cur.servers.map((s) => norm(s.ip)));
+  // servers the player added inside Minecraft → shown in the launcher too
+  const importedFromGame = cur.servers
+    .filter((s) => !launcherSet.has(norm(s.ip)))
+    .map((s) => ({ name: s.name || s.ip, ip: s.ip, cat: 'vn', fromGame: true }));
+  // launcher favourites → appear in the in-game Multiplayer list (keep the game's own order & icons)
+  // writeList lets the UI push only the player's own / pinned servers (not the whole featured catalogue)
+  const pushSource = Array.isArray(writeList) ? writeList : (launcherServers || []);
+  const toAdd = pushSource.filter((s) => s && s.ip && !gameSet.has(norm(s.ip)) && !String(s.ip).includes('[object'));
+  let wrote = false;
+  if (writeToGame && toAdd.length) {
+    let root = cur.root;
+    if (!root || root.t !== TAG.COMPOUND) {
+      root = nbt.compound({});
+      root._rootName = '';
+    }
+    const existing = root.v.servers?.t === TAG.LIST ? root.v.servers.v : [];
+    const added = toAdd.slice(0, 60).map((s) => nbt.compound({
+      name: nbt.string(String(s.name || s.ip).slice(0, 64)),
+      ip: nbt.string(String(s.ip).trim())
+    }));
+    root.v.servers = nbt.list(TAG.COMPOUND, [...existing, ...added]);
+    try {
+      if (fs.existsSync(cur.path)) fs.copyFileSync(cur.path, `${cur.path}.bw-bak`);
+      const tmp = `${cur.path}.tmp`;
+      fs.mkdirSync(path.dirname(cur.path), { recursive: true });
+      fs.writeFileSync(tmp, writeNbtRoot(root));
+      fs.renameSync(tmp, cur.path);
+      wrote = true;
+    } catch (err) {
+      return { ok: false, error: err.message, importedFromGame };
+    }
+  }
+  return { ok: true, importedFromGame, addedToGame: wrote ? toAdd.length : 0, gameCount: cur.servers.length };
+}
+
+/* ====================== v40.8 UNIVERSAL DRAG & DROP INSTALL ====================== */
+// Looks inside the dropped file and puts it in the right place (mods / shaderpacks / resourcepacks / saves).
+function classifyDroppedFile(filePath) {
+  const lower = String(filePath || '').toLowerCase();
+  if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return { kind: 'missing' };
+  if (lower.endsWith('.mrpack')) return { kind: 'mrpack' };
+  if (!/\.(jar|zip)$/.test(lower)) return { kind: 'unknown' };
+  let Zip = null;
+  try { Zip = require('adm-zip'); } catch (_) { return { kind: lower.endsWith('.jar') ? 'mod' : 'unknown' }; }
+  let names = [];
+  try {
+    names = new Zip(filePath).getEntries().map((e) => e.entryName.replace(/\\/g, '/'));
+  } catch (_) {
+    return { kind: 'broken' };
+  }
+  const has = (re) => names.some((n) => re.test(n));
+  if (has(/^(fabric\.mod\.json|quilt\.mod\.json|META-INF\/(neoforge\.)?mods\.toml|mcmod\.info)$/i)) return { kind: 'mod' };
+  if (lower.endsWith('.jar')) return { kind: 'mod' };
+  if (has(/^([^/]+\/)?level\.dat$/i)) return { kind: 'world' };
+  if (has(/^([^/]+\/)?shaders\//i)) return { kind: 'shader' };
+  const hasMeta = has(/^([^/]+\/)?pack\.mcmeta$/i);
+  if (hasMeta && has(/^([^/]+\/)?assets\//i)) return { kind: 'resourcepack' };
+  if (hasMeta && has(/^([^/]+\/)?data\//i)) return { kind: 'datapack' };
+  if (hasMeta) return { kind: 'resourcepack' };
+  if (has(/^(modrinth\.index\.json|manifest\.json)$/i)) return { kind: 'modpack-zip' };
+  return { kind: 'unknown' };
+}
+
+function installDroppedAddonFile({ gameDir, instanceDir = '', filePath } = {}) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const targetDir = instanceDir && fs.existsSync(String(instanceDir)) ? String(instanceDir) : rootDir;
+  const info = classifyDroppedFile(filePath);
+  const baseName = path.basename(String(filePath || ''));
+  const copyInto = (sub) => {
+    const dir = path.join(targetDir, sub);
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, baseName);
+    if (path.resolve(dest) !== path.resolve(filePath)) fs.copyFileSync(filePath, dest);
+    return dest;
+  };
+  switch (info.kind) {
+    case 'mod': {
+      const dest = copyInto('mods');
+      let loaders = [];
+      try {
+        const meta = inspectJarModMetadata(dest);
+        loaders = Array.isArray(meta?.inspectedLoaders) ? meta.inspectedLoaders : (Array.isArray(meta?.loaders) ? meta.loaders : []);
+      } catch (_) {}
+      try { setModUserDisabledFlags(path.join(targetDir, 'mods'), baseName, false); } catch (_) {}
+      return { ok: true, kind: 'mod', fileName: baseName, loaders, targetDir };
+    }
+    case 'shader': {
+      copyInto('shaderpacks');
+      try { equipShaderInGame(targetDir, baseName); } catch (_) {}
+      return { ok: true, kind: 'shader', fileName: baseName, targetDir };
+    }
+    case 'resourcepack': {
+      copyInto('resourcepacks');
+      try { equipResourcePackInGame(targetDir, baseName, true); } catch (_) {}
+      return { ok: true, kind: 'resourcepack', fileName: baseName, targetDir };
+    }
+    case 'world': {
+      const r = importWorldZip(rootDir, filePath);
+      return { ...(r || {}), ok: Boolean(r?.ok), kind: 'world', fileName: baseName };
+    }
+    case 'mrpack':
+    case 'modpack-zip':
+      return { ok: true, kind: 'mrpack', deferred: true, fileName: baseName, filePath };
+    case 'datapack':
+      return { ok: false, kind: 'datapack', fileName: baseName, error: 'Đây là Datapack — hãy mở thẻ Thế giới → chọn Map → "Datapack" để thêm vào đúng thế giới.' };
+    case 'broken':
+      return { ok: false, kind: 'broken', fileName: baseName, error: 'File nén bị hỏng hoặc tải chưa xong.' };
+    default:
+      return { ok: false, kind: info.kind, fileName: baseName, error: 'Không nhận ra loại file này (hỗ trợ: Mod .jar, Shader/Resource Pack .zip, Map .zip, Modpack .mrpack).' };
+  }
+}
+
 module.exports = {
+  applyGentleSmoothOptions,
+  applyGentleJvmTuning,
+  computeGentleFpsCap,
   fetchVersionManifest,
   fetchLoaderVersions,
   getInstalledVersions,
@@ -8338,5 +9049,17 @@ module.exports = {
   createStandaloneQuickWorld,
   getReplayStudioStatus,
   ensurePortableFfmpeg,
-  installReplayStudioPack
+  installReplayStudioPack,
+  saveCustomLocalCape,
+  removeCustomLocalCape,
+  getCustomLocalCape,
+  configureCrackSkinSupport,
+  setModUserDisabledFlags,
+  normalizeKeyCodeForConflict,
+  pingMinecraftServer,
+  parseServerAddress,
+  readServersDat,
+  syncServersDat,
+  classifyDroppedFile,
+  installDroppedAddonFile
 };

@@ -45,28 +45,38 @@ function encodeModifiedUtf8(str) {
 
 function decodeModifiedUtf8(buf, start, len) {
   const end = start + len;
-  const chars = [];
+  // v40.8: build the string in chunks — spreading huge arrays into fromCharCode overflows the call stack
+  let out = '';
+  let chunk = [];
+  const flush = () => {
+    if (chunk.length) {
+      out += String.fromCharCode.apply(null, chunk);
+      chunk = [];
+    }
+  };
   let i = start;
   while (i < end) {
     const b1 = buf[i] & 0xff;
     if ((b1 & 0x80) === 0) {
-      chars.push(b1);
+      chunk.push(b1);
       i += 1;
     } else if ((b1 & 0xe0) === 0xc0 && i + 1 < end) {
       const b2 = buf[i + 1] & 0x3f;
-      chars.push(((b1 & 0x1f) << 6) | b2);
+      chunk.push(((b1 & 0x1f) << 6) | b2);
       i += 2;
     } else if ((b1 & 0xf0) === 0xe0 && i + 2 < end) {
       const b2 = buf[i + 1] & 0x3f;
       const b3 = buf[i + 2] & 0x3f;
-      chars.push(((b1 & 0x0f) << 12) | (b2 << 6) | b3);
+      chunk.push(((b1 & 0x0f) << 12) | (b2 << 6) | b3);
       i += 3;
     } else {
-      chars.push(b1);
+      chunk.push(b1);
       i += 1;
     }
+    if (chunk.length >= 8192) flush();
   }
-  return String.fromCharCode(...chars);
+  flush();
+  return out;
 }
 
 function readNbtRoot(rawBuf) {
@@ -950,20 +960,39 @@ function inspectWorldNbt(worldDir) {
   };
 }
 
-function applyPlayerPatchesToCompound(playerObj, { gameTypeId, reviveHardcore, teleportCoords }) {
+function applyPlayerPatchesToCompound(playerObj, { gameTypeId, reviveHardcore, teleportCoords, fallbackSpawn = null }) {
   if (!playerObj) return;
   if (gameTypeId !== null && gameTypeId !== undefined) {
     playerObj.playerGameType = nbt.int(gameTypeId);
   }
   if (reviveHardcore) {
+    // v40.8: if the player died in the Void / below the world or while burning (lava/fire),
+    // move them back to spawn so they don't die again the moment the world loads
+    const posList = playerObj.Pos?.v;
+    const curY = Array.isArray(posList) && posList.length >= 3 ? Number(posList[1].v) : 0;
+    const wasBurning = Number(playerObj.Fire?.v || 0) > 0;
+    if (!teleportCoords && fallbackSpawn && (curY < -60 || wasBurning)) {
+      teleportCoords = fallbackSpawn;
+    }
     playerObj.playerGameType = nbt.int(0);
     playerObj.Health = nbt.float(20.0);
     playerObj.DeathTime = nbt.short(0);
     playerObj.HurtTime = nbt.short(0);
     playerObj.FallDistance = nbt.float(0.0);
     playerObj.Fire = nbt.short(-20);
+    playerObj.Air = nbt.short(300);
     playerObj.foodLevel = nbt.int(20);
     playerObj.foodSaturationLevel = nbt.float(5.0);
+    playerObj.Motion = nbt.list(TAG.DOUBLE, [nbt.double(0), nbt.double(0), nbt.double(0)]);
+    // Leaving Spectator: drop flying / invulnerable flags so Survival behaves normally
+    if (playerObj.abilities?.v) {
+      const ab = playerObj.abilities.v;
+      ab.flying = nbt.byte(0);
+      ab.mayfly = nbt.byte(0);
+      ab.invulnerable = nbt.byte(0);
+      ab.instabuild = nbt.byte(0);
+      ab.mayBuild = nbt.byte(1);
+    }
   }
   if (teleportCoords) {
     playerObj.Pos = nbt.list(TAG.DOUBLE, [
@@ -1048,7 +1077,11 @@ function rescueAndPatchWorldNbt(worldDir, patches = {}) {
   }
 
   if (patches.clearWeatherAndDay) {
-    dataObj.DayTime = nbt.long(1000);
+    // v40.8: jump to the morning of the CURRENT day — keep the F3 day counter instead of resetting to Day 0
+    let curTicks = 0n;
+    try { curTicks = BigInt(dataObj.DayTime?.v ?? 0); } catch (_) { curTicks = 0n; }
+    if (curTicks < 0n) curTicks = 0n;
+    dataObj.DayTime = nbt.long((curTicks / 24000n) * 24000n + 1000n);
     dataObj.raining = nbt.byte(0);
     dataObj.thundering = nbt.byte(0);
     dataObj.rainTime = nbt.int(0);
@@ -1096,7 +1129,8 @@ function rescueAndPatchWorldNbt(worldDir, patches = {}) {
       applyPlayerPatchesToCompound(dataObj.Player.v, {
         gameTypeId: targetGameTypeId,
         reviveHardcore: doRevive,
-        teleportCoords: doTeleport ? spawnCoords : null
+        teleportCoords: doTeleport ? spawnCoords : null,
+        fallbackSpawn: spawnCoords
       });
     }
     // Also patch all playerdata/*.dat files so singleplayer/LAN UUID profiles stay in sync!
@@ -1111,7 +1145,8 @@ function rescueAndPatchWorldNbt(worldDir, patches = {}) {
             applyPlayerPatchesToCompound(pRoot.v, {
               gameTypeId: targetGameTypeId,
               reviveHardcore: doRevive,
-              teleportCoords: doTeleport ? spawnCoords : null
+              teleportCoords: doTeleport ? spawnCoords : null,
+              fallbackSpawn: spawnCoords
             });
             const pTmp = `${pFull}.tmp`;
             fs.writeFileSync(pTmp, zlib.gzipSync(writeNbtRoot(pRoot)));

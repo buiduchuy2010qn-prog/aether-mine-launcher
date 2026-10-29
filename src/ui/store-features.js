@@ -1197,6 +1197,16 @@ async function loadModrinthStore(append = false) {
           );
         }
         await refreshLocalAddonsCount();
+        // v40.8: Shaders need Iris (Fabric) — if the player is still on Vanilla, switch to Fabric so the shader actually loads
+        if (!curTarget.isPack && state.activeModStoreType === 'shader' && (state.selectedCore === 'vanilla' || !state.selectedCore)) {
+          if (typeof window.selectMcVersionAndCore === 'function') {
+            await window.selectMcVersionAndCore(state.selectedVersion || curTarget.mcVersion, 'fabric');
+          } else {
+            state.selectedCore = 'fabric';
+            if (typeof saveCurrentConfig === 'function') saveCurrentConfig();
+          }
+          showAetherNotification('✨ Shader cần Iris + Sodium chạy trên Fabric — BlockWay đã tự chuyển nhân sang Fabric để vào game có Shader ngay!', 'info', 5200);
+        }
         if (curTarget.isPack && typeof refreshPackInstances === 'function') {
           await refreshPackInstances();
         }
@@ -1428,6 +1438,35 @@ async function renderLocalAddonsManager(skipAutoUpdateScan = false) {
   }
 }
 
+// v40.8 Servers 2.0: soft hint when the server's reported version doesn't cover the selected Minecraft version
+function serverVersionMismatchNote(verName, selected) {
+  const sel = String(selected || '').trim();
+  if (!sel || !/^\d+\.\d+/.test(sel)) return '';
+  const found = String(verName || '').match(/\b(?:1\.\d{1,2}(?:\.\d{1,2})?|2\d\.\d{1,2}(?:\.\d{1,2})?)\b/g) || [];
+  if (!found.length) return '';
+  const tup = (v) => v.split('.').map((n) => Number(n) || 0);
+  // compare only as many parts as the server wrote ("1.21" covers 1.21.x)
+  const cmpPrefix = (a, b) => {
+    const A = tup(a);
+    const B = tup(b);
+    for (let i = 0; i < B.length; i++) {
+      const d = (A[i] || 0) - B[i];
+      if (d) return d;
+    }
+    return 0;
+  };
+  if (found.length >= 2) {
+    const sorted = [...found].sort((x, y) => cmpPrefix(x, y) || 0);
+    const lo = sorted[0];
+    const hi = sorted[sorted.length - 1];
+    if (cmpPrefix(sel, lo) >= 0 && cmpPrefix(sel, hi) <= 0) return '';
+    return `Server ghi hỗ trợ MC ${lo} → ${hi} — bạn đang chọn ${sel}. Nếu không vào được, đổi phiên bản ở Trang chủ.`;
+  }
+  if (/\+|\.x\b|-\s*$/i.test(verName) && cmpPrefix(sel, found[0]) >= 0) return '';
+  if (cmpPrefix(sel, found[0]) === 0) return '';
+  return `Server báo phiên bản ${found[0]} — bạn đang chọn ${sel}. Nhiều server vẫn vào được nhờ ViaVersion; nếu bị từ chối hãy đổi sang ${found[0]}.`;
+}
+
 function renderFavoriteServers() {
   const container = document.getElementById('favoriteServersList');
   if (!container) return;
@@ -1479,13 +1518,21 @@ function renderFavoriteServers() {
     </div>`;
     return;
   }
+  const pinnedSet = new Set(Array.isArray(state.pinnedServers) ? state.pinnedServers : []);
+  // v40.8: 📌 pinned servers always on top
+  filteredWithIdx.sort((a, b) => Number(pinnedSet.has(b.srv.ip)) - Number(pinnedSet.has(a.srv.ip)));
   container.innerHTML = filteredWithIdx.map(({ srv, idx }) => {
     const isSelected = state.serverIp === srv.ip;
+    const isPinned = pinnedSet.has(srv.ip);
     const pingInfo = (state.serverPingCache && state.serverPingCache[srv.ip]) || null;
-    const latencyTag = pingInfo?.online && pingInfo.latencyMs ? `<span class="srv-latency-tag">${pingInfo.latencyMs}ms</span>` : '';
+    const ms = Number(pingInfo?.latencyMs) || 0;
+    const msClass = ms <= 0 ? '' : (ms < 80 ? 'good' : (ms < 180 ? 'mid' : 'bad'));
+    const latencyTag = pingInfo?.online && ms ? `<span class="srv-latency-tag ${msClass}" title="Độ trễ thật từ máy bạn tới server">${ms}ms</span>` : '';
+    const sampleTip = Array.isArray(pingInfo?.playersSample) && pingInfo.playersSample.length
+      ? ` title="Đang chơi: ${escapeHtml(pingInfo.playersSample.join(', '))}"` : '';
     const statusHtml = pingInfo
       ? (pingInfo.online
-          ? `<span class="srv-ping-badge online">● ${(pingInfo.playersOnline || 0).toLocaleString('vi-VN')}/${(pingInfo.playersMax || 0).toLocaleString('vi-VN')} người</span>${latencyTag}`
+          ? `<span class="srv-ping-badge online"${sampleTip}>● ${(pingInfo.playersOnline || 0).toLocaleString('vi-VN')}/${(pingInfo.playersMax || 0).toLocaleString('vi-VN')} người</span>${latencyTag}`
           : `<span class="srv-ping-badge offline">● Ngoại tuyến</span>`)
       : `<span class="srv-ping-badge pending">⏳ Đang kiểm tra...</span>`;
     const safeIcon = (pingInfo?.icon && /^data:image\/|^https?:\/\//i.test(String(pingInfo.icon))) ? escapeHtml(pingInfo.icon) : '';
@@ -1497,26 +1544,56 @@ function renderFavoriteServers() {
       : (srv.cat === 'crack' ? '<span class="srv-cat-pill crack">🔓 Crack Quốc Tế</span>' : '<span class="srv-cat-pill vn">🇻🇳 Việt Nam</span>');
     const safeSrvName = escapeHtml(srv.name);
     const safeSrvIp = escapeHtml(srv.ip);
-    return `<div class="srv-card-row ${isSelected ? 'active' : ''}">
+    const verNote = pingInfo?.online ? serverVersionMismatchNote(pingInfo.version, state.selectedVersion) : '';
+    const verBadge = pingInfo?.online && pingInfo.version
+      ? `<span class="srv-ver-pill ${verNote ? 'warn' : ''}" title="${escapeHtml(verNote || `Server báo phiên bản: ${pingInfo.version}`)}">${verNote ? '⚠ ' : ''}${escapeHtml(String(pingInfo.version).slice(0, 34))}</span>`
+      : '';
+    const motdHtml = pingInfo?.online && pingInfo.motd
+      ? `<div class="srv-motd-line" title="${escapeHtml(pingInfo.motd)}">${escapeHtml(pingInfo.motd).replace(/\n/g, ' • ')}</div>`
+      : '';
+    return `<div class="srv-card-row ${isSelected ? 'active' : ''} ${isPinned ? 'is-pinned' : ''}">
       <div class="srv-card-left">
         ${iconHtml}
         <div class="srv-card-meta">
           <div class="srv-title-line">
-            <strong class="srv-name-text" title="${safeSrvName}">${safeSrvName}</strong>
+            <strong class="srv-name-text" title="${safeSrvName}">${isPinned ? '📌 ' : ''}${safeSrvName}</strong>
             ${statusHtml}
           </div>
-          <div class="srv-ip-line">${catBadge} • IP: <span>${safeSrvIp}</span></div>
+          ${motdHtml}
+          <div class="srv-ip-line">${catBadge} ${verBadge} • IP: <span>${safeSrvIp}</span></div>
         </div>
       </div>
       <div class="srv-card-actions">
-        <button class="btn-install-mod ${isSelected ? 'installed' : ''}" data-joinsrv="${safeSrvIp}">${isSelected ? '✓ Đang chọn' : '▶ Tham gia'}</button>
+        <button class="btn-install-mod srv-direct-btn" data-directsrv="${safeSrvIp}" title="Mở game và vào thẳng server này ngay (chỉ lần này)">🚀 Vào Thẳng</button>
+        <button class="btn-install-mod ${isSelected ? 'installed' : ''}" data-joinsrv="${safeSrvIp}" title="Ghim server này vào nút CHƠI NGAY">${isSelected ? '✓ Đang chọn' : '▶ Tham gia'}</button>
         <div class="srv-secondary-btns">
+          <button class="srv-icon-btn ${isPinned ? 'is-on' : ''}" data-pinsrv="${safeSrvIp}" title="${isPinned ? 'Bỏ ghim' : 'Ghim lên đầu danh sách'}">📌</button>
           <button class="srv-icon-btn" data-copysrv="${safeSrvIp}" title="Sao chép địa chỉ IP: ${safeSrvIp}">📋</button>
           <button class="srv-icon-btn danger" data-delsrv="${idx}" title="Xóa máy chủ khỏi danh sách">✕</button>
         </div>
       </div>
     </div>`;
   }).join('');
+  container.querySelectorAll('[data-pinsrv]').forEach((btn) => {
+    btn.onclick = () => {
+      const ip = btn.dataset.pinsrv;
+      const list = Array.isArray(state.pinnedServers) ? state.pinnedServers : [];
+      state.pinnedServers = list.includes(ip) ? list.filter((x) => x !== ip) : [ip, ...list];
+      saveCurrentConfig();
+      renderFavoriteServers();
+    };
+  });
+  container.querySelectorAll('[data-directsrv]').forEach((btn) => {
+    btn.onclick = () => {
+      if (state.isLaunching) {
+        showAetherNotification('⚠️ Minecraft đang chạy hoặc đang khởi động — hãy tắt game trước khi vào server khác.', 'error', 4000);
+        return;
+      }
+      state.pendingOneShotServer = btn.dataset.directsrv;
+      document.querySelector('.nav-item[data-tab="home"]')?.click();
+      document.getElementById('btnLaunch')?.click();
+    };
+  });
   container.querySelectorAll('[data-copysrv]').forEach((btn) => {
     btn.onclick = () => {
       navigator.clipboard?.writeText(btn.dataset.copysrv);
@@ -1779,21 +1856,74 @@ async function renderLocalWorlds() {
   });
   if (typeof refreshWorldBackupsUI === 'function') refreshWorldBackupsUI(false);
 }
-async function pingAllFavoriteServers() {
+async function pingAllFavoriteServers(onlyMissing = false) {
   if (!state.serverPingCache) state.serverPingCache = {};
+  if (state._pingAllRunning) {
+    // servers added while a ping round is running (e.g. imported from servers.dat) get pinged right after
+    state._pingAllQueued = true;
+    return;
+  }
+  state._pingAllRunning = true;
   const btn = document.getElementById('btnPingAllServers');
-  if (btn) btn.textContent = '⏳ Đang ping...';
-  await Promise.all(
-    (state.favoriteServers || []).map(async (srv) => {
+  if (btn) { btn.textContent = '⏳ Đang ping...'; btn.disabled = true; }
+  // v40.8: native status ping, max 6 at a time so it stays light on the network & CPU
+  const queue = [...new Set((state.favoriteServers || []).map((s) => s.ip).filter(Boolean))]
+    .filter((ip) => !onlyMissing || !state.serverPingCache[ip]);
+  let rerenderTimer = null;
+  const scheduleRender = () => {
+    if (rerenderTimer) return;
+    rerenderTimer = setTimeout(() => { rerenderTimer = null; renderFavoriteServers(); }, 250);
+  };
+  const worker = async () => {
+    while (queue.length) {
+      const ip = queue.shift();
       try {
-        const res = await window.aetherAPI.pingServer(srv.ip);
-        if (res?.ok) state.serverPingCache[srv.ip] = res;
-      } catch (_) {}
-    })
-  );
-  if (btn) btn.textContent = '📡 Ping';
-  renderFavoriteServers();
+        const res = await window.aetherAPI.pingServer(ip);
+        state.serverPingCache[ip] = res && res.ok ? res : { ok: true, online: false };
+      } catch (_) {
+        state.serverPingCache[ip] = { ok: true, online: false };
+      }
+      scheduleRender();
+    }
+  };
+  try {
+    await Promise.all(Array.from({ length: Math.min(6, queue.length || 1) }, worker));
+  } finally {
+    state._pingAllRunning = false;
+    if (btn) { btn.textContent = '📡 Kiểm tra Ping'; btn.disabled = false; }
+    renderFavoriteServers();
+    if (state._pingAllQueued) {
+      state._pingAllQueued = false;
+      pingAllFavoriteServers(true);
+    }
+  }
 }
+
+// v40.8: two-way sync with the in-game Multiplayer list (servers.dat)
+async function syncServersWithGameDat(silent = true) {
+  if (!window.aetherAPI.syncServersDat || state.isLaunching) return;
+  const now = Date.now();
+  if (silent && state._lastServersDatSync && now - state._lastServersDatSync < 60000) return;
+  state._lastServersDatSync = now;
+  try {
+    const featured = new Set((typeof DEFAULT_FEATURED_SERVERS !== 'undefined' ? DEFAULT_FEATURED_SERVERS : []).map((d) => String(d.ip).toLowerCase()));
+    const pinned = new Set(Array.isArray(state.pinnedServers) ? state.pinnedServers : []);
+    const writeServers = (state.favoriteServers || []).filter((s) => s && s.ip && (!featured.has(String(s.ip).toLowerCase()) || pinned.has(s.ip)));
+    const res = await window.aetherAPI.syncServersDat({ gameDir: state.gameDir, servers: state.favoriteServers || [], writeServers, writeToGame: true });
+    if (!res?.ok) return;
+    const imported = Array.isArray(res.importedFromGame) ? res.importedFromGame : [];
+    if (imported.length) {
+      state.favoriteServers = [...(state.favoriteServers || []), ...imported.map((s) => ({ name: s.name, ip: s.ip, cat: 'vn' }))];
+      saveCurrentConfig();
+      renderFavoriteServers();
+      pingAllFavoriteServers();
+    }
+    if (!silent || imported.length || res.addedToGame) {
+      showAetherNotification(`🔄 Đồng bộ danh sách server với game: +${imported.length} từ Minecraft, +${res.addedToGame || 0} vào Multiplayer trong game.`, 'success', 4000);
+    }
+  } catch (_) {}
+}
+window.syncServersWithGameDat = syncServersWithGameDat;
 
 let selectedMigrateSourcePath = '';
 
@@ -1969,9 +2099,11 @@ async function openLauncherMigrateModal() {
       if (goModsBtn) {
         goModsBtn.onclick = async () => {
           modal.classList.add('hidden');
-          document.querySelector('.nav-item[data-tab="tab-mods"]')?.click();
+          document.querySelector('.nav-item[data-tab="mods"]')?.click();
+          // v40.8: open the "Đã Cài" view + mods folder (old selectors pointed at elements that don't exist)
+          document.querySelector('.mtype-btn[data-ptype="installed"]')?.click();
           state.activeLocalFolder = 'mods';
-          document.querySelector('#localFolderSwitch [data-lfolder="mods"]')?.click();
+          document.querySelector('[data-localfolder="mods"]')?.click();
           await renderLocalAddonsManager();
           document.getElementById('localAddonsList')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         };
@@ -1980,7 +2112,7 @@ async function openLauncherMigrateModal() {
       if (goWorldsBtn) {
         goWorldsBtn.onclick = async () => {
           modal.classList.add('hidden');
-          document.querySelector('.nav-item[data-tab="tab-worlds"]')?.click();
+          document.querySelector('.nav-item[data-tab="worlds"]')?.click();
           await renderLocalWorlds();
         };
       }
@@ -1988,7 +2120,7 @@ async function openLauncherMigrateModal() {
       if (goServersBtn) {
         goServersBtn.onclick = () => {
           modal.classList.add('hidden');
-          document.querySelector('.nav-item[data-tab="tab-servers"]')?.click();
+          document.querySelector('.nav-item[data-tab="servers"]')?.click();
           renderFavoriteServers();
         };
       }
@@ -2967,7 +3099,7 @@ window.openQuickWorldModal = openQuickWorldModal;
 async function launchPackInstance(inst, customServerIp = '', customWorldFolder = '', customWorldTitle = '', newWorldOptions = null) {
   if (state.isLaunching) { packNotify('⚠️ Minecraft đang chạy hoặc đang khởi động. Hãy tắt game trước.', 'error'); return; }
   if (state.authMode === 'microsoft' && !state.msProfile) { packNotify('⚠️ Vui lòng đăng nhập tài khoản Microsoft trước (Trang chủ → Tài khoản).', 'error'); return; }
-  if (state.authMode === 'aether' && !state.cloudProfile) { packNotify('⚠️ Vui lòng đăng nhập Aether Cloud trước (Trang chủ → Tài khoản).', 'error'); return; }
+  if (state.authMode === 'aether' && !state.cloudProfile) { packNotify('⚠️ Vui lòng đăng nhập BlockWay Cloud trước (Trang chủ → Tài khoản).', 'error'); return; }
   if (!inst.mcVersion) { packNotify('❌ Gói chưa xác định phiên bản Minecraft.', 'error'); return; }
   if ((inst.manualPending || []).length) {
     const ask = await askUserAgreement({
@@ -3025,6 +3157,7 @@ async function launchPackInstance(inst, customServerIp = '', customWorldFolder =
     autoBackupWorlds: state.autoBackupWorlds !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
     smartRamCoach: state.smartRamCoach !== false,
+    gentleSmoothMode: state.gentleSmoothMode !== false,
     cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
   });
   if (!res?.ok) {
@@ -3279,6 +3412,18 @@ function renderCoopActiveBanner(info) {
   if (bHide) bHide.onclick = () => banner.classList.add('hidden');
 }
 
+// v40.8: backend returns IP objects { name, ip, type: 'lan' | 'vpn' } — normalise everywhere
+function coopIpOf(x) {
+  if (!x) return '';
+  return typeof x === 'string' ? x : String(x.ip || '');
+}
+function coopIpLabelOf(x) {
+  const ip = coopIpOf(x);
+  if (!ip) return '';
+  if (typeof x === 'object' && x.type === 'vpn') return `${ip} (VPN ${x.name || ''})`.replace(/\s+\)/, ')');
+  return `${ip} (Wi-Fi / LAN)`;
+}
+
 async function scanCoopLanWorldsUI() {
   const listEl = document.getElementById('coopLanWorldsList');
   const ipBadge = document.getElementById('coopLocalIpStrip') || document.getElementById('coopLocalIpBadge');
@@ -3292,9 +3437,10 @@ async function scanCoopLanWorldsUI() {
   try {
     const scanFn = window.aetherAPI.scanLanWorlds || window.aetherAPI.coopScanLan;
     const res = await scanFn(2200);
-    if (res?.localIps?.length) {
-      coopState.localIps = res.localIps;
-      if (ipBadge) ipBadge.innerHTML = `🖧 IP LAN máy bạn: <strong>${escapeHtml(res.localIps.join(' • '))}</strong>`;
+    const ipList = (res?.localIps || []).filter((x) => coopIpOf(x));
+    if (ipList.length) {
+      coopState.localIps = ipList;
+      if (ipBadge) ipBadge.innerHTML = `🖧 IP LAN máy bạn: <strong>${escapeHtml(ipList.map(coopIpLabelOf).join(' • '))}</strong>`;
     } else if (ipBadge) {
       ipBadge.innerHTML = '🖧 IP LAN máy bạn: <strong>127.0.0.1 (Chưa thấy mạng LAN)</strong>';
     }
@@ -3590,7 +3736,7 @@ async function joinCoopRoomByCode(rawInput) {
 }
 
 function openCreateCoopRoomModal() {
-  const defaultAddr = coopState.activeRoom?.joinAddress || (coopState.localIps[0] ? `${coopState.localIps[0]}:25565` : '');
+  const defaultAddr = coopState.activeRoom?.joinAddress || (coopIpOf(coopState.localIps[0]) ? `${coopIpOf(coopState.localIps[0])}:25565` : '');
   const card = packOpenModal(`
     <div class="modal-head"><span class="card-dot emerald"></span><h3>🔑 Tạo Mã Phòng BlockWay (6 Ký Tự)</h3></div>
     <div class="modal-body">
@@ -3741,7 +3887,7 @@ function initCoopHubUI() {
         refreshPublicCoopRoomsUI(false);
         showAetherNotification(`🌐 Phòng e4mc đã mở: ${evt.domain} (Mã Phòng: ${room.roomCode || 'Sẵn sàng'}) — Đã tự sao chép!`, 'success', 8000);
       } else if (evt.type === 'lan-port' && evt.port) {
-        const ip = (evt.localIps && evt.localIps[0]) || coopState.localIps[0] || '127.0.0.1';
+        const ip = coopIpOf(evt.localIps && evt.localIps[0]) || coopIpOf(coopState.localIps[0]) || '127.0.0.1';
         const lanAddr = `${ip}:${evt.port}`;
         // Only update banner with LAN address if e4mc hasn't already provided a public domain
         if (!coopState.activeRoom?.joinAddress?.includes('.e4mc.link')) {
@@ -3850,7 +3996,7 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
     if (!causesEl) return;
     causesEl.innerHTML = (causesList || []).map((c) => {
       const isOk = c.severity === 'info' || c.severity === 'ok';
-      const sevColor = c.severity === 'high' ? '#f87171' : (isOk ? '#34d399' : '#fbbf24');
+      const sevColor = c.severity === 'high' ? 'var(--bw-danger-text)' : (isOk ? 'var(--bw-ok-text)' : 'var(--bw-gold-text)');
       const sevBg = c.severity === 'high' ? 'rgba(239,68,68,0.1)' : (isOk ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)');
       const sevBorder = c.severity === 'high' ? 'rgba(239,68,68,0.32)' : (isOk ? 'rgba(16,185,129,0.32)' : 'rgba(245,158,11,0.32)');
       return `<div class="crash-cause-card" style="background:${sevBg};border:1px solid ${sevBorder};border-radius:10px;padding:12px 14px;margin-bottom:6px;">
@@ -4332,7 +4478,7 @@ async function openScreenshotsGalleryModal() {
       </div>
       <div class="screenshot-card-meta">
         <div class="screenshot-name" title="${safeName}">${safeName}</div>
-        <div class="screenshot-sub">${escapeHtml(dateStr)} • ${escapeHtml(it.sizeKB)} KB</div>
+        <div class="screenshot-sub">${escapeHtml(dateStr)} • ${escapeHtml(it.sizeKB)} KB${it.instanceName ? ` • ${escapeHtml(it.instanceName)}` : ''}</div>
         <div class="screenshot-actions">
           <button class="btn-install-mod" data-copyshot="${idx}" title="Copy ảnh vào Clipboard để Ctrl+V dán thẳng vào Zalo, Discord, Messenger">📋 Copy Ảnh</button>
           <button class="vtype-btn" data-wallpapershot="${idx}" title="Đặt bức ảnh này làm hình nền trang chủ Launcher">🖼️ Làm Nền</button>
@@ -4342,14 +4488,23 @@ async function openScreenshotsGalleryModal() {
     </div>`;
   }).join('');
 
+  let lightboxIdx = -1;
   const showLightbox = (item) => {
     activeScreenshotLightboxItem = item;
+    lightboxIdx = items.indexOf(item);
     if (!lightbox) return;
     const imgEl = document.getElementById('screenshotLightboxImg');
     const nameEl = document.getElementById('screenshotLightboxName');
     if (imgEl) imgEl.src = item.fileUrl;
-    if (nameEl) nameEl.textContent = `${item.name} (${item.sizeKB} KB)`;
+    const where = item.instanceName ? ` • ${item.instanceName}` : '';
+    if (nameEl) nameEl.textContent = `${item.name} (${item.sizeKB} KB)${where} — ${lightboxIdx + 1}/${items.length} • ←/→ chuyển ảnh, Esc thu nhỏ`;
     lightbox.classList.remove('hidden');
+    try { lightbox.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (_) {}
+  };
+  window.__bwShotLightboxStep = (dir) => {
+    if (!items.length) return;
+    const next = ((lightboxIdx < 0 ? 0 : lightboxIdx) + dir + items.length) % items.length;
+    showLightbox(items[next]);
   };
 
   grid.querySelectorAll('[data-viewshot]').forEach((el) => {
@@ -4379,11 +4534,8 @@ async function openScreenshotsGalleryModal() {
       e.stopPropagation();
       const it = items[Number(btn.dataset.wallpapershot)];
       if (!it) return;
-      const heroBanner = document.querySelector('.hero-banner');
-      if (heroBanner) heroBanner.style.backgroundImage = `url("${it.fileUrl}")`;
-      state.customBannerImage = it.fileUrl;
-      saveCurrentConfig();
-      showAetherNotification(`🖼️ Đã đặt ảnh chụp "${it.name}" làm hình nền trang chủ Launcher!`, 'success', 4000);
+      if (typeof window.applyHeroWallpaper === 'function') window.applyHeroWallpaper(it.fileUrl, `📸 ${it.name}`);
+      showAetherNotification(`🖼️ Đã đặt ảnh chụp "${it.name}" làm hình nền trang chủ Launcher! (Muốn về nền gốc: bấm "🔄 Nền mặc định")`, 'success', 4500);
     };
   });
 
@@ -4428,6 +4580,33 @@ function initV402FeaturesUI() {
         window.aetherAPI.packsInstanceOpen({ gameDir: state.gameDir, dir: activeCrashDoctorTarget.dir, sub: 'mods' });
       } else {
         window.aetherAPI.openSubFolder(state.gameDir, 'mods');
+      }
+    };
+  }
+
+  // v40.8: upload the log to mclo.gs (redacted) and copy a share link
+  const btnCrashShare = document.getElementById('btnCrashShareLog');
+  if (btnCrashShare && window.aetherAPI.shareCrashLog) {
+    btnCrashShare.onclick = async () => {
+      const orig = btnCrashShare.textContent;
+      btnCrashShare.disabled = true;
+      btnCrashShare.textContent = '⏳ Đang tải log lên...';
+      const consoleText = Array.from(document.querySelectorAll('#consoleOutput .log-line, #consoleOutput .log-entry')).slice(-400).map((el) => el.textContent || '').join('\n');
+      const r = await window.aetherAPI.shareCrashLog({ gameDir: activeCrashDoctorTarget?.dir || state.gameDir, fallbackText: consoleText });
+      btnCrashShare.disabled = false;
+      btnCrashShare.textContent = orig;
+      if (r?.ok && r.url) {
+        showAetherNotification(`📤 Đã tạo link log: ${r.url} — link đã được copy, dán (Ctrl+V) vào Discord/Zalo để nhờ hỗ trợ!`, 'success', 7000);
+        const st = document.getElementById('crashDoctorStatusMsg');
+        if (st) {
+          st.classList.remove('hidden');
+          st.className = 'coop-room-status is-ok';
+          st.innerHTML = `📤 Link chia sẻ nhật ký (đã che tên máy, IP &amp; mã đăng nhập): <a href="#" id="lnkCrashShared">${escapeHtml(r.url)}</a>`;
+          const a = document.getElementById('lnkCrashShared');
+          if (a) a.onclick = (ev) => { ev.preventDefault(); window.aetherAPI.openExternal(r.url); };
+        }
+      } else {
+        showAetherNotification(`⚠️ Không tạo được link log: ${r?.error || 'Lỗi mạng'}`, 'error', 5000);
       }
     };
   }
@@ -4483,11 +4662,13 @@ function initV402FeaturesUI() {
     });
     worldsDropCard.addEventListener('drop', async (e) => {
       e.preventDefault();
+      e.__bwHandled = true;
       worldsDropCard.style.borderColor = '';
       const files = Array.from(e.dataTransfer?.files || []);
-      const zipFile = files.find((f) => f.name.toLowerCase().endsWith('.zip') && f.path);
+      const getP = (f) => (window.aetherAPI.getPathForFile ? window.aetherAPI.getPathForFile(f) : f.path) || '';
+      const zipFile = files.find((f) => f.name.toLowerCase().endsWith('.zip') && getP(f));
       if (zipFile) {
-        await importWorldZipUI(zipFile.path);
+        await importWorldZipUI(getP(zipFile));
       }
     });
   }
@@ -4538,14 +4719,35 @@ function initV402FeaturesUI() {
     if (el) {
       el.onclick = () => {
         if (!activeScreenshotLightboxItem) return;
-        const heroBanner = document.querySelector('.hero-banner');
-        if (heroBanner) heroBanner.style.backgroundImage = `url("${activeScreenshotLightboxItem.fileUrl}")`;
-        state.customBannerImage = activeScreenshotLightboxItem.fileUrl;
-        saveCurrentConfig();
+        if (typeof window.applyHeroWallpaper === 'function') window.applyHeroWallpaper(activeScreenshotLightboxItem.fileUrl, `📸 ${activeScreenshotLightboxItem.name}`);
         showAetherNotification(`🖼️ Đã đặt "${activeScreenshotLightboxItem.name}" làm hình nền trang chủ!`, 'success', 4000);
       };
     }
   });
+
+  // v40.8: reset home banner to the default BlockWay wallpaper
+  const btnGalleryResetWp = document.getElementById('btnGalleryResetWallpaper');
+  if (btnGalleryResetWp) {
+    btnGalleryResetWp.onclick = () => {
+      if (typeof window.applyHeroWallpaper === 'function') window.applyHeroWallpaper('app-banner-hero.png', 'BlockWay');
+      showAetherNotification('🔄 Đã đưa hình nền trang chủ về mặc định BlockWay.', 'success', 3000);
+    };
+  }
+
+  // v40.8: lightbox keyboard — ←/→ browse, Esc closes the big preview first (then the gallery)
+  document.addEventListener('keydown', (e) => {
+    const wrap = document.getElementById('screenshotLightboxWrap');
+    const galleryOpen = shotsModal && !shotsModal.classList.contains('hidden');
+    const lbOpen = wrap && !wrap.classList.contains('hidden');
+    if (!galleryOpen || !lbOpen) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (typeof window.__bwShotLightboxStep === 'function') window.__bwShotLightboxStep(e.key === 'ArrowRight' ? 1 : -1);
+    } else if (e.key === 'Escape') {
+      e.stopImmediatePropagation();
+      wrap.classList.add('hidden');
+    }
+  }, true);
 
   // Escape key closes Crash Doctor or Screenshots Gallery modal
   document.addEventListener('keydown', (e) => {
@@ -6223,9 +6425,102 @@ function initV407FeaturesUI() {
   }, 850);
 }
 
+/* ===================== v40.8 PRO — KÉO-THẢ CÀI MỌI THỨ (Mod • Shader • Resource Pack • Map • Modpack) ===================== */
+function initUniversalDropUI() {
+  let overlay = document.getElementById('bwDropOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'bwDropOverlay';
+    overlay.className = 'bw-drop-overlay hidden';
+    overlay.innerHTML = `<div class="bw-drop-card">
+      <div class="bw-drop-icon">📥</div>
+      <div class="bw-drop-title">Thả file vào đây để cài tự động</div>
+      <div class="bw-drop-sub">Mod <code>.jar</code> • Shader / Resource Pack <code>.zip</code> • Map <code>.zip</code> • Modpack <code>.mrpack</code></div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+  let dragDepth = 0;
+  const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
+  const hide = () => { dragDepth = 0; overlay.classList.add('hidden'); };
+  window.addEventListener('dragenter', (e) => {
+    if (!hasFiles(e)) return;
+    dragDepth += 1;
+    overlay.classList.remove('hidden');
+  });
+  window.addEventListener('dragleave', (e) => {
+    if (!hasFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) overlay.classList.add('hidden');
+  });
+  window.addEventListener('dragover', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); // never let Electron navigate to the dropped file
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+  window.addEventListener('drop', async (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    hide();
+    if (e.__bwHandled) return; // a specific drop zone (e.g. Worlds card) already took it
+    const files = Array.from(e.dataTransfer?.files || []);
+    const paths = files.map((f) => (window.aetherAPI.getPathForFile ? window.aetherAPI.getPathForFile(f) : f.path)).filter(Boolean);
+    if (!paths.length) return;
+    await installDroppedPathsUI(paths);
+  });
+}
+
+async function installDroppedPathsUI(paths) {
+  if (!window.aetherAPI.installDroppedFiles) return;
+  const instanceDir = state.modTargetInstanceDir || '';
+  showAetherNotification(`📥 Đang nhận diện & cài ${paths.length} file...`, 'info', 2500);
+  const res = await window.aetherAPI.installDroppedFiles({ gameDir: state.gameDir, instanceDir, filePaths: paths });
+  const results = res?.results || [];
+  const okMsgs = [];
+  let needFabricForShader = false;
+  for (const r of results) {
+    if (r.kind === 'mrpack' && r.deferred && r.filePath) {
+      if (packHub.installing) { packNotify('⏳ Đang cài một gói khác...', 'error'); continue; }
+      packHub.installing = true;
+      packShowProgress(`📦 Đang nhập Modpack ${r.fileName}...`, 1);
+      const pr = await window.aetherAPI.packsImportFile({ filePath: r.filePath, gameDir: state.gameDir });
+      packHub.installing = false;
+      handlePackInstallResult(pr, r.fileName);
+      continue;
+    }
+    if (!r.ok) {
+      showAetherNotification(`⚠️ ${r.fileName || 'File'}: ${r.error || 'Không cài được'}`, 'error', 6000);
+      continue;
+    }
+    if (r.kind === 'mod') {
+      const core = String(state.selectedCore || 'vanilla').toLowerCase();
+      const loaders = (r.loaders || []).map((l) => String(l).toLowerCase());
+      const mismatch = loaders.length && !instanceDir && core !== 'vanilla' && !loaders.includes(core) && !(core === 'quilt' && loaders.includes('fabric'));
+      okMsgs.push(`🧩 Mod ${r.fileName}${loaders.length ? ` (${loaders.join('/')})` : ''}${mismatch ? ` ⚠ bạn đang chọn ${core.toUpperCase()}` : ''}`);
+    } else if (r.kind === 'shader') {
+      okMsgs.push(`✨ Shader ${r.fileName} (đã bật sẵn)`);
+      if (!instanceDir && String(state.selectedCore || 'vanilla').toLowerCase() === 'vanilla') needFabricForShader = true;
+    } else if (r.kind === 'resourcepack') {
+      okMsgs.push(`🎨 Resource Pack ${r.fileName} (đã bật sẵn)`);
+    } else if (r.kind === 'world') {
+      okMsgs.push(`🗺️ Map ${r.worldName || r.fileName}`);
+    }
+  }
+  if (needFabricForShader && typeof window.selectMcVersionAndCore === 'function') {
+    try { await window.selectMcVersionAndCore(state.selectedVersion, 'fabric'); } catch (_) {}
+    okMsgs.push('⚙️ Đã chuyển sang Fabric để chạy Shader');
+  }
+  if (okMsgs.length) showAetherNotification(`✅ Đã cài: ${okMsgs.join(' • ')}`, 'success', 6500);
+  try {
+    if (typeof refreshLocalAddonsCount === 'function') await refreshLocalAddonsCount();
+    if (results.some((r) => r.kind === 'world' && r.ok) && typeof renderLocalWorlds === 'function') renderLocalWorlds();
+  } catch (_) {}
+}
+window.installDroppedPathsUI = installDroppedPathsUI;
+
 window.addEventListener('DOMContentLoaded', () => {
   initCoopHubUI();
   initV402FeaturesUI();
   initV406FeaturesUI();
   initV407FeaturesUI();
+  initUniversalDropUI();
 });

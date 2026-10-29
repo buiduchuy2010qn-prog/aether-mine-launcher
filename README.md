@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v40.7.0 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v40.8.0 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,13 +6,29 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.7.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.8.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-6_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
-**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**, **Kho Skin trực tuyến theo chủ đề & Đồng bộ để bạn bè thấy đúng Skin nhau khi chơi Offline/LAN**, **Chế độ Chiến đấu PvP / BedWars 1-Click kiểu Lunar Client**, **Trình Cứu hộ Thế giới Hardcore & Kho Hạt giống (Seed) tuyển chọn**, **Studio Quay phim 3D Replay & Xuất Video MP4 tự động**, **Gỡ trùng phím tắt Modpack & Sáng hang động Fullbright 1-Click** và **Bác Sĩ Chẩn Đoán & Tự Sửa Lỗi Crash bằng Tiếng Việt**.
+**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới với **Chế độ Mượt Êm không ép máy**, **Servers 2.0 ping thật & vào thẳng 1-Click**, **Kéo-thả cài Mod/Shader/Map/Modpack**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**, **Kho Skin trực tuyến theo chủ đề & Đồng bộ để bạn bè thấy đúng Skin nhau khi chơi Offline/LAN**, **Chế độ Chiến đấu PvP / BedWars 1-Click kiểu Lunar Client**, **Trình Cứu hộ Thế giới Hardcore & Kho Hạt giống (Seed) tuyển chọn**, **Studio Quay phim 3D Replay & Xuất Video MP4 tự động**, **Gỡ trùng phím tắt Modpack & Sáng hang động Fullbright 1-Click** và **Bác Sĩ Chẩn Đoán & Tự Sửa Lỗi Crash bằng Tiếng Việt**.
 
 🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/blockway-launcher/](https://buiduchuy2010qn-prog.github.io/blockway-launcher/)**
+
+---
+
+## 🍃 Mới trong phiên bản `v40.8.0 PRO`
+
+1. **🍃 Chế Độ "Mượt Êm — Không Ép Máy" (bật sẵn, MỚI `v40.8.0 PRO`):**
+   - Tự giới hạn FPS theo **tần số quét màn hình** (60–144Hz), chỉnh tầm nhìn / khoảng cách mô phỏng hợp lý và nạp RAM nhẹ nhàng — khung hình đều, **không vắt kiệt CPU/GPU**, máy mát và êm quạt hơn khi chơi lâu. Thêm **ModernFix** vào gói tăng FPS giúp vào game nhanh và nhẹ RAM. Tắt 1-Click là trả lại nguyên cài đặt cũ.
+2. **🌐 Servers 2.0 (MỚI `v40.8.0 PRO`):**
+   - Ping trực tiếp như màn hình Multiplayer trong game: **độ trễ thật (ms)**, **MOTD**, **logo server**, **phiên bản + cảnh báo lệch bản**, danh sách người đang chơi; **⚡ Vào Thẳng** 1-Click, **📌 Ghim** server yêu thích và **🔄 đồng bộ 2 chiều** với danh sách server trong Minecraft.
+3. **📥 Kéo-Thả Cài Mọi Thứ (MỚI `v40.8.0 PRO`):**
+   - Thả file **Mod `.jar`**, **Shader / Resource Pack `.zip`**, **Map `.zip`** hoặc **Modpack `.mrpack`** vào cửa sổ Launcher — tự nhận diện, cài đúng thư mục và bật sẵn (Shader tự chuyển sang Fabric nếu cần).
+4. **🧺 Tủ Đồ Skin & 🦸 Áo Choàng Riêng (MỚI `v40.8.0 PRO`):**
+   - Tự lưu **12 skin gần nhất** để mặc lại 1-Click; tải **áo choàng `.png`** của riêng bạn — bạn bè chơi Offline / LAN cũng nhìn thấy.
+5. **📤 Chia Sẻ Log Lỗi 1-Click & 🖼️ Thư Viện Ảnh Chụp Mới:**
+   - Bác Sĩ Crash tạo **link nhật ký (mclo.gs)** đã tự che tên máy & IP để gửi nhóm hỗ trợ; thư viện ảnh chụp có **xem toàn màn hình ←/→**, ghi rõ ảnh thuộc Modpack nào và **đặt làm hình nền** được lưu lại.
+6. **🛠️ Sửa lỗi & tối ưu:** Mod đã tắt không còn tự bật lại, sửa thẻ Kho Seed / Kho Map, skin bạn bè hiển thị cả trong Modpack, hồi sinh Hardcore giữ nguyên ngày trong game & tự đưa về điểm hồi sinh nếu rơi Void, giao diện Sáng / Trắng Hồng rõ chữ hơn, bản Portable tự cập nhật đúng bản Portable.
 
 ---
 

@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    # Website / docs-only changes don't need a new Windows build
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'google*.html'
   workflow_dispatch:
 
 permissions:
@@ -16,10 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Read package.json version
         id: pkg
@@ -45,14 +50,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.pkg.outputs.version }}
-          name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place"
+          name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place"
           body: |
-            ### ⚡ BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO — Every World, One Place
-            - **👕 Kho Skin Trực Tuyến Theo Chủ Đề & Đồng Bộ Thấy Đúng Skin Nhau:** Duyệt và mặc 1-Click hàng ngàn mẫu Skin 3D (*Anime, Ngầu, Dễ thương, Hiệp sĩ, YouTuber*) kèm chế độ **Đồng bộ Skin đa người chơi** giúp bạn bè chơi chung Offline / LAN / Phòng mạng đều nhìn thấy đúng Skin & Lớp áo 3D riêng của nhau.
-            - **⚔️ Chế Độ Chiến Đấu PvP / BedWars 1-Click (Phong Cách Lunar Client):** Bật 1-Click để tự trang bị **Bảng phím bấm Keystrokes + tốc độ nhấp CPS, Tự chạy nhanh (`ToggleSprint`), Thanh độ bền Giáp & Hiệu ứng Thuốc, Tâm ngắm động, Góc nhìn 360° và Lửa thấp không che màn hình** — tắt 1-Click là trả lại nguyên vẹn bộ Mod sinh tồn.
-            - **🛠️ Trình Cứu Hộ Thế Giới Hardcore & Kho Hạt Giống (Seed) Đẹp:** Xem trực tiếp mã **Seed** và **tọa độ nhân vật (`X, Y, Z`)**, mở khóa dùng lệnh, bật giữ đồ khi chết, cứu nhân vật kẹt dưới vực về Điểm xuất hiện, **Hồi sinh khỏi Hardcore 1-Click** và tạo thế giới từ Kho Seed tuyển chọn đẹp nhất.
-            - **🎬 Studio Quay Lại Trận Đấu 3D & Xuất Video `.MP4` Tự Động:** Tự cài trình quay phim 3D trong game (**Flashback / ReplayMod**) + **Camera bay tự do (`Freecam`)** kèm bộ kết xuất Video `.MP4` gọn nhẹ để dựng clip điện ảnh đăng TikTok / YouTube mà không gây tụt FPS lúc đang chơi.
-            - **🎛️ Hệ Sinh Thái Toàn Diện:** Gỡ trùng phím tắt Modpack & Sáng hang động Fullbright 1-Click, Kho Bản đồ xây sẵn & Datapack, Combo Voice Chat Tổ đội, Cố vấn RAM tự động, Tự động đảo Void OneBlock / SkyBlock và Bác Sĩ Crash Tiếng Việt.
+            ### 🍃 BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place
+            - **🍃 Chế Độ "Mượt Êm — Không Ép Máy" (bật sẵn):** Tự giới hạn FPS theo tần số màn hình, chỉnh tầm nhìn / mô phỏng hợp lý và nạp RAM nhẹ nhàng — game mượt đều khung hình mà **không vắt kiệt CPU/GPU, máy mát và êm quạt hơn**. Tắt 1-Click là trả lại nguyên cài đặt cũ.
+            - **🌐 Servers 2.0:** Ping trực tiếp như trong game (độ trễ thật, MOTD, logo server, phiên bản & cảnh báo lệch bản), **⚡ Vào Thẳng** server 1-Click, **📌 Ghim** server yêu thích và **đồng bộ 2 chiều** với danh sách Multiplayer trong Minecraft.
+            - **📥 Kéo-Thả Cài Mọi Thứ:** Thả file Mod `.jar`, Shader / Resource Pack `.zip`, Map `.zip` hoặc Modpack `.mrpack` vào cửa sổ — Launcher tự nhận diện, cài đúng chỗ và bật sẵn.
+            - **🧺 Tủ Đồ Skin & 🦸 Áo Choàng Riêng:** Lưu 12 skin gần nhất để mặc lại 1-Click, tải áo choàng `.png` của riêng bạn — bạn bè chơi Offline / LAN cũng thấy.
+            - **📤 Chia Sẻ Log Lỗi 1-Click:** Bác Sĩ Crash tạo link nhật ký (mclo.gs) đã tự che tên máy & IP để gửi nhóm hỗ trợ.
+            - **🛠️ Sửa Lỗi & Tối Ưu:** Mod đã tắt không còn tự bật lại, sửa thẻ Kho Seed / Kho Map, sửa skin bạn bè trong Modpack, hồi sinh Hardcore an toàn hơn (giữ ngày trong game, tự đưa về điểm hồi sinh nếu rơi Void), sửa ảnh nền từ ảnh chụp, giao diện Sáng / Trắng Hồng rõ chữ hơn, bản Portable tự cập nhật đúng bản Portable.
           files: |
             dist/*.exe
         env:

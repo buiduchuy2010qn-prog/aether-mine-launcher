@@ -34,7 +34,7 @@ const state = {
   favoriteServers: [...DEFAULT_FEATURED_SERVERS],
   winResolution: '1280x720', outerLayerVisible: true, stageBgMode: 'stars', serverPingCache: {}, acceptedEula: false, skipLaunchConfirm: false, isLaunching: false,
   activeLaunchContext: null, lastLaunchContext: null,
-  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, smartRamCoach: true, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
+  autoBackupWorlds: true, discordRpcEnabled: true, autoViLang: true, potatoGraphicsPreset: false, smartRamCoach: true, gentleSmoothMode: true, autoCreateFirstWorld: true, modTargetInstanceDir: '', pendingQuickWorldFolder: '', pendingQuickWorldTitle: '',
   playtimeStats: { totalSeconds: 0, sessionsCount: 0, byInstance: {}, byVersion: {} }
 };
 
@@ -82,6 +82,8 @@ function syncAutoBackupAndDiscordUI() {
   if (chkPotato) chkPotato.checked = Boolean(state.potatoGraphicsPreset);
   const chkCoach = document.getElementById('smartRamCoachCheck');
   if (chkCoach) chkCoach.checked = state.smartRamCoach !== false;
+  const chkGentle = document.getElementById('gentleSmoothCheck');
+  if (chkGentle) chkGentle.checked = state.gentleSmoothMode !== false;
 }
 window.syncAutoBackupAndDiscordUI = syncAutoBackupAndDiscordUI;
 
@@ -149,7 +151,7 @@ async function applyCapeToViewer(capeType) {
   if (btnElytra) btnElytra.classList.toggle('active', state.backEquipment === 'elytra');
   if (!skinViewer) return;
   const effectiveType = (state.backEquipment === 'elytra' && state.capeType === 'none') ? 'mojang' : state.capeType;
-  const capeUrl = buildCapeDataUrl(effectiveType);
+  const capeUrl = effectiveType === 'custom' ? (state.customCapeDataUrl || null) : buildCapeDataUrl(effectiveType);
   try {
     if (capeUrl) {
       await skinViewer.loadCape(capeUrl, { backEquipment: state.backEquipment || 'cape' });
@@ -241,7 +243,83 @@ async function loadCharacterSkin(username) {
     } catch (_) {}
   }
   draw2DAvatarFace(normalized64Url);
+  if (res?.ok && res.dataUrl) rememberSkinInCloset(normalized64Url, clean);
 }
+
+// v40.8 Skin closet: the last 12 skins you wore, one click to put back on
+function rememberSkinInCloset(dataUrl, name = 'Skin') {
+  if (!dataUrl || !/^data:image\/png/i.test(String(dataUrl))) return;
+  const list = Array.isArray(state.skinCloset) ? state.skinCloset.filter((s) => s && s.dataUrl !== dataUrl) : [];
+  list.unshift({ dataUrl, name: String(name || 'Skin').slice(0, 40), model: state.skinModel || 'classic', at: Date.now() });
+  state.skinCloset = list.slice(0, 12);
+  saveCurrentConfig();
+  renderSkinCloset();
+}
+
+function skinFaceFromDataUrl(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = 32;
+        c.height = 32;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 8, 8, 8, 8, 0, 0, 32, 32);
+        ctx.drawImage(img, 40, 8, 8, 8, 0, 0, 32, 32);
+        resolve(c.toDataURL('image/png'));
+      } catch (_) { resolve(''); }
+    };
+    img.onerror = () => resolve('');
+    img.src = dataUrl;
+  });
+}
+
+async function renderSkinCloset() {
+  const tray = document.getElementById('skinClosetTray');
+  if (!tray) return;
+  const list = Array.isArray(state.skinCloset) ? state.skinCloset : [];
+  if (!list.length) {
+    tray.innerHTML = '<span class="skin-closet-empty">Các skin bạn mặc sẽ tự lưu ở đây (tối đa 12) để đổi lại 1-Click.</span>';
+    return;
+  }
+  const faces = await Promise.all(list.map((s) => skinFaceFromDataUrl(s.dataUrl)));
+  tray.innerHTML = list.map((s, i) => {
+    const active = s.dataUrl === currentSkinDataUrl;
+    const safeName = String(s.name || 'Skin').replace(/[<>&"]/g, '');
+    return `<button type="button" class="skin-closet-item ${active ? 'active' : ''}" data-closetidx="${i}" title="Mặc lại: ${safeName}">
+      ${faces[i] ? `<img src="${faces[i]}" alt="" />` : '👕'}
+      <span>${safeName}</span>
+    </button>`;
+  }).join('');
+  tray.querySelectorAll('[data-closetidx]').forEach((btn) => {
+    btn.onclick = () => {
+      const it = list[Number(btn.dataset.closetidx)];
+      if (it && typeof window.applyExternalSkinDataUrl === 'function') window.applyExternalSkinDataUrl(it.dataUrl, it.name);
+    };
+  });
+}
+
+function syncCustomCapeChip() {
+  const chip = document.querySelector('#capeSelectorBar .cape-chip[data-cape="custom"]');
+  if (chip) chip.classList.toggle('hidden', !state.customCapeDataUrl);
+  const btnRm = document.getElementById('btnRemoveCustomCape');
+  if (btnRm) btnRm.classList.toggle('hidden', !state.customCapeDataUrl);
+}
+
+async function refreshCustomCapeFromDisk() {
+  try {
+    const name = (state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username;
+    const r = await window.aetherAPI.getLocalCape?.(state.gameDir, name);
+    state.customCapeDataUrl = r?.ok ? (r.dataUrl || '') : '';
+  } catch (_) {
+    state.customCapeDataUrl = '';
+  }
+  syncCustomCapeChip();
+  if (state.capeType === 'custom') applyCapeToViewer(state.customCapeDataUrl ? 'custom' : 'none');
+}
+window.refreshCustomCapeFromDisk = refreshCustomCapeFromDisk;
 
 function setPose(poseName) {
   if (!skinViewer || !window.skinview3d) return;
@@ -437,6 +515,7 @@ function switchMainTab(tabId) {
   if (targetTab === 'servers') {
     if (typeof renderFavoriteServers === 'function') renderFavoriteServers();
     if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers();
+    if (typeof window.syncServersWithGameDat === 'function') window.syncServersWithGameDat(true);
     if (typeof onCoopHubTabShown === 'function') onCoopHubTabShown();
     if (typeof window.refreshPvpAndReplayStates === 'function') window.refreshPvpAndReplayStates();
   }
@@ -563,10 +642,9 @@ function updateSummaryUI() {
   const heroBanner = document.getElementById('heroBanner');
   if (heroBanner) {
     const wpUrl = state.customWallpaper || 'app-banner-hero.png';
-    heroBanner.style.backgroundImage = `url('${wpUrl}')`;
+    heroBanner.style.backgroundImage = `url("${String(wpUrl).replace(/"/g, '%22')}")`;
     heroBanner.classList.toggle('is-brand-wallpaper', wpUrl === 'app-banner-hero.png');
-    const wpLabelMatch = state.customWpLabel || 'BlockWay';
-    document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.textContent.trim() === wpLabelMatch));
+    document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.dataset.wp === wpUrl));
   }
   const javaBadge = document.getElementById('javaReqBadge');
   if (javaBadge) javaBadge.textContent = getRecommendedJavaBadge(ver);
@@ -755,7 +833,9 @@ function saveCurrentConfig() {
       autoViLang: state.autoViLang !== false,
       potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
       smartRamCoach: state.smartRamCoach !== false,
+      gentleSmoothMode: state.gentleSmoothMode !== false,
       autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
+      customWallpaper: state.customWallpaper || '',
       playtimeTotalSec: Number(state.playtimeStats?.totalSeconds) || 0,
       installedVersions: Array.isArray(state.installedVersions) ? state.installedVersions.slice(0, 40) : []
     }));
@@ -772,10 +852,30 @@ function saveCurrentConfig() {
     autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
     autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
     smartRamCoach: state.smartRamCoach !== false,
+    gentleSmoothMode: state.gentleSmoothMode !== false,
     autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
-    uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated)
+    uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated),
+    customWallpaper: state.customWallpaper || '',
+    customWpLabel: state.customWpLabel || '',
+    skinCloset: Array.isArray(state.skinCloset) ? state.skinCloset.slice(0, 12) : [],
+    pinnedServers: Array.isArray(state.pinnedServers) ? state.pinnedServers.slice(0, 50) : []
   });
 }
+
+// v40.8: one place to change the home banner wallpaper (chips, screenshots "Làm Nền", reset) — persisted in config
+function applyHeroWallpaper(url, label = '') {
+  const wpUrl = url && String(url).trim() ? String(url).trim() : 'app-banner-hero.png';
+  state.customWallpaper = wpUrl === 'app-banner-hero.png' ? '' : wpUrl;
+  state.customWpLabel = label || '';
+  const heroBanner = document.getElementById('heroBanner');
+  if (heroBanner) {
+    heroBanner.style.backgroundImage = `url("${wpUrl.replace(/"/g, '%22')}")`;
+    heroBanner.classList.toggle('is-brand-wallpaper', wpUrl === 'app-banner-hero.png');
+  }
+  document.querySelectorAll('.wp-chip').forEach((w) => w.classList.toggle('active', w.dataset.wp === wpUrl));
+  saveCurrentConfig();
+}
+window.applyHeroWallpaper = applyHeroWallpaper;
 
 function isVersionInstalledOnDisk(verId) {
   return state.installedVersions.some((inst) => inst === verId || inst.endsWith(`-${verId}`) || inst.startsWith(`${verId}-`));
@@ -1112,6 +1212,8 @@ function appendLog(line, type = 'normal') {
   div.className = `log-entry ${resolvedType}`;
   div.textContent = line;
   out.appendChild(div);
+  // Keep the console light: cap DOM to the last 1500 lines so long sessions never bloat launcher RAM/CPU
+  while (out.childElementCount > 1500) out.removeChild(out.firstElementChild);
   out.scrollTop = out.scrollHeight;
 }
 
@@ -1135,7 +1237,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.7.0'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.8.0'}`), 2000);
       }
     }
     return;
@@ -1189,10 +1291,17 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
   btnAgree.textContent = 'Đang cập nhật...';
   btnCancel.classList.add('hidden');
 
-  window.aetherAPI.onUpdateProgress((pct) => {
-    bodyEl.textContent = `Đang tải gói nâng cấp từ GitHub Cloud (${pct}%)... Vui lòng đợi vài giây!`;
-    btnAgree.textContent = `Đang tải ${pct}%...`;
-  });
+  // v40.8: register the progress listener only once (re-clicking "Cập nhật" used to stack listeners)
+  window.__bwUpdateProgressUI = { bodyEl, btnAgree };
+  if (!window.__bwUpdateProgressBound) {
+    window.__bwUpdateProgressBound = true;
+    window.aetherAPI.onUpdateProgress((pct) => {
+      const ui = window.__bwUpdateProgressUI;
+      if (!ui) return;
+      ui.bodyEl.textContent = `Đang tải gói nâng cấp từ GitHub Cloud (${pct}%)... Vui lòng đợi vài giây!`;
+      ui.btnAgree.textContent = `Đang tải ${pct}%...`;
+    });
+  }
 
   const instRes = await window.aetherAPI.installUpdateNow(res.downloadUrl, res.latestVersion);
   if (!instRes?.ok) {
@@ -1640,13 +1749,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   const btnPingAll = document.getElementById('btnPingAllServers');
   if (btnPingAll) btnPingAll.onclick = () => { if (typeof pingAllFavoriteServers === 'function') pingAllFavoriteServers(); };
+  const btnSyncSrvDat = document.getElementById('btnSyncServersDat');
+  if (btnSyncSrvDat) btnSyncSrvDat.onclick = () => { if (typeof window.syncServersWithGameDat === 'function') window.syncServersWithGameDat(false); };
   document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((chip) => {
     chip.onclick = () => {
       document.querySelectorAll('#modQuickCategoryBar .mqt-chip').forEach((c) => c.classList.toggle('active', c === chip));
       const targetType = chip.dataset.mtype || 'mod';
       state.activeModStoreType = targetType;
       state.modCategory = chip.dataset.mcat || '';
-      document.querySelectorAll('.mtype-btn').forEach((b) => b.classList.toggle('active', b.dataset.ptype === targetType));
+      document.querySelectorAll('.mtype-btn[data-ptype]').forEach((b) => b.classList.toggle('active', b.dataset.ptype === targetType));
       const searchIn = document.getElementById('modSearchInput');
       if (searchIn) searchIn.value = chip.dataset.mquery || '';
       loadModrinthStore(false);
@@ -1728,15 +1839,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     wp.style.setProperty('--wp-thumb', `url('${wp.dataset.wp}')`);
     wp.title = `Hình nền: ${wp.textContent.trim()}`;
     wp.onclick = () => {
-      document.querySelectorAll('.wp-chip').forEach((w) => w.classList.remove('active'));
-      wp.classList.add('active');
-      state.customWallpaper = wp.dataset.wp;
-      state.customWpLabel = wp.textContent.trim();
-      const heroBanner = document.getElementById('heroBanner');
-      if (heroBanner) {
-        heroBanner.style.backgroundImage = `url('${wp.dataset.wp}')`;
-        heroBanner.classList.toggle('is-brand-wallpaper', wp.dataset.wp === 'app-banner-hero.png');
-      }
+      applyHeroWallpaper(wp.dataset.wp, wp.textContent.trim());
     };
   });
 
@@ -1778,6 +1881,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       } catch (_) {}
     }
     draw2DAvatarFace(normUrl);
+    rememberSkinInCloset(normUrl, skinLabel);
   };
 
   document.getElementById('btnUploadSkinPng').onclick = async () => {
@@ -1791,7 +1895,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.cachedSkinDataUrl = normUrl;
       state.selectedSkinPreset = '';
       saveCurrentConfig();
-      syncCloudCosmeticsIfActive('🎉 Đã tải ảnh Skin (.PNG) lên nhân vật 3D & lưu vào tài khoản Aether Cloud 24/7!');
+      syncCloudCosmeticsIfActive('🎉 Đã tải ảnh Skin (.PNG) lên nhân vật 3D & lưu vào tài khoản BlockWay Cloud 24/7!');
       if (skinViewer) {
         try {
           await skinViewer.loadSkin(normUrl, { model: state.skinModel });
@@ -1799,8 +1903,40 @@ window.addEventListener('DOMContentLoaded', async () => {
         } catch (_) {}
       }
       draw2DAvatarFace(normUrl);
+      rememberSkinInCloset(normUrl, 'Skin tải lên');
     }
   };
+
+  // v40.8: custom cape upload / remove (shown in-game via CustomSkinLoader LocalSkin/capes)
+  const capeOwnerName = () => ((state.authMode === 'aether' && state.cloudProfile?.mcUsername) ? state.cloudProfile.mcUsername : state.username);
+  const btnUploadCape = document.getElementById('btnUploadCapePng');
+  if (btnUploadCape) {
+    btnUploadCape.onclick = async () => {
+      const res = await window.aetherAPI.uploadLocalCape?.(state.gameDir, capeOwnerName());
+      if (res?.ok && res.dataUrl) {
+        state.customCapeDataUrl = res.dataUrl;
+        syncCustomCapeChip();
+        await applyCapeToViewer('custom');
+        saveCurrentConfig();
+        showAetherNotification('🦸 Đã lưu Áo choàng riêng! Bật "🤝 Đồng Bộ Để Bạn Bè Thấy Đúng Skin" để thấy áo choàng trong game (Offline / LAN).', 'success', 5000);
+      } else if (res && !res.canceled) {
+        showAetherNotification(`⚠️ ${res.error || 'Không lưu được áo choàng.'}`, 'error', 5000);
+      }
+    };
+  }
+  const btnRemoveCape = document.getElementById('btnRemoveCustomCape');
+  if (btnRemoveCape) {
+    btnRemoveCape.onclick = async () => {
+      await window.aetherAPI.removeLocalCape?.(state.gameDir, capeOwnerName());
+      state.customCapeDataUrl = '';
+      syncCustomCapeChip();
+      if (state.capeType === 'custom') await applyCapeToViewer('none');
+      saveCurrentConfig();
+      showAetherNotification('🗑️ Đã gỡ Áo choàng riêng.', 'success', 3000);
+    };
+  }
+  refreshCustomCapeFromDisk();
+  renderSkinCloset();
 
   document.querySelectorAll('.core-tab-btn').forEach((btn) => { btn.onclick = () => setCore(btn.dataset.core); });
   document.querySelectorAll('.vtype-btn[data-vtype]').forEach((btn) => {
@@ -1821,9 +1957,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   const bFps1 = document.getElementById('btnOneClickFpsBoost'); if (bFps1) bFps1.onclick = (e) => runOneClickFpsBoost(e.currentTarget);
   const bFps2 = document.getElementById('btnStoreFpsBoost'); if (bFps2) bFps2.onclick = (e) => runOneClickFpsBoost(e.currentTarget);
 
-  document.querySelectorAll('.mtype-btn').forEach((btn) => {
+  // v40.8: scope to Mod-store type tabs only — Worlds/Packs sub-tabs share the .mtype-btn class
+  document.querySelectorAll('.mtype-btn[data-ptype]').forEach((btn) => {
     btn.onclick = () => {
-      document.querySelectorAll('.mtype-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.mtype-btn[data-ptype]').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       state.activeModStoreType = btn.dataset.ptype;
       state.modCategory = '';
@@ -1972,6 +2109,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
   const smartRamCoachCheck = document.getElementById('smartRamCoachCheck');
+  const gentleSmoothCheck = document.getElementById('gentleSmoothCheck');
+  if (gentleSmoothCheck) {
+    gentleSmoothCheck.onchange = (e) => {
+      state.gentleSmoothMode = Boolean(e.target.checked);
+      syncAutoBackupAndDiscordUI();
+      saveCurrentConfig();
+      if (typeof showAetherNotification === 'function') {
+        showAetherNotification(
+          state.gentleSmoothMode
+            ? '🍃 Đã bật Mượt Êm: khóa FPS theo màn hình & giảm tải nền — máy mát, quạt êm mà vẫn mượt!'
+            : '↩️ Đã tắt Mượt Êm: lần mở game tới sẽ tự khôi phục thiết lập đồ họa gốc của bạn.',
+          'info',
+          3800
+        );
+      }
+    };
+  }
   if (smartRamCoachCheck) {
     smartRamCoachCheck.onchange = (e) => {
       state.smartRamCoach = Boolean(e.target.checked);
@@ -2187,7 +2341,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       showAetherNotification('☁️ Đang xác thực tài khoản trên Supabase Server 24/7...', 'info', 2500);
       const res = await window.aetherAPI.cloudLogin({ loginId, password, customDbUrl: state.customDbUrl });
       btnAetherLogin.disabled = false;
-      btnAetherLogin.textContent = '🔑 Đăng Nhập Vào Aether Cloud';
+      btnAetherLogin.textContent = '🔑 Đăng Nhập Vào BlockWay Cloud';
       if (res?.ok && res.profile) {
         applyCloudProfileToUI(res.profile, `✅ Đăng nhập thành công! Nhân vật: ${res.profile.mcUsername} (${res.profile.loginId})`);
       } else if (res?.error) {
@@ -2216,12 +2370,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       const fallbackMc = loginId.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 16);
       btnAetherReg.disabled = true;
-      btnAetherReg.textContent = '⏳ Đang khởi tạo trên Supabase...';
+      btnAetherReg.textContent = '⏳ Đang tạo tài khoản Cloud...';
       showAetherNotification('☁️ Đang tạo tài khoản mới trên Supabase PostgreSQL 24/7...', 'info', 2500);
       const res = await window.aetherAPI.cloudRegister({
         loginId,
         password,
-        mcUsername: customMcName.length >= 3 ? customMcName : (fallbackMc.length >= 3 ? fallbackMc : 'AetherPlayer'),
+        mcUsername: customMcName.length >= 3 ? customMcName : (fallbackMc.length >= 3 ? fallbackMc : 'BlockWayPlayer'),
         skinModel: state.skinModel,
         capeType: state.capeType,
         skinPreset: state.selectedSkinPreset,
@@ -2232,7 +2386,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnAetherReg.textContent = '✨ Xác Nhận Tạo Tài Khoản Mới';
       refreshRegCaptcha();
       if (res?.ok && res.profile) {
-        applyCloudProfileToUI(res.profile, `🎉 Tạo tài khoản Aether Cloud thành công! Nhân vật: "${res.profile.mcUsername}"`);
+        applyCloudProfileToUI(res.profile, `🎉 Tạo tài khoản BlockWay Cloud thành công! Nhân vật: "${res.profile.mcUsername}"`);
       } else if (res?.error) {
         showAetherNotification(`⚠️ ${res.error}`, 'error', 5500);
       }
@@ -2412,7 +2566,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       changePassRow?.classList.add('hidden');
       setAuthModeUI('aether');
       saveCurrentConfig();
-      showAetherNotification('👋 Đã đăng xuất khỏi tài khoản Aether Cloud.', 'info', 3500);
+      showAetherNotification('👋 Đã đăng xuất khỏi tài khoản BlockWay Cloud.', 'info', 3500);
     };
   }
 
@@ -2563,7 +2717,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!canvas) return;
       const a = document.createElement('a');
       a.href = canvas.toDataURL('image/png');
-      a.download = `AetherCraft-3D-${state.username || 'Skin'}.png`;
+      a.download = `BlockWay-3D-${state.username || 'Skin'}.png`;
       a.click();
       document.getElementById('statusText').textContent = '📸 Đã chụp & tải xuống ảnh Nhân Vật 3D (.PNG nền trong suốt)!';
     };
@@ -2578,15 +2732,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnLaunch').onclick = async () => {
     const quickWorldFolder = state.pendingQuickWorldFolder || '';
     const quickWorldTitle = state.pendingQuickWorldTitle || quickWorldFolder || '';
+    // v40.8: "⚡ Vào Thẳng" server join for this launch only (does not stick to the Play button)
+    const oneShotServer = quickWorldFolder ? '' : (state.pendingOneShotServer || '');
     state.pendingQuickWorldFolder = '';
     state.pendingQuickWorldTitle = '';
+    state.pendingOneShotServer = '';
     if (state.isLaunching) return;
     state._manualForceKilled = false;
     if (state.authMode === 'microsoft' && !state.msProfile) {
       document.getElementById('statusText').textContent = '⚠ Vui lòng đăng nhập tài khoản Microsoft Bản Quyền trước!'; return;
     }
     if (state.authMode === 'aether' && !state.cloudProfile) {
-      document.getElementById('statusText').textContent = '⚠ Vui lòng Đăng nhập hoặc Tạo tài khoản Aether Cloud trước!'; return;
+      document.getElementById('statusText').textContent = '⚠ Vui lòng Đăng nhập hoặc Tạo tài khoản BlockWay Cloud trước!'; return;
     }
     const isInstalled = isVersionInstalledOnDisk(state.selectedVersion);
     if (!isInstalled || (!state.skipLaunchConfirm && !quickWorldFolder)) {
@@ -2618,7 +2775,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       'starting',
       quickWorldFolder
         ? `⚡ Đang vào thẳng thế giới “${quickWorldTitle}” (MC ${state.selectedVersion} • ${state.selectedCore.toUpperCase()})...`
-        : `Đang khởi tạo Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()})...`
+        : (oneShotServer
+          ? `⚡ Đang vào thẳng Server ${oneShotServer} (MC ${state.selectedVersion} • ${state.selectedCore.toUpperCase()})...`
+          : `Đang khởi tạo Minecraft ${state.selectedVersion} (${state.selectedCore.toUpperCase()})...`)
     );
 
     const rawActiveSkin = currentSkinDataUrl || state.cachedSkinDataUrl || createFallbackSteveSkinDataUrl();
@@ -2631,10 +2790,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       msProfile: state.msProfile, cloudProfile: state.cloudProfile, mcVersion: state.selectedVersion, loaderType: state.selectedCore,
       loaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB, javaPath: state.javaPath,
       gameDir: state.gameDir, useAikarFlags: state.aikarFlags, fastSkipHash: state.fastSkipHash,
-      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: quickWorldFolder ? '' : state.serverIp,
+      hideLauncherOnPlay: state.hideLauncherOnPlay, serverIp: quickWorldFolder ? '' : (oneShotServer || state.serverIp),
       worldFolderName: quickWorldFolder || '', autoBackupWorlds: state.autoBackupWorlds !== false,
       autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
       smartRamCoach: state.smartRamCoach !== false,
+      gentleSmoothMode: state.gentleSmoothMode !== false,
       cpuCores: state.cpuCores, skinDataUrl: finalSkinDataUrl, skinModel: state.skinModel, winResolution: state.winResolution
     });
 

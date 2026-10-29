@@ -1,7 +1,7 @@
 {
   "name": "blockway-launcher",
-  "version": "40.7.0",
-  "description": "BlockWay Launcher v40.7.0 PRO — Every World, One Place (Kho Skin Online & Đồng Bộ Thấy Skin Nhau, Chế Độ PvP Lunar 1-Click, Trình Cứu Hộ Map Hardcore & Kho Seed Đẹp, Studio Quay Phim 3D Replay & Xuất MP4)",
+  "version": "40.8.0",
+  "description": "BlockWay Launcher v40.8.0 PRO — Every World, One Place (Chế độ Mượt Êm không ép máy, Servers 2.0 ping thật & vào thẳng 1-Click, Kéo-thả cài Mod/Shader/Map/Modpack, Tủ đồ Skin & Áo choàng riêng, Chia sẻ log lỗi 1-Click)",
   "homepage": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
   "repository": {
     "type": "git",
@@ -36,6 +36,7 @@
   "author": "buiduchuy2010qn-prog",
   "license": "MIT",
   "dependencies": {
+    "adm-zip": "^0.4.16",
     "minecraft-launcher-core": "^3.16.2"
   },
   "devDependencies": {

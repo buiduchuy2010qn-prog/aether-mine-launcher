@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v40.7.0 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v40.8.0 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,7 +23,7 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v40.7.0</strong>
+          <strong id="titlebarUpdateVer">v40.8.0</strong>
         </button>
       </div>
 
@@ -1160,6 +1160,7 @@
             <div style="display:flex;align-items:center;gap:8px;">
               <span class="field-hint-mini" id="activeServerBadge">Chế độ: Vào Menu chính</span>
               <button class="btn-sync-skin" id="btnPingAllServers">📡 Kiểm tra Ping</button>
+              <button class="vtype-btn" id="btnSyncServersDat" title="Đồng bộ 2 chiều với danh sách Multiplayer bên trong Minecraft (servers.dat)">🔄 Đồng bộ với game</button>
             </div>
           </div>
 
@@ -1365,6 +1366,8 @@
                   <button class="btn-fps-boost-1click" id="btnInstallFriendSkinSync" style="width:100%;margin-top:6px;" title="Tự động trang bị CustomSkinLoader + Lớp Áo 3D + Áo Choàng để khi chơi chung LAN / Internet Offline bạn bè đều nhìn thấy đúng Skin của nhau (không bị trùng thành Steve/Alex)">
                     <span>🤝 Đồng Bộ Để Bạn Bè Thấy Đúng Skin Nhau (Offline / LAN)</span>
                   </button>
+                  <div class="skin-closet-head">🧺 Tủ đồ skin gần đây <span>— bấm để mặc lại</span></div>
+                  <div class="skin-closet-tray" id="skinClosetTray"></div>
                 </div>
 
                 <!-- SUB-TAB 3: ÁO CHOÀNG & CÁNH ELYTRA -->
@@ -1379,6 +1382,13 @@
                     <button class="cape-chip" data-cape="gold">Minecon</button>
                     <button class="cape-chip" data-cape="cherry">Anh Đào</button>
                     <button class="cape-chip" data-cape="diamond">BlockWay</button>
+                    <button class="cape-chip hidden" data-cape="custom" title="Áo choàng bạn tự tải lên">⭐ Của tôi</button>
+                  </div>
+                  <div class="wt-row-2col" style="margin-top:8px;">
+                    <button class="wt-upload-btn" id="btnUploadCapePng" title="Ảnh PNG tỉ lệ 2:1 (VD 64x32) — bạn bè dùng BlockWay sẽ thấy khi chơi Offline / LAN">
+                      <span>📤 Tải Áo Choàng Riêng (.PNG)</span>
+                    </button>
+                    <button class="wt-upload-btn hidden" id="btnRemoveCustomCape"><span>🗑️ Gỡ áo choàng riêng</span></button>
                   </div>
                   <button class="wt-upload-btn full-width-btn" id="btnToggleElytra" style="margin-top:8px;">
                     <span>🪽 Đeo Thử Cánh Cứng Elytra 3D</span>
@@ -1586,7 +1596,7 @@
               </div>
             </div>
             <div class="console-terminal" id="consoleOutput">
-              <div class="log-entry info">[BlockWay Launcher v40.7.0 PRO] Sẵn sàng khởi chạy.</div>
+              <div class="log-entry info">[BlockWay Launcher v40.8.0 PRO] Sẵn sàng khởi chạy.</div>
             </div>
           </div>
         </section>
@@ -1608,7 +1618,7 @@
                 📦 GitHub Repo
               </button>
               <button class="btn-sync-skin" id="btnCheckUpdate">
-                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.7.0</span>)
+                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v40.8.0</span>)
               </button>
             </div>
           </div>
@@ -1757,6 +1767,13 @@
                   </div>
                 </label>
                 <label class="settings-opt-item">
+                  <input type="checkbox" id="gentleSmoothCheck" checked />
+                  <div class="soi-body">
+                    <strong>🍃 Mượt Êm — Không Ép Máy (Khóa FPS theo màn hình)</strong>
+                    <span>Khóa FPS bằng tần số màn hình, giảm tải CPU mô phỏng &amp; Đồ họa Fabulous, giới hạn luồng dọn RAM chạy nền. Máy mát, quạt êm mà vẫn mượt — tắt là tự khôi phục thiết lập gốc.</span>
+                  </div>
+                </label>
+                <label class="settings-opt-item">
                   <input type="checkbox" id="potatoGraphicsCheck" />
                   <div class="soi-body">
                     <strong>🚀 Chế độ Đồ họa Siêu Mượt cho Máy Yếu (Tối ưu <code>options.txt</code>)</strong>
@@ -1832,6 +1849,7 @@
         <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <button class="btn-modal-cancel" id="btnCrashDoctorClose">Đóng</button>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-sync-skin" id="btnCrashShareLog" title="Tải nhật ký lỗi lên mclo.gs (đã tự che tên máy, IP & mã đăng nhập) rồi copy link để gửi bạn bè / nhóm hỗ trợ">📤 Tạo link chia sẻ log</button>
             <button class="btn-sync-skin" id="btnCrashOpenModsDir">📂 Mở Thư Mục Mods</button>
             <button class="btn-modal-agree" id="btnCrashRelaunchNow">🚀 Đã Sửa Xong — Vào Lại Game Ngay</button>
           </div>
@@ -1850,6 +1868,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <button class="btn-sync-skin" id="btnGalleryOpenExplorer">📂 Mở Thư Mục Gốc</button>
+            <button class="vtype-btn" id="btnGalleryResetWallpaper" title="Đưa hình nền trang chủ về ảnh BlockWay mặc định">🔄 Nền mặc định</button>
             <button class="vtype-btn" id="btnGalleryRefresh">🔄 Làm mới</button>
             <button class="vtype-btn" id="btnGalleryCloseTop">✕ Đóng</button>
           </div>

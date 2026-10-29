@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('aetherAPI', {
   minimize: () => ipcRenderer.send('win:minimize'),
@@ -142,6 +142,17 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   getReplayStudioStatus: (params) => ipcRenderer.invoke('replay:status', params),
   installReplayStudioPack: (params) => ipcRenderer.invoke('replay:install', params),
   copyTextToClipboard: (text) => ipcRenderer.invoke('sys:copy-text', text),
+
+  // v40.8 PRO — Servers 2.0, Kéo-Thả Cài Mọi Thứ, Tủ Đồ Skin + Áo Choàng, Chia Sẻ Log Lỗi
+  syncServersDat: (params) => ipcRenderer.invoke('server:sync-dat', params),
+  installDroppedFiles: (params) => ipcRenderer.invoke('addons:install-dropped', params),
+  getPathForFile: (file) => {
+    try { return webUtils.getPathForFile(file) || ''; } catch (_) { return (file && file.path) || ''; }
+  },
+  uploadLocalCape: (gameDir, username) => ipcRenderer.invoke('cape:upload-local', gameDir, username),
+  getLocalCape: (gameDir, username) => ipcRenderer.invoke('cape:get-local', gameDir, username),
+  removeLocalCape: (gameDir, username) => ipcRenderer.invoke('cape:remove-local', gameDir, username),
+  shareCrashLog: (params) => ipcRenderer.invoke('crash:share-log', params),
 
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),

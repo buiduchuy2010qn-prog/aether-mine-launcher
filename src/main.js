@@ -37,7 +37,8 @@ const {
   searchOnlineSkins, applyOnlineSkinToWardrobe, installFriendSkinSyncPack,
   getPvpClientModeState, togglePvpClientMode,
   inspectLocalWorldDetails, rescuePatchLocalWorld, getCuratedSeedsVault, createStandaloneQuickWorld,
-  getReplayStudioStatus, installReplayStudioPack
+  getReplayStudioStatus, installReplayStudioPack,
+  saveCustomLocalCape, removeCustomLocalCape, getCustomLocalCape
 } = require('./launcher-engine');
 const {
   loginWithMicrosoftModal,
@@ -76,7 +77,7 @@ function getLauncherVersionTitle() {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
     if (pkg?.version) return `BlockWay Launcher — v${pkg.version} PRO`;
   } catch (_) {}
-  return 'BlockWay Launcher — v40.7.0 PRO';
+  return `BlockWay Launcher — v${app.getVersion()} PRO`;
 }
 
 let mainWindow;
@@ -136,6 +137,7 @@ let discordConnecting = false;
 let discordLastTryMs = 0;
 let discordDesiredActivity = null;
 let activeGamePresenceCtx = null;
+let mcGameRunning = false;
 
 try {
   if (fs.existsSync(configPath)) {
@@ -274,11 +276,11 @@ function setDiscordLobbyPresence() {
   activeGamePresenceCtx = null;
   updateDiscordPresence({
     details: 'Đang ở sảnh chờ BlockWay Launcher',
-    state: 'Every World, One Place • v40.5.0 PRO',
+    state: `Every World, One Place • v${app.getVersion()} PRO`,
     timestamps: { start: launcherBootEpochSec },
     assets: {
       large_image: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-logo.png',
-      large_text: 'BlockWay Launcher v40.5.0 PRO'
+      large_text: `BlockWay Launcher v${app.getVersion()} PRO`
     },
     buttons: [
       { label: 'Tải BlockWay Launcher', url: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/' }
@@ -307,7 +309,7 @@ function setDiscordPlayingPresence(ctx = {}) {
     timestamps: { start: activeGamePresenceCtx.startSec },
     assets: {
       large_image: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/app-logo.png',
-      large_text: 'BlockWay Launcher v40.5.0 PRO'
+      large_text: `BlockWay Launcher v${app.getVersion()} PRO`
     },
     buttons: [
       { label: 'Tải BlockWay Launcher', url: 'https://buiduchuy2010qn-prog.github.io/blockway-launcher/' }
@@ -398,12 +400,23 @@ async function ensureAppIconSyncedAndApplied() {
       } catch (_) {}
       mainWindow.setTitle(getLauncherVersionTitle());
     }
-    if (process.platform === 'win32' && fs.existsSync(activeIco)) {
+    // v40.8: refresh shortcut icons only once per version (it used to spawn PowerShell on every start-up)
+    let iconStampPath = '';
+    let iconAlreadySynced = false;
+    try {
+      iconStampPath = path.join(app.getPath('userData'), 'bw-icon-sync-stamp.txt');
+      iconAlreadySynced = fs.existsSync(iconStampPath) && fs.readFileSync(iconStampPath, 'utf8').trim() === app.getVersion();
+    } catch (_) {}
+    if (process.platform === 'win32' && fs.existsSync(activeIco) && !iconAlreadySynced) {
       const { exec } = require('child_process');
       const exePathEsc = (process.execPath || '').replace(/'/g, "''");
       const icoEsc = activeIco.replace(/'/g, "''");
       const psUpdateShortcuts = `powershell -NoProfile -WindowStyle Hidden -Command "$ws = New-Object -ComObject WScript.Shell; $dt = [Environment]::GetFolderPath('Desktop'); $tb = Join-Path $env:APPDATA 'Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar'; @($dt, [Environment]::GetFolderPath('Programs'), $tb) | Where-Object { Test-Path $_ } | ForEach-Object { Get-ChildItem -Path $_ -Include '*Aether*.lnk','*BlockWay*.lnk' -Recurse -File -ErrorAction SilentlyContinue } | ForEach-Object { try { $s = $ws.CreateShortcut($_.FullName); $s.IconLocation = '${icoEsc},0'; $s.Description = 'BlockWay Launcher'; $s.Save(); if ($_.Name -like '*Aether*') { $newName = Join-Path $_.DirectoryName 'BlockWay Launcher.lnk'; if (-not (Test-Path $newName)) { Rename-Item -Path $_.FullName -NewName 'BlockWay Launcher.lnk' -ErrorAction SilentlyContinue } } } catch {} }; try { $bw = Join-Path $dt 'BlockWay Launcher.lnk'; $s2 = $ws.CreateShortcut($bw); $s2.TargetPath = '${exePathEsc}'; $s2.IconLocation = '${icoEsc},0'; $s2.Description = 'BlockWay Launcher'; $s2.Save() } catch {}"`;
-      exec(psUpdateShortcuts, () => {});
+      exec(psUpdateShortcuts, (err) => {
+        if (!err && iconStampPath) {
+          try { fs.writeFileSync(iconStampPath, app.getVersion(), 'utf8'); } catch (_) {}
+        }
+      });
     }
   } catch (_) {}
 }
@@ -915,9 +928,16 @@ ipcMain.handle('mc:force-kill', async () => {
 
 ipcMain.handle('mc:launch', async (_e, config) => {
   try {
-    try { delete require.cache[require.resolve('./launcher-engine')]; } catch (_) {}
+    // v40.8: reuse the already-loaded engine (re-requiring it on every launch wasted ~MBs of RAM & startup time)
     const freshEngine = require('./launcher-engine');
+    mcGameRunning = true;
     hideOnLaunchSetting = config.hideLauncherOnPlay !== false;
+    // v40.8 PRO "Mượt Êm": detect the monitor refresh rate so FPS is capped to what the screen can actually show
+    try {
+      const { screen } = require('electron');
+      const disp = mainWindow ? screen.getDisplayMatching(mainWindow.getBounds()) : screen.getPrimaryDisplay();
+      config.displayHz = Math.round(Number(disp?.displayFrequency) || 0);
+    } catch (_) {}
     const sessionStartMs = Date.now();
     let lastPlaytimeCheckpointMs = sessionStartMs;
     const instanceSlug = config.instanceDir ? path.basename(String(config.instanceDir).trim()) : '';
@@ -960,6 +980,7 @@ ipcMain.handle('mc:launch', async (_e, config) => {
         cleanupJavaTempAndTrimRam();
       },
       onClose: (code) => {
+        mcGameRunning = false;
         clearInterval(playtimeTimer);
         const remSec = Math.max(0, Math.round((Date.now() - lastPlaytimeCheckpointMs) / 1000));
         const finalStats = recordPlaytimeDelta(remSec, { instanceSlug, mcVersion: config.mcVersion, isFinal: true });
@@ -987,6 +1008,7 @@ ipcMain.handle('mc:launch', async (_e, config) => {
     });
     return { ok: true };
   } catch (err) {
+    mcGameRunning = false;
     if (discordRpcEnabled) setDiscordLobbyPresence();
     return { ok: false, error: err.message };
   }
@@ -1110,7 +1132,10 @@ ipcMain.handle('updater:check', async () => {
     }
 
     let latestVersion = remotePkg?.version || currentVersion;
-    let downloadUrl = `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v${latestVersion}/BlockWay-Launcher-Setup-${latestVersion}.exe`;
+    // v40.8: Portable users must get the Portable .exe, installed users the Setup .exe (names use "BlockWay.Launcher-…")
+    const isPortableRun = Boolean(process.env.PORTABLE_EXECUTABLE_FILE);
+    const assetKind = isPortableRun ? 'Portable' : 'Setup';
+    let downloadUrl = `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v${latestVersion}/BlockWay.Launcher-${assetKind}-${latestVersion}.exe`;
 
     try {
       const relInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/${repoSlug}/releases/latest?t=${Date.now()}`);
@@ -1119,7 +1144,9 @@ ipcMain.handle('updater:check', async () => {
         latestVersion = relVer;
       }
       if (Array.isArray(relInfo?.assets)) {
-        const exeAsset = relInfo.assets.find((a) => typeof a?.browser_download_url === 'string' && /\.exe$/i.test(a.name || a.browser_download_url));
+        const exeAssets = relInfo.assets.filter((a) => typeof a?.browser_download_url === 'string' && /\.exe$/i.test(a.name || a.browser_download_url));
+        const kindRx = isPortableRun ? /portable/i : /setup/i;
+        const exeAsset = exeAssets.find((a) => kindRx.test(a.name || '')) || exeAssets[0];
         if (exeAsset?.browser_download_url) {
           downloadUrl = exeAsset.browser_download_url;
         }
@@ -1127,7 +1154,7 @@ ipcMain.handle('updater:check', async () => {
     } catch (_) {}
 
     const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
-    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch };
+    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch, isPortable: isPortableRun };
   } catch (err) {
     return { ok: false, error: err.message, currentVersion: app.getVersion() };
   }
@@ -1136,15 +1163,51 @@ ipcMain.handle('updater:check', async () => {
 ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => {
   try {
     const appRoot = path.resolve(__dirname, '..');
-    const isUnpackedApp = path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
+    const portableExeFile = process.env.PORTABLE_EXECUTABLE_FILE || '';
+    // v40.8: the Portable .exe unpacks into %TEMP% on every start — hot-patching there is wiped on next launch,
+    // so Portable users get the new Portable .exe downloaded right next to the old one instead.
+    const isUnpackedApp = !portableExeFile && path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
+
+    if (portableExeFile) {
+      const parsedUrl = new URL(String(downloadUrl || ''));
+      const allowedHosts = new Set(['github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com']);
+      if (parsedUrl.protocol !== 'https:' || !allowedHosts.has(parsedUrl.hostname.toLowerCase())) {
+        throw new Error('Nguồn tải bản cập nhật không hợp lệ.');
+      }
+      const safeVer = String(latestVersion || 'latest').replace(/[^0-9A-Za-z._-]/g, '');
+      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(portableExeFile);
+      const newExe = path.join(portableDir, `BlockWay.Launcher-Portable-${safeVer}.exe`);
+      const tmpExe = `${newExe}.download`;
+      await downloadWithProgress(parsedUrl.toString(), tmpExe, (pct) => {
+        mainWindow?.webContents.send('updater:progress', Math.min(99, pct));
+      });
+      if (!fs.existsSync(tmpExe) || fs.statSync(tmpExe).size < 5 * 1024 * 1024) {
+        try { fs.rmSync(tmpExe, { force: true }); } catch (_) {}
+        throw new Error('Tệp Portable tải về chưa hoàn chỉnh, hãy thử lại.');
+      }
+      try { fs.rmSync(newExe, { force: true }); } catch (_) {}
+      fs.renameSync(tmpExe, newExe);
+      mainWindow?.webContents.send('updater:progress', 100);
+      const { spawn } = require('child_process');
+      setTimeout(() => {
+        try {
+          const child = spawn(newExe, [], { detached: true, stdio: 'ignore', cwd: portableDir });
+          child.unref();
+        } catch (_) {}
+        app.exit(0);
+      }, 400);
+      return { ok: true, portablePath: newExe };
+    }
 
     if (isUnpackedApp) {
       const { repoSlug, refBranch } = await resolveGitHubRepoAndRef();
       const fallbackFiles = [
         'package.json',
+        'ota-manifest.json',
         'src/main.js',
         'src/preload.js',
         'src/launcher-engine.js',
+        'src/world-creator.js',
         'src/microsoft-auth.js',
         'src/aether-cloud-auth.js',
         'src/ui/index.html',
@@ -1164,11 +1227,13 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
 
       // v40.4 PRO: Fetch dynamic ota-manifest.json with SHA-256 verification (skips unchanged files & prevents corrupted updates)
       let manifestEntries = null;
+      let manifestBuf = null;
       try {
         const manBuf = await fetchBinaryBuffer(`${baseRaw}/ota-manifest.json?t=${Date.now()}`);
         const manJson = JSON.parse(manBuf.toString('utf8'));
         if (manJson && Array.isArray(manJson.files) && manJson.files.length >= 8) {
           manifestEntries = manJson.files.filter((e) => e && typeof e.path === 'string' && /^(package\.json|ota-manifest\.json|src\/[A-Za-z0-9._/-]+)$/.test(e.path) && !e.path.includes('..'));
+          manifestBuf = manBuf;
         }
       } catch (_) {}
 
@@ -1220,6 +1285,10 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
         }
         stagedFiles.push({ rel, buf, targetFile: localFile });
         mainWindow?.webContents.send('updater:progress', Math.round(((i + 1) / entriesToProcess.length) * 95));
+      }
+      // v40.8: keep the local ota-manifest.json in sync so the next update only downloads what changed
+      if (manifestBuf) {
+        stagedFiles.push({ rel: 'ota-manifest.json', buf: manifestBuf, targetFile: path.resolve(appRoot, 'ota-manifest.json') });
       }
 
       // Phase 2: Atomic write to disk with automatic in-memory rollback if any write fails
@@ -1488,26 +1557,55 @@ ipcMain.handle('packs:cf-key-set', async (_e, key) => {
 });
 
 ipcMain.handle('server:ping', async (_e, serverIp) => {
+  const cleanIp = String(serverIp || '').trim();
+  if (!cleanIp || cleanIp.includes('[object')) return { ok: false, online: false };
+  // v40.8 Servers 2.0: talk to the server directly (real ms, MOTD, version, icon) — cloud lookup only as a fallback
+  let nativeErr = null;
   try {
-    const cleanIp = String(serverIp || '').trim();
-    if (!cleanIp) return { ok: false };
-    const data = await fetchJsonSimple(`https://api.mcsrvstat.us/2/${encodeURIComponent(cleanIp)}`);
+    const engine = require('./launcher-engine');
+    return await engine.pingMinecraftServer(cleanIp, { timeoutMs: 4500 });
+  } catch (err) {
+    nativeErr = err;
+  }
+  // DNS failure / refused connection = really offline; skip the slow cloud lookup
+  if (nativeErr && /ENOTFOUND|ECONNREFUSED|EHOSTUNREACH/i.test(String(nativeErr.code || nativeErr.message))) {
+    return { ok: true, online: false, source: 'native', error: nativeErr.message };
+  }
+  try {
+    const data = await fetchJsonSimple(`https://api.mcsrvstat.us/3/${encodeURIComponent(cleanIp)}`);
+    const motdLines = Array.isArray(data?.motd?.clean) ? data.motd.clean : [];
     return {
       ok: true,
       online: Boolean(data?.online),
+      source: 'cloud',
+      latencyMs: 0,
+      motd: motdLines.map((l) => String(l).replace(/\s{2,}/g, ' ').trim()).filter(Boolean).slice(0, 2).join('\n'),
       playersOnline: data?.players?.online ?? 0,
       playersMax: data?.players?.max ?? 0,
+      playersSample: Array.isArray(data?.players?.list) ? data.players.list.map((p) => p?.name || p).filter(Boolean).slice(0, 12) : [],
       version: data?.version || '',
+      protocol: Number(data?.protocol?.version) || 0,
       icon: data?.icon || null
     };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: true, online: false, error: (nativeErr && nativeErr.message) || err.message };
+  }
+});
+
+ipcMain.handle('server:sync-dat', async (_e, { gameDir, servers, writeServers, writeToGame = true } = {}) => {
+  try {
+    const engine = require('./launcher-engine');
+    return engine.syncServersDat(gameDir, Array.isArray(servers) ? servers : [], {
+      writeToGame: Boolean(writeToGame) && !mcGameRunning,
+      writeList: Array.isArray(writeServers) ? writeServers : null
+    });
+  } catch (err) {
+    return { ok: false, error: err.message, importedFromGame: [] };
   }
 });
 
 ipcMain.handle('migrate:scan', async (_e, gameDir) => {
   try {
-    try { delete require.cache[require.resolve('./launcher-engine')]; } catch (_) {}
     const freshEngine = require('./launcher-engine');
     const items = freshEngine.scanExternalLaunchers(gameDir);
     return { ok: true, items };
@@ -1518,7 +1616,6 @@ ipcMain.handle('migrate:scan', async (_e, gameDir) => {
 
 ipcMain.handle('migrate:import', async (_e, params) => {
   try {
-    try { delete require.cache[require.resolve('./launcher-engine')]; } catch (_) {}
     const freshEngine = require('./launcher-engine');
     const res = freshEngine.importFromExternalLauncher(params || {}, (st) => {
       mainWindow?.webContents.send('mc:status', st);
@@ -1576,8 +1673,9 @@ ipcMain.handle('coop:prepare-host', async (_e, params) => {
 ipcMain.handle('coop:upsert-room', async (_e, params) => {
   try {
     const res = await upsertCoopRoom(params || {});
-    if (res?.ok && res?.room?.code && activeGamePresenceCtx) {
-      setDiscordPlayingPresence({ ...activeGamePresenceCtx, coopCode: res.room.code });
+    const roomCode = res?.room?.roomCode || res?.room?.code;
+    if (res?.ok && roomCode && activeGamePresenceCtx) {
+      setDiscordPlayingPresence({ ...activeGamePresenceCtx, coopCode: roomCode });
     }
     return res;
   } catch (err) {
@@ -2136,6 +2234,130 @@ ipcMain.handle('sys:copy-text', async (_e, text = '') => {
   try {
     clipboard.writeText(String(text ?? '').slice(0, 4096));
     return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+/* ===================== v40.8 PRO — Áo choàng tự chọn, Kéo-thả cài đặt, Chia sẻ log lỗi ===================== */
+ipcMain.handle('cape:upload-local', async (_e, gameDir, username) => {
+  try {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Chọn ảnh Áo choàng (Cape) .png — tỉ lệ 2:1, VD 64x32',
+      properties: ['openFile'],
+      filters: [{ name: 'Minecraft Cape PNG', extensions: ['png'] }]
+    });
+    if (res.canceled || !res.filePaths?.length) return { ok: false, canceled: true };
+    return saveCustomLocalCape(gameDir, username, res.filePaths[0]);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cape:get-local', async (_e, gameDir, username) => {
+  try { return getCustomLocalCape(gameDir, username); } catch (err) { return { ok: false, error: err.message, dataUrl: '' }; }
+});
+
+ipcMain.handle('cape:remove-local', async (_e, gameDir, username) => {
+  try { return removeCustomLocalCape(gameDir, username); } catch (err) { return { ok: false, error: err.message }; }
+});
+
+ipcMain.handle('addons:install-dropped', async (_e, { gameDir, instanceDir = '', filePaths = [] } = {}) => {
+  const engine = require('./launcher-engine');
+  const results = [];
+  for (const fp of (Array.isArray(filePaths) ? filePaths : []).slice(0, 20)) {
+    try {
+      results.push(engine.installDroppedAddonFile({ gameDir, instanceDir, filePath: String(fp || '') }));
+    } catch (err) {
+      results.push({ ok: false, fileName: path.basename(String(fp || '')), error: err.message });
+    }
+  }
+  return { ok: results.some((r) => r.ok), results };
+});
+
+function redactLogForSharing(text) {
+  let s = String(text || '');
+  const escapeRe = (v) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  try {
+    const home = os.homedir();
+    if (home && home.length > 3) {
+      for (const variant of new Set([home, home.replace(/\\/g, '/'), home.replace(/\\/g, '\\\\')])) {
+        s = s.replace(new RegExp(escapeRe(variant), 'gi'), '~');
+      }
+    }
+    const user = os.userInfo().username;
+    if (user && user.length >= 3) {
+      s = s.replace(new RegExp(`([\\\\/]Users[\\\\/])${escapeRe(user)}(?=[\\\\/])`, 'gi'), '$1<user>');
+      s = s.replace(new RegExp(`\\b${escapeRe(user)}\\b`, 'gi'), '<user>');
+    }
+  } catch (_) {}
+  s = s.replace(/(--(?:accessToken|clientId|xuid|session)\s+)\S+/gi, '$1<hidden>');
+  s = s.replace(/("?(?:accessToken|access_token|refresh_token|session|token)"?\s*[:=]\s*"?)[\w.\-]{12,}/gi, '$1<hidden>');
+  s = s.replace(/eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}/g, '<hidden-token>');
+  s = s.replace(/\b(?!127\.0\.0\.1\b)(?!0\.0\.0\.0\b)(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g, '<ip>');
+  return s;
+}
+
+function postToMclogs(content) {
+  return new Promise((resolve, reject) => {
+    const body = `content=${encodeURIComponent(content)}`;
+    const req = https.request({
+      hostname: 'api.mclo.gs',
+      path: '/1/log',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+        'User-Agent': `BlockWayLauncher/${app.getVersion()}`
+      },
+      timeout: 20000
+    }, (res) => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(data);
+          if (j && j.success && j.url) resolve(j);
+          else reject(new Error(j?.error || `mclo.gs trả về mã ${res.statusCode}`));
+        } catch (_) {
+          reject(new Error(`mclo.gs trả về dữ liệu không hợp lệ (mã ${res.statusCode})`));
+        }
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('Hết thời gian kết nối tới mclo.gs')));
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+ipcMain.handle('crash:share-log', async (_e, { gameDir, fallbackText = '' } = {}) => {
+  try {
+    const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+    const parts = [];
+    const latestLog = path.join(rootDir, 'logs', 'latest.log');
+    const latestMtime = fs.existsSync(latestLog) ? fs.statSync(latestLog).mtimeMs : 0;
+    const crashDir = path.join(rootDir, 'crash-reports');
+    if (fs.existsSync(crashDir)) {
+      const newest = fs.readdirSync(crashDir)
+        .filter((f) => /\.txt$/i.test(f))
+        .map((f) => ({ f, t: fs.statSync(path.join(crashDir, f)).mtimeMs }))
+        .sort((a, b) => b.t - a.t)[0];
+      if (newest && (!latestMtime || newest.t >= latestMtime - 5 * 60 * 1000)) {
+        parts.push(`===== crash-reports/${newest.f} =====\n${fs.readFileSync(path.join(crashDir, newest.f), 'utf8')}`);
+      }
+    }
+    if (latestMtime) parts.push(`===== logs/latest.log =====\n${fs.readFileSync(latestLog, 'utf8')}`);
+    if (!parts.length && fallbackText) parts.push(String(fallbackText));
+    if (!parts.length) return { ok: false, error: 'Chưa có nhật ký nào để chia sẻ — hãy mở game một lần trước.' };
+    let content = redactLogForSharing(parts.join('\n\n'));
+    const lines = content.split(/\r?\n/);
+    if (lines.length > 24000) content = lines.slice(-24000).join('\n');
+    if (Buffer.byteLength(content) > 9 * 1024 * 1024) content = content.slice(-9 * 1024 * 1024);
+    const r = await postToMclogs(content);
+    try { clipboard.writeText(r.url); } catch (_) {}
+    return { ok: true, url: r.url, id: r.id };
   } catch (err) {
     return { ok: false, error: err.message };
   }

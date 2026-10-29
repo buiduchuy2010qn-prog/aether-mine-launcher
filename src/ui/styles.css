@@ -5376,7 +5376,7 @@ html[data-theme="cherry"] {
   color: #15803d;
 }
 
-html:not([data-theme="prism"]) .aether-feedback-banner.success {
+html:not([data-theme="prism"]):not([data-theme="sakura"]) .aether-feedback-banner.success {
   color: #4ade80;
 }
 
@@ -5386,7 +5386,7 @@ html:not([data-theme="prism"]) .aether-feedback-banner.success {
   color: #dc2626;
 }
 
-html:not([data-theme="prism"]) .aether-feedback-banner.error {
+html:not([data-theme="prism"]):not([data-theme="sakura"]) .aether-feedback-banner.error {
   color: #f87171;
 }
 
@@ -5396,7 +5396,7 @@ html:not([data-theme="prism"]) .aether-feedback-banner.error {
   color: #0284c7;
 }
 
-html:not([data-theme="prism"]) .aether-feedback-banner.info {
+html:not([data-theme="prism"]):not([data-theme="sakura"]) .aether-feedback-banner.info {
   color: #38bdf8;
 }
 
