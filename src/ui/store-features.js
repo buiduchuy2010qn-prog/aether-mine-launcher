@@ -4529,7 +4529,7 @@ async function openOptifineHubModal(droppedJar = null) {
   const currentCore = String(target.core || state.selectedCore || 'vanilla').toLowerCase();
   const currentMc = String(target.mcVersion || state.selectedVersion || '1.21.4');
   const targetLabel = target.isPack ? `📦 ${target.label}` : `🏠 Thư mục chính (.minecraft — MC ${currentMc} • ${currentCore.toUpperCase()})`;
-  const effectiveParityLoader = (currentCore === 'vanilla' || currentCore === 'legacyfabric') && !target.isPack ? 'fabric' : currentCore;
+  const effectiveParityLoader = (currentCore === 'vanilla' || currentCore === 'legacyfabric' || currentCore === 'optifine') && !target.isPack ? 'fabric' : currentCore;
 
   const droppedMc = droppedJar?.mcVersion || currentMc;
   const droppedName = droppedJar?.fileName ? escapeHtml(droppedJar.fileName) : '';
@@ -4619,11 +4619,11 @@ async function openOptifineHubModal(droppedJar = null) {
       btnParity.textContent = '⏳ Đang tải & đồng bộ Bộ Chuẩn OptiFine...';
       try {
         let loaderToUse = currentCore;
-        if (!target.isPack && (loaderToUse === 'vanilla' || loaderToUse === 'legacyfabric')) {
+        if (!target.isPack && (loaderToUse === 'vanilla' || loaderToUse === 'legacyfabric' || loaderToUse === 'optifine')) {
           loaderToUse = 'fabric';
-          setStatus(`⚙️ Đang chuyển sang <strong>Fabric • MC ${escapeHtml(currentMc)}</strong> để kích hoạt trọn bộ tính năng đồ họa &amp; Shader...`);
+          setStatus(`⚙️ Đang kích hoạt Core <strong>OptiFine • MC ${escapeHtml(currentMc)}</strong> và trang bị trọn bộ Shader, Zoom, Đuốc sáng &amp; FPS...`);
           if (typeof window.selectMcVersionAndCore === 'function') {
-            await window.selectMcVersionAndCore(currentMc, 'fabric');
+            await window.selectMcVersionAndCore(currentMc, 'optifine');
           }
         } else {
           setStatus(`⏳ Đang tải các Mod tương thích cho <strong>${escapeHtml(loaderToUse.toUpperCase())} • MC ${escapeHtml(currentMc)}</strong> từ Modrinth...`);
@@ -4747,8 +4747,11 @@ async function openOptifineHubModal(droppedJar = null) {
         action: 'run-installer'
       });
       if (r?.ok) {
-        setStatus('☕ Đã mở cửa sổ cài đặt OptiFine gốc bằng Java! Hãy bấm <strong>Install</strong> trong cửa sổ vừa hiện lên.');
-        showAetherNotification('☕ Đã mở trình cài đặt OptiFine gốc bằng Java!', 'info', 5000);
+        if (!droppedJar.isInstance && typeof window.selectMcVersionAndCore === 'function') {
+          try { await window.selectMcVersionAndCore(droppedMc, 'optifine'); } catch (_) {}
+        }
+        setStatus('☕ Đã mở cửa sổ cài đặt OptiFine gốc bằng Java và chuyển sẵn sang Core <strong>OptiFine</strong>! Hãy bấm <strong>Install</strong> trong cửa sổ vừa hiện lên.');
+        showAetherNotification('☕ Đã mở trình cài OptiFine gốc bằng Java & chọn sẵn Core OptiFine!', 'info', 5000);
       } else {
         setStatus(`⚠️ ${escapeHtml(r?.error || 'Không mở được trình cài đặt Java.')}`, true);
       }
@@ -5036,7 +5039,7 @@ function initV402FeaturesUI() {
     const el = document.getElementById(id);
     if (el) el.onclick = () => exportMrpackUI(null);
   });
-  ['btnModsOptifineHub', 'btnToolsOptifineHub'].forEach((id) => {
+  ['btnHomeOptifineHub', 'btnModsOptifineHub', 'btnToolsOptifineHub'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.onclick = () => openOptifineHubModal(null);
   });
@@ -6918,7 +6921,7 @@ async function installDroppedPathsUI(paths) {
     } else if (r.kind === 'mod') {
       const core = String(state.selectedCore || 'vanilla').toLowerCase();
       const loaders = (r.loaders || []).map((l) => String(l).toLowerCase());
-      const mismatch = loaders.length && !instanceDir && core !== 'vanilla' && !loaders.includes(core) && !(core === 'quilt' && loaders.includes('fabric'));
+      const mismatch = loaders.length && !instanceDir && core !== 'vanilla' && !loaders.includes(core) && !((core === 'quilt' || core === 'optifine') && loaders.includes('fabric'));
       okMsgs.push(`🧩 Mod ${r.fileName}${loaders.length ? ` (${loaders.join('/')})` : ''}${mismatch ? ` ⚠ bạn đang chọn ${core.toUpperCase()}` : ''}`);
     } else if (r.kind === 'shader') {
       okMsgs.push(`✨ Shader ${r.fileName} (đã bật sẵn)`);
@@ -6930,8 +6933,8 @@ async function installDroppedPathsUI(paths) {
     }
   }
   if (needFabricForShader && typeof window.selectMcVersionAndCore === 'function') {
-    try { await window.selectMcVersionAndCore(state.selectedVersion, 'fabric'); } catch (_) {}
-    okMsgs.push('⚙️ Đã chuyển sang Fabric để chạy Shader');
+    try { await window.selectMcVersionAndCore(state.selectedVersion, 'optifine'); } catch (_) {}
+    okMsgs.push('🔆 Đã bật Core OptiFine để tự động chạy Shader');
   }
   if (okMsgs.length) showAetherNotification(`✅ Đã cài: ${okMsgs.join(' • ')}`, 'success', 6500);
   if (pendingOptifineChoice) {

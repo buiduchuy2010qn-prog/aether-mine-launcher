@@ -512,8 +512,77 @@ async function fetchVersionManifest() {
   };
 }
 
-async function fetchLoaderVersions(mcVersion, loaderType) {
+function normalizeModrinthLoader(loaderType) {
+  const raw = String(loaderType || '').toLowerCase().trim();
+  if (!raw || raw === 'vanilla' || raw === 'legacyfabric' || raw === 'optifine') return 'fabric';
+  return raw;
+}
+
+function findInstalledOptifineProfiles(gameDir, mcVersion) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const versionsDir = path.join(rootDir, 'versions');
+  if (!fs.existsSync(versionsDir)) return [];
+  const targetVer = String(mcVersion || '').trim();
+  const esc = targetVer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const out = [];
+  try {
+    const entries = fs.readdirSync(versionsDir, { withFileTypes: true });
+    for (const ent of entries) {
+      if (!ent.isDirectory()) continue;
+      const id = ent.name;
+      if (!/optifine/i.test(id)) continue;
+      const jsonPath = path.join(versionsDir, id, `${id}.json`);
+      if (!fs.existsSync(jsonPath)) continue;
+      let matched = false;
+      let mtime = 0;
+      try {
+        mtime = fs.statSync(jsonPath).mtimeMs || 0;
+        const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        if (targetVer) {
+          if (
+            new RegExp(`^${esc}[-_ ]?optifine`, 'i').test(id)
+            || parsed?.inheritsFrom === targetVer
+            || parsed?.jar === targetVer
+          ) {
+            matched = true;
+          }
+        } else {
+          matched = true;
+        }
+      } catch (_) {}
+      if (matched) {
+        const shortTag = targetVer
+          ? id.replace(new RegExp(`^${esc}[-_ ]?`, 'i'), '')
+          : id;
+        out.push({ customId: id, shortTag: shortTag || id, mtime });
+      }
+    }
+  } catch (_) {}
+  return out.sort((a, b) => b.mtime - a.mtime);
+}
+
+async function fetchLoaderVersions(mcVersion, loaderType, gameDir = '') {
   if (loaderType === 'vanilla') return [];
+
+  if (loaderType === 'optifine') {
+    const out = [];
+    const installedProfiles = findInstalledOptifineProfiles(gameDir || getDefaultGameDir(), mcVersion);
+    for (const p of installedProfiles) {
+      out.push({
+        version: p.customId,
+        stable: true,
+        kind: 'standalone',
+        displayLabel: `☕ ${p.shortTag} (OptiFine gốc đã cài)`
+      });
+    }
+    out.push({
+      version: 'Auto-Shader-Zoom',
+      stable: true,
+      kind: 'parity',
+      displayLabel: '🔆 Tự động đủ bộ (Shader • Zoom • Đuốc sáng • FPS)'
+    });
+    return out;
+  }
 
   if (loaderType === 'fabric') {
     try {
@@ -675,6 +744,33 @@ function installLegacyForgeFromInstaller(gameDir, installerJar) {
 async function prepareCustomLoaderJson(gameDir, mcVersion, loaderType, loaderVersion, onStatus) {
   if (loaderType === 'vanilla') return null;
 
+  if (loaderType === 'optifine') {
+    const installedProfiles = findInstalledOptifineProfiles(gameDir, mcVersion);
+    if (loaderVersion && loaderVersion !== 'Auto-Shader-Zoom') {
+      const exact = installedProfiles.find((p) => p.customId === loaderVersion);
+      if (exact) return { type: 'customJson', customId: exact.customId };
+    } else if (installedProfiles.length > 0 && !loaderVersion) {
+      return { type: 'customJson', customId: installedProfiles[0].customId };
+    }
+    try {
+      const fabList = await fetchJson(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(mcVersion)}?limit=4`);
+      if (Array.isArray(fabList) && fabList.length > 0) {
+        return await prepareCustomLoaderJson(gameDir, mcVersion, 'fabric', fabList[0].loader.version, onStatus);
+      }
+    } catch (_) {}
+    if (compareMcVersions(mcVersion, '1.14') < 0) {
+      const forgeList = await fetchLoaderVersions(mcVersion, 'forge');
+      if (forgeList.length > 0) {
+        return await prepareCustomLoaderJson(gameDir, mcVersion, 'forge', forgeList[0].version, onStatus);
+      }
+      const lfList = await fetchLoaderVersions(mcVersion, 'legacyfabric');
+      if (lfList.length > 0) {
+        return await prepareCustomLoaderJson(gameDir, mcVersion, 'legacyfabric', lfList[0].version, onStatus);
+      }
+    }
+    return null;
+  }
+
   let loaderVer = loaderVersion;
   if (!loaderVer) {
     const available = await fetchLoaderVersions(mcVersion, loaderType);
@@ -756,7 +852,7 @@ async function searchModrinth({
   limit = 48,
   allVersions = false
 }) {
-  const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const buildFacets = (strictExactVer) => {
     const f = [[`project_type:${projectType}`]];
     if (mcVersion && !allVersions) {
@@ -978,13 +1074,13 @@ function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVe
   } catch (_) {}
 }
 
-async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.11', loaderType = 'fabric', gameDir, _isDep = false }, onStatus) {
+async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '1.21.11', loaderType = 'fabric', gameDir, _isDep = false, strictMcVersion = false }, onStatus) {
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
   const folderMap = { mod: 'mods', shader: 'shaderpacks', resourcepack: 'resourcepacks' };
   const targetFolder = path.join(rootDir, folderMap[projectType] || 'mods');
   if (!fs.existsSync(targetFolder)) fs.mkdirSync(targetFolder, { recursive: true });
 
-  const effectiveLoader = loaderType === 'vanilla' || loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const loaderMatches = (loaders) => {
     if (projectType !== 'mod') return true;
     if (!Array.isArray(loaders)) return false;
@@ -1005,8 +1101,8 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
     return gvOk && loaderMatches(v.loaders);
   });
 
-  // 2. Fallback within the SAME major.minor family (e.g. 1.21.x) + compatible Core Loader
-  if (matched.length === 0) {
+  // 2. Fallback within the SAME major.minor family (e.g. 1.21.x) + compatible Core Loader (unless strictMcVersion requested)
+  if (matched.length === 0 && !strictMcVersion) {
     const baseParts = String(mcVersion).split('-')[0].split('.');
     const familyPrefix = baseParts.length >= 2 ? `${baseParts[0]}.${baseParts[1]}` : mcVersion;
     matched = allVersions.filter((v) => {
@@ -1671,7 +1767,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   const modsFolder = path.join(rootDir, 'mods');
   if (!fs.existsSync(modsFolder)) return;
 
-  const effectiveLoader = loaderType === 'legacyfabric' ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const meta = readModsMetaManifest(modsFolder);
   let metaDirty = false;
   let files = [];
@@ -1925,6 +2021,7 @@ async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'f
   }
 
   const installed = [];
+  const alreadyPresent = [];
   const errors = [];
   for (let i = 0; i < groups.length; i++) {
     const candidates = groups[i];
@@ -1934,11 +2031,12 @@ async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'f
       try {
         onStatus?.(`🔆 [${i + 1}/${groups.length}] Đang trang bị gói Chuẩn OptiFine: ${slug.toUpperCase()} (${mcVersion})...`);
         const res = await installModrinthProject(
-          { slug, projectType: 'mod', mcVersion, loaderType: effectiveLoader, gameDir: rootDir },
+          { slug, projectType: 'mod', mcVersion, loaderType: effectiveLoader, gameDir: rootDir, strictMcVersion: true },
           onStatus
         );
         if (res?.fileName) {
-          installed.push(res.fileName);
+          if (res.skipped) alreadyPresent.push(res.fileName);
+          else installed.push(res.fileName);
           groupSuccess = true;
           break;
         }
@@ -1950,13 +2048,110 @@ async function installOptifineParityPack({ mcVersion = '1.21.4', loaderType = 'f
   }
 
   return {
-    ok: installed.length > 0,
+    ok: installed.length > 0 || alreadyPresent.length > 0,
     installed,
-    alreadyPresent: [],
+    alreadyPresent,
     parkedConflicts,
     parkedOptifine: parkedConflicts,
     errors,
     recommendedCore: effectiveLoader
+  };
+}
+
+function findActiveOptifineForgeJar(modsDir, mcVersion) {
+  if (!modsDir || !fs.existsSync(modsDir)) return null;
+  try {
+    const files = fs.readdirSync(modsDir).filter((f) => /\.jar$/i.test(f) && isProprietaryOptifineFile(f) && !/^optifabric/i.test(f));
+    for (const f of files) {
+      const info = inspectOptifineJar(path.join(modsDir, f));
+      if (!info.isOptifine) continue;
+      if (!mcVersion || !info.mcVersion || info.mcVersion === mcVersion) {
+        return f;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function resolveOptifineRuntimePlan({ rootDir, gameDirectory, mcVersion, loaderVersion }, onStatus) {
+  const standaloneProfiles = findInstalledOptifineProfiles(rootDir, mcVersion);
+  const pickedStandalone = loaderVersion && loaderVersion !== 'Auto-Shader-Zoom'
+    ? standaloneProfiles.find((p) => p.customId === loaderVersion)
+    : standaloneProfiles[0];
+
+  if (pickedStandalone && (loaderVersion === pickedStandalone.customId || !loaderVersion)) {
+    onStatus?.(`🔆 Đang mở cấu hình OptiFine gốc "${pickedStandalone.shortTag}" cho MC ${mcVersion}...`);
+    return {
+      mode: 'standalone',
+      effectiveLoader: 'vanilla',
+      effectiveLoaderVersion: '',
+      customPrep: { type: 'customJson', customId: pickedStandalone.customId }
+    };
+  }
+
+  const modsDir = path.join(gameDirectory, 'mods');
+  const activeOfJar = findActiveOptifineForgeJar(modsDir, mcVersion);
+  if (activeOfJar) {
+    const forgeBuilds = await fetchLoaderVersions(mcVersion, 'forge');
+    if (forgeBuilds.length > 0) {
+      parkOptifineConflictsInMods(modsDir, 'for-optifine');
+      onStatus?.(`🔆 Đang mở OptiFine (${activeOfJar}) qua nền tảng Forge cho MC ${mcVersion}...`);
+      return {
+        mode: 'forge-jar',
+        effectiveLoader: 'forge',
+        effectiveLoaderVersion: forgeBuilds[0].version,
+        customPrep: null
+      };
+    }
+  }
+
+  // Default 1-Click Automatic OptiFine Mode (Shader • Zoom • Dynamic Lights • FPS)
+  let effectiveLoader = 'vanilla';
+  let effectiveLoaderVersion = '';
+  try {
+    const fabList = await fetchJson(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(mcVersion)}?limit=4`);
+    if (Array.isArray(fabList) && fabList.length > 0) {
+      effectiveLoader = 'fabric';
+      effectiveLoaderVersion = fabList[0].loader.version;
+    }
+  } catch (_) {}
+
+  if (effectiveLoader === 'vanilla' && compareMcVersions(mcVersion, '1.14') >= 0) {
+    // Check offline cached fabric-loader profile on disk
+    try {
+      const versDir = path.join(rootDir, 'versions');
+      if (fs.existsSync(versDir)) {
+        const suffix = `-${mcVersion}`;
+        const cached = fs.readdirSync(versDir).find((d) => d.startsWith('fabric-loader-') && d.endsWith(suffix));
+        if (cached) {
+          effectiveLoader = 'fabric';
+          effectiveLoaderVersion = cached.slice('fabric-loader-'.length, cached.length - suffix.length);
+        }
+      }
+    } catch (_) {}
+  } else if (effectiveLoader === 'vanilla' && compareMcVersions(mcVersion, '1.14') < 0) {
+    const forgeBuilds = await fetchLoaderVersions(mcVersion, 'forge');
+    if (forgeBuilds.length > 0) {
+      effectiveLoader = 'forge';
+      effectiveLoaderVersion = forgeBuilds[0].version;
+    } else {
+      const lfBuilds = await fetchLoaderVersions(mcVersion, 'legacyfabric');
+      if (lfBuilds.length > 0) {
+        effectiveLoader = 'legacyfabric';
+        effectiveLoaderVersion = lfBuilds[0].version;
+      }
+    }
+  }
+
+  if (effectiveLoader === 'vanilla') {
+    onStatus?.(`ℹ️ Phiên bản ${mcVersion} chưa có bản dựng Loader trên kho — đang mở trực tiếp chế độ mượt êm.`);
+  }
+
+  return {
+    mode: 'auto-parity',
+    effectiveLoader,
+    effectiveLoaderVersion,
+    customPrep: null
   };
 }
 
@@ -2723,23 +2918,70 @@ async function launchMinecraft(config, callbacks = {}) {
     }
   } catch (_) {}
 
+  let effectiveLoaderType = loaderType;
+  let effectiveLoaderVersion = loaderVersion;
+  let optifineRuntimePlan = null;
+  if (loaderType === 'optifine') {
+    optifineRuntimePlan = await resolveOptifineRuntimePlan(
+      { rootDir, gameDirectory, mcVersion, loaderVersion },
+      callbacks.onStatus
+    );
+    effectiveLoaderType = optifineRuntimePlan.effectiveLoader;
+    effectiveLoaderVersion = optifineRuntimePlan.effectiveLoaderVersion;
+  }
+
   if (gameDirectory === rootDir) {
-    await ensureModsMatchVersion(rootDir, mcVersion, loaderType, callbacks.onStatus);
+    await ensureModsMatchVersion(rootDir, mcVersion, effectiveLoaderType, callbacks.onStatus);
   } else {
     // v40.4.1 PRO: Ensure SkyBlock / OneBlock instances auto-default "World Type: Default" to Void Island!
     try {
       const instMeta = readInstanceMeta(gameDirectory);
       const instHint = `${config?.packName || ''} ${instMeta?.name || ''} ${path.basename(gameDirectory)}`;
       if (instMeta?.autoIslandMode || /(one\s*block|one_?block|sky\s*block|sky_?block)/i.test(instHint)) {
-        ensureDefaultIslandWorldPresetJar(gameDirectory, mcVersion, loaderType);
+        ensureDefaultIslandWorldPresetJar(gameDirectory, mcVersion, effectiveLoaderType);
       }
     } catch (_) {}
   }
-  const loaderPrep = await prepareCustomLoaderJson(
+
+  // v40.9.2 PRO: Auto-equip 1-Click OptiFine Parity Mods when launching with OptiFine Core (0s overhead if already equipped)
+  if (optifineRuntimePlan?.mode === 'auto-parity' && ['fabric', 'forge', 'neoforge', 'quilt'].includes(effectiveLoaderType)) {
+    try {
+      const modsDirNow = path.join(gameDirectory, 'mods');
+      fs.mkdirSync(modsDirNow, { recursive: true });
+      const activeJarsNow = fs.readdirSync(modsDirNow).filter((f) => /\.jar$/i.test(f));
+      const hasRenderMod = activeJarsNow.some((f) => /^(?:sodium|embeddium)[-_+.]/i.test(f));
+      const hasShaderMod = activeJarsNow.some((f) => /^(?:iris|oculus)[-_+.]/i.test(f));
+      const hasZoomMod = activeJarsNow.some((f) => /^(?:zume|zoomify|logical[-_]zoom|wi[-_]zoom)[-_+.]/i.test(f));
+      const markerPath = path.join(modsDirNow, '.blockway-of-checked.json');
+      const cacheKey = `${mcVersion}:${effectiveLoaderType}`;
+      let checkedMap = {};
+      try {
+        if (fs.existsSync(markerPath)) checkedMap = JSON.parse(fs.readFileSync(markerPath, 'utf8')) || {};
+      } catch (_) {}
+      const recentlyChecked = checkedMap[cacheKey] && (Date.now() - Number(checkedMap[cacheKey])) < 6 * 3600 * 1000;
+
+      if (!(hasRenderMod && hasShaderMod && hasZoomMod) && !recentlyChecked) {
+        callbacks.onStatus?.(`🔆 Đang tự động trang bị trọn bộ OptiFine (Shader • Zoom • Đuốc sáng • FPS) cho MC ${mcVersion}...`);
+        await installOptifineParityPack(
+          {
+            mcVersion,
+            loaderType: effectiveLoaderType,
+            gameDir: rootDir,
+            instanceDir: gameDirectory !== rootDir ? gameDirectory : ''
+          },
+          callbacks.onStatus
+        );
+        checkedMap[cacheKey] = Date.now();
+        try { fs.writeFileSync(markerPath, JSON.stringify(checkedMap, null, 2), 'utf8'); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  const loaderPrep = optifineRuntimePlan?.customPrep || await prepareCustomLoaderJson(
     rootDir,
     mcVersion,
-    loaderType,
-    loaderVersion,
+    effectiveLoaderType,
+    effectiveLoaderVersion,
     callbacks.onStatus
   );
 
@@ -5335,7 +5577,7 @@ async function prepareCoopHostMods({
   const targetDir = (instanceDir && fs.existsSync(instanceDir))
     ? instanceDir
     : (gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir());
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const installed = [];
   const warnings = [];
   const wantE4mc = mode === 'lan' ? false : Boolean(enableE4mc);
@@ -5551,7 +5793,7 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
   const modsFolder = path.join(rootDir, 'mods');
   if (!fs.existsSync(modsFolder)) fs.mkdirSync(modsFolder, { recursive: true });
 
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const meta = readModsMetaManifest(modsFolder);
   let allFiles = [];
   try {
@@ -5810,7 +6052,7 @@ async function syncCoopModBasket({ gameDir, instanceDir, mcVersion = '1.21.4', l
     } catch (_) {}
   }
 
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const items = Array.isArray(modBasket) ? modBasket : [];
   if (!items.length) return { ok: true, installed: [], alreadyHad: [], failed: [], installedCount: 0, skippedCount: 0 };
 
@@ -7627,7 +7869,7 @@ async function checkLocalAddonsUpdates({
     return { ok: true, updatesCount: 0, rollbackCount, itemsMap };
   }
 
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   let loadersForUpdate = [effectiveLoader];
   if (safeFolder === 'mods') {
     if (effectiveLoader === 'quilt') loadersForUpdate = ['quilt', 'fabric'];
@@ -8182,7 +8424,7 @@ async function installCoopComboPack({
   includeTeamQol = true
 } = {}, onStatus) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const installed = [];
   const skipped = [];
 
@@ -8636,7 +8878,7 @@ async function installFriendSkinSyncPack({
   friendNames = []
 } = {}, onStatus) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const installed = [];
   const skipped = [];
 
@@ -8745,7 +8987,7 @@ async function togglePvpClientMode({
   enable = true
 } = {}, onStatus) {
   const targetDir = resolveTweakerDir(gameDir, instanceDir);
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const modsDir = path.join(targetDir, 'mods');
   fs.mkdirSync(modsDir, { recursive: true });
   const prevManifest = readPvpModeManifest(targetDir);
@@ -9069,7 +9311,7 @@ async function installReplayStudioPack({
 } = {}, onStatus) {
   const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
   const targetDir = resolveTweakerDir(rootDir, instanceDir);
-  const effectiveLoader = (!loaderType || loaderType === 'vanilla' || loaderType === 'legacyfabric') ? 'fabric' : loaderType;
+  const effectiveLoader = normalizeModrinthLoader(loaderType);
   const installed = [];
 
   // Prefer Flashback (super lightweight & intuitive UI), fallback to ReplayMod — try both on every loader
@@ -9583,5 +9825,7 @@ module.exports = {
   readServersDat,
   syncServersDat,
   classifyDroppedFile,
-  installDroppedAddonFile
+  installDroppedAddonFile,
+  findInstalledOptifineProfiles,
+  resolveOptifineRuntimePlan
 };

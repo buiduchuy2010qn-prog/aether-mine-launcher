@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "40.9.1",
-  "generatedAt": "2026-10-29T08:09:17.571Z",
+  "version": "40.9.2",
+  "generatedAt": "2026-10-29T08:37:45.371Z",
   "filesCount": 18,
   "files": [
     {
       "path": "package.json",
-      "size": 2167,
-      "sha256": "f68142dadcb49c18560b754209abcf2307ca18e199cebd531813e71a34bb4355"
+      "size": 2173,
+      "sha256": "ca290271e7842b0043fed3c63c146f5f00b1a6d5cff47ee568a746a5fe93673c"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,13 +16,13 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 394190,
-      "sha256": "3730127ad35fc815777a7f4334952ca8ccd14c150fcbeb7edc0807541931c770"
+      "size": 403740,
+      "sha256": "fbacdd204c979ef677a0ede5d0f8424e8583f7aab8acf87f3d5a98ca8adba49a"
     },
     {
       "path": "src/main.js",
-      "size": 91568,
-      "sha256": "46750243b393ce3589f3cf10030b2569aabf5c111cbacb8b99f7ba625dc2f32d"
+      "size": 91586,
+      "sha256": "9b5dc3fe5e3caf1b22dc1b58fee183d3a8a40dd2dc33505efa49d8c95f1cfd37"
     },
     {
       "path": "src/microsoft-auth.js",
@@ -31,8 +31,8 @@
     },
     {
       "path": "src/preload.js",
-      "size": 13035,
-      "sha256": "8be48eef026fda656595268624d69dd07636de985ddf195b60395439bdd0dc91"
+      "size": 13053,
+      "sha256": "a9ca1330e605e1158cf54b011bee826e165bd6531241a5816c0f6ae5867d4730"
     },
     {
       "path": "src/ui/app-banner-hero.png",
@@ -56,13 +56,13 @@
     },
     {
       "path": "src/ui/index.html",
-      "size": 196680,
-      "sha256": "c4eb11f1244c436b455cb321659a4917f1915181e1ab084b96fda0d042544b80"
+      "size": 198841,
+      "sha256": "99359ac0f49ed734cd81ea2c62cb824f07032637421ce3f498f760d8144a0e71"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 190671,
-      "sha256": "218ddaa8245d7c5ace9aeed3c19b21582b46d0207f0d6f3cb9da8fb9d1ae39f9"
+      "size": 194591,
+      "sha256": "e08d2b60028762eead55641763c7d7c45ed1b6ca7d84839963721c61d915520e"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -71,8 +71,8 @@
     },
     {
       "path": "src/ui/renderer.js",
-      "size": 142403,
-      "sha256": "786d69efa3863a3db6e1ec56c72c7e4800f978c343f9b4e50e679d2fee63aef3"
+      "size": 142780,
+      "sha256": "13948a5d1248d802b7f8548c07c85ca5541c5e3361c30c518080eb30b29a7a26"
     },
     {
       "path": "src/ui/skinview3d.bundle.js",
@@ -81,8 +81,8 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 378659,
-      "sha256": "d2e9875a226465db9bd99251f56478ac6eb72c9c28e66cb58e7f10aa4984a7e5"
+      "size": 379054,
+      "sha256": "56a2f51033249861ae6d985657c1039335ab0be0dba0edbff28430580c23b2a1"
     },
     {
       "path": "src/ui/styles.css",

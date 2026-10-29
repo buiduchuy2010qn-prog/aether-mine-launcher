@@ -591,7 +591,14 @@ function updateSummaryUI() {
   const ramNum = ctx?.ramGB || state.ramGB;
   const ram = `${ramNum} GB`;
   const effectiveLdrVer = ctx ? (ctx.loaderVersion || '') : state.selectedLoaderVersion;
-  const ldrTag = (effectiveCore !== 'vanilla' && effectiveLdrVer) ? ` ${effectiveLdrVer}` : '';
+  let ldrTag = '';
+  if (effectiveCore === 'optifine') {
+    ldrTag = (!effectiveLdrVer || effectiveLdrVer === 'Auto-Shader-Zoom')
+      ? ' (Shader • Zoom)'
+      : ` (${effectiveLdrVer.replace(new RegExp(`^${ver.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[-_ ]?`, 'i'), '')})`;
+  } else if (effectiveCore !== 'vanilla' && effectiveLdrVer) {
+    ldrTag = ` ${effectiveLdrVer}`;
+  }
   const sideVer = document.getElementById('sideVerText');
   if (sideVer) sideVer.textContent = ver;
   const sideCore = document.getElementById('sideCoreText');
@@ -987,12 +994,15 @@ async function refreshLoaderBuilds() {
   }
   loaderSelect.disabled = false;
   loaderSelect.innerHTML = '<option value="">Đang tải danh sách build...</option>';
-  const res = await window.aetherAPI.getLoaders(state.selectedVersion, state.selectedCore);
+  const res = await window.aetherAPI.getLoaders(state.selectedVersion, state.selectedCore, state.gameDir);
   if (!res.ok || !res.data || res.data.length === 0) {
     loaderSelect.innerHTML = '<option value="">Chưa hỗ trợ bản này</option>';
     state.selectedLoaderVersion = ''; return;
   }
-  loaderSelect.innerHTML = res.data.map((item, idx) => `<option value="${item.version}" ${idx === 0 ? 'selected' : ''}>${item.version} ${item.stable ? '(Ổn định)' : ''}</option>`).join('');
+  loaderSelect.innerHTML = res.data.map((item, idx) => {
+    const labelText = item.displayLabel || `${item.version} ${item.stable ? '(Ổn định)' : ''}`;
+    return `<option value="${item.version}" ${idx === 0 ? 'selected' : ''}>${labelText}</option>`;
+  }).join('');
   state.selectedLoaderVersion = res.data[0].version;
   updateSummaryUI();
 }
@@ -1278,7 +1288,7 @@ async function checkAndPromptLauncherUpdate(manualClick = false) {
       }
       if (topUpdVer) {
         topUpdVer.textContent = '⚠ Lỗi mạng';
-        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.9.1'}`), 2000);
+        setTimeout(() => (topUpdVer.textContent = `v${res?.currentVersion || '40.9.2'}`), 2000);
       }
     }
     return;

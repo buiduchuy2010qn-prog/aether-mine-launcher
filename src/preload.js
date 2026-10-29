@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   getSystemInfo: () => ipcRenderer.invoke('sys:info'),
   getVersions: () => ipcRenderer.invoke('mc:versions'),
   getInstalledVersions: (gameDir) => ipcRenderer.invoke('mc:installed-versions', gameDir),
-  getLoaders: (mcVersion, loaderType) => ipcRenderer.invoke('mc:loaders', mcVersion, loaderType),
+  getLoaders: (mcVersion, loaderType, gameDir) => ipcRenderer.invoke('mc:loaders', mcVersion, loaderType, gameDir),
   launchGame: (config) => ipcRenderer.invoke('mc:launch', config),
   forceKillGame: () => ipcRenderer.invoke('mc:force-kill'),
   trimRamNow: () => ipcRenderer.invoke('sys:trim-ram'),

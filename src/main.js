@@ -857,9 +857,9 @@ ipcMain.handle('mc:installed-versions', async (_e, gameDir) => {
   }
 });
 
-ipcMain.handle('mc:loaders', async (_e, mcVersion, loaderType) => {
+ipcMain.handle('mc:loaders', async (_e, mcVersion, loaderType, gameDir) => {
   try {
-    return { ok: true, data: await fetchLoaderVersions(mcVersion, loaderType) };
+    return { ok: true, data: await fetchLoaderVersions(mcVersion, loaderType, gameDir) };
   } catch (err) {
     return { ok: false, error: err.message };
   }
