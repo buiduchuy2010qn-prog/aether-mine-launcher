@@ -927,6 +927,10 @@ async function searchModrinth({
 
 const KNOWN_MOD_SLUG_PREFIXES = {
   'fabric-api': ['fabric-api-'],
+  'fabric-language-kotlin': ['fabric-language-kotlin-'],
+  'sodium-extra': ['sodium-extra-'],
+  'reeses-sodium-options': ['reeses_sodium_options-', 'reeses-sodium-options-'],
+  'sodium-dynamic-lights': ['sodium-dynamic-lights-', 'sodiumdynamiclights-'],
   'sodium': ['sodium-'],
   'lithium': ['lithium-'],
   'ferrite-core': ['ferritecore-'],
@@ -939,17 +943,14 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'cloth-config': ['cloth-config-'],
   'continuity': ['continuity-'],
   'fusion-connected-textures': ['fusion-'],
-  'entity-model-features': ['entity_model_features_', 'entity-model-features-'],
-  'entitytexturefeatures': ['entity_texture_features_', 'entitytexturefeatures-'],
+  'entity-model-features': ['entity_model_features-', 'entity_model_features_', 'entity-model-features-'],
+  'entitytexturefeatures': ['entity_texture_features-', 'entity_texture_features_', 'entitytexturefeatures-'],
   'polytone': ['polytone-'],
   'cit-resewn': ['citresewn-', 'cit-resewn-'],
   'oculus': ['oculus-'],
   'indium': ['indium-'],
   'appleskin': ['appleskin-'],
-  'sodium-extra': ['sodium-extra-'],
-  'reeses-sodium-options': ['reeses_sodium_options-', 'reeses-sodium-options-'],
   'lambdynamiclights': ['lambdynamiclights-'],
-  'sodium-dynamic-lights': ['sodium-dynamic-lights-', 'sodiumdynamiclights-'],
   'zume': ['zume-'],
   'logical-zoom': ['logical_zoom-', 'logical-zoom-'],
   'zoomify': ['zoomify-'],
@@ -966,6 +967,9 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'skinshuffle': ['skinshuffle-'],
   'skinrestorer': ['skinrestorer-'],
   'capes': ['capes-'],
+  'fzzy-config': ['fzzy_config-', 'fzzy-config-'],
+  'particle-core': ['particle_core-', 'particle-core-'],
+  'yacl': ['yet_another_config_lib_v3-', 'yet-another-config-lib-', 'yacl-'],
   'evergreenhud': ['evergreenhud-'],
   'clean-keystrokes': ['clean-keystrokes-', 'cleankeystrokes-'],
   'armor-hud': ['armor-hud-', 'armorhud-', 'ukus-armor-hud-'],
@@ -980,6 +984,38 @@ const KNOWN_MOD_SLUG_PREFIXES = {
   'emi': ['emi-'],
   'jade': ['jade-']
 };
+
+function extractModBaseStem(fileName = '') {
+  const clean = path.basename(String(fileName || ''))
+    .replace(/\.disabled$/i, '')
+    .replace(/\.jar$/i, '')
+    .trim();
+  if (!clean) return '';
+  const stripped = clean
+    .replace(/[-_+](?:fabric|forge|neoforge|quilt|universal|all|mc\d|minecraft|v?\d+\.\d).*$/i, '')
+    .replace(/[-_]+$/g, '')
+    .toLowerCase()
+    .replace(/_/g, '-');
+  return stripped || clean.toLowerCase().replace(/_/g, '-');
+}
+
+const KNOWN_MOD_STEM_TO_SLUG = (() => {
+  const map = new Map();
+  for (const [slug, prefixes] of Object.entries(KNOWN_MOD_SLUG_PREFIXES)) {
+    map.set(slug.toLowerCase(), slug);
+    for (const p of prefixes) {
+      const st = extractModBaseStem(p.replace(/[-_]+$/, ''));
+      if (st) map.set(st, slug);
+    }
+  }
+  return map;
+})();
+
+function matchKnownSlugByFilename(fileName = '') {
+  const stem = extractModBaseStem(fileName);
+  if (!stem) return '';
+  return KNOWN_MOD_STEM_TO_SLUG.get(stem) || '';
+}
 
 function extractMcVerFromFilename(fileName = '') {
   const clean = String(fileName).replace(/\.disabled$/i, '').replace(/\.jar$/i, '');
@@ -1043,22 +1079,30 @@ function setModUserDisabledFlags(modsFolder, cleanNames, disabled) {
   if (dirty) writeModsMetaManifest(modsFolder, meta);
 }
 
-function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVersion = '') {
+function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVersion = '', newProjectId = '') {
   if (!fs.existsSync(modsFolder)) return;
-  const prefixes = new Set(KNOWN_MOD_SLUG_PREFIXES[slug.toLowerCase()] || [`${slug.toLowerCase()}-`]);
-  if (newFilename) {
-    const stemMatch = newFilename.toLowerCase().match(/^([a-z0-9_]+[-_])/);
-    if (stemMatch && stemMatch[1].length >= 4) prefixes.add(stemMatch[1]);
-  }
+  const newStem = extractModBaseStem(newFilename);
+  const isSlugHuman = Boolean(slug && !/[A-Z]/.test(slug) && slug.toLowerCase() !== String(newProjectId || '').toLowerCase());
+  const newCanonicalSlug = matchKnownSlugByFilename(newFilename) || (isSlugHuman ? slug.toLowerCase() : '');
   const meta = readModsMetaManifest(modsFolder);
   try {
     for (const file of fs.readdirSync(modsFolder)) {
       if (file === newFilename || file === `${newFilename}.disabled` || file.startsWith('.')) continue;
       if (!/\.jar$/i.test(file)) continue;
-      const lower = file.toLowerCase();
       const metaEntry = meta[file];
-      const isSameMod = (metaEntry && metaEntry.slug && metaEntry.slug.toLowerCase() === slug.toLowerCase()) ||
-        Array.from(prefixes).some((p) => lower.startsWith(p));
+      let isSameMod = false;
+      if (newProjectId && metaEntry?.projectId) {
+        if (metaEntry.projectId !== newProjectId) continue;
+        isSameMod = true;
+      } else {
+        const fileStem = extractModBaseStem(file);
+        const fileSlugHuman = metaEntry?.slug && !/[A-Z]/.test(metaEntry.slug) ? metaEntry.slug.toLowerCase() : '';
+        const fileCanonicalSlug = matchKnownSlugByFilename(file) || fileSlugHuman;
+        isSameMod = Boolean(
+          (newStem && fileStem && newStem === fileStem) ||
+          (newCanonicalSlug && fileCanonicalSlug && newCanonicalSlug === fileCanonicalSlug)
+        );
+      }
       if (isSameMod) {
         const fileVer = metaEntry?.mcVersion || extractMcVerFromFilename(file);
         // If the existing .jar is for a DIFFERENT MC version, cache it as .jar.disabled so switching back later is instant!
@@ -1128,8 +1172,9 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   if (!fileObj || !fileObj.url) {
     throw new Error(`Gói "${slug}" không có file tải hợp lệ.`);
   }
+  const isFallbackMatch = projectType === 'mod' && !(Array.isArray(chosen.game_versions) && chosen.game_versions.includes(mcVersion));
 
-  // 4. Auto-install required dependencies (e.g. Fabric API, Cloth Config, Architectury, GeckoLib) matching the exact mcVersion & loader!
+  // 4. Auto-install required dependencies (e.g. Fabric API, Cloth Config, Architectury, GeckoLib, Kotlin) matching the exact mcVersion & loader!
   const installedDeps = [];
   if (projectType === 'mod' && !_isDep && Array.isArray(chosen.dependencies)) {
     const reqDeps = chosen.dependencies.filter((d) => d.dependency_type === 'required' && (d.project_id || d.version_id));
@@ -1160,19 +1205,39 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   const destPath = path.join(targetFolder, fileObj.filename);
   const disabledPath = `${destPath}.disabled`;
 
-  if (projectType === 'mod') {
-    removeConflictingModJars(targetFolder, slug, fileObj.filename, mcVersion);
+  const assertFallbackJarCompatible = (jarPathToCheck) => {
+    if (!isFallbackMatch) return;
+    const inspected = inspectJarModMetadata(jarPathToCheck);
+    if (inspected?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, inspected.mcDepSpec)) {
+      const supportedVers = Array.from(new Set(allVersions.flatMap((v) => v.game_versions || []).filter((g) => /^\d+\.\d+/.test(g)))).slice(0, 5).join(', ');
+      throw new Error(`Mod "${slug}" chưa hỗ trợ bản ${mcVersion} (${effectiveLoader.toUpperCase()}). Các bản hỗ trợ: ${supportedVers || 'Khác'}`);
+    }
+  };
+
+  const recordInstalledModMeta = () => {
+    if (projectType !== 'mod') return;
+    removeConflictingModJars(targetFolder, slug, fileObj.filename, mcVersion, chosen.project_id);
     const meta = readModsMetaManifest(targetFolder);
+    const inspected = inspectJarModMetadata(destPath);
+    const canonicalSlug = matchKnownSlugByFilename(fileObj.filename) || (!/[A-Z]/.test(slug) ? slug : (inspected?.modId || slug));
     meta[fileObj.filename] = {
-      slug,
+      ...(meta[fileObj.filename] || {}),
+      slug: canonicalSlug,
       projectId: chosen.project_id || slug,
-      mcVersion,
+      mcVersion: isFallbackMatch ? (chosen.game_versions?.[chosen.game_versions.length - 1] || mcVersion) : mcVersion,
       gameVersions: Array.isArray(chosen.game_versions) ? chosen.game_versions : [mcVersion],
       loader: effectiveLoader,
+      ...(inspected ? {
+        inspectedLoaders: inspected.inspectedLoaders,
+        modId: inspected.modId,
+        mcDepSpec: inspected.mcDepSpec,
+        providedIds: inspected.providedIds,
+        requiredModIds: inspected.requiredModIds
+      } : {}),
       updatedAt: Date.now()
     };
     writeModsMetaManifest(targetFolder, meta);
-  }
+  };
 
   const finalizeAddonAutoEquip = async (finalName) => {
     let autoEquipped = false;
@@ -1216,11 +1281,15 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
     return autoEquipped;
   };
 
-  // If the exact file was previously cached as .jar.disabled, re-enable it immediately without re-downloading!
+  // If the exact file was previously cached as .jar.disabled, verify compatibility BEFORE re-enabling!
   if (!fs.existsSync(destPath) && fs.existsSync(disabledPath) && fs.statSync(disabledPath).size > 1024) {
+    assertFallbackJarCompatible(disabledPath);
     try {
       fs.renameSync(disabledPath, destPath);
-      if (projectType === 'mod') setModUserDisabledFlags(path.dirname(destPath), fileObj.filename, false);
+      if (projectType === 'mod') {
+        setModUserDisabledFlags(path.dirname(destPath), fileObj.filename, false);
+        recordInstalledModMeta();
+      }
       const autoEquipped = await finalizeAddonAutoEquip(fileObj.filename);
       onStatus?.(`✓ Đã kích hoạt ngay ${fileObj.filename} (chuẩn ${mcVersion}) có sẵn trong máy!`);
       return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true, installedDeps, autoEquipped };
@@ -1228,6 +1297,13 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
   }
 
   if (fs.existsSync(destPath) && fs.statSync(destPath).size > 1024) {
+    try {
+      assertFallbackJarCompatible(destPath);
+    } catch (incompatErr) {
+      try { fs.renameSync(destPath, disabledPath); } catch (_) {}
+      throw incompatErr;
+    }
+    if (projectType === 'mod') recordInstalledModMeta();
     const autoEquipped = await finalizeAddonAutoEquip(fileObj.filename);
     onStatus?.(`✓ Gói ${fileObj.filename} đã cài sẵn trên máy${autoEquipped ? ' & tự bật trong Game' : ''}.`);
     return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true, installedDeps, autoEquipped };
@@ -1235,6 +1311,13 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
 
   onStatus?.(`Đang tải ${fileObj.filename} (chuẩn ${mcVersion} • ${effectiveLoader.toUpperCase()})...`);
   await downloadFile(fileObj.url, destPath);
+  try {
+    assertFallbackJarCompatible(destPath);
+  } catch (incompatErr) {
+    try { fs.renameSync(destPath, disabledPath); } catch (_) {}
+    throw incompatErr;
+  }
+  if (projectType === 'mod') recordInstalledModMeta();
   const autoEquipped = await finalizeAddonAutoEquip(fileObj.filename);
   return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, installedDeps, autoEquipped };
 }
@@ -2251,18 +2334,59 @@ function inspectJarModMetadata(jarFullPath) {
     if (!fs.existsSync(jarFullPath)) return null;
     const zip = openPackZip(jarFullPath);
     const loaders = new Set();
+    const providedSet = new Set();
+    const requiredSet = new Set();
+    const BUILTIN_DEP_IDS = new Set(['minecraft', 'java', 'fabricloader', 'quilt_loader', 'forge', 'neoforge', 'mixinextras']);
     let modId = '';
     let mcDepSpec = null;
 
-    // 1. Fabric (fabric.mod.json)
+    // 1. Fabric (fabric.mod.json + nested JIJ META-INF/jars/*.jar)
     const fabEntry = zip.getEntry('fabric.mod.json');
     if (fabEntry) {
       loaders.add('fabric');
       try {
         const rawJson = fabEntry.getData().toString('utf8').replace(/^\uFEFF/, '');
         const parsed = JSON.parse(rawJson);
-        if (parsed?.id && !modId) modId = String(parsed.id).toLowerCase();
-        if (parsed?.depends?.minecraft) mcDepSpec = parsed.depends.minecraft;
+        if (parsed?.id && !modId) {
+          modId = String(parsed.id).toLowerCase();
+          providedSet.add(modId);
+        }
+        if (Array.isArray(parsed?.provides)) {
+          for (const p of parsed.provides) {
+            const pid = typeof p === 'string' ? p : p?.id;
+            if (pid) providedSet.add(String(pid).toLowerCase());
+          }
+        }
+        if (parsed?.depends && typeof parsed.depends === 'object') {
+          if (parsed.depends.minecraft) mcDepSpec = parsed.depends.minecraft;
+          for (const depKey of Object.keys(parsed.depends)) {
+            const dk = String(depKey).toLowerCase().trim();
+            if (dk && !BUILTIN_DEP_IDS.has(dk)) requiredSet.add(dk);
+          }
+        }
+      } catch (_) {}
+
+      // Inspect embedded Jar-In-Jar (META-INF/jars/*.jar) so bundled sub-libraries are marked as provided
+      try {
+        for (const e of zip.getEntries()) {
+          const en = e.entryName.replace(/\\/g, '/');
+          if (!en.startsWith('META-INF/jars/') || !en.toLowerCase().endsWith('.jar')) continue;
+          if (e.header && e.header.size > 8 * 1024 * 1024) continue;
+          try {
+            const innerZip = openPackZip(e.getData());
+            const innerFab = innerZip.getEntry('fabric.mod.json');
+            if (innerFab) {
+              const ij = JSON.parse(innerFab.getData().toString('utf8').replace(/^\uFEFF/, ''));
+              if (ij?.id) providedSet.add(String(ij.id).toLowerCase());
+              if (Array.isArray(ij?.provides)) {
+                for (const p of ij.provides) {
+                  const pid = typeof p === 'string' ? p : p?.id;
+                  if (pid) providedSet.add(String(pid).toLowerCase());
+                }
+              }
+            }
+          } catch (_) {}
+        }
       } catch (_) {}
     }
 
@@ -2273,10 +2397,27 @@ function inspectJarModMetadata(jarFullPath) {
       try {
         const parsed = JSON.parse(quiltEntry.getData().toString('utf8').replace(/^\uFEFF/, ''));
         const qMod = parsed?.quilt_loader;
-        if (qMod?.id && !modId) modId = String(qMod.id).toLowerCase();
-        if (!mcDepSpec && Array.isArray(qMod?.depends)) {
-          const mcD = qMod.depends.find((d) => d && (d.id === 'minecraft' || d === 'minecraft'));
-          if (mcD?.versions) mcDepSpec = mcD.versions;
+        if (qMod?.id && !modId) {
+          modId = String(qMod.id).toLowerCase();
+          providedSet.add(modId);
+        }
+        if (Array.isArray(qMod?.provides)) {
+          for (const p of qMod.provides) {
+            const pid = typeof p === 'string' ? p : p?.id;
+            if (pid) providedSet.add(String(pid).toLowerCase());
+          }
+        }
+        if (Array.isArray(qMod?.depends)) {
+          for (const d of qMod.depends) {
+            const did = typeof d === 'string' ? d : d?.id;
+            if (!did) continue;
+            const dk = String(did).toLowerCase().trim();
+            if (dk === 'minecraft' && !mcDepSpec && d?.versions) {
+              mcDepSpec = d.versions;
+            } else if (dk && !BUILTIN_DEP_IDS.has(dk) && d?.optional !== true) {
+              requiredSet.add(dk);
+            }
+          }
         }
       } catch (_) {}
     }
@@ -2288,7 +2429,10 @@ function inspectJarModMetadata(jarFullPath) {
       try {
         const toml = neoEntry.getData().toString('utf8');
         const idM = toml.match(/modId\s*=\s*"([^"]+)"/);
-        if (idM && !modId) modId = idM[1].toLowerCase();
+        if (idM && !modId) {
+          modId = idM[1].toLowerCase();
+          providedSet.add(modId);
+        }
         const blocks = toml.split(/\[\[dependencies\.[^\]]+\]\]/i);
         for (const blk of blocks) {
           if (/modId\s*=\s*"minecraft"/i.test(blk)) {
@@ -2306,7 +2450,10 @@ function inspectJarModMetadata(jarFullPath) {
       try {
         const toml = forgeEntry.getData().toString('utf8');
         const idM = toml.match(/modId\s*=\s*"([^"]+)"/);
-        if (idM && !modId) modId = idM[1].toLowerCase();
+        if (idM && !modId) {
+          modId = idM[1].toLowerCase();
+          providedSet.add(modId);
+        }
         const blocks = toml.split(/\[\[dependencies\.[^\]]+\]\]/i);
         for (const blk of blocks) {
           if (/modId\s*=\s*"minecraft"/i.test(blk)) {
@@ -2324,11 +2471,15 @@ function inspectJarModMetadata(jarFullPath) {
       } catch (_) {}
     }
 
+    for (const p of providedSet) requiredSet.delete(p);
+
     if (loaders.size === 0 && !modId && !mcDepSpec) return null;
     return {
       inspectedLoaders: Array.from(loaders),
       modId,
-      mcDepSpec: mcDepSpec || ''
+      mcDepSpec: mcDepSpec || '',
+      providedIds: Array.from(providedSet),
+      requiredModIds: Array.from(requiredSet)
     };
   } catch (_) {
     return null;
@@ -2337,7 +2488,12 @@ function inspectJarModMetadata(jarFullPath) {
 
 function getOrInspectModMeta(modsFolder, meta, cleanFileName, actualDiskFileName) {
   let mEntry = meta[cleanFileName];
-  if (mEntry && (Array.isArray(mEntry.gameVersions) || Array.isArray(mEntry.inspectedLoaders))) {
+  if (
+    mEntry &&
+    Array.isArray(mEntry.inspectedLoaders) &&
+    Array.isArray(mEntry.providedIds) &&
+    Array.isArray(mEntry.requiredModIds)
+  ) {
     return { entry: mEntry, dirty: false };
   }
   const fullPath = path.join(modsFolder, actualDiskFileName || cleanFileName);
@@ -2348,10 +2504,86 @@ function getOrInspectModMeta(modsFolder, meta, cleanFileName, actualDiskFileName
     inspectedLoaders: inspected.inspectedLoaders,
     mcDepSpec: inspected.mcDepSpec,
     modId: inspected.modId || mEntry?.modId || '',
-    slug: mEntry?.slug || (inspected.modId && COMMON_MODID_TO_MODRINTH_SLUG[inspected.modId]) || ''
+    providedIds: inspected.providedIds,
+    requiredModIds: inspected.requiredModIds,
+    slug: mEntry?.slug || matchKnownSlugByFilename(cleanFileName) || (inspected.modId && COMMON_MODID_TO_MODRINTH_SLUG[inspected.modId]) || ''
   };
   meta[cleanFileName] = merged;
   return { entry: merged, dirty: true };
+}
+
+function resolveModIdToInstallSlug(rawId = '') {
+  const id = String(rawId || '').toLowerCase().trim();
+  if (!id || ['minecraft', 'java', 'forge', 'neoforge', 'fabricloader', 'quilt_loader', 'mixinextras', 'any', 'version'].includes(id)) {
+    return '';
+  }
+  if (id === 'fabric-language-kotlin') return 'fabric-language-kotlin';
+  if (id === 'fabric' || id === 'fabric-api' || /^fabric-[a-z0-9-]+-v\d+$/i.test(id)) return 'fabric-api';
+  if (COMMON_MODID_TO_MODRINTH_SLUG[id]) return COMMON_MODID_TO_MODRINTH_SLUG[id];
+  return id.replace(/_/g, '-');
+}
+
+async function autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion, effectiveLoader, onStatus) {
+  const installedFiles = [];
+  if (!['fabric', 'quilt'].includes(effectiveLoader) || !fs.existsSync(modsFolder)) {
+    return installedFiles;
+  }
+  const triedSlugs = new Set();
+  for (let pass = 0; pass < 2; pass++) {
+    let activeJars = [];
+    try {
+      activeJars = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+    } catch (_) {
+      break;
+    }
+    if (activeJars.length === 0) break;
+
+    const meta = readModsMetaManifest(modsFolder);
+    let dirty = false;
+    const provided = new Set(['minecraft', 'java', 'fabricloader', 'quilt_loader', 'mixinextras']);
+    const required = new Set();
+
+    for (const f of activeJars) {
+      const { entry, dirty: d } = getOrInspectModMeta(modsFolder, meta, f, f);
+      if (d) dirty = true;
+      if (entry?.modId) provided.add(entry.modId);
+      if (Array.isArray(entry?.providedIds)) entry.providedIds.forEach((p) => provided.add(p));
+      if (Array.isArray(entry?.requiredModIds)) entry.requiredModIds.forEach((r) => required.add(r));
+    }
+    if (dirty) writeModsMetaManifest(modsFolder, meta);
+
+    const slugsNeeded = new Set();
+    for (const reqId of required) {
+      if (provided.has(reqId)) continue;
+      const slug = resolveModIdToInstallSlug(reqId);
+      if (slug && !triedSlugs.has(slug)) {
+        slugsNeeded.add(slug);
+      }
+    }
+    if (slugsNeeded.size === 0) break;
+
+    let installedAnyThisPass = false;
+    for (const slug of slugsNeeded) {
+      triedSlugs.add(slug);
+      try {
+        onStatus?.(`🧩 Tự động tải thư viện còn thiếu "${slug}" cho MC ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
+        const depRes = await installModrinthProject({
+          slug,
+          projectType: 'mod',
+          mcVersion,
+          loaderType: effectiveLoader,
+          gameDir: rootDir,
+          _isDep: true
+        }, onStatus);
+        if (depRes?.fileName) {
+          if (!depRes.skipped) installedFiles.push(depRes.fileName);
+          installedAnyThisPass = true;
+        }
+      } catch (_) {}
+    }
+    if (!installedAnyThisPass) break;
+  }
+  return installedFiles;
 }
 
 function isLoaderListCompatible(modLoaders, effectiveLoader) {
@@ -2378,7 +2610,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   }
   if (files.length === 0) return;
 
-  // Populate Deep .jar Metadata for any hand-dropped jars lacking manifest info
+  // Populate Deep .jar Metadata for all jars so modId, mcDepSpec, providedIds & requiredModIds are accurate
   for (const f of files) {
     const cleanName = f.replace(/\.disabled$/i, '');
     const res = getOrInspectModMeta(modsFolder, meta, cleanName, f);
@@ -2395,6 +2627,9 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
       if (modLoaders.length > 0 && !isLoaderListCompatible(modLoaders, effectiveLoader)) {
         return false;
       }
+      if (mEntry.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec)) {
+        return false;
+      }
       if (Array.isArray(mEntry.gameVersions) && mEntry.gameVersions.length > 0) {
         return mEntry.gameVersions.includes(mcVersion);
       }
@@ -2409,14 +2644,13 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
     return !strictReEnable;
   };
 
-  const inferSlugFromFilename = (cleanFileName) => {
+  const inferSlugOrIdFromFilename = (cleanFileName) => {
+    if (meta[cleanFileName]?.projectId) return meta[cleanFileName].projectId;
     if (meta[cleanFileName]?.slug) return meta[cleanFileName].slug;
     const modId = meta[cleanFileName]?.modId;
     if (modId && COMMON_MODID_TO_MODRINTH_SLUG[modId]) return COMMON_MODID_TO_MODRINTH_SLUG[modId];
-    const lower = cleanFileName.toLowerCase();
-    for (const [slug, prefixes] of Object.entries(KNOWN_MOD_SLUG_PREFIXES)) {
-      if (prefixes.some((p) => lower.startsWith(p))) return slug;
-    }
+    const known = matchKnownSlugByFilename(cleanFileName);
+    if (known) return known;
     if (modId && modId.length >= 3) return modId;
     return '';
   };
@@ -2449,7 +2683,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   const slugsToAutoFetch = new Set();
   for (const f of files) {
     if (!isFileCompatibleWithVersion(f, false)) {
-      const slug = inferSlugFromFilename(f);
+      const slug = inferSlugOrIdFromFilename(f);
       try {
         fs.renameSync(path.join(modsFolder, f), path.join(modsFolder, `${f}.disabled`));
       } catch (_) {}
@@ -2457,11 +2691,11 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
     }
   }
 
-  // Step 3: For any disabled mod whose slug is known, check if an enabled .jar for that slug already exists; if not, auto-install for mcVersion!
+  // Step 3: Strictly upgrade disabled mods ONLY if an official build for mcVersion exists on Modrinth
   if (slugsToAutoFetch.size > 0) {
     const activeFilesNow = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
     for (const slug of slugsToAutoFetch) {
-      const alreadyActive = activeFilesNow.some((f) => inferSlugFromFilename(f).toLowerCase() === slug.toLowerCase());
+      const alreadyActive = activeFilesNow.some((f) => inferSlugOrIdFromFilename(f).toLowerCase() === slug.toLowerCase());
       if (!alreadyActive) {
         try {
           onStatus?.(`🔄 Tự động đồng bộ Mod "${slug}" sang đúng phiên bản ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
@@ -2471,12 +2705,16 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
             mcVersion,
             loaderType: effectiveLoader,
             gameDir: rootDir,
-            _isDep: true
+            _isDep: true,
+            strictMcVersion: true
           }, onStatus);
         } catch (_) {}
       }
     }
   }
+
+  // Step 4: Inspect active Fabric/Quilt jars (including JIJ) and auto-install any missing required libraries (e.g. fabric-language-kotlin, fabric-api) BEFORE launch!
+  await autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion, effectiveLoader, onStatus);
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const norm = normalizeModrinthLoader(loaderType, mcVersion);
@@ -6499,8 +6737,13 @@ const COMMON_MODID_TO_MODRINTH_SLUG = {
   cicada: 'cicada',
   owo: 'owo-lib',
   'owo-lib': 'owo-lib',
+  fzzy_config: 'fzzy-config',
+  'fzzy-config': 'fzzy-config',
+  particle_core: 'particle-core',
+  'particle-core': 'particle-core',
   'cardinal-components-base': 'cardinal-components-api',
   'cardinal-components': 'cardinal-components-api',
+  placeholder_api: 'placeholder-api',
   'placeholder-api': 'placeholder-api',
   bookshelf: 'bookshelf',
   prickle: 'prickle',
@@ -6517,6 +6760,11 @@ const COMMON_MODID_TO_MODRINTH_SLUG = {
   'ferrite-core': 'ferrite-core',
   entityculling: 'entityculling',
   immediatelyfast: 'immediatelyfast',
+  zoomify: 'zoomify',
+  capes: 'capes',
+  polytone: 'polytone',
+  continuity: 'continuity',
+  lambdynamiclights: 'lambdynamiclights',
   voicechat: 'simple-voice-chat',
   'simple-voice-chat': 'simple-voice-chat',
   plasmovoice: 'plasmo-voice',
@@ -6537,6 +6785,7 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
 
   const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
   const meta = readModsMetaManifest(modsFolder);
+  let metaDirty = false;
   let allFiles = [];
   try {
     allFiles = fs.readdirSync(modsFolder).filter((f) => /\.jar(\.disabled)?$/i.test(f));
@@ -6545,6 +6794,13 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
   if (allFiles.length === 0) {
     return { ok: true, upgraded: [], kept: [], disabledIncompatible: [], depsInstalled: [], effectiveLoader };
   }
+
+  for (const f of allFiles) {
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const r = getOrInspectModMeta(modsFolder, meta, cleanName, f);
+    if (r.dirty) metaDirty = true;
+  }
+  if (metaDirty) writeModsMetaManifest(modsFolder, meta);
 
   onStatus?.(`🔍 Đang quét & nhận diện ${allFiles.length} Mod trong máy qua cơ sở dữ liệu Modrinth...`);
   const fullPaths = allFiles.map((f) => path.join(modsFolder, f));
@@ -6557,24 +6813,22 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
     if (hashHit?.project_id) return hashHit.project_id;
     if (meta[cleanName]?.projectId) return meta[cleanName].projectId;
     if (meta[cleanName]?.slug) return meta[cleanName].slug;
-    const lower = cleanName.toLowerCase();
-    for (const [slug, prefixes] of Object.entries(KNOWN_MOD_SLUG_PREFIXES)) {
-      if (prefixes.some((p) => lower.startsWith(p))) return slug;
-    }
-    const guess = cleanName
-      .replace(/\.jar$/i, '')
-      .replace(/[-_+](?:mc|fabric|forge|neoforge|quilt)?[-_+]?v?\d+\.\d+.*$/i, '')
-      .replace(/[-_+]v?\d+\.\d+.*$/i, '')
-      .toLowerCase();
-    return COMMON_MODID_TO_MODRINTH_SLUG[guess] || (guess.length >= 3 ? guess : '');
+    const known = matchKnownSlugByFilename(cleanName);
+    if (known) return known;
+    const modId = meta[cleanName]?.modId;
+    if (modId && COMMON_MODID_TO_MODRINTH_SLUG[modId]) return COMMON_MODID_TO_MODRINTH_SLUG[modId];
+    const guess = extractModBaseStem(cleanName);
+    return COMMON_MODID_TO_MODRINTH_SLUG[guess] || (modId && modId.length >= 3 ? modId : (guess.length >= 3 ? guess : ''));
   };
 
   const isModMatchingTarget = (fileName, fullPath) => {
     const cleanName = fileName.replace(/\.disabled$/i, '');
     const sha1 = fileToHash[fullPath];
     const hashHit = sha1 ? byHash[sha1] : null;
-    const gVers = hashHit?.game_versions || meta[cleanName]?.gameVersions || [];
-    const loaders = hashHit?.loaders || (meta[cleanName]?.loader ? [meta[cleanName].loader] : []);
+    const mEntry = meta[cleanName];
+    const gVers = hashHit?.game_versions || mEntry?.gameVersions || [];
+    const loaders = hashHit?.loaders
+      || (Array.isArray(mEntry?.inspectedLoaders) && mEntry.inspectedLoaders.length ? mEntry.inspectedLoaders : (mEntry?.loader ? [mEntry.loader] : []));
 
     if (Array.isArray(loaders) && loaders.length > 0) {
       const lOk = loaders.includes(effectiveLoader)
@@ -6582,10 +6836,13 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
         || (effectiveLoader === 'forge' && loaders.includes('neoforge'));
       if (!lOk) return false;
     }
+    if (mEntry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec)) {
+      return false;
+    }
     if (Array.isArray(gVers) && gVers.length > 0) {
       return gVers.includes(mcVersion);
     }
-    const explicitVer = meta[cleanName]?.mcVersion || extractMcVerFromFilename(cleanName);
+    const explicitVer = mEntry?.mcVersion || extractMcVerFromFilename(cleanName);
     if (explicitVer) return explicitVer === mcVersion;
     return true;
   };
@@ -6604,24 +6861,24 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
     const sha1 = fileToHash[fullPath];
     const hashHit = sha1 ? byHash[sha1] : null;
 
-    if (hashHit && Array.isArray(hashHit.dependencies)) {
-      for (const d of hashHit.dependencies) {
-        if (d.dependency_type === 'required' && d.project_id) requiredDepIds.add(d.project_id);
-      }
-    }
-
     if (isModMatchingTarget(f, fullPath)) {
       if (isDisabled) {
+        if (meta[cleanName]?.userDisabled) continue;
         const enabledDest = path.join(modsFolder, cleanName);
         if (!fs.existsSync(enabledDest)) {
           try { fs.renameSync(fullPath, enabledDest); } catch (_) {}
+        }
+      }
+      if (hashHit && Array.isArray(hashHit.dependencies)) {
+        for (const d of hashHit.dependencies) {
+          if (d.dependency_type === 'required' && d.project_id) requiredDepIds.add(d.project_id);
         }
       }
       kept.push(cleanName);
       continue;
     }
 
-    // Mod does not match target mcVersion + effectiveLoader -> try to upgrade/switch from Modrinth!
+    // Mod does not match target mcVersion + effectiveLoader -> try to strictly upgrade/switch from Modrinth!
     const slugOrId = inferSlugOrProjectId(f, fullPath);
     if (slugOrId) {
       onStatus?.(`🔄 [${i + 1}/${allFiles.length}] Đang tìm bản ${mcVersion} (${effectiveLoader.toUpperCase()}) cho Mod "${cleanName}"...`);
@@ -6634,7 +6891,8 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
           projectType: 'mod',
           mcVersion,
           loaderType: effectiveLoader,
-          gameDir: rootDir
+          gameDir: rootDir,
+          strictMcVersion: true
         }, onStatus);
         if (res?.ok && res.fileName) {
           upgraded.push({ from: cleanName, to: res.fileName });
@@ -6650,10 +6908,12 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
     if (!isDisabled && fs.existsSync(fullPath)) {
       try { fs.renameSync(fullPath, `${fullPath}.disabled`); } catch (_) {}
     }
-    disabledIncompatible.push(cleanName);
+    if (!isDisabled) {
+      disabledIncompatible.push(cleanName);
+    }
   }
 
-  // Ensure all required dependencies discovered from SHA-1 lookup are installed
+  // 1. Ensure all required dependencies discovered from Modrinth SHA-1 lookup are installed
   for (const depProjectId of requiredDepIds) {
     try {
       const depRes = await installModrinthProject({
@@ -6669,6 +6929,10 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
       }
     } catch (_) {}
   }
+
+  // 2. Also inspect fabric.mod.json / quilt.mod.json (including nested JIJ) of all active jars so dependencies like fabric-language-kotlin are 100% guaranteed installed!
+  const jarResolvedDeps = await autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion, effectiveLoader, onStatus);
+  jarResolvedDeps.forEach((dName) => depsInstalled.push(dName));
 
   return {
     ok: true,
@@ -6716,16 +6980,7 @@ async function buildCoopModBasket(rawInput = {}) {
     let sizeKB = 0;
     try { sizeKB = Math.round(fs.statSync(fp).size / 1024); } catch (_) {}
 
-    let fallbackSlug = mEntry.projectId || mEntry.slug || '';
-    if (!fallbackSlug) {
-      const lower = f.toLowerCase();
-      for (const [slug, prefixes] of Object.entries(KNOWN_MOD_SLUG_PREFIXES)) {
-        if (prefixes.some((p) => lower.startsWith(p))) {
-          fallbackSlug = slug;
-          break;
-        }
-      }
-    }
+    let fallbackSlug = mEntry.projectId || mEntry.slug || matchKnownSlugByFilename(f) || '';
 
     const verifiedUrl = primaryFile?.url || '';
     modBasket.push({
@@ -6896,6 +7151,7 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
   const rootDir = (instanceDir && fs.existsSync(instanceDir))
     ? instanceDir
     : (gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir());
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
 
   let crashReportText = '';
   let crashFilePath = '';
@@ -6922,8 +7178,12 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
   const latestLogPath = path.join(rootDir, 'logs', 'latest.log');
   if (fs.existsSync(latestLogPath)) {
     try {
-      const raw = fs.readFileSync(latestLogPath, 'utf8');
-      latestLogText = raw.slice(-24000);
+      const st = fs.statSync(latestLogPath);
+      // Only trust latest.log for crash regexes if an actual crash just occurred OR latest.log was modified recently (<20 mins)
+      if (numericExit !== 0 || (Date.now() - st.mtimeMs < 20 * 60 * 1000)) {
+        const raw = fs.readFileSync(latestLogPath, 'utf8');
+        latestLogText = raw.slice(-24000);
+      }
     } catch (_) {}
   }
 
@@ -6933,7 +7193,7 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
   const combined = `${crashReportText}\n${latestLogText}\n${joinedConsole}`;
   const errorOnlyLines = combined
     .split(/\r?\n/)
-    .filter((l) => /ERROR|FATAL|Exception|Error:|ModResolution|Incompatible|MixinApply|MixinTransformer|Caused by:/i.test(l))
+    .filter((l) => /ERROR|FATAL|Exception|Error:|ModResolution|Incompatible|MixinApply|MixinTransformer|Caused by:|Replace mod|HARD_DEP/i.test(l))
     .join('\n');
 
   const causes = [];
@@ -6946,9 +7206,10 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     actions.push(act);
   };
 
-  // List local active mods for matching offending jars
+  // List & inspect local active mods for exact JIJ dependency & version matching
   const modsDir = path.join(rootDir, 'mods');
   const meta = readModsMetaManifest(modsDir);
+  let metaDirty = false;
   let activeMods = [];
   try {
     if (fs.existsSync(modsDir)) {
@@ -6956,26 +7217,60 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     }
   } catch (_) {}
 
-  // 1. Check OptiFine + Sodium / Embeddium / Iris conflict
-  const optifineJar = activeMods.find((f) => /optifine|optifabric/i.test(f));
-  const sodiumOrIrisJar = activeMods.find((f) => /sodium|embeddium|iris|oculus/i.test(f));
-  if ((optifineJar && sodiumOrIrisJar) || (/optifine/i.test(combined) && /sodium|iris|embeddium/i.test(combined))) {
+  const modIdToJar = new Map();
+  const diskProvidedIds = new Set(['minecraft', 'java', 'fabricloader', 'quilt_loader', 'forge', 'neoforge', 'mixinextras']);
+  const diskRequiredIds = new Set();
+  const activeInstalledSlugs = new Set();
+
+  for (const jarName of activeMods) {
+    const { entry, dirty } = getOrInspectModMeta(modsDir, meta, jarName, jarName);
+    if (dirty) metaDirty = true;
+    const knownSlug = matchKnownSlugByFilename(jarName) || entry?.slug || '';
+    if (knownSlug) activeInstalledSlugs.add(knownSlug.toLowerCase());
+    if (entry?.modId) {
+      modIdToJar.set(entry.modId, jarName);
+      diskProvidedIds.add(entry.modId);
+      const mapped = resolveModIdToInstallSlug(entry.modId);
+      if (mapped) activeInstalledSlugs.add(mapped.toLowerCase());
+    }
+    if (Array.isArray(entry?.providedIds)) {
+      entry.providedIds.forEach((p) => diskProvidedIds.add(p));
+    }
+    // Collect required deps from mods that themselves match target MC version
+    const compat = !(entry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, entry.mcDepSpec));
+    if (compat && Array.isArray(entry?.requiredModIds)) {
+      entry.requiredModIds.forEach((r) => diskRequiredIds.add(r));
+    }
+  }
+  if (metaDirty && fs.existsSync(modsDir)) writeModsMetaManifest(modsDir, meta);
+
+  // 1. Check REAL OptiFine + Sodium / Embeddium / Iris jar conflict (never trigger on harmless Iris/ETF log lines mentioning "OptiFine" shaderpacks!)
+  const optifineJar = activeMods.find((f) => isProprietaryOptifineFile(f) || /optifabric/i.test(f));
+  const sodiumOrIrisJar = activeMods.find((f) => /^(sodium|embeddium|iris|oculus)[-_+]/i.test(f));
+  if (optifineJar && sodiumOrIrisJar) {
     causes.push({
       severity: 'high',
       title: '⚡ Xung đột giữa OptiFine và Sodium / Iris',
-      detail: `OptiFine (${optifineJar || 'OptiFine.jar'}) không thể chạy chung với bộ tối ưu đời mới (${sodiumOrIrisJar || 'Sodium/Iris'}). Bạn chỉ cần tắt OptiFine là game sẽ vào mượt ngay!`
+      detail: `OptiFine (${optifineJar}) không thể chạy chung với bộ tối ưu đời mới (${sodiumOrIrisJar}). Hệ thống sẽ tự động tắt OptiFine để game vào mượt ngay!`
     });
-    if (optifineJar) {
-      addAction({
-        type: 'disable-mod',
-        fileName: optifineJar,
-        label: `🚫 Tắt ngay ${optifineJar} (Giữ Sodium + Iris mượt hơn)`
-      });
-    }
+    addAction({
+      type: 'disable-mod',
+      reason: 'conflict',
+      fileName: optifineJar,
+      label: `🚫 Tắt ngay ${optifineJar} (Giữ Sodium + Iris mượt hơn)`
+    });
   }
 
-  // 2. Check missing required dependencies (Fabric / Quilt / Forge / NeoForge)
+  // 2. Check missing required dependencies (both from disk JIJ inspection AND crash/resolution logs)
   const missingSlugs = new Set();
+  if (['fabric', 'quilt'].includes(effectiveLoader)) {
+    for (const reqId of diskRequiredIds) {
+      if (!diskProvidedIds.has(reqId)) {
+        const slug = resolveModIdToInstallSlug(reqId);
+        if (slug) missingSlugs.add(slug);
+      }
+    }
+  }
   const reqRegexes = [
     /Install\s+([a-z0-9_-]+),\s+version/gi,
     /requires\s+(?:version\s+[^\s]+\s+of\s+)?['"]?([a-z0-9_-]{3,40})['"]?\s*,?\s*which is missing/gi,
@@ -6987,21 +7282,24 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     let m;
     while ((m = rx.exec(combined)) !== null) {
       const rawId = String(m[1] || '').toLowerCase().trim();
-      if (!rawId || ['minecraft', 'java', 'forge', 'neoforge', 'fabricloader', 'quilt_loader', 'any', 'version'].includes(rawId)) continue;
-      const mapped = COMMON_MODID_TO_MODRINTH_SLUG[rawId] || rawId;
-      missingSlugs.add(mapped);
+      const mapped = resolveModIdToInstallSlug(rawId);
+      if (!mapped) continue;
+      // Only report log-parsed missing slug if it is ACTUALLY still missing on disk right now!
+      if (!activeInstalledSlugs.has(mapped.toLowerCase()) && !diskProvidedIds.has(rawId)) {
+        missingSlugs.add(mapped);
+      }
     }
   }
-  if (/net\/fabricmc\/fabric\/api\//i.test(combined)) {
+  if (/net\/fabricmc\/fabric\/api\//i.test(combined) && !activeInstalledSlugs.has('fabric-api')) {
     missingSlugs.add('fabric-api');
   }
-  if (/me\/shedaniel\/autoconfig|me\/shedaniel\/clothconfig/i.test(combined)) {
+  if (/me\/shedaniel\/autoconfig|me\/shedaniel\/clothconfig/i.test(combined) && !activeInstalledSlugs.has('cloth-config')) {
     missingSlugs.add('cloth-config');
   }
-  if (/dev\/architectury\//i.test(combined)) {
+  if (/dev\/architectury\//i.test(combined) && !activeInstalledSlugs.has('architectury-api')) {
     missingSlugs.add('architectury-api');
   }
-  if (/software\/bernie\/geckolib/i.test(combined)) {
+  if (/software\/bernie\/geckolib/i.test(combined) && !activeInstalledSlugs.has('geckolib')) {
     missingSlugs.add('geckolib');
   }
 
@@ -7052,12 +7350,30 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
 
   // 5. Check Incompatible Mod Version or Mixin Crash from a specific .jar
   const mentionedJars = new Set();
+  const logBadModIdRxs = [
+    /Replace mod '[^']+' \(([a-z0-9_-]+)\)/gi,
+    /Mod '[^']+' \(([a-z0-9_-]+)\)[^\r\n]*requires version [^\r\n]+ of 'Minecraft'/gi,
+    /HARD_DEP ([a-z0-9_-]+) [^\r\n{]+\{depends minecraft @/gi
+  ];
+  for (const rx of logBadModIdRxs) {
+    let m;
+    while ((m = rx.exec(combined)) !== null) {
+      const badId = String(m[1] || '').toLowerCase().trim();
+      const hitJar = modIdToJar.get(badId);
+      if (hitJar) mentionedJars.add(hitJar);
+    }
+  }
+
   for (const jarName of activeMods) {
     const mEntry = meta[jarName];
     const metaVers = Array.isArray(mEntry?.gameVersions) ? mEntry.gameVersions : [];
     const baseNoExt = jarName.replace(/\.jar$/i, '');
     if (errorOnlyLines.includes(jarName) || (baseNoExt.length > 5 && crashReportText.includes(baseNoExt))) {
       mentionedJars.add(jarName);
+    }
+    if (mEntry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec)) {
+      mentionedJars.add(jarName);
+      continue;
     }
     if (metaVers.length > 0) {
       if (!metaVers.includes(mcVersion)) {
@@ -7066,7 +7382,6 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     } else {
       const jarMcVer = extractMcVerFromFilename(jarName);
       if (jarMcVer && jarMcVer !== mcVersion) {
-        // Ignore minor sub-version differences inside 1.21.10/1.21.11 for embedded libs like placeholder-api unless an actual crash occurred
         const isMinor21Lib = /^placeholder-api/i.test(jarName) && jarMcVer.startsWith('1.21.') && mcVersion.startsWith('1.21.');
         if (!isMinor21Lib || numericExit !== 0) {
           mentionedJars.add(jarName);
@@ -7075,15 +7390,17 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     }
   }
 
-  if (/Incompatible mods found|ModResolutionException|MixinApplyError|MixinTransformerError|spongepowered\.asm\.mixin/i.test(errorOnlyLines) || mentionedJars.size > 0) {
+  if ((numericExit !== 0 && /Incompatible mods found|ModResolutionException|MixinApplyError|MixinTransformerError|spongepowered\.asm\.mixin/i.test(errorOnlyLines)) || mentionedJars.size > 0) {
     const jarList = Array.from(mentionedJars).slice(0, 5);
-    causes.push({
-      severity: 'medium',
-      title: jarList.length > 0
-        ? `⚠️ Phát hiện ${jarList.length} Mod lệch phiên bản hoặc xung đột Mixin (${jarList.join(', ')})`
-        : `⚠️ Có Mod trong thư mục mods/ không tương thích với Minecraft ${mcVersion} (${loaderType.toUpperCase()})`,
-      detail: `Một số file .jar trong thư mục mods được làm cho phiên bản Minecraft khác hoặc xung đột mã nguồn (Mixin) khi khởi động.`
-    });
+    if (jarList.length > 0 || missingSlugs.size === 0) {
+      causes.push({
+        severity: 'medium',
+        title: jarList.length > 0
+          ? `⚠️ Phát hiện ${jarList.length} Mod lệch phiên bản hoặc xung đột Mixin (${jarList.join(', ')})`
+          : `⚠️ Có Mod trong thư mục mods/ không tương thích với Minecraft ${mcVersion} (${loaderType.toUpperCase()})`,
+        detail: `Một số file .jar trong thư mục mods được làm cho phiên bản Minecraft khác hoặc xung đột mã nguồn (Mixin) khi khởi động.`
+      });
+    }
     addAction({
       type: 'sync-all-mods',
       label: `🔄 Tự động đồng bộ & đổi toàn bộ Mod sang đúng bản MC ${mcVersion}`
@@ -7091,6 +7408,7 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     for (const badJar of jarList) {
       addAction({
         type: 'disable-mod',
+        reason: 'incompatible',
         fileName: badJar,
         label: `🚫 Tắt ngay Mod nghi gây lỗi: ${badJar}`
       });

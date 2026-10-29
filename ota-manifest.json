@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "41.0.1",
-  "generatedAt": "2026-10-29T16:11:14.843Z",
+  "version": "41.0.2",
+  "generatedAt": "2026-10-29T16:39:29.631Z",
   "filesCount": 34,
   "files": [
     {
       "path": "package.json",
       "size": 2176,
-      "sha256": "5fbc07a8ea6c60ddf855d12226f035934145f97f7ef0987d55e5f03e6c46176e"
+      "sha256": "ea14d7716bc68009a3c8f9138b1dc13b1d9cff427c4494184e2a9e73e6fa74f4"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,8 +16,8 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 437636,
-      "sha256": "1c6b7d63880015ee0fde9f3395b71081fb46d482d15389b09b22083a88647ccd"
+      "size": 451148,
+      "sha256": "cdaf1aa4d6bebf88deb1e99011fc1753cc4b97bc5f70a4f6158cba4cf78c6f44"
     },
     {
       "path": "src/main.js",
@@ -57,7 +57,7 @@
     {
       "path": "src/ui/index.html",
       "size": 215954,
-      "sha256": "777b5a95b9cca21e4374e2faba56ae614007d60b22dcc960eef16d4e5edfe63c"
+      "sha256": "bb79ec1dd9ab0aaaafff02dba12976a76ee869f95b8be64590dea3728ddb3a4c"
     },
     {
       "path": "src/ui/layout-v33.css",
@@ -161,8 +161,8 @@
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 433339,
-      "sha256": "4fae94bfe0d98c937976d2e0e9d22b844671e3e24b2f538cd708c7c0878beb0a"
+      "size": 435616,
+      "sha256": "f6a7bf276153a5ab2aa0f82adefb54ff557082d21000873014b35612bc6b5244"
     },
     {
       "path": "src/ui/styles.css",

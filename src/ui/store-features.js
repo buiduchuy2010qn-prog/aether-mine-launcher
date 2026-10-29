@@ -4293,8 +4293,17 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
   const causesEl = document.getElementById('crashDoctorCausesList');
   const actionsEl = document.getElementById('crashDoctorActionsList');
   const statusMsgEl = document.getElementById('crashDoctorStatusMsg');
+  const btnRelaunch = document.getElementById('btnCrashRelaunchNow');
   const rawLogEl = document.getElementById('crashDoctorRawPre') || document.getElementById('crashDoctorRawExcerpt');
   const consoleLines = Array.from(document.querySelectorAll('#consoleOutput .log-line, #consoleOutput .log-entry')).slice(-120).map((el) => el.textContent || '');
+
+  const setRelaunchBusy = (busy) => {
+    if (!btnRelaunch) return;
+    btnRelaunch.disabled = Boolean(busy);
+    btnRelaunch.textContent = busy
+      ? '⏳ Đang tự sửa lỗi — Vui lòng đợi...'
+      : '🚀 Đã Sửa Xong — Vào Lại Game Ngay';
+  };
 
   const setDoctorStatus = (html, isErr = false) => {
     if (!statusMsgEl) return;
@@ -4307,6 +4316,7 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
     statusMsgEl.innerHTML = html;
   };
 
+  setRelaunchBusy(true);
   if (subEl) {
     subEl.innerHTML = `⏳ <strong>Bác Sĩ BlockWay đang tự động khám nhật ký & kiểm tra thư mục <code>mods/</code></strong> cho cấu hình <strong>${escapeHtml(targetLabel)}</strong>...`;
   }
@@ -4324,6 +4334,7 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
   });
 
   if (!res?.ok) {
+    setRelaunchBusy(false);
     setDoctorStatus(`⚠️ Không thể đọc nhật ký lỗi: ${escapeHtml(res?.error || 'Lỗi không xác định')}`, true);
     return;
   }
@@ -4358,6 +4369,7 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
 
   // Automatic 1-Click Healer routine that fixes all detected issues without blocking popups
   const executeAutoHealAll = async () => {
+    setRelaunchBusy(true);
     setDoctorStatus(`⏳ <strong>Đang tự động sửa lỗi:</strong> Quét SHA-1 toàn bộ Mod, tải thư viện còn thiếu và đồng bộ cho <strong>${escapeHtml(targetLabel)}</strong>...`);
     const fixedNotes = [];
 
@@ -4369,18 +4381,13 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
 
       const effectiveCoreNow = isPackCrash ? (targetCore === 'vanilla' ? 'fabric' : targetCore) : (state.selectedCore === 'vanilla' ? 'fabric' : state.selectedCore);
       const acts = Array.isArray(res.actions) ? res.actions : [];
-      // 1. Auto-install missing required libraries (Fabric API, Cloth Config, etc.)
+
+      // 1. Handle conflict mods, RAM & Java upgrades first
       for (const act of acts) {
-        if (act.type === 'install-mod' && act.slug) {
+        if (act.type === 'disable-mod' && act.reason === 'conflict' && act.fileName) {
           try {
-            const r = await window.aetherAPI.installModrinth({
-              slug: act.slug,
-              projectType: 'mod',
-              mcVersion: targetVer,
-              loaderType: effectiveCoreNow,
-              gameDir: targetDir
-            });
-            if (r?.ok && r.fileName) fixedNotes.push(`Cài thư viện ${r.fileName}`);
+            const tr = await window.aetherAPI.toggleLocalAddon(targetDir, 'mods', act.fileName);
+            if (tr?.ok && tr.enabled === false) fixedNotes.push(`Tắt xung đột ${act.fileName}`);
           } catch (_) {}
         } else if (act.type === 'increase-ram') {
           const targetGB = Math.min(16, Math.max((targetRam || 4) + 2, Number(act.targetRam) || 6));
@@ -4406,21 +4413,52 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
         }
       }
 
-      // 2. Sync & upgrade all local mods to match target MC version + loader
+      // 2. Sync & strictly upgrade all local mods + auto-resolve JIJ dependencies
+      const upgradedFromSet = new Set();
+      const alreadyDisabledSet = new Set();
       const syncRes = await window.aetherAPI.syncAllModsToVersion({
         gameDir: targetDir,
         mcVersion: targetVer,
         loaderType: effectiveCoreNow
       });
       if (syncRes?.ok) {
-        const upCount = Array.isArray(syncRes.upgraded) ? syncRes.upgraded.length : 0;
-        const depCount = Array.isArray(syncRes.depsInstalled) ? syncRes.depsInstalled.length : 0;
-        const keptCount = Array.isArray(syncRes.kept) ? syncRes.kept.length : 0;
-        const disCount = Array.isArray(syncRes.disabledIncompatible) ? syncRes.disabledIncompatible.length : 0;
-        if (upCount > 0) fixedNotes.push(`Nâng cấp ${upCount} Mod sang bản ${targetVer}`);
-        if (depCount > 0) fixedNotes.push(`Tải thêm ${depCount} thư viện phụ thuộc`);
-        if (disCount > 0) fixedNotes.push(`Tự cất ${disCount} Mod không hỗ trợ bản ${targetVer}`);
-        if (keptCount > 0) fixedNotes.push(`Giữ nguyên ${keptCount} Mod chuẩn bản ${targetVer}`);
+        const upList = Array.isArray(syncRes.upgraded) ? syncRes.upgraded : [];
+        const depList = Array.isArray(syncRes.depsInstalled) ? syncRes.depsInstalled : [];
+        const keptList = Array.isArray(syncRes.kept) ? syncRes.kept : [];
+        const disList = Array.isArray(syncRes.disabledIncompatible) ? syncRes.disabledIncompatible : [];
+        upList.forEach((u) => { if (u?.from) upgradedFromSet.add(u.from); });
+        disList.forEach((d) => alreadyDisabledSet.add(d));
+        if (upList.length > 0) fixedNotes.push(`Nâng cấp ${upList.length} Mod sang bản ${targetVer}`);
+        if (depList.length > 0) fixedNotes.push(`Cài thư viện ${depList.join(', ')}`);
+        if (disList.length > 0) fixedNotes.push(`Tự tắt ${disList.length} Mod chưa hỗ trợ bản ${targetVer} (${disList.join(', ')})`);
+        if (keptList.length > 0 && upList.length === 0 && disList.length === 0) fixedNotes.push(`Kiểm tra ${keptList.length} Mod chuẩn bản ${targetVer}`);
+      }
+
+      // 3. Ensure every explicitly detected missing library is installed & any un-upgraded offending jar is disabled
+      for (const act of acts) {
+        if (act.type === 'install-mod' && act.slug) {
+          try {
+            const r = await window.aetherAPI.installModrinth({
+              slug: act.slug,
+              projectType: 'mod',
+              mcVersion: targetVer,
+              loaderType: effectiveCoreNow,
+              gameDir: targetDir
+            });
+            if (r?.ok && r.fileName && !r.skipped) {
+              fixedNotes.push(`Cài thư viện ${r.fileName}`);
+            }
+          } catch (_) {}
+        } else if (act.type === 'disable-mod' && act.reason !== 'conflict' && act.fileName) {
+          if (!upgradedFromSet.has(act.fileName) && !alreadyDisabledSet.has(act.fileName)) {
+            try {
+              const tr = await window.aetherAPI.toggleLocalAddon(targetDir, 'mods', act.fileName);
+              if (tr?.ok && tr.enabled === false) {
+                fixedNotes.push(`Tự tắt ${act.fileName}`);
+              }
+            } catch (_) {}
+          }
+        }
       }
 
       await refreshLocalAddonsCount();
@@ -4428,18 +4466,32 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
         await renderLocalAddonsManager();
       }
 
+      if (actionsEl) {
+        actionsEl.querySelectorAll('.crash-fix-btn').forEach((b) => {
+          b.disabled = true;
+          if (!b.textContent.trim().startsWith('✓')) {
+            b.textContent = `✓ ${b.textContent.trim().replace(/^[^\wÀ-ỹ]+\s*/, '')}`;
+          }
+        });
+      }
+
       const summaryDetail = fixedNotes.length > 0 ? fixedNotes.join(' • ') : `Tất cả Mod đã khớp chuẩn với MC ${targetVer}`;
+      if (subEl) {
+        subEl.innerHTML = `✅ <strong>Đã xử lý xong toàn bộ xung đột &amp; thư viện thiếu</strong> cho <strong>${escapeHtml(targetLabel)}</strong>:`;
+      }
       renderCauses([
         {
           severity: 'ok',
           title: `✅ Đã tự động sửa lỗi & đồng bộ toàn bộ Mod cho ${targetLabel}!`,
-          detail: `${summaryDetail}. Bây giờ bạn có thể bấm nút "🚀 Đã Sửa Xong — Vào Lại Game Ngay" hoặc "Đóng"!`
+          detail: `${summaryDetail}. Bây giờ bạn có thể bấm ngay nút "🚀 Đã Sửa Xong — Vào Lại Game Ngay"!`
         }
       ]);
       setDoctorStatus(`🎉 <strong>Hoàn tất tự động sửa lỗi:</strong> ${escapeHtml(summaryDetail)}!`);
       showAetherNotification(`✅ Bác Sĩ Crash đã tự động sửa lỗi & đồng bộ Mod (${summaryDetail})!`, 'success', 5500);
     } catch (err) {
       setDoctorStatus(`⚠️ Lỗi trong quá trình tự sửa: ${escapeHtml(err.message)}`, true);
+    } finally {
+      setRelaunchBusy(false);
     }
   };
 
@@ -4546,6 +4598,8 @@ async function openCrashDoctorModal(exitCode = null, autoHealOnOpen = true) {
       btnHealAll.disabled = false;
       btnHealAll.textContent = '✓ Đã Tự Động Sửa Xong Tất Cả Lỗi!';
     }
+  } else {
+    setRelaunchBusy(false);
   }
 }
 window.openCrashDoctorModal = openCrashDoctorModal;
