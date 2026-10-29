@@ -683,6 +683,25 @@ async function createQuickWorld({
       }, null, 2));
     } catch (_) {}
 
+    try {
+      const seedStr = seedBig.toString();
+      const matchedSeed = CURATED_SEEDS_VAULT.find((s) => s.seed === seedStr);
+      const previewAssetId = matchedSeed
+        ? matchedSeed.id
+        : ((worldType === 'skyblock' || worldType === 'oneblock') ? 'coral-castaway-island' : '');
+      if (previewAssetId) {
+        const seedsAssetDir = path.join(__dirname, 'ui', 'seeds');
+        const iconSrc = path.join(seedsAssetDir, `${previewAssetId}-icon.png`);
+        const bannerSrc = path.join(seedsAssetDir, `${previewAssetId}.jpg`);
+        if (fs.existsSync(iconSrc) && !fs.existsSync(path.join(worldDir, 'icon.png'))) {
+          fs.copyFileSync(iconSrc, path.join(worldDir, 'icon.png'));
+        }
+        if (fs.existsSync(bannerSrc) && !fs.existsSync(path.join(worldDir, 'blockway-preview.jpg'))) {
+          fs.copyFileSync(bannerSrc, path.join(worldDir, 'blockway-preview.jpg'));
+        }
+      }
+    } catch (_) {}
+
     return { ok: true, folderName, levelName: cleanName, worldType, seed: seedBig.toString(), worldDir };
   } catch (err) {
     return { ok: false, error: err.message || String(err) };
@@ -708,6 +727,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'scenic',
     badge: 'Đẹp Nhất Xây Nhà',
     coordsHint: 'Spawn gần X: 120, Z: 80',
+    previewImage: 'seeds/cherry-ring-mountain.jpg',
     description: 'Vòng núi tuyết hùng vĩ khép kín bao quanh thung lũng hoa anh đào hồng rực, hồ nước trong vắt ở giữa và ngôi làng bình yên sát bên.'
   },
   {
@@ -717,6 +737,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'survival',
     badge: 'An Toàn Tuyệt Đối',
     coordsHint: 'Xuất hiện ngay trên Đảo Nấm',
+    previewImage: 'seeds/mushroom-safe-island.jpg',
     description: 'Đảo Nấm rộng lớn nằm giữa đại dương ngay điểm xuất hiện — ban đêm không bao giờ tự sinh Zombie/Creeper, lý tưởng để xây đại căn cứ.'
   },
   {
@@ -726,6 +747,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'adventure',
     badge: 'Siêu Hiếm 3-Trong-1',
     coordsHint: 'Ngay sát điểm xuất hiện (X: 60, Z: 90)',
+    previewImage: 'seeds/mansion-village-ancient.jpg',
     description: 'Vừa vào thế giới đã đứng trước tòa Biệt thự Woodland Mansion khổng lồ ghép liền với ngôi làng dân làng và thành cổ Ancient City sâu bên dưới.'
   },
   {
@@ -735,6 +757,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'island',
     badge: 'Sinh Tồn Đảo Hoang',
     coordsHint: 'Đảo chính tại X: 0, Z: 0',
+    previewImage: 'seeds/coral-castaway-island.jpg',
     description: 'Thử thách sinh tồn trên hòn đảo nhỏ giữa vùng biển ấm rực rỡ san hô phát sáng ban đêm, bao quanh bởi xác tàu đắm và phế tích biển.'
   },
   {
@@ -744,6 +767,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'scenic',
     badge: 'Cảnh Quan Kỳ Vĩ',
     coordsHint: 'Gai băng tại X: -150, Z: 120',
+    previewImage: 'seeds/ice-spikes-frozen-kingdom.jpg',
     description: 'Hàng trăm cột băng xanh cao vút nối liền rặng núi tuyết trắng xóa, có sẵn làng tuyết Igloo và cổng địa ngục cổ ngay gần điểm xuất hiện.'
   },
   {
@@ -753,6 +777,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'adventure',
     badge: 'Giàu Tài Nguyên',
     coordsHint: 'Ốc đảo tại X: 40, Z: -60',
+    previewImage: 'seeds/badlands-gold-oasis.jpg',
     description: 'Sự giao thoa tuyệt đẹp giữa hồ nước xanh, làng sa mạc, Kim tự tháp chứa kho báu và dãy núi đất nung Badlands lộ thiên đầy mỏ vàng.'
   },
   {
@@ -762,6 +787,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'speedrun',
     badge: 'Speedrun Chuẩn',
     coordsHint: 'Làng & Hồ Lava ngay cạnh Spawn',
+    previewImage: 'seeds/speedrun-bastion-fortress.jpg',
     description: 'Có sẵn làng thợ rèn lấy sắt/đồ ăn và hồ dung nham dựng cổng Nether mở thẳng ra khu vực sát Pháo đài Nether Fortress và Bastion.'
   },
   {
@@ -771,6 +797,7 @@ const CURATED_SEEDS_VAULT = [
     category: 'scenic',
     badge: 'Hang Động Tuyệt Đẹp',
     coordsHint: 'Cửa hang lớn tại X: -80, Z: 40',
+    previewImage: 'seeds/lush-cave-ancient-taiga.jpg',
     description: 'Rừng thông khổng lồ phủ rêu phong bên trên một quần thể hang động Lush Caves rực sáng quả mọng phát quang và cá kỳ nhông Axolotl.'
   }
 ];

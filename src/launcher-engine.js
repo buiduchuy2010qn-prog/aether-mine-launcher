@@ -2373,7 +2373,24 @@ function scanSavesDirEntries(savesDir, extraMeta = {}) {
         }
         let iconDataUrl = null;
         const iconPath = path.join(wPath, 'icon.png');
-        if (fs.existsSync(iconPath)) {
+        const previewCandidates = [
+          { file: 'blockway-preview.jpg', mime: 'image/jpeg' },
+          { file: 'blockway-preview.png', mime: 'image/png' },
+          { file: 'blockway-preview.webp', mime: 'image/webp' }
+        ];
+        const foundPreview = previewCandidates
+          .map((c) => ({ ...c, full: path.join(wPath, c.file) }))
+          .find((c) => fs.existsSync(c.full));
+        if (foundPreview) {
+          try {
+            const useWidePreview = !fs.existsSync(iconPath)
+              || (fs.statSync(iconPath).mtimeMs <= fs.statSync(foundPreview.full).mtimeMs + 5000);
+            if (useWidePreview) {
+              iconDataUrl = `data:${foundPreview.mime};base64,${fs.readFileSync(foundPreview.full).toString('base64')}`;
+            }
+          } catch (_) {}
+        }
+        if (!iconDataUrl && fs.existsSync(iconPath)) {
           try { iconDataUrl = `data:image/png;base64,${fs.readFileSync(iconPath).toString('base64')}`; } catch (_) {}
         }
         let datapacksCount = 0;
@@ -3858,6 +3875,7 @@ function mapModrinthHit(h, kind) {
     title: h.title,
     summary: h.description,
     iconUrl: h.icon_url || '',
+    bannerUrl: h.featured_gallery || (Array.isArray(h.gallery) && h.gallery[0]) || '',
     downloads: h.downloads || 0,
     author: h.author || '',
     mcVersions: vers,
@@ -3899,6 +3917,7 @@ function mapCfMod(m) {
     title: m.name,
     summary: m.summary,
     iconUrl: m.logo?.thumbnailUrl || m.logo?.url || '',
+    bannerUrl: m.screenshots?.[0]?.url || m.screenshots?.[0]?.thumbnailUrl || '',
     downloads: Math.round(m.downloadCount || 0),
     author: m.authors?.[0]?.name || '',
     mcVersions: vers,
@@ -8192,6 +8211,7 @@ async function searchWorldAndDatapackStore({
     title: h.title,
     description: h.description || '',
     iconUrl: h.icon_url || '',
+    bannerUrl: h.featured_gallery || (Array.isArray(h.gallery) && h.gallery[0]) || '',
     downloads: h.downloads || 0,
     follows: h.follows || 0,
     author: h.author || 'Creator',
@@ -8220,6 +8240,7 @@ async function searchWorldAndDatapackStore({
           title: w.title,
           description: w.summary || '',
           iconUrl: w.iconUrl || '',
+          bannerUrl: w.bannerUrl || '',
           downloads: w.downloads || 0,
           follows: 0,
           author: w.author || 'Creator',
@@ -8249,12 +8270,32 @@ async function installStoreWorldOrDatapack({
   mode = 'new-world', // 'new-world' | 'attach-world'
   targetWorldPath = '',
   gameMode = 'survival',
-  keepInventory = true
+  keepInventory = true,
+  previewUrl = ''
 } = {}, onStatus) {
   const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
   const effectiveGameDir = resolveTweakerDir(rootDir, instanceDir);
   const tmpDir = path.join(rootDir, 'instances', '.blockway-downloads');
   if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+  const saveWorldPreviewIfMissing = async (targetDir) => {
+    try {
+      if (!targetDir || !/^https?:\/\//i.test(String(previewUrl || ''))) return;
+      if (fs.existsSync(path.join(targetDir, 'icon.png')) || fs.existsSync(path.join(targetDir, 'blockway-preview.jpg')) || fs.existsSync(path.join(targetDir, 'blockway-preview.png'))) return;
+      const tmpImg = path.join(tmpDir, `preview-${Date.now()}.bin`);
+      await downloadVerified([previewUrl], tmpImg, {});
+      if (fs.existsSync(tmpImg)) {
+        const buf = fs.readFileSync(tmpImg);
+        try { fs.unlinkSync(tmpImg); } catch (_) {}
+        if (buf.length > 128 && buf.length < 4 * 1024 * 1024) {
+          const isPng = buf[0] === 0x89 && buf[1] === 0x50;
+          const isWebp = buf.slice(8, 12).toString('ascii') === 'WEBP';
+          const outName = isPng ? 'blockway-preview.png' : (isWebp ? 'blockway-preview.webp' : 'blockway-preview.jpg');
+          fs.writeFileSync(path.join(targetDir, outName), buf);
+        }
+      }
+    } catch (_) {}
+  };
 
   // 1. CurseForge pre-built World Map
   if (source === 'curseforge-world') {
@@ -8365,6 +8406,8 @@ async function installStoreWorldOrDatapack({
     if (!created?.ok) {
       throw new Error(created?.error || 'Không thể khởi tạo thế giới tự động cho gói này.');
     }
+
+    await saveWorldPreviewIfMissing(created.worldDir);
 
     return {
       ok: true,

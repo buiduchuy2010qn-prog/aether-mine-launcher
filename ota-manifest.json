@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "40.9.2",
-  "generatedAt": "2026-10-29T08:37:45.371Z",
-  "filesCount": 18,
+  "version": "40.9.3",
+  "generatedAt": "2026-10-29T09:28:30.757Z",
+  "filesCount": 34,
   "files": [
     {
       "path": "package.json",
-      "size": 2173,
-      "sha256": "ca290271e7842b0043fed3c63c146f5f00b1a6d5cff47ee568a746a5fe93673c"
+      "size": 2230,
+      "sha256": "38d70f6a23658416bfc5d7936c09d2864d24cf51fed0a495d3df1e043cec0de3"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,8 +16,8 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 403740,
-      "sha256": "fbacdd204c979ef677a0ede5d0f8424e8583f7aab8acf87f3d5a98ca8adba49a"
+      "size": 405955,
+      "sha256": "c74ffcc536cd6e115ab3360aaba2a18debe5538018c2888ddc184a672529123d"
     },
     {
       "path": "src/main.js",
@@ -57,12 +57,12 @@
     {
       "path": "src/ui/index.html",
       "size": 198841,
-      "sha256": "99359ac0f49ed734cd81ea2c62cb824f07032637421ce3f498f760d8144a0e71"
+      "sha256": "559b8d33c8252160888ef63b93abf0ef59a3a067aa83870e6917025b5b46aff3"
     },
     {
       "path": "src/ui/layout-v33.css",
-      "size": 194591,
-      "sha256": "e08d2b60028762eead55641763c7d7c45ed1b6ca7d84839963721c61d915520e"
+      "size": 203415,
+      "sha256": "f4f2519854d235305c7864787d3d5feccf598cfc43b5b42395bbf4e95ef27121"
     },
     {
       "path": "src/ui/minecraft-logo.png",
@@ -75,14 +75,94 @@
       "sha256": "13948a5d1248d802b7f8548c07c85ca5541c5e3361c30c518080eb30b29a7a26"
     },
     {
+      "path": "src/ui/seeds/badlands-gold-oasis-icon.png",
+      "size": 13491,
+      "sha256": "86e4da30e57f18e9fae9624206b8cdf7a3c7f652f5a46e5d7fa9fc0fd80363df"
+    },
+    {
+      "path": "src/ui/seeds/badlands-gold-oasis.jpg",
+      "size": 68466,
+      "sha256": "9d6c49bc55cb44b1558eb2fa955912b3c3171c5c0934040f63b9c63675a2192c"
+    },
+    {
+      "path": "src/ui/seeds/cherry-ring-mountain-icon.png",
+      "size": 13696,
+      "sha256": "8c07667c72aa440edab3219d3ed5d228328ac98080467352b0435b6a7fa8b342"
+    },
+    {
+      "path": "src/ui/seeds/cherry-ring-mountain.jpg",
+      "size": 92726,
+      "sha256": "0ebcd50ab7bc7e8cde5b039305387eb5425dbe756190862cbb481bd0c3fd7ef8"
+    },
+    {
+      "path": "src/ui/seeds/coral-castaway-island-icon.png",
+      "size": 13520,
+      "sha256": "7b6cab8d3775c259d1907185eb4d59bb0ebcf354ba2dc2761cdc48ab2ab4de45"
+    },
+    {
+      "path": "src/ui/seeds/coral-castaway-island.jpg",
+      "size": 78999,
+      "sha256": "1586a11c07b90ea4697a01a7e48f54e86b4bdffc8370dafa999b90b572a88b44"
+    },
+    {
+      "path": "src/ui/seeds/ice-spikes-frozen-kingdom-icon.png",
+      "size": 12866,
+      "sha256": "e48e180561c1e613ed37bc2f16f980c24e68c80a45fa881d4e81d805a1e91676"
+    },
+    {
+      "path": "src/ui/seeds/ice-spikes-frozen-kingdom.jpg",
+      "size": 65663,
+      "sha256": "145846d66d7f0d4944aa6e4484e478f419cb55f36c83a88e83431b9e399bcafb"
+    },
+    {
+      "path": "src/ui/seeds/lush-cave-ancient-taiga-icon.png",
+      "size": 11544,
+      "sha256": "50eb170f00e3df9407f9edd0583b07ff343dee7e690dbe2e919f4a2572144ccf"
+    },
+    {
+      "path": "src/ui/seeds/lush-cave-ancient-taiga.jpg",
+      "size": 52750,
+      "sha256": "b0b98d5ca192ef32065cd0fd8151555b9c45dd0359d3fd6cef81d4c65d46ef87"
+    },
+    {
+      "path": "src/ui/seeds/mansion-village-ancient-icon.png",
+      "size": 10399,
+      "sha256": "ce25b32b83e487f9fad905aa7d5da9ec20cfacde6cabf0b339c228e87360282b"
+    },
+    {
+      "path": "src/ui/seeds/mansion-village-ancient.jpg",
+      "size": 44315,
+      "sha256": "958178cf220e414cb3dc4704a9bde48e85a6a5c063facde72da32d7aece336c3"
+    },
+    {
+      "path": "src/ui/seeds/mushroom-safe-island-icon.png",
+      "size": 13526,
+      "sha256": "6b1f73cf1511c56ceb8a5597935e883b630203debe339851b2cd7e889f3e8fd9"
+    },
+    {
+      "path": "src/ui/seeds/mushroom-safe-island.jpg",
+      "size": 66336,
+      "sha256": "50aa99d86b2f8782396bd49683b9416ab379823a7dc7ccce7c3b7ae8a3b518a5"
+    },
+    {
+      "path": "src/ui/seeds/speedrun-bastion-fortress-icon.png",
+      "size": 13073,
+      "sha256": "82cdb456a39acb5c4059bc834ae82f171f6b2b5029c6613b39af186be60711cb"
+    },
+    {
+      "path": "src/ui/seeds/speedrun-bastion-fortress.jpg",
+      "size": 66535,
+      "sha256": "7a1edf063b183583ff2212b2c2142da2530fadd52c58c73d9a96e111f57e925e"
+    },
+    {
       "path": "src/ui/skinview3d.bundle.js",
       "size": 477198,
       "sha256": "e2a60ce607f2169e24b18bfd6e5214113b66f30d92e23f9a021ebbd4b21c08d3"
     },
     {
       "path": "src/ui/store-features.js",
-      "size": 379054,
-      "sha256": "56a2f51033249861ae6d985657c1039335ab0be0dba0edbff28430580c23b2a1"
+      "size": 393048,
+      "sha256": "2a39626f7601a93493896f073b0a157bd1f5f9a5695189f1193ac959378dfbb3"
     },
     {
       "path": "src/ui/styles.css",
@@ -91,8 +171,8 @@
     },
     {
       "path": "src/world-creator.js",
-      "size": 48541,
-      "sha256": "8d727f98807f530f3dc3307f12d03acdfe1f983693fbdd563b4bb094bc09b796"
+      "size": 49913,
+      "sha256": "2cb6b5b37862454bd7b3da99a031a1a05da26d61360b29cc850e98d47a84e36a"
     }
   ]
 }

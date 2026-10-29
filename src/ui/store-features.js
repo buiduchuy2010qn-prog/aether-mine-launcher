@@ -2375,7 +2375,11 @@ function packRenderCards(items, append) {
     const displaySummary = (packHub.viEnabled && it.summaryVi) ? it.summaryVi : (it.summary || 'Chưa có mô tả.');
     const reqMc = vers.length ? `MC ${vers.join(', ')}${more > 0 ? ` (+${more})` : ''}` : 'Tự nhận diện MC';
     const reqLd = loaders.length ? loaders.map((l) => PACK_LOADER_LABEL[l] || l).join(' / ') : (it.kind === 'world' ? 'Bản đồ (Save)' : it.kind === 'datapack' ? 'Datapack' : 'Tự thiết lập Loader');
-    return `<div class="pack-card" data-uid="${escapeHtml(it.uid)}">
+    const safeMapBanner = ((it.kind === 'world' || packHub.kind === 'world') && /^https?:\/\//i.test(String(it.bannerUrl || '')))
+      ? escapeHtml(it.bannerUrl)
+      : '';
+    return `<div class="pack-card${safeMapBanner ? ' has-map-banner' : ''}" data-uid="${escapeHtml(it.uid)}">
+      ${safeMapBanner ? `<div class="pack-card-map-banner"><img src="${safeMapBanner}" alt="" loading="lazy" /></div>` : ''}
       <div class="pack-card-top">
         ${packIconHtml(it.iconUrl)}
         <div class="pack-head">
@@ -2976,7 +2980,7 @@ function openQuickWorldModal(inst = null, prefillSeed = '', prefillName = '') {
     ? (inst.autoIslandMode === 'oneblock' ? 'Đảo OneBlock giữa khoảng không' : inst.autoIslandMode ? 'Đảo SkyBlock giữa khoảng không' : '')
     : '';
   const worldTypeLabel = islandName ? `🏝️ ${islandName}` : '🌳 Thế giới sinh tồn chuẩn Minecraft';
-  const defaultName = String(prefillName || (isStandalone ? 'Thế giới mới' : (inst.name || 'Thế giới mới'))).slice(0, 40);
+  const defaultName = String(prefillName || (isStandalone ? 'Thế giới mới' : (inst.name || 'Thế giới mới'))).slice(0, 48);
   const headTarget = isStandalone ? `Minecraft ${escapeHtml(targetMcVer)}` : escapeHtml(inst.name || 'Modpack');
   const card = packOpenModal(`
     <div class="modal-head"><span class="card-dot emerald"></span><h3>🌍 Tạo thế giới mới — ${headTarget}</h3></div>
@@ -2984,7 +2988,7 @@ function openQuickWorldModal(inst = null, prefillSeed = '', prefillName = '') {
       ${supported ? '' : `<p class="pack-modal-hint">⚠️ Tạo thế giới tự động ngoài game cần Minecraft <strong>1.20 trở lên</strong> (đang chọn MC ${escapeHtml(targetMcVer)}). Hãy đổi sang 1.20+ hoặc bấm CHƠI NGAY để tạo trong game nhé.</p>`}
       <p class="pack-modal-hint">Kiểu thế giới: <strong>${worldTypeLabel}</strong> • MC ${escapeHtml(targetMcVer)}. Cấu hình sẵn chế độ, giữ đồ, hạt giống Seed đẹp rồi lưu sẵn hoặc vào thẳng không cần qua Menu!</p>
       <label class="qw-label">Tên thế giới</label>
-      <input type="text" id="qwName" class="pro-input" maxlength="40" value="${escapeHtml(defaultName)}" />
+      <input type="text" id="qwName" class="pro-input" maxlength="48" spellcheck="false" value="${escapeHtml(defaultName)}" />
       <label class="qw-label">Chế độ chơi</label>
       <div class="qw-seg" data-qwgroup="mode">
         <button type="button" class="vtype-btn active" data-v="survival">⚔️ Sinh tồn</button>
@@ -2999,15 +3003,19 @@ function openQuickWorldModal(inst = null, prefillSeed = '', prefillName = '') {
         <button type="button" class="vtype-btn active" data-v="normal">😐 Thường</button>
         <button type="button" class="vtype-btn" data-v="hard">😈 Khó</button>
       </div>
-      <label class="qw-label">Seed <span class="qw-sub">(để trống = ngẫu nhiên, hoặc bấm chọn nhanh Hạt giống đẹp bên dưới)</span></label>
-      <input type="text" id="qwSeed" class="pro-input" maxlength="64" value="${escapeHtml(prefillSeed || '')}" placeholder="VD: 1691256543523180978 hoặc để trống..." />
+      <label class="qw-label">Seed <span class="qw-sub">(để trống = ngẫu nhiên, hoặc bấm chọn nhanh Hạt giống có sẵn ảnh bản đồ bên dưới)</span></label>
+      <input type="text" id="qwSeed" class="pro-input" maxlength="64" spellcheck="false" value="${escapeHtml(prefillSeed || '')}" placeholder="VD: 1691256543523180978 hoặc để trống..." />
       <div class="qw-seed-chips">
         <button type="button" class="mqt-chip" data-qwseed="1691256543523180978" data-qwtitle="Thung Lũng Anh Đào">🌸 Anh Đào Núi Tuyết</button>
         <button type="button" class="mqt-chip" data-qwseed="-4270204629242599305" data-qwtitle="Đảo Nấm Bình Yên">🍄 Đảo Nấm Không Quái</button>
         <button type="button" class="mqt-chip" data-qwseed="5706378859201728440" data-qwtitle="Biệt Thự & Thành Cổ">🏰 Biệt Thự + Làng</button>
         <button type="button" class="mqt-chip" data-qwseed="-3420545464665791887" data-qwtitle="Đảo Hoang San Hô">🏝️ Đảo San Hô</button>
+        <button type="button" class="mqt-chip" data-qwseed="-7253978062019363248" data-qwtitle="Vương Quốc Gai Băng">❄️ Gai Băng Cổ Đại</button>
+        <button type="button" class="mqt-chip" data-qwseed="8678942899319966093" data-qwtitle="Ốc Đảo Giàu Vàng">🏜️ Ốc Đảo Giàu Vàng</button>
         <button type="button" class="mqt-chip" data-qwseed="-4530634556500121041" data-qwtitle="Speedrun Phá Đảo">⚡ Speedrun</button>
+        <button type="button" class="mqt-chip" data-qwseed="7092092118958763650" data-qwtitle="Hang Rêu Phát Sáng">🌲 Hang Rêu Phát Sáng</button>
       </div>
+      <div id="qwSeedPreviewBox" class="qw-seed-preview hidden"></div>
       <div class="qw-toggles">
         <label class="settings-opt-item"><input type="checkbox" id="qwKeepInv" /><div class="soi-body"><strong>🎒 Giữ đồ khi chết</strong><span>Chết không bị rơi đồ và kinh nghiệm.</span></div></label>
         <label class="settings-opt-item"><input type="checkbox" id="qwAlwaysDay" /><div class="soi-body"><strong>☀️ Luôn ban ngày</strong><span>Dừng chu kỳ ngày đêm, quái ít xuất hiện hơn.</span></div></label>
@@ -3019,21 +3027,57 @@ function openQuickWorldModal(inst = null, prefillSeed = '', prefillName = '') {
       <button class="btn-modal-cancel" data-pmclose>Hủy</button>
       ${isStandalone ? `<button class="btn-sync-skin" id="btnQwSaveOnly" ${supported ? '' : 'disabled'}>💾 Tạo Sẵn Vào Danh Sách</button>` : ''}
       <button class="btn-modal-agree" id="btnQwCreate" ${supported ? '' : 'disabled'}>🚀 Tạo &amp; Vào Thẳng</button>
-    </div>`, false);
+    </div>`, true);
   if (!card) return;
 
   const pick = { mode: 'survival', difficulty: 'normal' };
+  const seedInpEl = card.querySelector('#qwSeed');
+  const seedPreviewBox = card.querySelector('#qwSeedPreviewBox');
+  const syncQwSeedPreview = () => {
+    const val = (seedInpEl?.value || '').trim();
+    card.querySelectorAll('[data-qwseed]').forEach((c) => c.classList.toggle('active', Boolean(val) && c.dataset.qwseed === val));
+    if (!seedPreviewBox) return;
+    const matched = findCuratedSeedByValue(val);
+    if (!matched) {
+      seedPreviewBox.classList.add('hidden');
+      seedPreviewBox.innerHTML = '';
+      return;
+    }
+    const imgSrc = escapeHtml(matched.previewImage || `seeds/${matched.id}.jpg`);
+    seedPreviewBox.classList.remove('hidden');
+    seedPreviewBox.innerHTML = `
+      <img class="qw-sp-thumb" src="${imgSrc}" alt="${escapeHtml(matched.title)}" />
+      <div class="qw-sp-info">
+        <div class="qw-sp-head">
+          <strong>${escapeHtml(matched.title)}</strong>
+          <span class="mod-compat-pill ok">✓ Tự gắn ảnh đại diện Map</span>
+        </div>
+        <div class="qw-sp-coords">📍 ${escapeHtml(matched.coordsHint || '')} • Mã Seed: <code>${escapeHtml(matched.seed)}</code></div>
+        <p>${escapeHtml(matched.description || '')}</p>
+      </div>
+    `;
+  };
+  if (seedInpEl) {
+    seedInpEl.addEventListener('input', syncQwSeedPreview);
+  }
   card.querySelectorAll('[data-qwseed]').forEach((chip) => {
     chip.onclick = () => {
-      const seedInp = card.querySelector('#qwSeed');
       const nameInp = card.querySelector('#qwName');
-      if (seedInp) seedInp.value = chip.dataset.qwseed || '';
-      if (nameInp && (!nameInp.value.trim() || nameInp.value.trim() === 'Thế giới mới')) {
-        nameInp.value = chip.dataset.qwtitle || 'Thế giới mới';
+      const prevMatched = findCuratedSeedByValue((seedInpEl?.value || '').trim());
+      if (seedInpEl) seedInpEl.value = chip.dataset.qwseed || '';
+      if (nameInp) {
+        const curName = nameInp.value.trim();
+        const isAutoDefault = !curName || curName === 'Thế giới mới'
+          || Array.from(card.querySelectorAll('[data-qwseed]')).some((c) => c.dataset.qwtitle === curName)
+          || (prevMatched && String(prevMatched.title || '').includes(curName));
+        if (isAutoDefault) {
+          nameInp.value = chip.dataset.qwtitle || 'Thế giới mới';
+        }
       }
-      card.querySelectorAll('[data-qwseed]').forEach((c) => c.classList.toggle('active', c === chip));
+      syncQwSeedPreview();
     };
   });
+  syncQwSeedPreview();
 
   card.querySelectorAll('.qw-seg').forEach((grp) => {
     grp.querySelectorAll('button[data-v]').forEach((btn) => {
@@ -5768,6 +5812,7 @@ async function loadWorldStoreUI(reset = true) {
     const dl = it.downloads >= 1e6 ? `${(it.downloads / 1e6).toFixed(1)}M lượt tải`
       : (it.downloads >= 1e3 ? `${(it.downloads / 1e3).toFixed(1)}K lượt tải` : `${it.downloads || 0} lượt tải`);
     const safeIcon = /^https?:\/\//i.test(String(it.iconUrl || '')) ? escapeHtml(it.iconUrl) : '';
+    const safeBanner = /^https?:\/\//i.test(String(it.bannerUrl || '')) ? escapeHtml(it.bannerUrl) : '';
     const isCfWorld = it.source === 'curseforge-world';
     const typePill = isCfWorld
       ? '<span class="mod-compat-pill ok">🗺️ Bản đồ xây sẵn (CurseForge Map)</span>'
@@ -5775,10 +5820,22 @@ async function loadWorldStoreUI(reset = true) {
     const attachBtnHtml = isCfWorld
       ? ''
       : `<button type="button" class="vtype-btn" data-wsattach="${idx}" title="Gắn thêm Datapack này vào một Thế giới chơi đơn bạn đang có sẵn">➕ Gắn Vào Map Có Sẵn</button>`;
+    const bannerVisual = safeBanner
+      ? `<img class="wsc-banner-img" src="${safeBanner}" alt="${escapeHtml(it.title)}" loading="lazy" />
+         <span class="svc-zoom-pill">🔍 Xem ảnh</span>`
+      : `<div class="wsc-banner-fallback">
+           ${safeIcon
+             ? `<img class="wsc-banner-blur" src="${safeIcon}" alt="" loading="lazy" /><img class="wsc-banner-center-icon" src="${safeIcon}" alt="" loading="lazy" />`
+             : '<span class="wsc-banner-emoji">🗺️</span>'}
+         </div>`;
 
     return `<div class="mod-card world-store-card">
+      <div class="wsc-banner-wrap" data-wszoom="${idx}" title="Nhấp để xem ảnh bản đồ & thông tin chi tiết">
+        ${bannerVisual}
+        <span class="wsc-dl-pill">⬇ ${dl}</span>
+      </div>
       <div class="mod-card-top">
-        ${safeIcon ? `<img class="mod-icon" src="${safeIcon}" alt="" />` : '<div class="mod-icon" style="display:flex;align-items:center;justify-content:center;font-size:22px;">🗺️</div>'}
+        ${safeIcon ? `<img class="mod-icon" src="${safeIcon}" alt="" loading="lazy" />` : '<div class="mod-icon" style="display:flex;align-items:center;justify-content:center;font-size:22px;">🗺️</div>'}
         <div class="mod-head-info">
           <div class="mod-title" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
           <div class="mod-meta">bởi <strong>${escapeHtml(it.author || 'Creator')}</strong> • ${dl}</div>
@@ -5810,6 +5867,19 @@ async function loadWorldStoreUI(reset = true) {
     }
   }
 
+  grid.querySelectorAll('[data-wszoom]').forEach((bannerEl) => {
+    bannerEl.onclick = () => {
+      const idx = Number(bannerEl.dataset.wszoom);
+      const it = items[idx];
+      if (!it) return;
+      const curDesc = grid.querySelector(`[data-wsdesc="${idx}"]`)?.textContent || it.description || '';
+      openWorldStorePreviewModal(it, curDesc, () => {
+        const triggerBtn = grid.querySelector(`[data-wsnew="${idx}"]`);
+        if (triggerBtn) triggerBtn.click();
+      });
+    };
+  });
+
   grid.querySelectorAll('[data-wsnew]').forEach((btn) => {
     btn.onclick = async () => {
       const it = items[Number(btn.dataset.wsnew)];
@@ -5826,7 +5896,8 @@ async function loadWorldStoreUI(reset = true) {
           mcVersion: state.selectedVersion || '1.21.4',
           loaderType: state.selectedCore || 'fabric',
           mode: 'new-world',
-          keepInventory: true
+          keepInventory: true,
+          previewUrl: it.bannerUrl || it.iconUrl || ''
         });
         btn.disabled = false;
         btn.textContent = '✓ Đã tạo Map!';
@@ -6390,38 +6461,238 @@ async function handleTogglePvpModeClick(triggerBtn) {
 }
 
 /* ---------- Upgrade 3: World NBT Inspector, Hardcore Rescue & Seed Vault ---------- */
+const INLINE_CURATED_SEEDS_FALLBACK = [
+  {
+    id: 'cherry-ring-mountain',
+    title: '🌸 Thung Lũng Anh Đào Ôm Trọn Hồ Núi Tuyết',
+    seed: '1691256543523180978',
+    badge: 'Đẹp Nhất Xây Nhà',
+    coordsHint: 'Spawn gần X: 120, Z: 80',
+    previewImage: 'seeds/cherry-ring-mountain.jpg',
+    description: 'Vòng núi tuyết hùng vĩ khép kín bao quanh thung lũng hoa anh đào hồng rực, hồ nước trong vắt ở giữa và ngôi làng bình yên sát bên.'
+  },
+  {
+    id: 'mushroom-safe-island',
+    title: '🍄 Quần Đảo Nấm Khổng Lồ (100% Không Quái Ban Đêm)',
+    seed: '-4270204629242599305',
+    badge: 'An Toàn Tuyệt Đối',
+    coordsHint: 'Xuất hiện ngay trên Đảo Nấm',
+    previewImage: 'seeds/mushroom-safe-island.jpg',
+    description: 'Đảo Nấm rộng lớn nằm giữa đại dương ngay điểm xuất hiện — ban đêm không bao giờ tự sinh Zombie/Creeper, lý tưởng để xây đại căn cứ.'
+  },
+  {
+    id: 'mansion-village-ancient',
+    title: '🏰 Biệt Thự Rừng + Làng Cổ + Thành Cổ Ngầm Sát Nhau',
+    seed: '5706378859201728440',
+    badge: 'Siêu Hiếm 3-Trong-1',
+    coordsHint: 'Ngay sát điểm xuất hiện (X: 60, Z: 90)',
+    previewImage: 'seeds/mansion-village-ancient.jpg',
+    description: 'Vừa vào thế giới đã đứng trước tòa Biệt thự Woodland Mansion khổng lồ ghép liền với ngôi làng dân làng và thành cổ Ancient City sâu bên dưới.'
+  },
+  {
+    id: 'coral-castaway-island',
+    title: '🏝️ Đảo Hoang San Hô Rực Rỡ & Kho Báu Tàu Đắm',
+    seed: '-3420545464665791887',
+    badge: 'Sinh Tồn Đảo Hoang',
+    coordsHint: 'Đảo chính tại X: 0, Z: 0',
+    previewImage: 'seeds/coral-castaway-island.jpg',
+    description: 'Thử thách sinh tồn trên hòn đảo nhỏ giữa vùng biển ấm rực rỡ san hô phát sáng ban đêm, bao quanh bởi xác tàu đắm và phế tích biển.'
+  },
+  {
+    id: 'ice-spikes-frozen-kingdom',
+    title: '❄️ Vương Quốc Gai Băng Cổ Đại & Làng Tuyết',
+    seed: '-7253978062019363248',
+    badge: 'Cảnh Quan Kỳ Vĩ',
+    coordsHint: 'Gai băng tại X: -150, Z: 120',
+    previewImage: 'seeds/ice-spikes-frozen-kingdom.jpg',
+    description: 'Hàng trăm cột băng xanh cao vút nối liền rặng núi tuyết trắng xóa, có sẵn làng tuyết Igloo và cổng địa ngục cổ ngay gần điểm xuất hiện.'
+  },
+  {
+    id: 'badlands-gold-oasis',
+    title: '🏜️ Ốc Đảo Hẻm Núi Đỏ Giàu Vàng & Đền Sa Mạc',
+    seed: '8678942899319966093',
+    badge: 'Giàu Tài Nguyên',
+    coordsHint: 'Ốc đảo tại X: 40, Z: -60',
+    previewImage: 'seeds/badlands-gold-oasis.jpg',
+    description: 'Sự giao thoa tuyệt đẹp giữa hồ nước xanh, làng sa mạc, Kim tự tháp chứa kho báu và dãy núi đất nung Badlands lộ thiên đầy mỏ vàng.'
+  },
+  {
+    id: 'speedrun-bastion-fortress',
+    title: '⚡ Hạt Giống Phá Đảo Thần Tốc (Làng Rèn + Pháo Đài Gần)',
+    seed: '-4530634556500121041',
+    badge: 'Speedrun Chuẩn',
+    coordsHint: 'Làng & Hồ Lava ngay cạnh Spawn',
+    previewImage: 'seeds/speedrun-bastion-fortress.jpg',
+    description: 'Có sẵn làng thợ rèn lấy sắt/đồ ăn và hồ dung nham dựng cổng Nether mở thẳng ra khu vực sát Pháo đài Nether Fortress và Bastion.'
+  },
+  {
+    id: 'lush-cave-ancient-taiga',
+    title: '🌲 Rừng Tùng Cổ Thụ & Đại Hang Động Rêu Phát Sáng',
+    seed: '7092092118958763650',
+    badge: 'Hang Động Tuyệt Đẹp',
+    coordsHint: 'Cửa hang lớn tại X: -80, Z: 40',
+    previewImage: 'seeds/lush-cave-ancient-taiga.jpg',
+    description: 'Rừng thông khổng lồ phủ rêu phong bên trên một quần thể hang động Lush Caves rực sáng quả mọng phát quang và cá kỳ nhông Axolotl.'
+  }
+];
+
 let cachedCuratedSeeds = null;
+
+function findCuratedSeedByValue(seedStr) {
+  const clean = String(seedStr || '').trim();
+  if (!clean) return null;
+  const list = (Array.isArray(cachedCuratedSeeds) && cachedCuratedSeeds.length)
+    ? cachedCuratedSeeds
+    : INLINE_CURATED_SEEDS_FALLBACK;
+  return list.find((s) => String(s.seed) === clean) || null;
+}
+
+function openSeedPreviewModal(s) {
+  if (!s) return;
+  const imgSrc = escapeHtml(s.previewImage || `seeds/${s.id}.jpg`);
+  const cleanTitle = String(s.title || 'Thế giới mới').replace(/^[^\p{L}\p{N}]+/u, '').split('(')[0].trim().slice(0, 48);
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="card-dot emerald"></span>
+        <h3>${escapeHtml(s.title)}</h3>
+      </div>
+      <button class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body seed-preview-modal-body">
+      <div class="spm-hero-frame">
+        <img class="spm-hero-img" src="${imgSrc}" alt="${escapeHtml(s.title)}" />
+        <div class="svc-banner-overlay-top">
+          <span class="svc-badge-pill">🌱 ${escapeHtml(s.badge || 'Hạt giống tuyển chọn')}</span>
+          <span class="svc-badge-pill">Chuẩn MC 1.20 → 26.x</span>
+        </div>
+        <div class="svc-banner-overlay-bot">
+          <span class="svc-coords-pill">📍 ${escapeHtml(s.coordsHint || '')}</span>
+        </div>
+      </div>
+      <p class="spm-desc">${escapeHtml(s.description || '')}</p>
+      <div class="svc-seed-row">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="field-hint-mini" style="font-weight:800;">Mã Hạt Giống (Seed):</span>
+          <code class="svc-seed-code">${escapeHtml(s.seed)}</code>
+        </div>
+        <button type="button" class="vtype-btn" id="btnModalCopySeed">📋 Copy Seed</button>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span class="field-hint-mini">🖼️ Tự gắn sẵn ảnh đại diện thế giới vào <code>.minecraft/saves</code> khi tạo Map</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-modal-cancel" data-pmclose>Đóng</button>
+        <button class="btn-modal-agree" id="btnModalCreateFromSeed">🌍 Tạo Map Với Seed Này</button>
+      </div>
+    </div>`, true);
+  if (!card) return;
+  const copyBtn = card.querySelector('#btnModalCopySeed');
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      window.aetherAPI.copyTextToClipboard(s.seed);
+      showAetherNotification(`📋 Đã sao chép mã Seed "${s.seed}" vào khay nhớ tạm!`, 'success', 3000);
+    };
+  }
+  const createBtn = card.querySelector('#btnModalCreateFromSeed');
+  if (createBtn) {
+    createBtn.onclick = () => {
+      packCloseModal();
+      openQuickWorldModal(null, s.seed, cleanTitle);
+    };
+  }
+}
+
+function openWorldStorePreviewModal(it, displayDesc, onCreateWorld) {
+  if (!it) return;
+  const safeBanner = /^https?:\/\//i.test(String(it.bannerUrl || '')) ? escapeHtml(it.bannerUrl) : '';
+  const safeIcon = /^https?:\/\//i.test(String(it.iconUrl || '')) ? escapeHtml(it.iconUrl) : '';
+  const dl = it.downloads >= 1e6 ? `${(it.downloads / 1e6).toFixed(1)}M lượt tải`
+    : (it.downloads >= 1e3 ? `${(it.downloads / 1e3).toFixed(1)}K lượt tải` : `${it.downloads || 0} lượt tải`);
+  const card = packOpenModal(`
+    <div class="modal-head" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="card-dot emerald"></span>
+        <h3>🗺️ ${escapeHtml(it.title)}</h3>
+      </div>
+      <button class="vtype-btn" data-pmclose>✕ Đóng</button>
+    </div>
+    <div class="modal-body seed-preview-modal-body">
+      <div class="spm-hero-frame">
+        ${safeBanner
+          ? `<img class="spm-hero-img" src="${safeBanner}" alt="${escapeHtml(it.title)}" />`
+          : `<div class="wsc-banner-fallback" style="height:260px;">${safeIcon ? `<img class="wsc-banner-blur" src="${safeIcon}" alt="" /><img class="wsc-banner-center-icon" src="${safeIcon}" alt="" style="width:92px;height:92px;" />` : '<span class="wsc-banner-emoji">🗺️</span>'}</div>`}
+        <div class="svc-banner-overlay-bot">
+          <span class="svc-coords-pill">👤 bởi ${escapeHtml(it.author || 'Creator')} • ⬇ ${dl}</span>
+        </div>
+      </div>
+      <p class="spm-desc">${escapeHtml(displayDesc || it.description || '')}</p>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;gap:8px;">
+      <button class="btn-modal-cancel" data-pmclose>Đóng</button>
+      <button class="btn-modal-agree" id="btnWsModalCreate">🌍 Tạo Map Chơi Ngay</button>
+    </div>`, true);
+  if (!card) return;
+  const createBtn = card.querySelector('#btnWsModalCreate');
+  if (createBtn) {
+    createBtn.onclick = () => {
+      packCloseModal();
+      if (typeof onCreateWorld === 'function') onCreateWorld();
+    };
+  }
+}
 
 async function renderSeedVaultUI() {
   const grid = document.getElementById('seedVaultGrid');
   if (!grid || typeof window.aetherAPI?.getCuratedSeedsVault !== 'function') return;
   if (!cachedCuratedSeeds) {
-    const res = await window.aetherAPI.getCuratedSeedsVault();
-    cachedCuratedSeeds = res?.seeds || [];
+    try {
+      const res = await window.aetherAPI.getCuratedSeedsVault();
+      cachedCuratedSeeds = (res?.seeds || []).map((s) => {
+        const fb = INLINE_CURATED_SEEDS_FALLBACK.find((x) => x.id === s.id);
+        return { ...fb, ...s, previewImage: s.previewImage || fb?.previewImage || `seeds/${s.id}.jpg` };
+      });
+    } catch (_) {
+      cachedCuratedSeeds = INLINE_CURATED_SEEDS_FALLBACK;
+    }
   }
-  const seeds = cachedCuratedSeeds;
-  if (!seeds.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-muted);">Chưa tải được danh sách Hạt giống.</div>';
-    return;
-  }
+  const seeds = cachedCuratedSeeds.length ? cachedCuratedSeeds : INLINE_CURATED_SEEDS_FALLBACK;
 
-  grid.innerHTML = seeds.map((s, idx) => `
+  grid.innerHTML = seeds.map((s, idx) => {
+    const imgSrc = escapeHtml(s.previewImage || `seeds/${s.id}.jpg`);
+    return `
     <div class="mod-card seed-vault-card">
-      <div class="svc-top">
-        <span class="mod-compat-pill ok">🌱 ${escapeHtml(s.badge || 'Hạt giống tuyển chọn')}</span>
-        <span class="svc-coords">${escapeHtml(s.coordsHint || '')}</span>
+      <div class="svc-banner-wrap" data-zoomseed="${idx}" title="Nhấp để phóng to ảnh bản đồ & xem chi tiết">
+        <img class="svc-banner-img" src="${imgSrc}" alt="${escapeHtml(s.title)}" loading="lazy" />
+        <div class="svc-banner-overlay-top">
+          <span class="svc-badge-pill">🌱 ${escapeHtml(s.badge || 'Hạt giống tuyển chọn')}</span>
+          <span class="svc-zoom-pill">🔍 Phóng to</span>
+        </div>
+        <div class="svc-banner-overlay-bot">
+          <span class="svc-coords-pill">📍 ${escapeHtml(s.coordsHint || '')}</span>
+        </div>
       </div>
-      <div class="mod-title svc-title">${escapeHtml(s.title)}</div>
-      <div class="mod-desc">${escapeHtml(s.description || '')}</div>
-      <div class="svc-seed-row">
-        <code class="svc-seed-code">${escapeHtml(s.seed)}</code>
-        <button type="button" class="vtype-btn" data-copyseed="${idx}" title="Sao chép mã Seed này">📋 Copy Seed</button>
+      <div class="svc-body">
+        <div class="svc-title" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</div>
+        <div class="mod-desc svc-desc">${escapeHtml(s.description || '')}</div>
+        <div class="svc-seed-row">
+          <code class="svc-seed-code">${escapeHtml(s.seed)}</code>
+          <button type="button" class="vtype-btn svc-copy-btn" data-copyseed="${idx}" title="Sao chép mã Seed này">📋 Copy Seed</button>
+        </div>
+        <div class="mod-card-foot svc-foot">
+          <button type="button" class="vtype-btn" data-zoomseed="${idx}" title="Xem ảnh phóng to sắc nét">🖼️ Xem ảnh</button>
+          <button type="button" class="btn-install-mod" data-createseed="${idx}">🌍 Tạo Map Với Seed Này</button>
+        </div>
       </div>
-      <div class="mod-card-foot" style="justify-content:flex-end;margin-top:4px;">
-        <button type="button" class="btn-install-mod" data-createseed="${idx}">🌍 Tạo Map Với Seed Này</button>
-      </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('[data-zoomseed]').forEach((el) => {
+    el.onclick = () => {
+      const s = seeds[Number(el.dataset.zoomseed)];
+      if (s) openSeedPreviewModal(s);
+    };
+  });
 
   grid.querySelectorAll('[data-copyseed]').forEach((btn) => {
     btn.onclick = () => {
@@ -6436,7 +6707,7 @@ async function renderSeedVaultUI() {
     btn.onclick = () => {
       const s = seeds[Number(btn.dataset.createseed)];
       if (!s) return;
-      const cleanTitle = String(s.title || 'Thế giới mới').replace(/^[^\p{L}\p{N}]+/u, '').split('(')[0].trim().slice(0, 36);
+      const cleanTitle = String(s.title || 'Thế giới mới').replace(/^[^\p{L}\p{N}]+/u, '').split('(')[0].trim().slice(0, 48);
       openQuickWorldModal(null, s.seed, cleanTitle);
     };
   });

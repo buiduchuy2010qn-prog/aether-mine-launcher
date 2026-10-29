@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v40.9.2 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v40.9.3 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,26 +6,30 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.2_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-6_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v40.9.3_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-7_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
-**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới với **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Bộ Chuẩn OptiFine đời mới 1-Click & Trợ lý `OptiFine.jar` thông minh**, **Kho Modpack thông minh ưu tiên bản mới & dịch Tiếng Việt mượt**, **Chế độ Mượt Êm không ép máy**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
+**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới với **Ảnh bản đồ 16:9 trực quan cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack**, **Core `OptiFine` trực tiếp 1-Click tại Trang chủ**, **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Chế độ Mượt Êm không ép máy**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
 
 🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/blockway-launcher/](https://buiduchuy2010qn-prog.github.io/blockway-launcher/)**
 
 ---
 
-## 📦 Mới trong phiên bản `v40.9.2 PRO`
+## 📦 Mới trong phiên bản `v40.9.3 PRO`
 
-1. **📦 Đóng Gói & Gửi Bộ Mod Cho Bạn Bè 2.0 (MỚI `v40.9.2 PRO`):**
+1. **🖼️ Ảnh Bản Đồ 16:9 Cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack (MỚI `v40.9.3 PRO`):**
+   - Toàn bộ 8 hạt giống tuyển chọn trong **🌱 Kho Hạt Giống (Seed Đẹp)** đều hiển thị **ảnh phong cảnh 16:9 sắc nét**, tọa độ nổi bật, tiêu đề đầy đủ dễ đọc và hỗ trợ **🔍 Phóng to xem chi tiết**.
+   - Cửa sổ **+ Tạo Thế Giới Mới** tích hợp đầy đủ 8 thẻ chọn nhanh Seed kèm **khung xem trước ảnh bản đồ trực tiếp**, đồng thời **tự động gắn ảnh đại diện (`icon.png` + ảnh bìa rộng 16:9)** vào thư mục `.minecraft/saves` ngay khi tạo thế giới mới.
+   - **🗺️ Kho Bản Đồ Xây Sẵn & Datapack** và nhánh **Bản đồ (Map)** trong Kho Modpack đồng bộ hiển thị ảnh chụp màn hình 16:9 từ Modrinth & CurseForge.
+2. **📦 Đóng Gói & Gửi Bộ Mod Cho Bạn Bè 2.0 (`v40.9.2+ PRO`):**
    - Nút **📦 Đóng gói gửi bạn** hiển thị rõ ràng ngay đầu tab **Mod & Pack** và trên từng gói **Modpack đã cài**.
    - Cửa sổ đóng gói trực quan cho phép đặt tên bộ Mod, tùy chọn gửi kèm **Mod**, **Shader & Resource Pack**, **Cấu hình tinh chỉnh Mod (`config/`)**, **Phím tắt** và mặc định **tắt `servers.dat`** để giữ riêng tư IP máy chủ cá nhân.
    - Đóng gói xong tự mở sẵn thư mục và bôi đậm tệp `.mrpack` để kéo gửi thẳng qua Zalo / Discord — bạn bè chỉ cần kéo-thả vào cửa sổ BlockWay là tự cài khớp phiên bản MC + Loader + Mod!
-2. **🔆 Bộ "Chuẩn OptiFine Đời Mới" 1-Click & Nhận Diện `OptiFine_*.jar` Thông Minh (MỚI `v40.9.2 PRO`):**
-   - **1-Click Bộ Chuẩn OptiFine (Modrinth mã nguồn mở):** Trang bị trọn bộ tính năng quen thuộc của OptiFine (*Tăng FPS êm máy, chạy mọi gói Shader, phím Zoom ống nhòm mượt, Đuốc cầm tay phát sáng, Kính nối liền không viền, hỗ trợ Fresh Animations & Custom Resource Pack*) trên **Fabric, Quilt, NeoForge và Forge** mà không ép xung CPU/GPU.
+3. **🔆 Core `OptiFine` Trực Tiếp 1-Click & Nhận Diện `OptiFine_*.jar` Thông Minh (`v40.9.2+ PRO`):**
+   - **Chọn thẳng thẻ `OptiFine (Shader • Zoom)` tại Trang chủ:** Tự động kích hoạt cấu hình `OptiFine` `.jar` gốc (nếu đã cài) hoặc tự trang bị trọn bộ tính năng quen thuộc (*Tăng FPS êm máy, chạy mọi gói Shader, phím Zoom ống nhòm mượt, Đuốc cầm tay phát sáng, Kính nối liền không viền, hỗ trợ Fresh Animations & Custom Resource Pack*).
    - **Trợ lý `OptiFine_*.jar` thông minh:** Khi kéo-thả hoặc chọn tệp `OptiFine_*.jar` tải từ `optifine.net`, Launcher tự động đọc phiên bản MC bên trong tệp — nếu dùng Forge sẽ chép thẳng vào `mods/` và tự động cất gọn các Mod trùng render; nếu đang ở Vanilla / Fabric / NeoForge sẽ mở hộp thoại gợi ý chuyển sang Forge 1-Click hoặc chạy trình cài đặt Java gốc.
-3. **📚 Kho Modpack Thông Minh 2.0 (`#tab-packs`, MỚI `v40.9.2 PRO`):**
+4. **📚 Kho Modpack Thông Minh 2.0 (`#tab-packs`, `v40.9.2+ PRO`):**
    - Bổ sung bộ lọc sắp xếp **🔥 Đề xuất (Bản mới & Hot)**, **⬇ Lượt tải cao nhất**, **🆕 Phiên bản MC mới nhất**, **🕒 Mới cập nhật** — tự động ưu tiên các gói `1.20.x` / `1.21+` chất lượng cao lên hàng đầu thay vì gói `1.6.4` / `1.7.10` cũ.
    - Dịch mô tả Tiếng Việt theo lô êm ái (không nghẽn mạng), phân trang chuẩn theo từng nguồn kèm nút **⬇ Xem thêm gói Modpack** hiển thị rõ tổng số gói, và báo rõ trạng thái `CurseForge: chưa gắn Key` thay vì báo lỗi.
 
