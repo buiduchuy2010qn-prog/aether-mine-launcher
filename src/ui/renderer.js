@@ -879,68 +879,73 @@ function syncCloudCosmeticsIfActive(notifyMsg = '') {
   }
 }
 
+let _saveCfgTimer = null;
 function saveCurrentConfig() {
-  try {
-    localStorage.setItem('bw_boot_snapshot_v1', JSON.stringify({
-      theme: state.theme,
-      authMode: state.authMode,
-      username: state.username,
-      msProfile: state.msProfile ? { name: state.msProfile.name, displayName: state.msProfile.displayName, uuid: state.msProfile.uuid } : null,
-      cloudProfile: state.cloudProfile ? { mcUsername: state.cloudProfile.mcUsername, loginId: state.cloudProfile.loginId, uuid: state.cloudProfile.uuid } : null,
-      selectedVersion: state.selectedVersion,
-      selectedCore: state.selectedCore,
-      selectedLoaderVersion: state.selectedLoaderVersion,
-      ramGB: state.ramGB,
-      totalMemGB: state.totalMemGB,
-      freeMemGB: state.freeMemGB,
-      cpuCores: state.cpuCores,
-      cpuLoadPct: state.cpuLoadPct,
-      diskTotalGB: state.diskTotalGB,
-      diskUsedGB: state.diskUsedGB,
-      skinModel: state.skinModel,
-      selectedSkinPreset: state.selectedSkinPreset || '',
-      capeType: state.capeType,
-      cachedSkinDataUrl: state.cachedSkinDataUrl,
-      customAvatarDataUrl: state.customAvatarDataUrl || '',
-      autoBackupWorlds: state.autoBackupWorlds !== false,
-      discordRpcEnabled: state.discordRpcEnabled !== false,
-      autoViLang: state.autoViLang !== false,
-      potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+  if (_saveCfgTimer) clearTimeout(_saveCfgTimer);
+  _saveCfgTimer = setTimeout(() => {
+    _saveCfgTimer = null;
+    try {
+      localStorage.setItem('bw_boot_snapshot_v1', JSON.stringify({
+        theme: state.theme,
+        authMode: state.authMode,
+        username: state.username,
+        msProfile: state.msProfile ? { name: state.msProfile.name, displayName: state.msProfile.displayName, uuid: state.msProfile.uuid } : null,
+        cloudProfile: state.cloudProfile ? { mcUsername: state.cloudProfile.mcUsername, loginId: state.cloudProfile.loginId, uuid: state.cloudProfile.uuid } : null,
+        selectedVersion: state.selectedVersion,
+        selectedCore: state.selectedCore,
+        selectedLoaderVersion: state.selectedLoaderVersion,
+        ramGB: state.ramGB,
+        totalMemGB: state.totalMemGB,
+        freeMemGB: state.freeMemGB,
+        cpuCores: state.cpuCores,
+        cpuLoadPct: state.cpuLoadPct,
+        diskTotalGB: state.diskTotalGB,
+        diskUsedGB: state.diskUsedGB,
+        skinModel: state.skinModel,
+        selectedSkinPreset: state.selectedSkinPreset || '',
+        capeType: state.capeType,
+        cachedSkinDataUrl: state.cachedSkinDataUrl,
+        customAvatarDataUrl: state.customAvatarDataUrl || '',
+        autoBackupWorlds: state.autoBackupWorlds !== false,
+        discordRpcEnabled: state.discordRpcEnabled !== false,
+        autoViLang: state.autoViLang !== false,
+        potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
+        smartRamCoach: state.smartRamCoach !== false,
+        gentleSmoothMode: state.gentleSmoothMode !== false,
+        deepSmoothEngine: state.deepSmoothEngine !== false,
+        deepSmoothProfile: state.deepSmoothProfile || 'balanced',
+        deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
+        autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
+        uiScale: Number(state.uiScale) || 1.0,
+        customWallpaper: state.customWallpaper || '',
+        playtimeTotalSec: Number(state.playtimeStats?.totalSeconds) || 0,
+        installedVersions: Array.isArray(state.installedVersions) ? state.installedVersions.slice(0, 40) : []
+      }));
+    } catch (_) {}
+    window.aetherAPI.saveConfig({
+      theme: state.theme, authMode: state.authMode, username: state.username,
+      savedAccounts: state.savedAccounts, crackSkinSync: state.crackSkinSync, msProfile: state.msProfile, cloudProfile: state.cloudProfile, customDbUrl: state.customDbUrl,
+      selectedVersion: state.selectedVersion, selectedCore: state.selectedCore,
+      selectedLoaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB,
+      javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
+      fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
+      hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl, customAvatarDataUrl: state.customAvatarDataUrl || '',
+      capeType: state.capeType, winResolution: state.winResolution, uiScale: Number(state.uiScale) || 1.0, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
+      autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
+      autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
       smartRamCoach: state.smartRamCoach !== false,
       gentleSmoothMode: state.gentleSmoothMode !== false,
       deepSmoothEngine: state.deepSmoothEngine !== false,
       deepSmoothProfile: state.deepSmoothProfile || 'balanced',
       deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
       autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
-      uiScale: Number(state.uiScale) || 1.0,
+      uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated),
       customWallpaper: state.customWallpaper || '',
-      playtimeTotalSec: Number(state.playtimeStats?.totalSeconds) || 0,
-      installedVersions: Array.isArray(state.installedVersions) ? state.installedVersions.slice(0, 40) : []
-    }));
-  } catch (_) {}
-  window.aetherAPI.saveConfig({
-    theme: state.theme, authMode: state.authMode, username: state.username,
-    savedAccounts: state.savedAccounts, crackSkinSync: state.crackSkinSync, msProfile: state.msProfile, cloudProfile: state.cloudProfile, customDbUrl: state.customDbUrl,
-    selectedVersion: state.selectedVersion, selectedCore: state.selectedCore,
-    selectedLoaderVersion: state.selectedLoaderVersion, ramGB: state.ramGB,
-    javaPath: state.javaPath, gameDir: state.gameDir, serverIp: state.serverIp,
-    fastSkipHash: state.fastSkipHash, aikarFlags: state.aikarFlags,
-    hideLauncherOnPlay: state.hideLauncherOnPlay, skinModel: state.skinModel, selectedSkinPreset: state.selectedSkinPreset, cachedSkinDataUrl: state.cachedSkinDataUrl, customAvatarDataUrl: state.customAvatarDataUrl || '',
-    capeType: state.capeType, winResolution: state.winResolution, uiScale: Number(state.uiScale) || 1.0, favoriteServers: state.favoriteServers, acceptedEula: state.acceptedEula, skipLaunchConfirm: state.skipLaunchConfirm,
-    autoBackupWorlds: state.autoBackupWorlds !== false, discordRpcEnabled: state.discordRpcEnabled !== false,
-    autoViLang: state.autoViLang !== false, potatoGraphicsPreset: Boolean(state.potatoGraphicsPreset),
-    smartRamCoach: state.smartRamCoach !== false,
-    gentleSmoothMode: state.gentleSmoothMode !== false,
-    deepSmoothEngine: state.deepSmoothEngine !== false,
-    deepSmoothProfile: state.deepSmoothProfile || 'balanced',
-    deepSmoothLayers: Array.isArray(state.deepSmoothLayers) ? state.deepSmoothLayers : null,
-    autoCreateFirstWorld: state.autoCreateFirstWorld !== false,
-    uiV33ThemeMigrated: Boolean(state.uiV33ThemeMigrated),
-    customWallpaper: state.customWallpaper || '',
-    customWpLabel: state.customWpLabel || '',
-    skinCloset: Array.isArray(state.skinCloset) ? state.skinCloset.slice(0, 12) : [],
-    pinnedServers: Array.isArray(state.pinnedServers) ? state.pinnedServers.slice(0, 50) : []
-  });
+      customWpLabel: state.customWpLabel || '',
+      skinCloset: Array.isArray(state.skinCloset) ? state.skinCloset.slice(0, 12) : [],
+      pinnedServers: Array.isArray(state.pinnedServers) ? state.pinnedServers.slice(0, 50) : []
+    });
+  }, 120);
 }
 
 // v40.8: one place to change the home banner wallpaper (chips, screenshots "Làm Nền", reset) — persisted in config
@@ -1302,9 +1307,12 @@ function appendLog(line, type = 'normal') {
   div.className = `log-entry ${resolvedType}`;
   div.textContent = line;
   out.appendChild(div);
-  // Keep the console light: cap DOM to the last 1500 lines so long sessions never bloat launcher RAM/CPU
-  while (out.childElementCount > 1500) out.removeChild(out.firstElementChild);
-  out.scrollTop = out.scrollHeight;
+  // Keep the console light: cap DOM to the last 600 lines and avoid synchronous reflow when hidden
+  while (out.childElementCount > 600) out.removeChild(out.firstElementChild);
+  const drawer = document.getElementById('consoleDrawer');
+  if (!document.hidden && drawer && !drawer.classList.contains('hidden')) {
+    out.scrollTop = out.scrollHeight;
+  }
 }
 
 
@@ -2209,7 +2217,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
   setInterval(async () => {
-    if (document.hidden) return;
+    if (document.hidden || state.launchPhase === 'playing') return;
     try {
       const info = await window.aetherAPI.getSystemInfo();
       if (info && info.totalMemGB) {

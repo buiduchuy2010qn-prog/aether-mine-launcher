@@ -1,13 +1,13 @@
 {
   "format": "blockway-ota-manifest-v1",
-  "version": "41.0.6",
-  "generatedAt": "2026-10-30T06:57:02.993Z",
+  "version": "41.1.0",
+  "generatedAt": "2026-10-30T10:44:28.537Z",
   "filesCount": 34,
   "files": [
     {
       "path": "package.json",
-      "size": 2176,
-      "sha256": "036b722703409e5ed5e616810dd936ba90448d36ad9d65606f9d0a020cbb8662"
+      "size": 2622,
+      "sha256": "de240223f9f5692d1ff372ae9c568b53f00ceeead1e492c8c8853d63b6edd85e"
     },
     {
       "path": "src/aether-cloud-auth.js",
@@ -16,13 +16,13 @@
     },
     {
       "path": "src/launcher-engine.js",
-      "size": 490270,
-      "sha256": "8e1eb7181741c036eccf1f98b059b70bbe5ebee7da4b3ed00c459a9a16ff6dff"
+      "size": 498135,
+      "sha256": "ee18ad39f369c0897835cf636da5e50bb04b5a227ef9822abb4a5536b1a20ca0"
     },
     {
       "path": "src/main.js",
-      "size": 94853,
-      "sha256": "b122bdea088316b136bbfb73226a2b733edb1639652b09d97b0a0e214eb0e091"
+      "size": 97480,
+      "sha256": "9a5369707151bbdc67413643f2c2adea49193e1bcf9b244c1a5f822ba726bfc8"
     },
     {
       "path": "src/microsoft-auth.js",
@@ -57,7 +57,7 @@
     {
       "path": "src/ui/index.html",
       "size": 215954,
-      "sha256": "d4910aaff23f8ad0cee275e9e47334c07e1bd789bcf9ad85790bd06d02f35b2c"
+      "sha256": "752fbee8b2702a178d04a4e9d26a91d78c318770cbfef1d1d859d00b40a658fd"
     },
     {
       "path": "src/ui/layout-v33.css",
@@ -71,8 +71,8 @@
     },
     {
       "path": "src/ui/renderer.js",
-      "size": 160778,
-      "sha256": "261ab0676f4b3963f8f923cbd24a4ca2d10560f8a31b6d37aae1d5829341c54a"
+      "size": 161219,
+      "sha256": "ceca8a2b18f769cbab5e7a70f93b62e97ae73bac09a98dd8d3b96436f1bbf2db"
     },
     {
       "path": "src/ui/seeds/badlands-gold-oasis-icon.png",

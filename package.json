@@ -1,7 +1,7 @@
 {
   "name": "blockway-launcher",
-  "version": "41.0.6",
-  "description": "BlockWay Launcher v41.0.6 PRO — Every World, One Place (⚡ Turbo Smooth Core™ Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click, Menu Nhanh Tài Khoản & Avatar Riêng, Trợ Lý OptiFine Đa Loader, Kho Hạt Giống 16:9)",
+  "version": "41.1.0",
+  "description": "BlockWay Launcher v41.1.0 PRO — Every World, One Place (⚡ Turbo Smooth Core™ Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click, Menu Nhanh Tài Khoản & Avatar Riêng, Trợ Lý OptiFine Đa Loader, Kho Hạt Giống 16:9)",
   "homepage": "https://buiduchuy2010qn-prog.github.io/blockway-launcher/",
   "repository": {
     "type": "git",
@@ -13,7 +13,8 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win nsis portable --publish never"
+    "dist:win": "electron-builder --win nsis portable --publish never",
+    "dist:linux": "electron-builder --linux AppImage deb --publish never"
   },
   "keywords": [
     "blockway-launcher",
@@ -75,6 +76,17 @@
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "src/ui/app-logo.png",
+      "category": "Game",
+      "maintainer": "buiduchuy2010qn-prog <buiduchuy2010qn-prog@users.noreply.github.com>",
+      "synopsis": "BlockWay Launcher PRO — Every World, One Place",
+      "artifactName": "${productName}-Linux-${version}.${ext}"
     }
   }
 }

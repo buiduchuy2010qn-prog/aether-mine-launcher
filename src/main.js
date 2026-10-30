@@ -163,7 +163,18 @@ function encodeDiscordIpcFrame(op, payload) {
 function getDiscordIpcSocketPath(idx) {
   if (process.platform === 'win32') return `\\\\.\\pipe\\discord-ipc-${idx}`;
   const base = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || process.env.TMP || process.env.TEMP || '/tmp';
-  return path.join(base, `discord-ipc-${idx}`);
+  const candidates = [
+    path.join(base, `discord-ipc-${idx}`),
+    path.join(base, 'app', 'com.discordapp.Discord', `discord-ipc-${idx}`),
+    path.join(base, 'snap.discord', `discord-ipc-${idx}`),
+    path.join(base, '.flatpak', 'com.discordapp.Discord', 'xdg-run', `discord-ipc-${idx}`)
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (_) {}
+  }
+  return candidates[0];
 }
 
 function flushDiscordActivity() {
@@ -558,6 +569,10 @@ if (gotSingleInstanceLock) {
     if (discordRpcEnabled) {
       setTimeout(() => setDiscordLobbyPresence(), 1200);
     }
+    // Deferred background housekeeping (prunes >15 old .log.gz & abandoned .tmp files with 0 startup lag)
+    setTimeout(() => {
+      try { cleanupJavaTempAndTrimRam(); } catch (_) {}
+    }, 3500);
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -1159,10 +1174,12 @@ ipcMain.handle('updater:check', async () => {
     }
 
     let latestVersion = remotePkg?.version || currentVersion;
-    // v40.8: Portable users must get the Portable .exe, installed users the Setup .exe (names use "BlockWay.Launcher-…")
-    const isPortableRun = Boolean(process.env.PORTABLE_EXECUTABLE_FILE);
+    const isLinux = process.platform === 'linux';
+    const isPortableRun = Boolean(process.env.PORTABLE_EXECUTABLE_FILE || process.env.APPIMAGE);
     const assetKind = isPortableRun ? 'Portable' : 'Setup';
-    let downloadUrl = `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v${latestVersion}/BlockWay.Launcher-${assetKind}-${latestVersion}.exe`;
+    let downloadUrl = isLinux
+      ? `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v${latestVersion}/BlockWay.Launcher-Linux-${latestVersion}.AppImage`
+      : `https://github.com/buiduchuy2010qn-prog/${repoSlug}/releases/download/v${latestVersion}/BlockWay.Launcher-${assetKind}-${latestVersion}.exe`;
 
     try {
       const relInfo = await fetchJsonSimple(`https://api.github.com/repos/buiduchuy2010qn-prog/${repoSlug}/releases/latest?t=${Date.now()}`);
@@ -1171,17 +1188,25 @@ ipcMain.handle('updater:check', async () => {
         latestVersion = relVer;
       }
       if (Array.isArray(relInfo?.assets)) {
-        const exeAssets = relInfo.assets.filter((a) => typeof a?.browser_download_url === 'string' && /\.exe$/i.test(a.name || a.browser_download_url));
-        const kindRx = isPortableRun ? /portable/i : /setup/i;
-        const exeAsset = exeAssets.find((a) => kindRx.test(a.name || '')) || exeAssets[0];
-        if (exeAsset?.browser_download_url) {
-          downloadUrl = exeAsset.browser_download_url;
+        if (isLinux) {
+          const linuxAssets = relInfo.assets.filter((a) => typeof a?.browser_download_url === 'string' && /\.(AppImage|deb)$/i.test(a.name || a.browser_download_url));
+          const appImgAsset = linuxAssets.find((a) => /\.AppImage$/i.test(a.name || '')) || linuxAssets[0];
+          if (appImgAsset?.browser_download_url) {
+            downloadUrl = appImgAsset.browser_download_url;
+          }
+        } else {
+          const exeAssets = relInfo.assets.filter((a) => typeof a?.browser_download_url === 'string' && /\.exe$/i.test(a.name || a.browser_download_url));
+          const kindRx = isPortableRun ? /portable/i : /setup/i;
+          const exeAsset = exeAssets.find((a) => kindRx.test(a.name || '')) || exeAssets[0];
+          if (exeAsset?.browser_download_url) {
+            downloadUrl = exeAsset.browser_download_url;
+          }
         }
       }
     } catch (_) {}
 
     const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
-    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch, isPortable: isPortableRun };
+    return { ok: true, hasUpdate, currentVersion, latestVersion, downloadUrl, commitSha: refBranch, isPortable: isPortableRun, platform: process.platform };
   } catch (err) {
     return { ok: false, error: err.message, currentVersion: app.getVersion() };
   }
@@ -1191,39 +1216,48 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
   try {
     const appRoot = path.resolve(__dirname, '..');
     const portableExeFile = process.env.PORTABLE_EXECUTABLE_FILE || '';
-    // v40.8: the Portable .exe unpacks into %TEMP% on every start — hot-patching there is wiped on next launch,
-    // so Portable users get the new Portable .exe downloaded right next to the old one instead.
-    const isUnpackedApp = !portableExeFile && path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar');
+    const appImageFile = process.env.APPIMAGE || '';
+    const canWriteAppRoot = (() => {
+      try { fs.accessSync(appRoot, fs.constants.W_OK); return true; } catch (_) { return false; }
+    })();
+    // v41.1: Portable Windows .exe & Linux .AppImage unpack into /tmp on every start — replace binary on disk directly!
+    const isUnpackedApp = !portableExeFile && !appImageFile && path.basename(appRoot).toLowerCase() === 'app' && !appRoot.endsWith('.asar') && canWriteAppRoot;
 
-    if (portableExeFile) {
+    if (portableExeFile || appImageFile) {
       const parsedUrl = new URL(String(downloadUrl || ''));
       const allowedHosts = new Set(['github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com']);
       if (parsedUrl.protocol !== 'https:' || !allowedHosts.has(parsedUrl.hostname.toLowerCase())) {
         throw new Error('Nguồn tải bản cập nhật không hợp lệ.');
       }
       const safeVer = String(latestVersion || 'latest').replace(/[^0-9A-Za-z._-]/g, '');
-      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(portableExeFile);
-      const newExe = path.join(portableDir, `BlockWay.Launcher-Portable-${safeVer}.exe`);
-      const tmpExe = `${newExe}.download`;
-      await downloadWithProgress(parsedUrl.toString(), tmpExe, (pct) => {
+      const targetFile = appImageFile || portableExeFile;
+      const portableDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(targetFile);
+      const newBin = appImageFile
+        ? path.join(portableDir, `BlockWay.Launcher-Linux-${safeVer}.AppImage`)
+        : path.join(portableDir, `BlockWay.Launcher-Portable-${safeVer}.exe`);
+      const tmpBin = `${newBin}.download`;
+      await downloadWithProgress(parsedUrl.toString(), tmpBin, (pct) => {
         mainWindow?.webContents.send('updater:progress', Math.min(99, pct));
       });
-      if (!fs.existsSync(tmpExe) || fs.statSync(tmpExe).size < 5 * 1024 * 1024) {
-        try { fs.rmSync(tmpExe, { force: true }); } catch (_) {}
-        throw new Error('Tệp Portable tải về chưa hoàn chỉnh, hãy thử lại.');
+      if (!fs.existsSync(tmpBin) || fs.statSync(tmpBin).size < 5 * 1024 * 1024) {
+        try { fs.rmSync(tmpBin, { force: true }); } catch (_) {}
+        throw new Error('Tệp cập nhật tải về chưa hoàn chỉnh, hãy thử lại.');
       }
-      try { fs.rmSync(newExe, { force: true }); } catch (_) {}
-      fs.renameSync(tmpExe, newExe);
+      try { fs.rmSync(newBin, { force: true }); } catch (_) {}
+      fs.renameSync(tmpBin, newBin);
+      if (process.platform !== 'win32') {
+        try { fs.chmodSync(newBin, 0o755); } catch (_) {}
+      }
       mainWindow?.webContents.send('updater:progress', 100);
       const { spawn } = require('child_process');
       setTimeout(() => {
         try {
-          const child = spawn(newExe, [], { detached: true, stdio: 'ignore', cwd: portableDir });
+          const child = spawn(newBin, [], { detached: true, stdio: 'ignore', cwd: portableDir });
           child.unref();
         } catch (_) {}
         app.exit(0);
       }, 400);
-      return { ok: true, portablePath: newExe };
+      return { ok: true, portablePath: newBin };
     }
 
     if (isUnpackedApp) {
@@ -1347,13 +1381,36 @@ ipcMain.handle('updater:install-now', async (_e, downloadUrl, latestVersion) => 
       return { ok: true };
     }
 
-    // Fallback if running from legacy app.asar: validate GitHub download URL strictly
+    // Fallback if running from legacy app.asar or root-owned /opt on Linux: validate GitHub download URL strictly
     const parsedUrl = new URL(String(downloadUrl || ''));
-    const allowedHosts = new Set(['github.com', 'objects.githubusercontent.com', 'raw.githubusercontent.com']);
+    const allowedHosts = new Set(['github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com', 'raw.githubusercontent.com']);
     if (parsedUrl.protocol !== 'https:' || !allowedHosts.has(parsedUrl.hostname.toLowerCase())) {
       throw new Error('Nguồn tải bản cập nhật không hợp lệ.');
     }
     const safeVer = String(latestVersion || 'latest').replace(/[^0-9A-Za-z._-]/g, '');
+    if (process.platform === 'linux') {
+      const dlDir = path.join(os.homedir(), 'Downloads');
+      fs.mkdirSync(dlDir, { recursive: true });
+      const ext = /\.deb$/i.test(parsedUrl.pathname) ? 'deb' : 'AppImage';
+      const targetLinuxBin = path.join(dlDir, `BlockWay.Launcher-Linux-${safeVer}.${ext}`);
+      await downloadWithProgress(parsedUrl.toString(), targetLinuxBin, (pct) => {
+        mainWindow?.webContents.send('updater:progress', pct);
+      });
+      if (ext === 'AppImage') {
+        try { fs.chmodSync(targetLinuxBin, 0o755); } catch (_) {}
+        const { spawn } = require('child_process');
+        setTimeout(() => {
+          try {
+            const child = spawn(targetLinuxBin, [], { detached: true, stdio: 'ignore', cwd: dlDir });
+            child.unref();
+          } catch (_) {}
+          app.exit(0);
+        }, 350);
+      } else {
+        try { shell.showItemInFolder(targetLinuxBin); } catch (_) {}
+      }
+      return { ok: true, portablePath: targetLinuxBin };
+    }
     const tempExe = path.join(os.tmpdir(), `BlockWay-Setup-${safeVer}.exe`);
     await downloadWithProgress(parsedUrl.toString(), tempExe, (pct) => {
       mainWindow?.webContents.send('updater:progress', pct);
@@ -2455,7 +2512,7 @@ ipcMain.handle('optifine:handle-jar', async (_e, params = {}) => {
         );
       }
       const { spawn } = require('child_process');
-      let javaBin = detectJavaPath(21, resolvedGameDir) || detectJavaPath(17, resolvedGameDir) || detectJavaPath(8, resolvedGameDir) || 'java';
+      let javaBin = detectJavaPath(resolvedGameDir, targetMc || '1.21.4') || 'java';
       if (javaBin && /javaw\.exe$/i.test(javaBin)) {
         const cliJava = javaBin.replace(/javaw\.exe$/i, 'java.exe');
         if (fs.existsSync(cliJava)) javaBin = cliJava;

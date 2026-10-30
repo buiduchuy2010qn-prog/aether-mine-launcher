@@ -157,14 +157,31 @@ function getDefaultGameDir() {
   return path.join(os.homedir(), '.minecraft');
 }
 
+function getPlatformJavaBinaryNames() {
+  return process.platform === 'win32' ? ['javaw.exe', 'java.exe'] : ['java'];
+}
+
+function ensureExecutablePermissionOnUnix(binPath) {
+  if (process.platform === 'win32' || !binPath) return;
+  try {
+    if (fs.existsSync(binPath)) fs.chmodSync(binPath, 0o755);
+    const jreRoot = path.dirname(path.dirname(binPath));
+    const spawnHelper = path.join(jreRoot, 'lib', 'jspawnhelper');
+    if (fs.existsSync(spawnHelper)) fs.chmodSync(spawnHelper, 0o755);
+  } catch (_) {}
+}
+
 function findJavawInDir(baseDir, maxDepth = 4, currentDepth = 0) {
   const results = [];
   if (!baseDir || !fs.existsSync(baseDir) || currentDepth > maxDepth) return results;
   try {
-    const binCheck = path.join(baseDir, 'bin', process.platform === 'win32' ? 'javaw.exe' : 'java');
-    if (fs.existsSync(binCheck)) {
-      results.push(binCheck);
-      return results;
+    for (const binName of getPlatformJavaBinaryNames()) {
+      const binCheck = path.join(baseDir, 'bin', binName);
+      if (fs.existsSync(binCheck)) {
+        ensureExecutablePermissionOnUnix(binCheck);
+        results.push(binCheck);
+        return results;
+      }
     }
     const entries = fs.readdirSync(baseDir, { withFileTypes: true });
     for (const entry of entries) {
@@ -176,23 +193,54 @@ function findJavawInDir(baseDir, maxDepth = 4, currentDepth = 0) {
   return results;
 }
 
-function detectJavaPath(customGameDir, mcVersion = '1.21.4') {
+function getPlatformJavaSearchRoots(customGameDir) {
   const gameDir = customGameDir || getDefaultGameDir();
-  const searchRoots = [
+  const home = os.homedir();
+  const common = [
     path.join(gameDir, 'runtimes'),
     path.join(gameDir, 'runtime'),
-    path.join(os.homedir(), 'sdk'),
-    process.env.JAVA_HOME || null,
-    'C:\\Program Files\\Eclipse Adoptium',
-    'C:\\Program Files\\Java',
-    'C:\\Program Files\\Microsoft',
-    'C:\\Program Files\\BellSoft',
-    'C:\\Program Files\\Zulu'
-  ].filter(Boolean);
+    path.join(getDefaultGameDir(), 'runtimes'),
+    path.join(getDefaultGameDir(), 'runtime'),
+    path.join(home, 'sdk'),
+    path.join(home, '.jdks'),
+    path.join(home, '.sdkman', 'candidates', 'java'),
+    process.env.JAVA_HOME || null
+  ];
+  if (process.platform === 'win32') {
+    common.push(
+      'C:\\Program Files\\Eclipse Adoptium',
+      'C:\\Program Files\\Java',
+      'C:\\Program Files (x86)\\Java',
+      'C:\\Program Files\\Microsoft',
+      'C:\\Program Files\\BellSoft',
+      'C:\\Program Files\\Zulu',
+      'C:\\Program Files\\Amazon Corretto'
+    );
+  } else if (process.platform === 'linux') {
+    common.push(
+      '/usr/lib/jvm',
+      '/usr/lib64/jvm',
+      '/usr/java',
+      '/opt/java',
+      '/opt/jdk',
+      path.join(home, '.local', 'share', 'PrismLauncher', 'java'),
+      path.join(home, '.var', 'app', 'org.prismlauncher.PrismLauncher', 'data', 'PrismLauncher', 'java')
+    );
+  } else if (process.platform === 'darwin') {
+    common.push(
+      '/Library/Java/JavaVirtualMachines',
+      path.join(home, 'Library', 'Java', 'JavaVirtualMachines')
+    );
+  }
+  return common.filter(Boolean);
+}
+
+function detectJavaPath(customGameDir, mcVersion = '1.21.4') {
+  const searchRoots = getPlatformJavaSearchRoots(customGameDir);
 
   const allFound = [];
   for (const root of searchRoots) {
-    if (root.endsWith('.exe') && fs.existsSync(root)) {
+    if ((root.endsWith('.exe') || root.endsWith('/bin/java')) && fs.existsSync(root)) {
       allFound.push(root);
     } else {
       allFound.push(...findJavawInDir(root, 4));
@@ -215,11 +263,12 @@ function detectJavaPath(customGameDir, mcVersion = '1.21.4') {
 }
 
 async function ensureJavaRuntime(gameDir, mcVersion, requestedJavaPath, onStatus) {
-  // v40.0: chọn đúng Java theo yêu cầu của từng phiên bản Minecraft (Java 8 / 17 / 21 / 25)
+  // v40.0+: chọn đúng Java theo yêu cầu của từng phiên bản Minecraft (Java 8 / 17 / 21 / 25) trên cả Windows & Linux
   let need = 0;
   try { need = await getRequiredJavaMajor(gameDir, mcVersion); } catch (_) { need = 0; }
 
   if (requestedJavaPath && requestedJavaPath !== 'java' && fs.existsSync(requestedJavaPath)) {
+    ensureExecutablePermissionOnUnix(requestedJavaPath);
     if (!need) return requestedJavaPath;
     const reqMajor = getJavaMajorVersion(requestedJavaPath);
     if (!reqMajor || reqMajor === need) return requestedJavaPath;
@@ -228,13 +277,11 @@ async function ensureJavaRuntime(gameDir, mcVersion, requestedJavaPath, onStatus
   if (need) {
     const exact = listJavaCandidates(gameDir).find((p) => getJavaMajorVersion(p) === need);
     if (exact) return exact;
-    if (process.platform === 'win32') {
-      try {
-        const got = await downloadPortableJava(gameDir, need, onStatus);
-        if (got) return got;
-      } catch (e) {
-        onStatus?.(`⚠ Không tải được Java ${need}: ${e.message}. Đang thử Java có sẵn...`);
-      }
+    try {
+      const got = await downloadPortableJava(gameDir, need, onStatus);
+      if (got) return got;
+    } catch (e) {
+      onStatus?.(`⚠ Không tải được Java ${need}: ${e.message}. Đang thử Java có sẵn...`);
     }
     // Fallback: Java mới hơn yêu cầu (chỉ khi yêu cầu >= 17)
     if (need >= 17) {
@@ -252,19 +299,11 @@ async function ensureJavaRuntime(gameDir, mcVersion, requestedJavaPath, onStatus
     return detected;
   }
 
-  // Auto-download Portable Java 21 JRE into .minecraft/runtimes/jre-21 if not installed on PC
-  if (process.platform === 'win32') {
-    const jreRoot = path.join(gameDir, 'runtimes', 'jre-21');
-    const zipPath = path.join(jreRoot, 'jre21.zip');
-    onStatus?.('Đang tự động tải Java 21 Runtime cho máy (chỉ tải 1 lần đầu)...');
-    const adoptiumUrl = 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse';
-    await downloadFile(adoptiumUrl, zipPath);
-    onStatus?.('Đang giải nén Java 21 Runtime...');
-    execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${jreRoot}' -Force"`, { stdio: 'ignore' });
-    try { fs.unlinkSync(zipPath); } catch (_) {}
-    const afterInstall = detectJavaPath(gameDir, mcVersion);
-    if (afterInstall && afterInstall !== 'java') return afterInstall;
-  }
+  // Auto-download Portable Java 21 JRE into .minecraft/runtimes/jre-21 on Windows, Linux & macOS
+  try {
+    const got21 = await downloadPortableJava(gameDir, 21, onStatus);
+    if (got21) return got21;
+  } catch (_) {}
 
   return 'java';
 }
@@ -305,27 +344,12 @@ function getJavaMajorVersion(javaPath) {
 }
 
 function listJavaCandidates(customGameDir) {
-  const gameDir = customGameDir || getDefaultGameDir();
-  const roots = [
-    path.join(gameDir, 'runtimes'),
-    path.join(gameDir, 'runtime'),
-    path.join(getDefaultGameDir(), 'runtime'),
-    path.join(os.homedir(), 'sdk'),
-    path.join(os.homedir(), '.jdks'),
-    process.env.JAVA_HOME || null,
-    'C:\\Program Files\\Eclipse Adoptium',
-    'C:\\Program Files\\Java',
-    'C:\\Program Files (x86)\\Java',
-    'C:\\Program Files\\Microsoft',
-    'C:\\Program Files\\BellSoft',
-    'C:\\Program Files\\Zulu',
-    'C:\\Program Files\\Amazon Corretto'
-  ].filter(Boolean);
+  const roots = getPlatformJavaSearchRoots(customGameDir);
   const seen = new Set();
   const out = [];
   for (const root of roots) {
     for (const p of findJavawInDir(root, 4)) {
-      const key = p.toLowerCase();
+      const key = process.platform === 'win32' ? p.toLowerCase() : p;
       if (!seen.has(key)) { seen.add(key); out.push(p); }
     }
   }
@@ -367,27 +391,53 @@ async function getRequiredJavaMajor(gameDir, mcVersion) {
   return major;
 }
 
+function getAdoptiumTargetPlatformAndArch() {
+  const osName = process.platform === 'win32'
+    ? 'windows'
+    : (process.platform === 'darwin' ? 'mac' : 'linux');
+  const archName = process.arch === 'arm64'
+    ? 'aarch64'
+    : (process.arch === 'ia32' ? 'x32' : 'x64');
+  const archiveExt = process.platform === 'win32' ? 'zip' : 'tar.gz';
+  return { osName, archName, archiveExt };
+}
+
 async function downloadPortableJava(gameDir, major, onStatus) {
   const jreRoot = path.join(gameDir || getDefaultGameDir(), 'runtimes', `jre-${major}`);
   const existing = findJavawInDir(jreRoot, 4).find((p) => getJavaMajorVersion(p) === major);
-  if (existing) return existing;
+  if (existing) {
+    ensureExecutablePermissionOnUnix(existing);
+    return existing;
+  }
   fs.mkdirSync(jreRoot, { recursive: true });
-  const zipPath = path.join(jreRoot, `jre${major}.zip`);
-  onStatus?.(`☕ Đang tự động tải Java ${major} Runtime (chỉ tải 1 lần đầu)...`);
-  await downloadFile(`https://api.adoptium.net/v3/binary/latest/${major}/ga/windows/x64/jre/hotspot/normal/eclipse`, zipPath);
+  const { osName, archName, archiveExt } = getAdoptiumTargetPlatformAndArch();
+  const archivePath = path.join(jreRoot, `jre${major}.${archiveExt}`);
+  onStatus?.(`☕ Đang tự động tải Java ${major} Runtime cho ${osName.toUpperCase()} (${archName})...`);
+  const adoptiumUrl = `https://api.adoptium.net/v3/binary/latest/${major}/ga/${osName}/${archName}/jre/hotspot/normal/eclipse`;
+  await downloadFile(adoptiumUrl, archivePath);
   onStatus?.(`☕ Đang giải nén Java ${major} Runtime...`);
   let extracted = false;
-  try {
-    const Zip = require('adm-zip');
-    new Zip(zipPath).extractAllTo(jreRoot, true);
-    extracted = true;
-  } catch (_) {}
-  if (!extracted) {
-    execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${jreRoot}' -Force"`, { stdio: 'ignore' });
+  if (archiveExt === 'zip') {
+    try {
+      const Zip = require('adm-zip');
+      new Zip(archivePath).extractAllTo(jreRoot, true);
+      extracted = true;
+    } catch (_) {}
+    if (!extracted && process.platform === 'win32') {
+      execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${jreRoot}' -Force"`, { stdio: 'ignore' });
+      extracted = true;
+    }
+  } else {
+    try {
+      require('child_process').execFileSync('tar', ['-xzf', archivePath, '-C', jreRoot], { stdio: 'ignore' });
+      extracted = true;
+    } catch (_) {}
   }
-  try { fs.unlinkSync(zipPath); } catch (_) {}
+  try { fs.unlinkSync(archivePath); } catch (_) {}
   javaMajorCache.clear();
-  return findJavawInDir(jreRoot, 4).find((p) => getJavaMajorVersion(p) === major) || null;
+  const foundBin = findJavawInDir(jreRoot, 4).find((p) => getJavaMajorVersion(p) === major) || null;
+  if (foundBin) ensureExecutablePermissionOnUnix(foundBin);
+  return foundBin;
 }
 
 function compareMcVersions(a, b) {
@@ -401,19 +451,69 @@ function compareMcVersions(a, b) {
   return 0;
 }
 
-function cleanupJavaTempAndTrimRam() {
+function autoPruneGameLogsAndTemp(gameDir) {
+  const root = gameDir || getDefaultGameDir();
+  if (!root || !fs.existsSync(root)) return { prunedLogs: 0, prunedTemps: 0 };
+  let prunedLogs = 0;
+  let prunedTemps = 0;
+  try {
+    // Keep at most 15 newest archived .log.gz files in .minecraft/logs so disk never bloats over months of play
+    const logsDir = path.join(root, 'logs');
+    if (fs.existsSync(logsDir)) {
+      const gzLogs = fs.readdirSync(logsDir)
+        .filter((f) => /\.log\.gz$/i.test(f))
+        .map((f) => {
+          const fp = path.join(logsDir, f);
+          let mtime = 0;
+          try { mtime = fs.statSync(fp).mtimeMs || 0; } catch (_) {}
+          return { fp, mtime };
+        })
+        .sort((a, b) => b.mtime - a.mtime);
+      if (gzLogs.length > 15) {
+        for (const old of gzLogs.slice(15)) {
+          try { fs.unlinkSync(old.fp); prunedLogs++; } catch (_) {}
+        }
+      }
+    }
+    // Remove abandoned .download / .tmp files older than 2 hours in mods/ and runtimes/
+    const cutoff = Date.now() - 2 * 3600 * 1000;
+    for (const sub of ['mods', 'shaderpacks', 'resourcepacks', 'runtimes']) {
+      const subDir = path.join(root, sub);
+      if (!fs.existsSync(subDir)) continue;
+      for (const f of fs.readdirSync(subDir)) {
+        if (!/\.(download|tmp|part)$/i.test(f)) continue;
+        const fp = path.join(subDir, f);
+        try {
+          const st = fs.statSync(fp);
+          if (st.isFile() && st.mtimeMs < cutoff) {
+            fs.unlinkSync(fp);
+            prunedTemps++;
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+  return { prunedLogs, prunedTemps };
+}
+
+function cleanupJavaTempAndTrimRam(gameDir) {
   if (!activeMcProcess && !global.__activeMcProcess) {
     try {
       const tmp = os.tmpdir();
       const entries = fs.readdirSync(tmp);
       for (const name of entries) {
-        if (name.startsWith('jna-') || name.startsWith('hsperfdata_')) {
+        if (name.startsWith('jna-') || name.startsWith('hsperfdata_') || /^bw-.*-sandbox-/i.test(name)) {
           try {
             fs.rmSync(path.join(tmp, name), { recursive: true, force: true });
           } catch (_) {}
         }
       }
     } catch (_) {}
+    try { autoPruneGameLogsAndTemp(gameDir); } catch (_) {}
+  }
+
+  if (global.gc) {
+    try { global.gc(); } catch (_) {}
   }
 
   if (process.platform === 'win32') {
@@ -438,6 +538,9 @@ function forceKillMinecraft() {
       } catch (_) {}
     } else {
       try {
+        execSync(`pkill -9 -P ${pid}`, { stdio: 'ignore' });
+      } catch (_) {}
+      try {
         process.kill(pid, 'SIGKILL');
       } catch (_) {}
     }
@@ -447,6 +550,10 @@ function forceKillMinecraft() {
   if (process.platform === 'win32') {
     try {
       execSync('taskkill /F /IM javaw.exe', { stdio: 'ignore' });
+    } catch (_) {}
+  } else {
+    try {
+      execSync('pkill -9 -f "net.minecraft.client.main.Main|net.fabricmc.loader.impl.launch.knot.KnotClient|cpw.mods.bootstraplauncher"', { stdio: 'ignore' });
     } catch (_) {}
   }
   cleanupJavaTempAndTrimRam();
@@ -4802,11 +4909,65 @@ async function launchMinecraft(config, callbacks = {}) {
     }
   } catch (_) {}
 
+  // v41.1.0 PRO: Inject Linux GPU Driver multi-threaded OpenGL & Hybrid dGPU Prime Offload variables
+  if (deepSmoothEngine !== false) {
+    applyCrossPlatformDriverEnv({ gentleMode: gentleOn });
+  }
+
   const proc = await launcher.launch(launchOpts);
   activeMcProcess = proc;
   global.__activeMcProcess = proc;
 
   return proc;
+}
+
+function getCrossPlatformConfigRoot() {
+  if (process.platform === 'win32') {
+    return process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support');
+  }
+  return process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+}
+
+function getCrossPlatformDataRoot() {
+  if (process.platform === 'win32') {
+    return process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support');
+  }
+  return process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+}
+
+function applyCrossPlatformDriverEnv({ gentleMode = false, targetEnv = process.env, platform = process.platform } = {}) {
+  const applied = {};
+  if (!targetEnv || typeof targetEnv !== 'object') return applied;
+  if (platform === 'linux') {
+    // Mesa OpenGL multithreaded command dispatch (Intel / AMD GPUs on Linux: +20~35% FPS, lower frame-time jitter)
+    if (!targetEnv.mesa_glthread) {
+      targetEnv.mesa_glthread = 'true';
+      applied.mesa_glthread = 'true';
+    }
+    // NVIDIA proprietary OpenGL driver threaded optimization
+    if (!targetEnv.__GL_THREADED_OPTIMIZATIONS) {
+      targetEnv.__GL_THREADED_OPTIMIZATIONS = '1';
+      applied.__GL_THREADED_OPTIMIZATIONS = '1';
+    }
+    // On dual-GPU Linux laptops (when not in gentle eco mode), prefer discrete GPU via PRIME offload if NVIDIA driver is loaded
+    if (!gentleMode && fs.existsSync('/proc/driver/nvidia/version') && fs.existsSync('/sys/class/drm/card1')) {
+      if (!targetEnv.__NV_PRIME_RENDER_OFFLOAD) {
+        targetEnv.__NV_PRIME_RENDER_OFFLOAD = '1';
+        applied.__NV_PRIME_RENDER_OFFLOAD = '1';
+      }
+      if (!targetEnv.__GLX_VENDOR_LIBRARY_NAME) {
+        targetEnv.__GLX_VENDOR_LIBRARY_NAME = 'nvidia';
+        applied.__GLX_VENDOR_LIBRARY_NAME = 'nvidia';
+      }
+    }
+  }
+  return applied;
 }
 
 function countDirItems(dirPath, filterFn) {
@@ -4949,32 +5110,53 @@ function inspectMinecraftInstanceDir(id, launcherName, instanceName, mcDir, targ
 
 function scanExternalLaunchers(targetGameDir) {
   const targetRoot = targetGameDir && targetGameDir.trim() ? targetGameDir.trim() : getDefaultGameDir();
-  const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  const appData = getCrossPlatformDataRoot();
   const userHome = os.homedir();
   const discovered = [];
+  const seenPaths = new Set();
+  const pushUnique = (info) => {
+    if (!info || !info.path) return;
+    const normKey = process.platform === 'win32' ? path.resolve(info.path).toLowerCase() : path.resolve(info.path);
+    if (seenPaths.has(normKey)) return;
+    seenPaths.add(normKey);
+    discovered.push(info);
+  };
 
-  // 1. Default .minecraft (TLauncher / Official / SKLauncher / Legacy)
-  const stdMc = path.join(appData, '.minecraft');
-  const hasTLauncher = fs.existsSync(path.join(appData, '.tlauncher')) || fs.existsSync(path.join(stdMc, 'TlauncherProfiles.json'));
-  const stdInfo = inspectMinecraftInstanceDir(
-    'std-minecraft',
-    hasTLauncher ? 'TLauncher / Official (.minecraft)' : 'Minecraft Official (.minecraft)',
-    'Thư mục gốc .minecraft',
-    stdMc,
-    targetRoot
-  );
-  if (stdInfo) discovered.push(stdInfo);
+  // 1. Default .minecraft (Windows %APPDATA%\.minecraft, Linux ~/.minecraft, macOS ~/Library/Application Support/minecraft)
+  const stdMcCandidates = Array.from(new Set([
+    getDefaultGameDir(),
+    path.join(appData, '.minecraft'),
+    path.join(userHome, '.minecraft')
+  ]));
+  for (const stdMc of stdMcCandidates) {
+    const hasTLauncher = fs.existsSync(path.join(appData, '.tlauncher'))
+      || fs.existsSync(path.join(userHome, '.tlauncher'))
+      || fs.existsSync(path.join(stdMc, 'TlauncherProfiles.json'));
+    const stdInfo = inspectMinecraftInstanceDir(
+      'std-minecraft',
+      hasTLauncher ? 'TLauncher / Official (.minecraft)' : 'Minecraft Official (.minecraft)',
+      'Thư mục gốc .minecraft',
+      stdMc,
+      targetRoot
+    );
+    pushUnique(stdInfo);
+  }
 
-  // 2. Modrinth App profiles
-  for (const mrFolder of ['ModrinthApp', 'com.modrinth.theseus']) {
-    const profilesRoot = path.join(appData, mrFolder, 'profiles');
+  // 2. Modrinth App profiles (Windows, Linux XDG & Linux Flatpak)
+  const mrRoots = [
+    path.join(appData, 'ModrinthApp', 'profiles'),
+    path.join(appData, 'com.modrinth.theseus', 'profiles'),
+    path.join(userHome, '.var', 'app', 'com.modrinth.ModrinthApp', 'data', 'ModrinthApp', 'profiles'),
+    path.join(userHome, '.var', 'app', 'com.modrinth.ModrinthApp', 'data', 'com.modrinth.theseus', 'profiles')
+  ];
+  for (const profilesRoot of mrRoots) {
     if (fs.existsSync(profilesRoot)) {
       try {
         for (const d of fs.readdirSync(profilesRoot, { withFileTypes: true })) {
           if (d.isDirectory()) {
             const pDir = path.join(profilesRoot, d.name);
             const info = inspectMinecraftInstanceDir(`modrinth-${d.name}`, 'Modrinth App', d.name, pDir, targetRoot);
-            if (info) discovered.push(info);
+            pushUnique(info);
           }
         }
       } catch (_) {}
@@ -4984,7 +5166,8 @@ function scanExternalLaunchers(targetGameDir) {
   // 3. CurseForge Instances
   const cfCandidates = [
     path.join(userHome, 'curseforge', 'minecraft', 'Instances'),
-    path.join(appData, 'curseforge', 'minecraft', 'Instances')
+    path.join(appData, 'curseforge', 'minecraft', 'Instances'),
+    path.join(userHome, 'Documents', 'curseforge', 'minecraft', 'Instances')
   ];
   for (const cfRoot of cfCandidates) {
     if (fs.existsSync(cfRoot)) {
@@ -4993,16 +5176,25 @@ function scanExternalLaunchers(targetGameDir) {
           if (d.isDirectory()) {
             const pDir = path.join(cfRoot, d.name);
             const info = inspectMinecraftInstanceDir(`curseforge-${d.name}`, 'CurseForge', d.name, pDir, targetRoot);
-            if (info) discovered.push(info);
+            pushUnique(info);
           }
         }
       } catch (_) {}
     }
   }
 
-  // 4. Prism Launcher / MultiMC / PollyMC
-  for (const prismName of ['PrismLauncher', 'MultiMC', 'PollyMC']) {
-    const instRoot = path.join(appData, prismName, 'instances');
+  // 4. Prism Launcher / MultiMC / PollyMC (Windows AppData, Linux XDG & Linux Flatpak)
+  const prismRoots = [];
+  for (const prismName of ['PrismLauncher', 'MultiMC', 'PollyMC', 'PolyMC']) {
+    prismRoots.push({ name: prismName, dir: path.join(appData, prismName, 'instances') });
+    prismRoots.push({ name: prismName, dir: path.join(userHome, '.local', 'share', prismName, 'instances') });
+  }
+  prismRoots.push({
+    name: 'PrismLauncher (Flatpak)',
+    dir: path.join(userHome, '.var', 'app', 'org.prismlauncher.PrismLauncher', 'data', 'PrismLauncher', 'instances')
+  });
+
+  for (const { name: prismName, dir: instRoot } of prismRoots) {
     if (fs.existsSync(instRoot)) {
       try {
         for (const d of fs.readdirSync(instRoot, { withFileTypes: true })) {
@@ -5011,7 +5203,7 @@ function scanExternalLaunchers(targetGameDir) {
               ? path.join(instRoot, d.name, '.minecraft')
               : path.join(instRoot, d.name, 'minecraft');
             const info = inspectMinecraftInstanceDir(`${prismName}-${d.name}`, prismName, d.name, subMc, targetRoot);
-            if (info) discovered.push(info);
+            pushUnique(info);
           }
         }
       } catch (_) {}
@@ -5019,10 +5211,12 @@ function scanExternalLaunchers(targetGameDir) {
   }
 
   // 5. Feather Client
-  const featherMods = path.join(appData, '.feather', 'user-mods');
-  if (fs.existsSync(featherMods)) {
-    const info = inspectMinecraftInstanceDir('feather-client', 'Feather Client', 'Feather User Mods', path.join(appData, '.feather'), targetRoot);
-    if (info) discovered.push(info);
+  for (const featherBase of [path.join(appData, '.feather'), path.join(userHome, '.feather')]) {
+    const featherMods = path.join(featherBase, 'user-mods');
+    if (fs.existsSync(featherMods)) {
+      const info = inspectMinecraftInstanceDir('feather-client', 'Feather Client', 'Feather User Mods', featherBase, targetRoot);
+      pushUnique(info);
+    }
   }
 
   return discovered;
@@ -6968,7 +7162,7 @@ function initViTranslationCache(customCacheDir = '') {
   if (viTransCacheMem) return viTransCacheMem;
   viTransCacheMem = {};
   try {
-    const baseDir = customCacheDir || path.join(os.homedir(), 'AppData', 'Roaming', 'blockway-launcher');
+    const baseDir = customCacheDir || path.join(getCrossPlatformConfigRoot(), 'blockway-launcher');
     if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
     viTransCacheFile = path.join(baseDir, 'vi-translation-cache.json');
     if (fs.existsSync(viTransCacheFile)) {
@@ -11206,21 +11400,31 @@ function getReplayStudioStatus({ gameDir, instanceDir = '' } = {}) {
   };
 }
 
+function getFfmpegStaticDownloadSpec(platform = process.platform, arch = process.arch) {
+  const normArch = arch === 'arm64' ? 'arm64' : (arch === 'ia32' ? 'ia32' : 'x64');
+  const exeName = platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+  const platTag = platform === 'win32' ? 'win32' : (platform === 'darwin' ? 'darwin' : 'linux');
+  const assetName = `ffmpeg-${platTag}-${normArch}.gz`;
+  return {
+    exeName,
+    assetName,
+    url: `https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/${assetName}`
+  };
+}
+
 async function ensurePortableFfmpeg(gameDir, onStatus) {
   const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
   const existing = detectFfmpegExecutable(rootDir);
   if (existing.found) return { ok: true, ...existing, alreadyInstalled: true };
-  if (process.platform !== 'win32') {
-    return { ok: false, error: 'Tải FFmpeg tự động hiện chỉ hỗ trợ Windows.' };
-  }
 
+  const spec = getFfmpegStaticDownloadSpec(process.platform, process.arch);
   const ffmpegDir = path.join(rootDir, 'runtimes', 'ffmpeg');
   fs.mkdirSync(ffmpegDir, { recursive: true });
-  const gzPath = path.join(ffmpegDir, 'ffmpeg-win64.gz');
-  const exePath = path.join(ffmpegDir, 'ffmpeg.exe');
+  const gzPath = path.join(ffmpegDir, spec.assetName);
+  const exePath = path.join(ffmpegDir, spec.exeName);
 
-  onStatus?.('🎬 Đang tải bộ kết xuất Video MP4 (FFmpeg gọn nhẹ 28 MB — chỉ tải 1 lần duy nhất)...');
-  await downloadFile('https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-win32-x64.gz', gzPath);
+  onStatus?.('🎬 Đang tải bộ kết xuất Video MP4 (FFmpeg gọn nhẹ — chỉ tải 1 lần duy nhất)...');
+  await downloadFile(spec.url, gzPath);
   onStatus?.('🎬 Đang giải nén & kích hoạt bộ xuất Video MP4...');
   await new Promise((resolve, reject) => {
     const inp = fs.createReadStream(gzPath);
@@ -11233,6 +11437,9 @@ async function ensurePortableFfmpeg(gameDir, onStatus) {
     inp.on('error', reject);
   });
   try { fs.unlinkSync(gzPath); } catch (_) {}
+  if (process.platform !== 'win32') {
+    try { fs.chmodSync(exePath, 0o755); } catch (_) {}
+  }
 
   if (!(process.env.PATH || '').includes(ffmpegDir)) {
     process.env.PATH = `${ffmpegDir}${path.delimiter}${process.env.PATH || ''}`;
@@ -11778,5 +11985,11 @@ module.exports = {
   extractMcVerFromFilename,
   isJarZipCorruptOrEmpty,
   areModsSameIdentity,
-  resolveKnownModMixinConflicts
+  resolveKnownModMixinConflicts,
+  getAdoptiumTargetPlatformAndArch,
+  getFfmpegStaticDownloadSpec,
+  applyCrossPlatformDriverEnv,
+  getCrossPlatformConfigRoot,
+  getCrossPlatformDataRoot,
+  autoPruneGameLogsAndTemp
 };

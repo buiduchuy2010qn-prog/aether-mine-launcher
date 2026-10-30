@@ -1,10 +1,9 @@
-name: Build BlockWay Launcher Windows EXE
+name: Build BlockWay Launcher Windows & Linux
 
 on:
   push:
     branches:
       - main
-    # Website / docs-only changes don't need a new Windows build
     paths-ignore:
       - 'docs/**'
       - '*.md'
@@ -17,6 +16,8 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.pkg.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,26 +40,67 @@ jobs:
       - name: Build Windows Setup & Portable EXE
         run: npm run dist:win
 
-      - name: Upload Artifact
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: BlockWay-Launcher-v${{ steps.pkg.outputs.version }}
+          name: BlockWay-Windows-v${{ steps.pkg.outputs.version }}
           path: |
             dist/*.exe
 
-      - name: Publish GitHub Release v${{ steps.pkg.outputs.version }}
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Read package.json version
+        id: pkg
+        run: |
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies in GitHub Cloud
+        run: npm install
+
+      - name: Build Linux AppImage & DEB
+        run: npm run dist:linux
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BlockWay-Linux-v${{ steps.pkg.outputs.version }}
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+
+  publish-release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows & Linux Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-dist
+          merge-multiple: true
+
+      - name: Publish GitHub Release v${{ needs.build-windows.outputs.version }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.pkg.outputs.version }}
-          name: "BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place"
+          tag_name: v${{ needs.build-windows.outputs.version }}
+          name: "BlockWay Launcher v${{ needs.build-windows.outputs.version }} PRO - Windows & Linux"
           body: |
-            ### 📦 BlockWay Launcher v${{ steps.pkg.outputs.version }} PRO - Every World, One Place
-            - **👤 Menu Nhanh Tài Khoản, Ảnh Avatar Hồ Sơ Riêng & Nhận Diện Khuôn Mặt Skin Thông Minh:** Bấm vào thẻ hồ sơ góc trên thanh bên để mở ngay bảng chuyển nhanh giữa *Cloud • Offline • Microsoft*, đổi tài khoản đã lưu 1-Click, tải ảnh đại diện riêng (`.PNG` / `.JPG` / `.WEBP`) không làm đổi Skin 3D trong game, tự lưu Skin cũ vào Tủ đồ và nhận diện thông minh khuôn mặt trên các mẫu Skin đặc biệt.
-            - **🖼️ Ảnh Bản Đồ 16:9 Cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack:** Toàn bộ 8 Seed tuyển chọn hiển thị ảnh phong cảnh 16:9 sắc nét, phóng to xem chi tiết 1-Click, xem trước trực tiếp trong hộp thoại *Tạo Thế Giới Mới* và tự gắn ảnh đại diện (`icon.png` + ảnh bìa rộng) vào `.minecraft/saves` ngay khi tạo Map.
-            - **🔆 Trợ Lý `OptiFine` Đa Nền Tảng & Tích Chọn Từng Tính Năng:** Cho phép chọn tự do **Thư mục chính hoặc Gói Modpack, mọi phiên bản MC (`1.7.10 → 26.3`) và mọi Mod Loader (`Core OptiFine`, `Fabric`, `Forge`, `NeoForge`, `Quilt`)**, tích chọn từng tính năng lẻ (FPS, Shader, chọn Mod Zoom ưa thích, Đuốc phát sáng, Kính nối liền, Fresh Animations) và hỗ trợ cài tệp `OptiFine_*.jar` gốc ở cả chế độ **Độc lập (Vanilla)** lẫn **Forge** cho mọi bản MC, đồng thời tương thích trực tiếp toàn bộ kho Mod trong mục *Mod & Pack*.
-            - **🔎 Hiển Thị Sắc Nét Chuẩn Màn Hình Laptop & Nút `Aa` Chỉnh Cỡ Chữ (90%–125%):** Khắc phục triệt để lỗi tự thu nhỏ giao diện trên màn hình Laptop DPI 125%–150%, làm mới bố cục tab Cài Đặt không còn khoảng trống thừa, nâng cấp toàn bộ ô tích (Checkbox) to rõ sắc nét kèm phím tắt `Ctrl ± / 0`.
-            - **📦 Đóng Gói & Gửi Bộ Mod Cho Bạn Bè 2.0 & 🍃 Mượt Êm Không Ép Máy:** Xuất gói `.mrpack` gửi qua Zalo/Discord 1-Click, Kho Modpack Thông Minh 2.0 dịch Tiếng Việt mượt mà, khóa FPS êm máy theo màn hình, Servers 2.0 ping thật & vào thẳng.
+            ### 📦 BlockWay Launcher v${{ needs.build-windows.outputs.version }} PRO - Every World, One Place (Windows & Linux)
+            - **🐧 Hỗ Trợ Đa Nền Tảng Windows (`.exe`) & Linux (`.AppImage` / `.deb`):** Tự động tải Java Runtime (8 / 17 / 21 / 25) và FFmpeg theo đúng hệ điều hành, quét Launcher ngoài chuẩn XDG / Flatpak, hỗ trợ Discord Rich Presence trên Linux và tự bật tăng tốc đa luồng OpenGL (`mesa_glthread=true` / NVIDIA Prime Offload).
+            - **⚡ Turbo Smooth Core™ 6 Tầng & Generational ZGC (`< 0.05 ms`):** Tự động tối ưu `options.txt`, `optionsof.txt`, `sodium-options.json` (độ trễ 1-frame), `modernfix-mixins.properties`, `immediatelyfast.json`, gỡ khóa 30 FPS giao diện Exordium và hoàn tác 1-Click.
+            - **👤 Menu Nhanh Tài Khoản, Ảnh Avatar Hồ Sơ Riêng & Nhận Diện Khuôn Mặt Skin Thông Minh:** Chuyển nhanh *Cloud • Offline • Microsoft*, tải ảnh đại diện riêng (`.PNG` / `.JPG` / `.WEBP`) không làm đổi Skin 3D trong game.
+            - **🔆 Trợ Lý `OptiFine` Đa Nền Tảng & Kho Hạt Giống 16:9:** Chọn tự do mọi phiên bản MC (`1.7.10 → 26.3`) và mọi Mod Loader (`Core OptiFine`, `Fabric`, `Forge`, `NeoForge`, `Quilt`), tích chọn từng tính năng lẻ và tạo Thế giới Seed 16:9 1-Click.
           files: |
-            dist/*.exe
+            release-dist/*.exe
+            release-dist/*.AppImage
+            release-dist/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
