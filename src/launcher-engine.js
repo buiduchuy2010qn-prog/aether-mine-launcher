@@ -1349,7 +1349,10 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
       try { fs.renameSync(destPath, disabledPath); } catch (_) {}
       throw incompatErr;
     }
-    if (projectType === 'mod') recordInstalledModMeta();
+    if (projectType === 'mod') {
+      recordInstalledModMeta();
+      if (!_isDep) resolveKnownModMixinConflicts(targetDir, null, onStatus);
+    }
     const autoEquipped = await finalizeAddonAutoEquip(fileObj.filename);
     onStatus?.(`✓ Gói ${fileObj.filename} đã cài sẵn trên máy${autoEquipped ? ' & tự bật trong Game' : ''}.`);
     return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, skipped: true, installedDeps, autoEquipped };
@@ -1363,7 +1366,10 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
     try { fs.renameSync(destPath, disabledPath); } catch (_) {}
     throw incompatErr;
   }
-  if (projectType === 'mod') recordInstalledModMeta();
+  if (projectType === 'mod') {
+    recordInstalledModMeta();
+    if (!_isDep) resolveKnownModMixinConflicts(targetDir, null, onStatus);
+  }
   const autoEquipped = await finalizeAddonAutoEquip(fileObj.filename);
   return { ok: true, fileName: fileObj.filename, versionNumber: chosen.version_number, destPath, installedDeps, autoEquipped };
 }
@@ -2119,7 +2125,7 @@ function applyDeepGameSmoothEngine({
       highlights.push(`sodium-options.json: Hoãn chunk đa luồng, chỉ vẽ hoạt ảnh nhìn thấy & hàng đợi khung hình = ${normProfile === 'esports' ? 1 : 2}`);
     }
 
-    // LAYER 4: config/modernfix-mixins.properties (-35~50% RAM & 2x Boot Speed)
+    // LAYER 4: config/modernfix-mixins.properties (-35~50% RAM & 2x Boot Speed, without background Mixin audit freeze)
     if (normLayers.includes('modernfix')) {
       applyPropertiesFile(
         'config/modernfix-mixins.properties',
@@ -2127,11 +2133,12 @@ function applyDeepGameSmoothEngine({
           'mixin.perf.dynamic_resources': 'true',
           'mixin.perf.faster_item_rendering': 'true',
           'mixin.perf.deduplicate_location': 'true',
-          'mixin.perf.compact_bit_storage': 'true'
+          'mixin.perf.compact_bit_storage': 'true',
+          'mixin.perf.clear_mixin_classinfo': 'false'
         },
         'BlockWay Turbo Smooth Core - ModernFix Deep RAM & Model Streaming Config'
       );
-      highlights.push('modernfix-mixins.properties: Kích hoạt dynamic_resources=true (giảm 35–50% RAM & vào Modpack nhanh gấp đôi)');
+      highlights.push('modernfix-mixins.properties: Kích hoạt dynamic_resources=true & tắt clear_mixin_classinfo (tránh khựng luồng nạp thế giới)');
     }
 
     // LAYER 5: config/immediatelyfast.json & config/entityculling.json
@@ -2912,6 +2919,104 @@ function isLoaderListCompatible(modLoaders, effectiveLoader, mcVersion = '') {
   return false;
 }
 
+// Known hard runtime Mixin / classloader collisions where neither mod declares `breaks` in metadata.
+// Most notably: e4mc 6.x + krypton BOTH apply a mandatory @Redirect(defaultRequire=1) to
+// NetworkEncryptionUtils.cipherFromKey inside ServerLoginNetworkHandler (class_3248), which crashes
+// Netty Local IO during Singleplayer IntegratedServer login and freezes the client at "Đang lưu thế giới"!
+const KNOWN_MUTUAL_EXCLUSION_MOD_PAIRS = [
+  {
+    keepRx: /^e4mc(?:[-_+.]|\.jar|$)/i,
+    keepModIds: ['e4mc', 'e4mc_minecraft'],
+    parkRx: /^krypton(?:[-_+.]|\.jar|$)/i,
+    parkModIds: ['krypton'],
+    parkSlugs: ['krypton'],
+    reasonVi: 'Xung đột Mixin mã hóa mạng cục bộ (ServerLoginNetworkHandler) giữa Krypton và e4mc gây treo màn hình "Đang lưu thế giới" khi tạo/vào Thế giới đơn'
+  },
+  {
+    keepRx: /^embeddium(?:[-_+.]|\.jar|$)/i,
+    keepModIds: ['embeddium'],
+    parkRx: /^rubidium(?:[-_+.]|\.jar|$)/i,
+    parkModIds: ['rubidium'],
+    parkSlugs: ['rubidium'],
+    reasonVi: 'Embeddium đã thay thế hoàn toàn Rubidium (tránh xung đột trùng API đồ họa)'
+  },
+  {
+    keepRx: /^iris(?:[-_+.]|\.jar|$)/i,
+    keepModIds: ['iris'],
+    parkRx: /^optifabric(?:[-_+.]|\.jar|$)/i,
+    parkModIds: ['optifabric'],
+    parkSlugs: ['optifabric'],
+    reasonVi: 'Iris Shaders xung đột trực tiếp với OptiFabric'
+  }
+];
+
+function matchesModConflictSide(cleanFile, metaEntry, rx, modIds = []) {
+  if (rx && rx.test(cleanFile)) return true;
+  const mid = String(metaEntry?.modId || '').trim().toLowerCase();
+  if (mid && modIds.includes(mid)) return true;
+  const prov = Array.isArray(metaEntry?.providedIds) ? metaEntry.providedIds : [];
+  if (prov.some((p) => modIds.includes(String(p || '').toLowerCase()))) return true;
+  return false;
+}
+
+function wouldConflictWithActiveMods(cleanCandidate, metaObj, activeFiles = []) {
+  const meta = metaObj || {};
+  for (const rule of KNOWN_MUTUAL_EXCLUSION_MOD_PAIRS) {
+    if (matchesModConflictSide(cleanCandidate, meta[cleanCandidate], rule.parkRx, rule.parkModIds)) {
+      const hasKeeper = activeFiles.some((act) =>
+        matchesModConflictSide(act, meta[act], rule.keepRx, rule.keepModIds)
+      );
+      if (hasKeeper) return rule;
+    }
+  }
+  return null;
+}
+
+function wouldSlugConflictWithActiveMods(slugRaw, metaObj, activeFiles = []) {
+  const s = String(slugRaw || '').trim().toLowerCase();
+  if (!s) return null;
+  const meta = metaObj || {};
+  for (const rule of KNOWN_MUTUAL_EXCLUSION_MOD_PAIRS) {
+    if (Array.isArray(rule.parkSlugs) && rule.parkSlugs.includes(s)) {
+      const hasKeeper = activeFiles.some((act) =>
+        matchesModConflictSide(act, meta[act], rule.keepRx, rule.keepModIds)
+      );
+      if (hasKeeper) return rule;
+    }
+  }
+  return null;
+}
+
+function resolveKnownModMixinConflicts(modsFolder, metaObj = null, onStatus = null) {
+  const parked = [];
+  if (!modsFolder || !fs.existsSync(modsFolder)) return parked;
+  const meta = metaObj || readModsMetaManifest(modsFolder);
+  let active = [];
+  try {
+    active = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+  } catch (_) {
+    return parked;
+  }
+  for (const rule of KNOWN_MUTUAL_EXCLUSION_MOD_PAIRS) {
+    const keeperFile = active.find((f) => matchesModConflictSide(f, meta[f], rule.keepRx, rule.keepModIds));
+    if (!keeperFile) continue;
+    const conflicting = active.filter((f) =>
+      f !== keeperFile && matchesModConflictSide(f, meta[f], rule.parkRx, rule.parkModIds)
+    );
+    for (const badFile of conflicting) {
+      try {
+        const dst = path.join(modsFolder, `${badFile}.disabled`);
+        if (fs.existsSync(dst)) fs.unlinkSync(dst);
+        fs.renameSync(path.join(modsFolder, badFile), dst);
+        active = active.filter((x) => x !== badFile);
+        parked.push({ fileName: badFile, keptWith: keeperFile, reason: rule.reasonVi });
+        onStatus?.(`🛡️ Tự động cất gọn "${badFile}" (${rule.reasonVi})...`);
+      } catch (_) {}
+    }
+  }
+  return parked;
+}
+
 async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, options = {}) {
   if (!loaderType || loaderType === 'vanilla') return;
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
@@ -3094,6 +3199,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, 
       areModsSameIdentity(meta[act], act, meta[cand.cleanName], cand.cleanName)
     );
     if (alreadyActiveSameMod) continue;
+    if (wouldConflictWithActiveMods(cand.cleanName, meta, activeCompatible)) continue;
     const enabledPath = path.join(modsFolder, cand.cleanName);
     const disabledPath = path.join(modsFolder, cand.f);
     if (!fs.existsSync(enabledPath)) {
@@ -3104,8 +3210,9 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, 
     }
   }
 
-  // Ensure no duplicate active builds of the exact same mod coexist
+  // Ensure no duplicate active builds or mutually-exclusive Mixin pairs coexist
   dedupeActiveModsByIdentity(modsFolder, meta);
+  resolveKnownModMixinConflicts(modsFolder, meta, onStatus);
 
   // Step 3: Strictly upgrade disabled mods ONLY if NO matching build is already active AND an official build exists on Modrinth
   if (disabledCandidates.length > 0) {
@@ -3115,6 +3222,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, 
     for (const item of disabledCandidates) {
       const slugKey = item.slug.toLowerCase();
       if (fetchedSlugs.has(slugKey)) continue;
+      if (wouldSlugConflictWithActiveMods(slugKey, meta, activeFilesNow)) continue;
       const alreadyActive = activeFilesNow.some((act) =>
         areModsSameIdentity(meta[act], act, meta[item.cleanName], item.cleanName) ||
         inferSlugOrIdFromFilename(act).toLowerCase() === slugKey
@@ -3144,7 +3252,7 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, 
   // Step 5: Quarantine any active Fabric/Quilt mod whose required parent dependency STILL could not be satisfied (offline / unupdated parent)
   quarantineUnresolvedFabricMods(modsFolder, effectiveLoader, onStatus);
 
-  // Step 6: Guard against simultaneous OptiFine.jar + Sodium/Embeddium/Iris/Oculus collision
+  // Step 6: Guard against simultaneous OptiFine.jar + Sodium/Embeddium/Iris/Oculus AND known Mixin collisions (e.g. e4mc + krypton)
   try {
     const activeFinal = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
     const hasOptifineActive = activeFinal.some((f) => isProprietaryOptifineFile(f));
@@ -3154,8 +3262,9 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, 
     }
   } catch (_) {}
 
-  // Final safety dedupe pass after any dependency/upgrade installs
+  // Final safety dedupe & Mixin mutual-exclusion pass after any dependency/upgrade installs
   const refreshedMeta = readModsMetaManifest(modsFolder);
+  resolveKnownModMixinConflicts(modsFolder, refreshedMeta, onStatus);
   dedupeActiveModsByIdentity(modsFolder, refreshedMeta);
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
@@ -7098,9 +7207,14 @@ async function prepareCoopHostMods({
     }
   }
 
+  // Automatically park known hard-conflicting mods (e.g. krypton when e4mc was just installed)
+  const coopModsFolder = path.join(targetDir, 'mods');
+  const parkedConflicts = resolveKnownModMixinConflicts(coopModsFolder, null, onStatus);
+
   return {
     ok: installed.length > 0 || warnings.length === 0,
     installed,
+    parkedConflicts,
     warnings,
     effectiveLoader,
     targetDir
@@ -7452,6 +7566,7 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
         areModsSameIdentity(meta[k], k, meta[cand.cleanName], cand.cleanName, hashHitByClean[k], hashHitByClean[cand.cleanName])
       );
       if (alreadyKept) continue;
+      if (wouldConflictWithActiveMods(cand.cleanName, meta, kept)) continue;
       const enabledDest = path.join(modsFolder, cand.cleanName);
       const disFull = path.join(modsFolder, cand.f);
       if (!fs.existsSync(enabledDest)) {
@@ -7472,6 +7587,12 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
   }
 
   dedupeActiveModsByIdentity(modsFolder, meta);
+  const preSyncParked = resolveKnownModMixinConflicts(modsFolder, meta, onStatus);
+  preSyncParked.forEach((p) => {
+    const idx = kept.indexOf(p.fileName);
+    if (idx !== -1) kept.splice(idx, 1);
+    if (!disabledIncompatible.includes(p.fileName)) disabledIncompatible.push(p.fileName);
+  });
 
   // Phase 2: Query Modrinth ONLY for mods that do NOT already have a matching active build on disk!
   const triedSlugs = new Set();
@@ -7487,6 +7608,11 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
 
     const slugOrId = inferSlugOrProjectId(cleanName);
     const slugKey = String(slugOrId || '').toLowerCase();
+    const activeForConflictCheck = [...kept, ...upgraded.map((u) => u.to)];
+    if (wouldConflictWithActiveMods(cleanName, meta, activeForConflictCheck) || wouldSlugConflictWithActiveMods(slugKey, meta, activeForConflictCheck)) {
+      if (wasActive && !disabledIncompatible.includes(cleanName)) disabledIncompatible.push(cleanName);
+      continue;
+    }
     if (slugOrId && !triedSlugs.has(slugKey)) {
       triedSlugs.add(slugKey);
       onStatus?.(`🔄 [${i + 1}/${incompatibleItems.length}] Đang tìm bản ${mcVersion} (${effectiveLoader.toUpperCase()}) cho Mod "${cleanName}"...`);
@@ -7552,6 +7678,12 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
     }
   } catch (_) {}
   const finalMeta = readModsMetaManifest(modsFolder);
+  const postSyncParked = resolveKnownModMixinConflicts(modsFolder, finalMeta, onStatus);
+  postSyncParked.forEach((p) => {
+    const idx = kept.indexOf(p.fileName);
+    if (idx !== -1) kept.splice(idx, 1);
+    if (!disabledIncompatible.includes(p.fileName)) disabledIncompatible.push(p.fileName);
+  });
   dedupeActiveModsByIdentity(modsFolder, finalMeta);
 
   return {
@@ -7882,6 +8014,25 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
     });
   }
 
+  // 1b. Check Known Hard Mixin Collisions (e.g. e4mc + krypton freezing at "Đang lưu thế giới" when creating/joining Singleplayer worlds)
+  for (const rule of KNOWN_MUTUAL_EXCLUSION_MOD_PAIRS) {
+    const keepHit = activeMods.find((f) => matchesModConflictSide(f, meta[f], rule.keepRx, rule.keepModIds));
+    const parkHit = activeMods.find((f) => f !== keepHit && matchesModConflictSide(f, meta[f], rule.parkRx, rule.parkModIds));
+    if (keepHit && parkHit) {
+      causes.push({
+        severity: 'high',
+        title: `⚡ Xung đột Mixin trực tiếp giữa "${parkHit}" và "${keepHit}"`,
+        detail: `${rule.reasonVi}. Chỉ cần tắt "${parkHit}" (giữ "${keepHit}") là tạo và vào Thế giới mượt ngay lập tức!`
+      });
+      addAction({
+        type: 'disable-mod',
+        reason: 'conflict',
+        fileName: parkHit,
+        label: `🚫 Tắt ngay ${parkHit} (Chống treo "Đang lưu thế giới")`
+      });
+    }
+  }
+
   // 2. Check missing required dependencies (both from disk JIJ inspection AND crash/resolution logs)
   const missingSlugs = new Set();
   if (['fabric', 'quilt'].includes(effectiveLoader)) {
@@ -7974,7 +8125,10 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
   const logBadModIdRxs = [
     /Replace mod '[^']+' \(([a-z0-9_-]+)\)/gi,
     /Mod '[^']+' \(([a-z0-9_-]+)\)[^\r\n]*requires version [^\r\n]+ of 'Minecraft'/gi,
-    /HARD_DEP ([a-z0-9_-]+) [^\r\n{]+\{depends minecraft @/gi
+    /HARD_DEP ([a-z0-9_-]+) [^\r\n{]+\{depends minecraft @/gi,
+    /Critical injection failure:[^\r\n]*?\sfrom mod ([a-z0-9_-]+)\s+failed injection check/gi,
+    /@Redirect conflict\.\s*Skipping [^\r\n]*?\sfrom mod ([a-z0-9_-]+)/gi,
+    /MixinApplyError:[^\r\n]*?\sfrom mod ([a-z0-9_-]+)/gi
   ];
   for (const rx of logBadModIdRxs) {
     let m;
@@ -7988,11 +8142,13 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
   for (const jarName of activeMods) {
     const mEntry = meta[jarName];
     const metaVers = Array.isArray(mEntry?.gameVersions) ? mEntry.gameVersions : [];
+    const jarMcVer = extractMcVerFromFilename(jarName);
+    const confirmedForTarget = metaVers.includes(mcVersion) || jarMcVer === mcVersion;
     const baseNoExt = jarName.replace(/\.jar$/i, '');
     if (errorOnlyLines.includes(jarName) || (baseNoExt.length > 5 && crashReportText.includes(baseNoExt))) {
       mentionedJars.add(jarName);
     }
-    if (mEntry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec)) {
+    if (mEntry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec, { enforceEraBoundary: !confirmedForTarget })) {
       mentionedJars.add(jarName);
       continue;
     }
@@ -8000,13 +8156,10 @@ function analyzeMinecraftCrash({ gameDir, instanceDir, mcVersion = '1.21.4', loa
       if (!metaVers.includes(mcVersion)) {
         mentionedJars.add(jarName);
       }
-    } else {
-      const jarMcVer = extractMcVerFromFilename(jarName);
-      if (jarMcVer && jarMcVer !== mcVersion) {
-        const isMinor21Lib = /^placeholder-api/i.test(jarName) && jarMcVer.startsWith('1.21.') && mcVersion.startsWith('1.21.');
-        if (!isMinor21Lib || numericExit !== 0) {
-          mentionedJars.add(jarName);
-        }
+    } else if (jarMcVer && jarMcVer !== mcVersion) {
+      const isMinor21Lib = /^placeholder-api/i.test(jarName) && jarMcVer.startsWith('1.21.') && mcVersion.startsWith('1.21.');
+      if (!isMinor21Lib || numericExit !== 0) {
+        mentionedJars.add(jarName);
       }
     }
   }
@@ -11557,5 +11710,6 @@ module.exports = {
   extractModBaseStem,
   extractMcVerFromFilename,
   isJarZipCorruptOrEmpty,
-  areModsSameIdentity
+  areModsSameIdentity,
+  resolveKnownModMixinConflicts
 };
