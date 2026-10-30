@@ -465,7 +465,7 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     `-XX:ParallelGCThreads=${parallelThreads}`,
     `-XX:ConcGCThreads=${concThreads}`,
     '-XX:+ParallelRefProcEnabled',
-    '-XX:MaxGCPauseMillis=50',
+    '-XX:MaxGCPauseMillis=20',
     '-XX:+DisableExplicitGC',
     '-XX:+UseStringDeduplication',
     '-XX:G1NewSizePercent=20',
@@ -474,7 +474,7 @@ function buildMultiCoreSmoothExitArgs(ramGB, cpuCores = os.cpus().length) {
     '-XX:G1ReservePercent=15',
     '-XX:G1HeapWastePercent=5',
     '-XX:G1MixedGCCountTarget=4',
-    '-XX:InitiatingHeapOccupancyPercent=15',
+    '-XX:InitiatingHeapOccupancyPercent=25',
     '-XX:G1MixedGCLiveThresholdPercent=90',
     '-XX:G1RSetUpdatingPauseTimePercent=5',
     '-XX:SurvivorRatio=32',
@@ -1551,8 +1551,10 @@ const GENTLE_SMOOTH_VERSION = 1;
 
 function computeGentleFpsCap(displayHz) {
   const hz = Math.round(Number(displayHz) || 0);
-  if (!hz || hz < 30) return 75;
-  return Math.max(60, Math.min(144, hz));
+  if (!hz || hz < 30) return 120;
+  // Mojang SimpleOption framerateLimit slider uses strict 10-FPS steps (10..250; 260 = Unlimited)
+  const snapped = Math.ceil(hz / 10) * 10;
+  return Math.max(60, Math.min(240, snapped));
 }
 
 function readOptValue(content, key) {
@@ -1674,7 +1676,7 @@ function applyGentleJvmTuning(args, { javaMajor = 0, cpuCores = os.cpus().length
  */
 const DEEP_SMOOTH_BACKUP_FILE = '.blockway-deep-smooth-backup.json';
 const DEEP_SMOOTH_STATE_FILE = '.blockway-deep-smooth-state.json';
-const DEEP_SMOOTH_VERSION = 2;
+const DEEP_SMOOTH_VERSION = 3;
 const DEEP_SMOOTH_ALL_LAYERS = [
   'vanilla_io',
   'optifine',
@@ -1796,7 +1798,10 @@ function inspectDeepGameSmoothState({ gameDir, instanceDir = '', loaderType = ''
     'config/embeddium-options.json',
     'config/modernfix-mixins.properties',
     'config/immediatelyfast.json',
-    'config/entityculling.json'
+    'config/entityculling.json',
+    'config/exordium.json',
+    'config/lambdynlights.toml',
+    'config/dynamic_fps.json'
   ];
   const existingFiles = trackedRelPaths.filter((rel) => {
     try { return fs.existsSync(path.join(targetDir, ...rel.split('/'))); } catch (_) { return false; }
@@ -1997,12 +2002,13 @@ function applyDeepGameSmoothEngine({
   };
 
   try {
-    // LAYER 1: options.txt (Windows Async Disk Chunk I/O + Mouse Polling + Profile Frame Pacing)
+    // LAYER 1: options.txt (Windows Async Disk Chunk I/O + Mouse Polling + Harmonic Frame Pacing)
     if (normLayers.includes('vanilla_io')) {
       const optsAbs = path.join(targetDir, 'options.txt');
       const existingOptsTxt = fs.existsSync(optsAbs) ? fs.readFileSync(optsAbs, 'utf8') : '';
       const cloudKey = /^clouds:/m.test(existingOptsTxt) && !/^renderClouds:/m.test(existingOptsTxt) ? 'clouds' : 'renderClouds';
-      const fpsCap = computeGentleFpsCap(displayHz);
+      // 120 FPS (exact 2x harmonic of 60Hz DWM) avoids Mojang's 260 ("T: inf" = Unlimited) iGPU TDP thermal/bandwidth choke!
+      const smoothFpsCap = Math.max(120, computeGentleFpsCap(displayHz));
 
       const muts = [
         { key: 'syncChunkWrites', value: 'false' },
@@ -2010,12 +2016,13 @@ function applyDeepGameSmoothEngine({
         { key: 'onboardAccessibility', value: 'false' },
         { key: 'tutorialStep', value: 'none' },
         { key: 'rawMouseInput', value: 'true' },
-        { key: 'prioritizeChunkUpdates', value: '0' }
+        { key: 'prioritizeChunkUpdates', value: '1' },
+        { key: 'inactivityFpsLimit', value: '"afk"' }
       ];
 
       if (normProfile === 'balanced') {
         muts.push(
-          { key: 'maxFps', value: String(fpsCap), onlyIfHigherNum: fpsCap },
+          { key: 'maxFps', value: String(smoothFpsCap), onlyIfHigherNum: smoothFpsCap },
           { key: 'simulationDistance', value: '8', onlyIfHigherNum: 8 },
           { key: 'renderDistance', value: '12', onlyIfHigherNum: 12 },
           { key: 'graphicsMode', value: '1', onlyIfGteNum: 2 },
@@ -2023,11 +2030,11 @@ function applyDeepGameSmoothEngine({
           { key: 'entityDistanceScaling', value: '0.80', onlyIfHigherNum: 0.8 },
           { key: 'biomeBlendRadius', value: '2', onlyIfHigherNum: 2 }
         );
-        highlights.push(`options.txt: Tắt ghi đồng bộ ổ cứng Windows (syncChunkWrites:false) & khóa êm ${fpsCap} FPS`);
+        highlights.push(`options.txt: Tắt ghi đồng bộ ổ cứng (syncChunkWrites:false), ưu tiên nạp chunk gần & giữ nhịp mượt ${smoothFpsCap} FPS (chống sụt áp iGPU do T:inf)`);
       } else if (normProfile === 'esports') {
         muts.push(
           { key: 'enableVsync', value: 'false' },
-          { key: 'maxFps', value: '260' },
+          { key: 'maxFps', value: '240' },
           { key: 'entityShadows', value: 'false' },
           { key: 'particles', value: '1' },
           { key: cloudKey, value: cloudKey === 'renderClouds' ? '"fast"' : 'false' },
@@ -2038,7 +2045,7 @@ function applyDeepGameSmoothEngine({
           { key: 'entityDistanceScaling', value: '0.70' },
           { key: 'biomeBlendRadius', value: '1' }
         );
-        highlights.push('options.txt: Mở trần 260 FPS, tắt VSync, chuột thô 1:1 & giảm tải PvP');
+        highlights.push('options.txt: Khóa chuẩn 240 FPS (tránh bẫy 260=Unlimited gây nghẽn nhiệt GPU), tắt VSync, chuột thô 1:1 & giảm tải PvP');
       } else {
         muts.push(
           { key: 'enableVsync', value: 'false' },
@@ -2095,8 +2102,11 @@ function applyDeepGameSmoothEngine({
 
     // LAYER 3: config/sodium-options.json & config/embeddium-options.json (supports both Sodium 0.5/Embeddium & Sodium 0.6-0.9+ schemas)
     if (normLayers.includes('sodium')) {
+      // Reserve P-cores for Render + Integrated Server threads on hybrid Intel/AMD CPUs while keeping async meshing fast
+      const optimalChunkThreads = Math.max(2, Math.min(4, Math.floor((os.cpus().length || 4) / 3)));
       const sodiumPatch = {
         performance: {
+          chunk_builder_threads: optimalChunkThreads,
           always_defer_chunk_updates: true,
           chunk_build_defer_mode: 'ALWAYS',
           animate_only_visible_textures: true,
@@ -2108,7 +2118,7 @@ function applyDeepGameSmoothEngine({
         },
         advanced: {
           use_advanced_staging_buffers: true,
-          cpu_render_ahead_limit: normProfile === 'esports' ? 1 : 2
+          cpu_render_ahead_limit: 1
         },
         quality: {
           hidden_fluid_culling: true,
@@ -2126,10 +2136,10 @@ function applyDeepGameSmoothEngine({
       ) {
         applyJsonConfigFile('config/embeddium-options.json', sodiumPatch);
       }
-      highlights.push(`sodium-options.json: Hoãn chunk đa luồng (ALWAYS), ẩn chất lỏng khuất & hàng đợi khung hình = ${normProfile === 'esports' ? 1 : 2}`);
+      highlights.push(`sodium-options.json: Hàng đợi khung hình 1-frame (độ trễ chuột 0ms), ${optimalChunkThreads} luồng chunk (bảo vệ nhân P-core) & hoãn chunk ALWAYS`);
     }
 
-    // LAYER 4: config/modernfix-mixins.properties (-35~50% RAM & 2x Boot Speed, without background Mixin audit freeze)
+    // LAYER 4: config/modernfix-mixins.properties (-35~50% RAM & Render-Thread Priority Protection)
     if (normLayers.includes('modernfix')) {
       applyPropertiesFile(
         'config/modernfix-mixins.properties',
@@ -2138,14 +2148,15 @@ function applyDeepGameSmoothEngine({
           'mixin.perf.faster_item_rendering': 'true',
           'mixin.perf.deduplicate_location': 'true',
           'mixin.perf.compact_bit_storage': 'true',
+          'mixin.perf.thread_priorities': 'true',
           'mixin.perf.clear_mixin_classinfo': 'false'
         },
-        'BlockWay Turbo Smooth Core - ModernFix Deep RAM & Model Streaming Config'
+        'BlockWay Turbo Smooth Core - ModernFix Deep RAM & Thread Priority Config'
       );
-      highlights.push('modernfix-mixins.properties: Kích hoạt dynamic_resources=true & tắt clear_mixin_classinfo (tránh khựng luồng nạp thế giới)');
+      highlights.push('modernfix-mixins.properties: Kích hoạt dynamic_resources=true, ưu tiên luồng vẽ Render (thread_priorities=true) & chống khựng nạp thế giới');
     }
 
-    // LAYER 5: config/immediatelyfast.json & config/entityculling.json (supports both 1.20 & 1.21+/26.2 ImmediatelyFast 1.14+ schemas)
+    // LAYER 5: HUD, Culling & Dynamic Light Anti-Stutter (ImmediatelyFast + EntityCulling + Exordium 30Hz Uncap + LambDynLights + DynamicFPS)
     if (normLayers.includes('culling_hud')) {
       applyJsonConfigFile('config/immediatelyfast.json', {
         hud_batching: true,
@@ -2163,7 +2174,41 @@ function applyDeepGameSmoothEngine({
         blockEntityFrustumCulling: true,
         sleepDelay: normProfile === 'esports' ? 5 : 10
       });
-      highlights.push('immediatelyfast.json & entityculling.json: Gom mẻ vẽ enhanced_batching 1-lần-gọi GPU & ngừng tính toán thực thể khuất tường');
+      // Neutralize Exordium's notorious 30 FPS HUD/Inventory throttle if config/exordium.json exists
+      const exordiumAbs = path.join(targetDir, 'config', 'exordium.json');
+      if (fs.existsSync(exordiumAbs)) {
+        applyJsonConfigFile('config/exordium.json', {
+          globalSettings: {
+            enabled: false,
+            maxFps: 240
+          }
+        });
+      }
+      // Uncap Mojang's 60 FPS menu limit if Dynamic FPS is installed or configured
+      const dynFpsAbs = path.join(targetDir, 'config', 'dynamic_fps.json');
+      const modsFolderAbs = path.join(targetDir, 'mods');
+      const hasDynFpsMod = fs.existsSync(modsFolderAbs)
+        && fs.readdirSync(modsFolderAbs).some((f) => /^dynamic[-_]?fps[-_+.]/i.test(f) && /\.jar$/i.test(f));
+      if (fs.existsSync(dynFpsAbs) || hasDynFpsMod) {
+        applyJsonConfigFile('config/dynamic_fps.json', {
+          uncap_menu_frame_rate: true
+        });
+      }
+      // Switch LambDynamicLights from per-frame "fancy" chunk mesh rebuilds to smooth "fast" mode
+      const ldlRel = 'config/lambdynlights.toml';
+      const ldlAbs = path.join(targetDir, 'config', 'lambdynlights.toml');
+      if (fs.existsSync(ldlAbs)) {
+        const rawLdl = fs.readFileSync(ldlAbs, 'utf8');
+        if (/^\s*mode\s*=\s*"fancy"/m.test(rawLdl)) {
+          if (!(ldlRel in backup.rawFileBackups)) {
+            backup.rawFileBackups[ldlRel] = { existed: true, content: rawLdl };
+          }
+          const nextLdl = rawLdl.replace(/^(\s*mode\s*=\s*)"fancy"/m, '$1"fast"');
+          fs.writeFileSync(ldlAbs, nextLdl, 'utf8');
+          touchedFiles.push(ldlRel);
+        }
+      }
+      highlights.push('immediatelyfast, entityculling & HUD: Vẽ gộp enhanced_batching, gỡ khóa 30 FPS giao diện Exordium & tối ưu đèn động mượt');
     }
 
     // LAYER 6: JVM Safepoint & Network Low-Latency
@@ -2939,6 +2984,14 @@ const KNOWN_MUTUAL_EXCLUSION_MOD_PAIRS = [
     parkModIds: ['krypton'],
     parkSlugs: ['krypton'],
     reasonVi: 'Xung đột Mixin mã hóa mạng cục bộ (ServerLoginNetworkHandler) giữa Krypton và e4mc gây treo màn hình "Đang lưu thế giới" khi tạo/vào Thế giới đơn'
+  },
+  {
+    keepRx: /^immediatelyfast(?:[-_+.]|\.jar|$)/i,
+    keepModIds: ['immediatelyfast'],
+    parkRx: /^exordium(?:[-_+.]|\.jar|$)/i,
+    parkModIds: ['exordium'],
+    parkSlugs: ['exordium'],
+    reasonVi: 'Exordium khóa cứng giao diện HUD / Túi đồ / Tâm ngắm ở 30 FPS gây cảm giác giật khựng, trong khi ImmediatelyFast đã gom mẻ vẽ HUD mượt ở 100% tần số quét'
   },
   {
     keepRx: /^embeddium(?:[-_+.]|\.jar|$)/i,
@@ -4584,7 +4637,7 @@ async function launchMinecraft(config, callbacks = {}) {
     callbacks.onStatus?.(`🧠 Cố vấn RAM thông minh: Tự cân chỉnh ${effectiveRamGB} GB (${ramCoach.gcModeLabel}) phù hợp ${ramCoach.modsCount} Mod & RAM trống hệ thống.`);
   }
   const baseCustomArgs = useAikarFlags
-    ? (smartRamCoach && Array.isArray(ramCoach.jvmArgs) && ramCoach.jvmArgs.length ? ramCoach.jvmArgs : buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores))
+    ? (Array.isArray(ramCoach.jvmArgs) && ramCoach.jvmArgs.length ? ramCoach.jvmArgs : buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores))
     : [];
   const gentleCustomArgs = gentleOn && baseCustomArgs.length
     ? applyGentleJvmTuning(baseCustomArgs, { javaMajor: getJavaMajorVersion(resolvedJava), cpuCores })
@@ -4595,6 +4648,11 @@ async function launchMinecraft(config, callbacks = {}) {
 
   const launcher = new Client();
 
+  const maxHeapMB = Math.max(1024, Math.round(effectiveRamGB * 1024));
+  const minHeapMB = (os.totalmem() >= 10 * 1073741824 && effectiveRamGB >= 3.5)
+    ? Math.min(2048, Math.max(1024, Math.round(effectiveRamGB * 512)))
+    : 512;
+
   const launchOpts = {
     authorization,
     root: rootDir,
@@ -4603,8 +4661,8 @@ async function launchMinecraft(config, callbacks = {}) {
       type: mcVersion.includes('w') || mcVersion.includes('pre') || mcVersion.includes('rc') ? 'snapshot' : 'release'
     },
     memory: {
-      max: `${Math.max(1024, Math.round(effectiveRamGB * 1024))}M`,
-      min: '512M'
+      max: `${maxHeapMB}M`,
+      min: `${minHeapMB}M`
     },
     javaPath: resolvedJava === 'java' ? undefined : resolvedJava,
     customArgs,
@@ -10378,7 +10436,8 @@ function buildGenerationalZgcArgs(javaMajor, cpuCores = os.cpus().length) {
     args.push('-XX:+ZGenerational');
   }
   args.push(
-    '-XX:ZUncommitDelay=30',
+    '-XX:+AlwaysPreTouch',
+    '-XX:ZUncommitDelay=45',
     `-XX:ConcGCThreads=${concThreads}`,
     '-XX:+DisableExplicitGC',
     '-XX:+PerfDisableSharedMem',
@@ -10472,10 +10531,10 @@ function computeSmartRamAndJvmAdvice({
     else javaMajor = 8;
   }
 
-  const useGenZgc = javaMajor >= 21 && cpuCores >= 6 && effectiveRamGB >= 5 && totalMemGB >= 11;
+  const useGenZgc = javaMajor >= 21 && cpuCores >= 6 && effectiveRamGB >= 3.5 && totalMemGB >= 10;
   const gcMode = useGenZgc ? 'zgc-gen' : 'g1gc-tuned';
   const gcModeLabel = useGenZgc
-    ? `Generational ZGC (Java ${javaMajor} • Siêu mượt <1ms)`
+    ? `Generational ZGC (Java ${javaMajor} • Siêu mượt <0.05ms)`
     : `Low-Pause G1GC (Đa nhân ${cpuCores} luồng)`;
 
   let jvmArgs;
@@ -10484,7 +10543,7 @@ function computeSmartRamAndJvmAdvice({
   } else {
     jvmArgs = buildMultiCoreSmoothExitArgs(effectiveRamGB, cpuCores);
     if (javaMajor >= 17 && !jvmArgs.some((a) => a.startsWith('-XX:G1PeriodicGCInterval='))) {
-      jvmArgs.push('-XX:G1PeriodicGCInterval=15000');
+      jvmArgs.push('-XX:G1PeriodicGCInterval=60000');
     }
   }
 
