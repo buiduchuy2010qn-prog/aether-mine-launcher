@@ -1207,11 +1207,10 @@
                 <h2>🌐 Chơi Chung Bạn Bè &amp; Máy Chủ Multiplayer</h2>
                 <span class="installed-count-tag" id="serversCountBadge">18 Server</span>
               </div>
-              <p>Chơi chung qua <strong>Wi-Fi LAN</strong>, <strong>Internet 1-Click (e4mc)</strong>, <strong>Mã Phòng 6 Ký Tự</strong> hoặc mở Trạm Server riêng.</p>
+              <p>Chơi chung qua <strong>Wi-Fi LAN</strong>, <strong>Internet 1-Click (e4mc)</strong>, <strong>Mã Phòng 6 Ký Tự</strong> hoặc mở <strong>Trạm Server Ngầm riêng</strong> bên dưới.</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="field-hint-mini" id="activeServerBadge">Chế độ: Vào Menu chính</span>
-              <button class="btn-fps-boost-1click" id="btnOpenLocalServerStudio" title="Dành cho máy làm chủ: Tự tải server.jar và chạy máy chủ ngầm 0% GPU (có khuyến cáo cấu hình máy tự động)">🖥️ Mở Trạm Server Ngầm (Tùy chọn)</button>
               <button class="btn-sync-skin" id="btnPingAllServers">📡 Kiểm tra Ping</button>
               <button class="vtype-btn" id="btnSyncServersDat" title="Đồng bộ 2 chiều với danh sách Multiplayer bên trong Minecraft (servers.dat)">🔄 Đồng bộ với game</button>
             </div>
@@ -1301,6 +1300,25 @@
                 </div>
                 <div class="coop-public-rooms hidden" id="coopPublicRoomsList"></div>
               </div>
+            </div>
+          </div>
+
+          <!-- v41.2.0 PRO: MỤC RIÊNG — TRẠM SERVER NGẦM TRÊN MÁY (0% GPU • KÈM KHUYẾN CÁO CẤU HÌNH) -->
+          <div class="bento-card ls-dedicated-section-card" id="localServerDedicatedCard">
+            <div class="ls-sec-left">
+              <div class="ls-sec-title-row">
+                <span class="ls-sec-pill">🖥️ MỤC RIÊNG • 0% GPU</span>
+                <strong>Trạm Server Ngầm Trên Máy (Dành Cho Máy Làm Chủ)</strong>
+                <span class="installed-count-tag" id="lsCardStateBadge">⚪ Đang nghỉ</span>
+                <span class="ls-sec-hw-tag" id="lsCardHwBadge">🔍 Tự kiểm tra RAM &amp; CPU</span>
+              </div>
+              <p class="ls-sec-desc" id="lsCardAdviceText">
+                Tự tải <code>server.jar</code> chính thức và chạy ngầm không tốn GPU. <strong>Lưu ý:</strong> Máy mở Server gánh tính toán cho cả nhóm (khuyên dùng trên máy <strong>8 GB – 16 GB+ RAM</strong>; máy yếu nên dùng <em>Mở Qua Internet e4mc</em> ở trên).
+              </p>
+            </div>
+            <div class="ls-sec-actions">
+              <button type="button" class="btn-sync-skin" id="btnCardCopyServerIp" title="Copy địa chỉ IP LAN của Server để gửi cho bạn bè">📋 Copy IP</button>
+              <button type="button" class="btn-fps-boost-1click" id="btnOpenLocalServerStudio">🖥️ Mở Bảng Điều Khiển Server</button>
             </div>
           </div>
 
@@ -2273,11 +2291,11 @@
 
     <!-- v41.2.0 PRO OPT-IN MODAL #1: TRẠM SERVER NGẦM 0% GPU (HEADLESS SERVER STUDIO + KHUYẾN CÁO CẤU HÌNH) -->
     <div class="modal-backdrop hidden" id="localServerStudioModal">
-      <div class="modal-dialog-card ls-studio-card" role="dialog" aria-label="Trạm Server Ngầm 0% GPU">
+      <div class="modal-dialog-card ds-studio-card ls-studio-card" role="dialog" aria-label="Trạm Server Ngầm 0% GPU">
         <div class="modal-head ds-studio-head">
           <div class="ds-head-title">
-            <span class="ds-sig-pill">OPT-IN • 0% GPU</span>
-            <h3>🖥️ Trạm Server Ngầm Trên Máy (Headless Server)</h3>
+            <span class="ds-sig-pill">TRẠM SERVER • 0% GPU</span>
+            <h3>🖥️ Trạm Server Ngầm Trên Máy (Headless Server Studio)</h3>
             <span class="ds-live-badge" id="lsStateBadge">⚪ Đang nghỉ</span>
           </div>
           <button type="button" class="vtype-btn" id="btnLsCloseTop">✕ Đóng</button>
@@ -2287,28 +2305,42 @@
           <!-- HARDWARE REQUIREMENT & RAM ADVISOR BANNER (KHUYẾN CÁO CẤU HÌNH RÕ RÀNG) -->
           <div class="ls-hw-banner" id="lsHardwareAdviceBanner">
             <div class="lshw-top">
-              <strong id="lsHwBadgeTitle">🔍 Đang kiểm tra cấu hình máy chủ...</strong>
-              <span class="lshw-ip-pill" id="lsLanIpBadge">IP LAN: 127.0.0.1:25565</span>
+              <strong id="lsHwBadgeTitle">🟢 Đang phân tích cấu hình máy chủ...</strong>
+              <button type="button" class="lshw-ip-pill" id="lsLanIpBadge" title="Bấm để copy nhanh địa chỉ IP LAN">🖧 IP LAN: 127.0.0.1:25565 (Bấm Copy)</button>
             </div>
             <p id="lsHwAdviceDesc">
-              Lưu ý: Máy mở Server là máy làm chủ (chịu tải tính toán thế giới &amp; quái cho cả nhóm). Nếu máy dưới 8 GB RAM, khuyên bạn dùng tính năng <strong>Mở Thế Giới Qua Internet (e4mc)</strong> ở ngoài để nhẹ máy hơn.
+              Máy mở Server là máy làm chủ (chịu tải tính toán thế giới &amp; quái cho cả nhóm). Nếu máy dưới 8 GB RAM, khuyên dùng <strong>Mở Thế Giới Qua Internet (e4mc)</strong> để nhẹ hơn 50% RAM.
             </p>
           </div>
 
           <div class="ls-config-grid">
             <div class="ls-field">
+              <label for="lsMcVersionSelect">📦 Phiên Bản Minecraft</label>
+              <select id="lsMcVersionSelect" class="pro-select">
+                <option value="1.21.11">Minecraft 1.21.11 (Mới nhất)</option>
+                <option value="1.21.4" selected>Minecraft 1.21.4 (Phổ biến)</option>
+                <option value="1.21.1">Minecraft 1.21.1</option>
+                <option value="1.20.4">Minecraft 1.20.4</option>
+                <option value="1.20.1">Minecraft 1.20.1 (Ổn định)</option>
+                <option value="1.19.4">Minecraft 1.19.4</option>
+                <option value="1.18.2">Minecraft 1.18.2</option>
+                <option value="1.16.5">Minecraft 1.16.5</option>
+                <option value="1.12.2">Minecraft 1.12.2</option>
+              </select>
+            </div>
+            <div class="ls-field">
               <label for="lsWorldSelect">🌍 Chọn Bản Đồ (World)</label>
               <select id="lsWorldSelect" class="pro-select">
-                <option value="__server_default__">🌱 Tạo Map Server Mới (Mặc định)</option>
+                <option value="__server_default__">🌱 Tạo Map Server Mới</option>
               </select>
             </div>
             <div class="ls-field">
               <label for="lsRamSelect">🧠 Cấp RAM Cho Server</label>
               <select id="lsRamSelect" class="pro-select">
-                <option value="1.5">1.5 GB RAM (Nhẹ • 2–4 người)</option>
-                <option value="2" selected>2.0 GB RAM (Chuẩn • 4–6 người)</option>
-                <option value="3">3.0 GB RAM (Mạnh • 6–12 người)</option>
-                <option value="4">4.0 GB RAM (Máy 16GB+ • 10–16 người)</option>
+                <option value="1.5">1.5 GB RAM (2–4 người)</option>
+                <option value="2" selected>2.0 GB RAM (4–6 người)</option>
+                <option value="3">3.0 GB RAM (6–12 người)</option>
+                <option value="4">4.0 GB RAM (10–16 người)</option>
               </select>
             </div>
             <div class="ls-field">
@@ -2320,17 +2352,25 @@
               </select>
             </div>
             <div class="ls-field">
-              <label for="lsAuthModeSelect">🔓 Chế Độ Tài Khoản Bạn Bè</label>
+              <label for="lsAuthModeSelect">🔓 Tài Khoản Bạn Bè</label>
               <select id="lsAuthModeSelect" class="pro-select">
-                <option value="offline" selected>🔓 Cho phép cả Offline / Crack &amp; Bản quyền</option>
-                <option value="online">👑 Chỉ tài khoản Microsoft Bản quyền</option>
+                <option value="offline" selected>🔓 Cả Offline / Crack &amp; Bản quyền</option>
+                <option value="online">👑 Chỉ Bản quyền Microsoft</option>
+              </select>
+            </div>
+            <div class="ls-field">
+              <label for="lsViewDistSelect">🔭 Tầm Nhìn &amp; Tối Ưu Tải</label>
+              <select id="lsViewDistSelect" class="pro-select">
+                <option value="6">6 Chunks (Nhẹ CPU • Máy 8GB)</option>
+                <option value="8" selected>8 Chunks (Chuẩn • Khuyên dùng)</option>
+                <option value="10">10 Chunks (Rộng • Máy 16GB+)</option>
               </select>
             </div>
           </div>
 
           <!-- QUICK ADMIN 1-CLICK BAR -->
           <div class="ls-quick-cmd-bar">
-            <span class="ls-cmd-lbl">⚡ Lệnh nhanh 1-Click:</span>
+            <span class="ls-cmd-lbl">⚡ Lệnh Admin 1-Click:</span>
             <button type="button" class="vtype-btn" data-lscmd="op_me" title="Cấp quyền Admin (OP) cho tên nhân vật đang chọn trên Launcher">👑 Cấp OP cho tôi</button>
             <button type="button" class="vtype-btn" data-lscmd="time set day">☀️ Trời sáng</button>
             <button type="button" class="vtype-btn" data-lscmd="weather clear">🌤️ Tạnh mưa</button>
@@ -2338,12 +2378,18 @@
             <button type="button" class="vtype-btn" data-lscmd="save-all">💾 Lưu Map ngay</button>
           </div>
 
-          <div class="ls-cmd-input-row">
-            <input type="text" id="lsCustomCmdInput" class="pro-input" placeholder="Nhập lệnh Server (vd: op TenBanBe, gamemode creative TenBanBe, tp ...)" />
-            <button type="button" class="btn-sync-skin" id="btnLsSendCmd">Gửi lệnh</button>
+          <!-- UNIFIED TERMINAL CONSOLE PANEL -->
+          <div class="ls-terminal-card">
+            <div class="ls-terminal-head">
+              <span>🖥️ Bảng điều khiển &amp; Nhật ký Server trực tiếp (<code>nogui • 0% GPU</code>)</span>
+              <button type="button" class="ls-clear-btn" id="btnLsClearConsole">🧹 Xóa nhật ký</button>
+            </div>
+            <pre class="ls-console-box" id="lsConsoleOutput">[Trạm Server Ngầm] Sẵn sàng. Chọn cấu hình bên trên rồi bấm "🚀 Khởi Động Server Ngầm" khi cần mở máy chủ.</pre>
+            <div class="ls-cmd-input-row">
+              <input type="text" id="lsCustomCmdInput" class="pro-input" placeholder="Nhập lệnh Server (vd: op TenBanBe, gamemode creative TenBanBe, tp ...)" />
+              <button type="button" class="btn-sync-skin is-ok" id="btnLsSendCmd">⚡ Gửi lệnh</button>
+            </div>
           </div>
-
-          <pre class="ls-console-box" id="lsConsoleOutput">[Trạm Server Ngầm] Sẵn sàng. Bấm "🚀 Khởi Động Server Ngầm" khi bạn muốn mở máy chủ riêng.</pre>
         </div>
 
         <div class="modal-foot ds-studio-foot">
@@ -2352,8 +2398,8 @@
             <button type="button" class="btn-sync-skin" id="btnLsOpenFolder">📂 Mở thư mục Server</button>
           </div>
           <div class="ds-foot-right">
-            <button type="button" class="btn-modal-cancel" id="btnLsStopServer" disabled>⏹ Lưu &amp; Dừng Server</button>
-            <button type="button" class="btn-modal-agree" id="btnLsStartServer">🚀 Khởi Động Server Ngầm</button>
+            <button type="button" class="btn-modal-cancel ds-revert-btn" id="btnLsStopServer" disabled>⏹ Lưu &amp; Dừng Server</button>
+            <button type="button" class="btn-modal-agree ds-apply-btn" id="btnLsStartServer">🚀 Khởi Động Server Ngầm</button>
           </div>
         </div>
       </div>
@@ -2366,11 +2412,24 @@
           <div class="ds-head-title">
             <span class="ds-sig-pill">0% HAO FPS</span>
             <h3>🎨 Kho Làm Đẹp Không Tụt FPS &amp; Tiện Ích Nhanh</h3>
+            <span class="ds-live-badge" id="vbStatusSummaryBadge">Sẵn sàng</span>
           </div>
           <button type="button" class="vtype-btn" id="btnVbCloseTop">✕ Đóng</button>
         </div>
 
         <div class="modal-body ds-studio-body">
+          <div class="ds-target-strip">
+            <div class="ds-target-left">
+              <span class="ds-target-lbl">🎯 Áp dụng cho:</span>
+              <select id="vbTargetInstanceSelect" class="pro-select ds-target-select">
+                <option value="">🏠 Hồ sơ chính (.minecraft)</option>
+              </select>
+            </div>
+            <div class="ds-target-right">
+              <span class="ds-live-badge is-active">✓ Không giảm FPS</span>
+            </div>
+          </div>
+
           <div class="ds-sec-head">
             <strong>1. Gói Làm Đẹp &amp; Âm Thanh Nhẹ Máy (Bật / Tắt 1-Click)</strong>
             <span>Tự kích hoạt thẳng vào <code>options.txt</code></span>
@@ -2382,7 +2441,7 @@
                 <strong>🔥 Lửa Thấp PvP &amp; Bí Ngô Trong Suốt</strong>
                 <span>Hạ thấp ngọn lửa 60% không che tâm ngắm &amp; đội bí ngô nhìn rõ 100% (Tích hợp sẵn • 0% Lag).</span>
               </div>
-              <button type="button" class="btn-sync-skin" data-vbpack="low_fire_clean_gui">Bật ngay</button>
+              <button type="button" class="btn-sync-skin" data-vbpack="low_fire_clean_gui">✨ Bật Ngay</button>
             </div>
 
             <div class="vb-item-card">
@@ -2390,7 +2449,7 @@
                 <strong>💎 Viền Quặng Phát Sáng Trong Hang</strong>
                 <span>Đóng khung nổi bật Kim Cương, Emerald, Vàng, Cổ đại trong hang tối mà không cần bật Shader.</span>
               </div>
-              <button type="button" class="btn-sync-skin" data-vbpack="glowing_ores">Bật ngay</button>
+              <button type="button" class="btn-sync-skin" data-vbpack="glowing_ores">✨ Bật Ngay</button>
             </div>
 
             <div class="vb-item-card">
@@ -2398,7 +2457,7 @@
                 <strong>🐾 Hoạt Ảnh Sinh Vật Sống Động (Fresh Animations)</strong>
                 <span>Tự tải Fresh Animations + EMF/ETF giúp dân làng và sinh vật liếc mắt, bước đi mượt mà.</span>
               </div>
-              <button type="button" class="btn-sync-skin" data-vbpack="fresh_animations">Trang bị</button>
+              <button type="button" class="btn-sync-skin" data-vbpack="fresh_animations">✨ Bật Ngay</button>
             </div>
 
             <div class="vb-item-card">
@@ -2406,7 +2465,7 @@
                 <strong>🔊 Âm Thanh Vòm Hang Động &amp; Bước Chân 3D</strong>
                 <span>Tiếng vang chân thực trong hang sâu và tiếng bước chân riêng trên cỏ, gỗ, đá, tuyết.</span>
               </div>
-              <button type="button" class="btn-sync-skin" data-vbpack="immersive_sound">Trang bị</button>
+              <button type="button" class="btn-sync-skin" data-vbpack="immersive_sound">✨ Bật Ngay</button>
             </div>
           </div>
 
@@ -2434,6 +2493,15 @@
                 <button type="button" class="btn-sync-skin" id="btnVbImportPrefs">📥 Khôi phục</button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="modal-foot ds-studio-foot">
+          <div class="ds-foot-left">
+            <button type="button" class="btn-sync-skin" id="btnVbOpenResourcepacks">📂 Mở thư mục Resource Packs</button>
+          </div>
+          <div class="ds-foot-right">
+            <button type="button" class="btn-modal-agree ds-apply-btn" id="btnCloseVisualBoostFoot">✓ Hoàn tất</button>
           </div>
         </div>
       </div>

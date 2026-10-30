@@ -8254,47 +8254,61 @@ function initV410TurboSmoothUI() {
 // =========================================================================
 
 let localServerRunningState = false;
+let localServerLanAddress = 'localhost:25565';
 
 async function refreshLocalServerStudioModalUI() {
-  const modal = document.getElementById('localServerStudioModal');
-  if (!modal || !window.aetherAPI.inspectLocalServer) return;
+  if (!window.aetherAPI.inspectLocalServer) return;
   const res = await window.aetherAPI.inspectLocalServer({ gameDir: state.gameDir });
   if (!res?.ok) return;
 
   localServerRunningState = Boolean(res.running);
   const hw = res.hardware || {};
+  const port = res.meta?.port || res.savedProps?.port || 25565;
+  const rawFirstLan = Array.isArray(res.lanIps) && res.lanIps.length > 0 ? res.lanIps[0] : '127.0.0.1';
+  const firstLan = typeof rawFirstLan === 'string'
+    ? rawFirstLan
+    : (rawFirstLan?.ip || rawFirstLan?.address || '127.0.0.1');
+  localServerLanAddress = `${firstLan}:${port}`;
+
   const banner = document.getElementById('lsHardwareAdviceBanner');
-  const titleEl = document.getElementById('lsHwTitle');
-  const msgEl = document.getElementById('lsHwMessage');
-  const iconEl = document.getElementById('lsHwIcon');
+  const titleEl = document.getElementById('lsHwBadgeTitle');
+  const msgEl = document.getElementById('lsHwAdviceDesc');
+  const ipBadgeEl = document.getElementById('lsLanIpBadge');
+  const cardHwBadge = document.getElementById('lsCardHwBadge');
+  const cardAdviceText = document.getElementById('lsCardAdviceText');
 
   const tier = hw.tier || hw.level || 'medium';
   if (banner) {
     banner.classList.remove('is-low', 'is-medium', 'is-high');
-    if (tier === 'low') {
-      banner.classList.add('is-low');
-      if (iconEl) iconEl.textContent = '⚠️';
-    } else if (tier === 'high') {
-      banner.classList.add('is-high');
-      if (iconEl) iconEl.textContent = '✅';
-    } else {
-      banner.classList.add('is-medium');
-      if (iconEl) iconEl.textContent = '💡';
-    }
+    banner.classList.add(tier === 'low' ? 'is-low' : (tier === 'high' ? 'is-high' : 'is-medium'));
   }
   if (titleEl && (hw.badgeVi || hw.title)) titleEl.textContent = hw.badgeVi || hw.title;
   if (msgEl && (hw.adviceVi || hw.advice)) msgEl.textContent = hw.adviceVi || hw.advice;
+  if (ipBadgeEl) ipBadgeEl.textContent = `🖧 IP LAN: ${localServerLanAddress} (Bấm Copy)`;
+
+  if (cardHwBadge && hw.totalMemGB) {
+    cardHwBadge.classList.remove('is-low', 'is-medium', 'is-high');
+    cardHwBadge.classList.add(tier === 'low' ? 'is-low' : (tier === 'high' ? 'is-high' : 'is-medium'));
+    cardHwBadge.textContent = tier === 'low'
+      ? `⚠️ Máy ${hw.totalMemGB} GB RAM — Khuyên dùng e4mc`
+      : (tier === 'high'
+        ? `🟢 Máy Mạnh (${hw.totalMemGB} GB RAM • ${hw.cpuCores || 8} luồng)`
+        : `🟡 Máy Khá (${hw.totalMemGB} GB RAM • Khuyên cấp 2 GB)`);
+  }
+  if (cardAdviceText && hw.adviceVi) {
+    cardAdviceText.textContent = hw.adviceVi;
+  }
 
   // Populate singleplayer worlds dropdown
-  const worldSel = document.getElementById('lsWorldSource');
-  const worldList = Array.isArray(res.worlds) ? res.worlds : (Array.isArray(res.singleplayerWorlds) ? res.singleplayerWorlds : []);
+  const worldSel = document.getElementById('lsWorldSelect');
+  const worldList = Array.isArray(res.worlds) ? res.worlds : [];
   if (worldSel) {
     const prevVal = worldSel.value;
-    const opts = ['<option value="">🌱 Tạo thế giới Server mới (hoặc giữ world hiện tại)</option>'];
+    const opts = ['<option value="__server_default__">🌱 Tạo Map Server Mới</option>'];
     for (const w of worldList) {
       const fName = w.folderName || w.folder || '';
       const dName = w.displayName || w.name || fName;
-      opts.push(`<option value="${escapeHtml(fName)}">🗺️ Copy từ Chơi Đơn: ${escapeHtml(dName)} (${escapeHtml(fName)})</option>`);
+      opts.push(`<option value="${escapeHtml(fName)}">🗺️ Map Chơi Đơn: ${escapeHtml(dName)}</option>`);
     }
     worldSel.innerHTML = opts.join('');
     if (prevVal && Array.from(worldSel.options).some((o) => o.value === prevVal)) {
@@ -8303,32 +8317,36 @@ async function refreshLocalServerStudioModalUI() {
   }
 
   // Sync version selector with current launcher version if available
-  const verSel = document.getElementById('lsMcVersion');
+  const verSel = document.getElementById('lsMcVersionSelect');
   if (verSel && !localServerRunningState) {
     const curVer = res.meta?.mcVersion || state.selectedVersion || '1.21.4';
-    if (Array.from(verSel.options).some((o) => o.value === curVer)) {
-      verSel.value = curVer;
+    if (!Array.from(verSel.options).some((o) => o.value === curVer)) {
+      const opt = document.createElement('option');
+      opt.value = curVer;
+      opt.textContent = `Minecraft ${curVer} (Đang chọn)`;
+      verSel.insertBefore(opt, verSel.firstChild);
     }
+    verSel.value = curVer;
   }
 
-  // Sync RAM slider recommended default if not running
-  const ramRange = document.getElementById('lsRamRange');
-  const ramLabel = document.getElementById('lsRamValLabel');
-  const recRamMB = hw.recommendedRamGB ? Math.round(hw.recommendedRamGB * 1024) : (hw.recommendedServerRamMB || 2048);
-  if (ramRange && !localServerRunningState && recRamMB && !ramRange.dataset.userTouched) {
-    ramRange.value = String(recRamMB);
-    if (ramLabel) ramLabel.textContent = `${recRamMB} MB (${(recRamMB / 1024).toFixed(1)} GB)`;
+  // Sync RAM select recommended default if not running
+  const ramSel = document.getElementById('lsRamSelect');
+  if (ramSel && !localServerRunningState && hw.recommendedRamGB && !ramSel.dataset.userTouched) {
+    const recStr = String(hw.recommendedRamGB);
+    if (Array.from(ramSel.options).some((o) => o.value === recStr)) {
+      ramSel.value = recStr;
+    }
   }
 
   updateLocalServerLivePillUI({
     running: res.running,
     pid: res.pid,
     mcVersion: res.meta?.mcVersion || state.selectedVersion || '1.21.4',
-    port: res.meta?.port || res.savedProps?.port || 25565
+    port
   });
 
   const logBox = document.getElementById('lsConsoleOutput');
-  const logsArr = Array.isArray(res.recentLogs) ? res.recentLogs : (Array.isArray(res.logs) ? res.logs : []);
+  const logsArr = Array.isArray(res.recentLogs) ? res.recentLogs : [];
   if (logBox && logsArr.length > 0) {
     logBox.textContent = logsArr.join('\n');
     logBox.scrollTop = logBox.scrollHeight;
@@ -8337,32 +8355,31 @@ async function refreshLocalServerStudioModalUI() {
 
 function updateLocalServerLivePillUI(st = {}) {
   localServerRunningState = Boolean(st.running);
-  const pill = document.getElementById('lsStatusPill');
-  const toggleBtn = document.getElementById('btnLsToggleServer');
+  const pill = document.getElementById('lsStateBadge');
+  const cardBadge = document.getElementById('lsCardStateBadge');
+  const btnStart = document.getElementById('btnLsStartServer');
+  const btnStop = document.getElementById('btnLsStopServer');
+
+  const statusText = st.running
+    ? `🟢 Đang chạy (MC ${st.mcVersion || st.meta?.mcVersion || 'Server'} • :${st.port || st.meta?.port || 25565})`
+    : (st.starting ? `⏳ ${st.message || 'Đang khởi động...'}` : '⚪ Đang nghỉ');
+
   if (pill) {
-    if (st.running) {
-      pill.textContent = `🟢 Đang chạy (MC ${st.mcVersion || 'Server'} • Cổng ${st.port || 25565})`;
-      pill.classList.add('is-running');
-    } else if (st.starting) {
-      pill.textContent = `⏳ ${st.message || 'Đang khởi động Server...'}`;
-      pill.classList.remove('is-running');
-    } else {
-      pill.textContent = '⚪ Đang tắt';
-      pill.classList.remove('is-running');
-    }
+    pill.textContent = statusText;
+    pill.classList.toggle('is-active', Boolean(st.running));
   }
-  if (toggleBtn) {
-    toggleBtn.disabled = Boolean(st.starting);
-    if (st.running) {
-      toggleBtn.textContent = '⏹️ Dừng Server An Toàn (Lưu Map)';
-      toggleBtn.classList.add('is-danger');
-    } else if (st.starting) {
-      toggleBtn.textContent = '⏳ Đang nạp Server...';
-      toggleBtn.classList.remove('is-danger');
-    } else {
-      toggleBtn.textContent = '🚀 Khởi Động Trạm Server Ngầm';
-      toggleBtn.classList.remove('is-danger');
-    }
+  if (cardBadge) {
+    cardBadge.textContent = statusText;
+    cardBadge.classList.toggle('is-turbo-status', Boolean(st.running));
+  }
+  if (btnStart) {
+    btnStart.disabled = Boolean(st.running || st.starting);
+    btnStart.textContent = st.running
+      ? '🟢 Server Đang Chạy Ngầm'
+      : (st.starting ? '⏳ Đang nạp Server...' : '🚀 Khởi Động Server Ngầm');
+  }
+  if (btnStop) {
+    btnStop.disabled = !st.running;
   }
 }
 
@@ -8535,7 +8552,7 @@ function initV412PowerSuiteUI() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', () => openLocalServerStudioModal());
   });
-  ['btnCloseLocalServerStudioTop', 'btnCloseLocalServerStudioFoot'].forEach((id) => {
+  ['btnLsCloseTop', 'btnCloseLocalServerStudioTop', 'btnCloseLocalServerStudioFoot'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', () => lsModal?.classList.add('hidden'));
   });
@@ -8545,39 +8562,21 @@ function initV412PowerSuiteUI() {
     });
   }
 
-  // RAM slider in Local Server Studio
-  const ramRange = document.getElementById('lsRamRange');
-  const ramLabel = document.getElementById('lsRamValLabel');
-  if (ramRange) {
-    ramRange.addEventListener('input', () => {
-      ramRange.dataset.userTouched = '1';
-      const mb = Number(ramRange.value) || 2048;
-      if (ramLabel) ramLabel.textContent = `${mb} MB (${(mb / 1024).toFixed(1)} GB)`;
-    });
-  }
+  document.getElementById('lsRamSelect')?.addEventListener('change', (e) => {
+    e.currentTarget.dataset.userTouched = '1';
+  });
 
-  // Start / Stop Local Server button
-  const btnLsToggle = document.getElementById('btnLsToggleServer');
-  if (btnLsToggle) {
-    btnLsToggle.addEventListener('click', async () => {
-      if (localServerRunningState) {
-        btnLsToggle.disabled = true;
-        btnLsToggle.textContent = '⏳ Đang lưu Map & tắt...';
-        const r = await window.aetherAPI.stopLocalServer();
-        btnLsToggle.disabled = false;
-        if (r?.ok) {
-          showAetherNotification('🛑 Đã lưu thế giới và dừng Trạm Server Ngầm an toàn.', 'info', 4000);
-        }
-        await refreshLocalServerStudioModalUI();
-        return;
-      }
-
-      const mcVersion = document.getElementById('lsMcVersion')?.value || '1.21.4';
-      const ramMB = Number(document.getElementById('lsRamRange')?.value) || 2048;
-      const ramGB = Math.max(1, Math.round((ramMB / 1024) * 10) / 10);
-      const gamemode = document.getElementById('lsGamemode')?.value || 'survival';
-      const onlineMode = document.getElementById('lsOfflineMode')?.value === 'true';
-      const worldFolderName = document.getElementById('lsWorldSource')?.value || '';
+  // Start Local Server button
+  const btnLsStart = document.getElementById('btnLsStartServer');
+  if (btnLsStart) {
+    btnLsStart.addEventListener('click', async () => {
+      if (localServerRunningState) return;
+      const mcVersion = document.getElementById('lsMcVersionSelect')?.value || state.selectedVersion || '1.21.4';
+      const ramGB = Math.max(1, Number(document.getElementById('lsRamSelect')?.value) || 2);
+      const gamemode = document.getElementById('lsGamemodeSelect')?.value || 'survival';
+      const onlineMode = document.getElementById('lsAuthModeSelect')?.value === 'online';
+      const worldFolderName = document.getElementById('lsWorldSelect')?.value || '__server_default__';
+      const viewDistance = Number(document.getElementById('lsViewDistSelect')?.value) || 8;
 
       updateLocalServerLivePillUI({ starting: true, message: 'Đang chuẩn bị server.jar...' });
       const r = await window.aetherAPI.startLocalServer({
@@ -8588,13 +8587,13 @@ function initV412PowerSuiteUI() {
         onlineMode,
         gamemode,
         difficulty: 'normal',
-        maxPlayers: 10,
-        viewDistance: 8,
+        maxPlayers: viewDistance >= 10 ? 16 : (viewDistance <= 6 ? 6 : 10),
+        viewDistance,
         worldFolderName
       });
       if (r?.ok) {
         showAetherNotification(
-          `🚀 Trạm Server Ngầm MC ${mcVersion} đang khởi chạy (0% GPU)! Bạn có thể vào Multiplayer -> Direct Connect nhập localhost:25565.`,
+          `🚀 Trạm Server Ngầm MC ${mcVersion} đang khởi chạy (0% GPU)! Bạn có thể vào Multiplayer -> Direct Connect nhập ${localServerLanAddress}.`,
           'success',
           6000
         );
@@ -8606,35 +8605,42 @@ function initV412PowerSuiteUI() {
     });
   }
 
+  // Stop Local Server button
+  const btnLsStop = document.getElementById('btnLsStopServer');
+  if (btnLsStop) {
+    btnLsStop.addEventListener('click', async () => {
+      btnLsStop.disabled = true;
+      const orig = btnLsStop.textContent;
+      btnLsStop.textContent = '⏳ Đang lưu Map...';
+      const r = await window.aetherAPI.stopLocalServer();
+      btnLsStop.textContent = orig;
+      if (r?.ok) {
+        showAetherNotification('🛑 Đã lưu thế giới và dừng Trạm Server Ngầm an toàn.', 'info', 4000);
+      }
+      await refreshLocalServerStudioModalUI();
+    });
+  }
+
   // Quick command buttons inside Local Server Studio
   lsModal?.querySelectorAll('[data-lscmd]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      const cmd = btn.dataset.lscmd;
+      let cmd = btn.dataset.lscmd;
       if (!cmd) return;
+      if (cmd === 'op_me') {
+        const player = (document.getElementById('username')?.value || state.username || 'Player').trim();
+        cmd = `op ${player}`;
+      }
       const r = await window.aetherAPI.sendLocalServerCmd(cmd);
       if (r?.ok) {
         showAetherNotification(`⚡ Đã gửi lệnh "/${cmd}" vào Server!`, 'success', 2800);
       } else {
-        showAetherNotification(`⚠️ ${r?.error || 'Server chưa chạy'}`, 'error', 3000);
+        showAetherNotification(`⚠️ ${r?.error || 'Server hiện chưa chạy — hãy bấm Khởi Động Server Ngầm trước.'}`, 'error', 3200);
       }
     });
   });
 
-  const btnLsQuickOp = document.getElementById('btnLsQuickOp');
-  if (btnLsQuickOp) {
-    btnLsQuickOp.addEventListener('click', async () => {
-      const player = (document.getElementById('username')?.value || state.username || 'Player').trim();
-      const r = await window.aetherAPI.sendLocalServerCmd(`op ${player}`);
-      if (r?.ok) {
-        showAetherNotification(`👑 Đã cấp quyền Admin (OP) cho "${player}" trên Server!`, 'success', 3800);
-      } else {
-        showAetherNotification(`⚠️ ${r?.error || 'Server chưa chạy'}`, 'error', 3000);
-      }
-    });
-  }
-
   const sendCustomServerCmd = async () => {
-    const inp = document.getElementById('lsCmdInput');
+    const inp = document.getElementById('lsCustomCmdInput');
     if (!inp) return;
     const cmd = inp.value.trim().replace(/^\//, '');
     if (!cmd) return;
@@ -8646,16 +8652,20 @@ function initV412PowerSuiteUI() {
     }
   };
   document.getElementById('btnLsSendCmd')?.addEventListener('click', sendCustomServerCmd);
-  document.getElementById('lsCmdInput')?.addEventListener('keydown', (e) => {
+  document.getElementById('lsCustomCmdInput')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendCustomServerCmd();
   });
   document.getElementById('btnLsClearConsole')?.addEventListener('click', () => {
     const box = document.getElementById('lsConsoleOutput');
-    if (box) box.textContent = 'Đã xóa màn hình nhật ký.';
+    if (box) box.textContent = '[Trạm Server Ngầm] Đã xóa màn hình nhật ký.';
   });
-  document.getElementById('btnLsCopyIp')?.addEventListener('click', () => {
-    navigator.clipboard?.writeText('localhost:25565');
-    showAetherNotification('📋 Đã copy địa chỉ "localhost:25565"! Vào Multiplayer -> Direct Connect để dán.', 'success', 3800);
+
+  const copyServerIpAction = () => {
+    navigator.clipboard?.writeText(localServerLanAddress || 'localhost:25565');
+    showAetherNotification(`📋 Đã copy địa chỉ Server "${localServerLanAddress || 'localhost:25565'}"! Gửi cho bạn bè cùng mạng hoặc vào Direct Connect để dán.`, 'success', 4200);
+  };
+  ['btnLsCopyIp', 'lsLanIpBadge', 'btnCardCopyServerIp'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', copyServerIpAction);
   });
   document.getElementById('btnLsOpenFolder')?.addEventListener('click', () => {
     window.aetherAPI.openSubFolder(state.gameDir, 'local-server');
@@ -8665,8 +8675,9 @@ function initV412PowerSuiteUI() {
   if (window.aetherAPI.onLocalServerLog) {
     window.aetherAPI.onLocalServerLog((payload) => {
       const box = document.getElementById('lsConsoleOutput');
-      if (box && payload?.line) {
-        box.textContent += `\n${payload.line}`;
+      const line = typeof payload === 'string' ? payload : payload?.line;
+      if (box && line) {
+        box.textContent += `\n${line}`;
         if (box.textContent.length > 28000) {
           box.textContent = box.textContent.slice(-22000);
         }
@@ -8685,7 +8696,7 @@ function initV412PowerSuiteUI() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', () => openVisualBoostStudioModal());
   });
-  ['btnCloseVisualBoostTop', 'btnCloseVisualBoostFoot'].forEach((id) => {
+  ['btnVbCloseTop', 'btnCloseVisualBoostTop', 'btnCloseVisualBoostFoot'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', () => vbModal?.classList.add('hidden'));
   });
@@ -8744,18 +8755,23 @@ function initV412PowerSuiteUI() {
   });
 
   // Worldgen Boost & Backup/Restore Prefs triggers (both in Tab Tools and inside Visual Boost Modal)
-  ['btnToolsWorldgenBoost', 'btnVbQuickWorldgen'].forEach((id) => {
+  ['btnToolsWorldgenBoost', 'btnVbInstallWorldgen', 'btnVbQuickWorldgen'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', (e) => runWorldgenBoostInstallUI(e.currentTarget));
   });
-  ['btnToolsBackupPrefs', 'btnVbQuickBackupPrefs'].forEach((id) => {
+  ['btnToolsBackupPrefs', 'btnVbExportPrefs', 'btnVbQuickBackupPrefs'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', (e) => runBackupPlayerPrefsUI(e.currentTarget));
   });
-  ['btnToolsRestorePrefs', 'btnVbQuickRestorePrefs'].forEach((id) => {
+  ['btnToolsRestorePrefs', 'btnVbImportPrefs', 'btnVbQuickRestorePrefs'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', (e) => runRestorePlayerPrefsUI(e.currentTarget));
   });
+
+  // Populate dedicated section card hardware advisor on startup
+  setTimeout(() => {
+    refreshLocalServerStudioModalUI();
+  }, 550);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
