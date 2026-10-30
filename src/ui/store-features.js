@@ -595,8 +595,21 @@ async function refreshLocalAddonsCount() {
   const tabCountEl = document.getElementById('localAddonCount');
   if (tabCountEl) tabCountEl.textContent = storeItems.length;
 
-  const checkHasFpsPack = (enabledList, ver) => {
+  const isAddonLoaderCompat = (itemLoaders, effLoader, ver) => {
+    if (!effLoader || effLoader === 'vanilla' || effLoader === 'optifine-standalone') return false;
+    if (!Array.isArray(itemLoaders) || itemLoaders.length === 0) return true;
+    if (itemLoaders.includes(effLoader)) return true;
+    if (effLoader === 'quilt' && itemLoaders.includes('fabric')) return true;
+    if (effLoader === 'forge' && ver === '1.20.1' && itemLoaders.includes('neoforge')) return true;
+    return false;
+  };
+
+  const checkHasFpsPack = (enabledList, ver, effLoader) => {
+    if (!effLoader || effLoader === 'vanilla' || effLoader === 'optifine-standalone') {
+      return { installed: false, count: 0 };
+    }
     const compat = enabledList.filter((item) => {
+      if (!isAddonLoaderCompat(item.loaders, effLoader, ver)) return false;
       if (Array.isArray(item.gameVersions) && item.gameVersions.length > 0) return item.gameVersions.includes(ver);
       if (item.mcVersion) return item.mcVersion === ver;
       return true;
@@ -608,9 +621,11 @@ async function refreshLocalAddonsCount() {
   };
 
   const mainVer = state.selectedVersion || '1.21.4';
-  const mainFps = checkHasFpsPack(mainEnabled, mainVer);
+  const mainLoader = resolveUnderlyingModLoaderForCore(state.selectedCore || 'fabric', mainVer, state.selectedLoaderVersion || '', false);
+  const mainFps = checkHasFpsPack(mainEnabled, mainVer, mainLoader);
   const storeVer = target.mcVersion || mainVer;
-  const storeFps = target.isPack ? checkHasFpsPack(storeEnabled, storeVer) : mainFps;
+  const storeLoader = resolveUnderlyingModLoaderForCore(target.core || 'fabric', storeVer, '', target.isPack);
+  const storeFps = target.isPack ? checkHasFpsPack(storeEnabled, storeVer, storeLoader) : mainFps;
 
   const btnHomeFps = document.getElementById('btnOneClickFpsBoost');
   const btnStoreFps = document.getElementById('btnStoreFpsBoost');
@@ -628,8 +643,12 @@ async function refreshLocalAddonsCount() {
       : `<span>⚡ Cài Trọn Bộ X3 FPS (${storeVer})</span>`;
     btnStoreFps.dataset.alreadyInstalled = storeFps.installed ? 'true' : 'false';
   }
-  if (descEl && mainFps.installed) {
-    descEl.textContent = `✓ Bộ Mod X3 FPS (${mainFps.count} Mod chuẩn ${mainVer}: Sodium, Lithium, Iris...) đã cài sẵn — Bấm CHƠI NGAY để vào game!`;
+  if (descEl) {
+    if (mainFps.installed) {
+      descEl.textContent = `✓ Bộ Mod X3 FPS (${mainFps.count} Mod chuẩn ${mainVer}: Sodium, Lithium, Iris...) đã cài sẵn — Bấm CHƠI NGAY để vào game!`;
+    } else if (/^✓\s*Bộ Mod X3 FPS/i.test(descEl.textContent || '')) {
+      descEl.textContent = `Sẵn sàng trang bị 1-Click trọn bộ Mod tối ưu FPS (Sodium / Embeddium, FerriteCore, ModernFix...) cho MC ${mainVer}.`;
+    }
   }
   if (typeof window.refreshSmartRamCoachUI === 'function') window.refreshSmartRamCoachUI();
 }

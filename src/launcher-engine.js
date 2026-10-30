@@ -1057,7 +1057,7 @@ function writeModsMetaManifest(modsFolder, metaObj) {
   } catch (_) {}
 }
 
-// v40.8: remember mods the PLAYER (or PvP Mode) turned off so auto version-sync never re-enables them
+// v40.8 / v41.0.3: remember mods the PLAYER (or PvP Mode) turned off so auto version-sync never re-enables them
 function setModUserDisabledFlags(modsFolder, cleanNames, disabled) {
   const list = (Array.isArray(cleanNames) ? cleanNames : [cleanNames])
     .map((n) => path.basename(String(n || '')).replace(/\.disabled$/i, ''))
@@ -1070,16 +1070,45 @@ function setModUserDisabledFlags(modsFolder, cleanNames, disabled) {
     if (disabled && !cur.userDisabled) {
       meta[clean] = { ...cur, userDisabled: true };
       dirty = true;
-    } else if (!disabled && cur.userDisabled) {
-      const { userDisabled, ...rest } = cur;
-      meta[clean] = rest;
-      dirty = true;
+    } else if (!disabled) {
+      if (cur.userDisabled) {
+        const { userDisabled, ...rest } = cur;
+        meta[clean] = rest;
+        dirty = true;
+      }
+      // Also clear userDisabled on cached sibling versions of this exact same mod
+      const targetStem = extractModBaseStem(clean);
+      const targetPid = cur.projectId || '';
+      const targetModId = cur.modId || '';
+      for (const [otherKey, otherVal] of Object.entries(meta)) {
+        if (!otherVal?.userDisabled || otherKey === clean) continue;
+        if (targetPid && otherVal.projectId && targetPid !== otherVal.projectId) continue;
+        if (targetModId && otherVal.modId && targetModId !== otherVal.modId) continue;
+        const sameMod = (targetPid && otherVal.projectId === targetPid)
+          || (targetModId && otherVal.modId === targetModId)
+          || (targetStem && extractModBaseStem(otherKey) === targetStem);
+        if (sameMod) {
+          const { userDisabled: _u, ...restOther } = otherVal;
+          meta[otherKey] = restOther;
+          dirty = true;
+        }
+      }
     }
   }
   if (dirty) writeModsMetaManifest(modsFolder, meta);
 }
 
-function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVersion = '', newProjectId = '') {
+function inferLoadersFromFilenameHint(fileName = '') {
+  const clean = path.basename(String(fileName || '')).replace(/\.disabled$/i, '').replace(/\.jar$/i, '').toLowerCase();
+  const out = [];
+  if (/(?:^|[-_+])neoforge(?:[-_+.]|$)/.test(clean)) out.push('neoforge');
+  if (/(?:^|[-_+])forge(?:[-_+.]|$)/.test(clean)) out.push('forge');
+  if (/(?:^|[-_+])fabric(?:[-_+.]|$)/.test(clean)) out.push('fabric');
+  if (/(?:^|[-_+])quilt(?:[-_+.]|$)/.test(clean)) out.push('quilt');
+  return out;
+}
+
+function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVersion = '', newProjectId = '', targetLoader = '') {
   if (!fs.existsSync(modsFolder)) return;
   const newStem = extractModBaseStem(newFilename);
   const isSlugHuman = Boolean(slug && !/[A-Z]/.test(slug) && slug.toLowerCase() !== String(newProjectId || '').toLowerCase());
@@ -1105,10 +1134,25 @@ function removeConflictingModJars(modsFolder, slug, newFilename = '', targetMcVe
       }
       if (isSameMod) {
         const fileVer = metaEntry?.mcVersion || extractMcVerFromFilename(file);
-        // If the existing .jar is for a DIFFERENT MC version, cache it as .jar.disabled so switching back later is instant!
-        if (fileVer && targetMcVersion && fileVer !== targetMcVersion) {
+        const gVers = Array.isArray(metaEntry?.gameVersions) ? metaEntry.gameVersions : [];
+        const isDifferentMc = Boolean(
+          targetMcVersion && (
+            (fileVer && fileVer !== targetMcVersion) ||
+            (gVers.length > 0 && !gVers.includes(targetMcVersion))
+          )
+        );
+        const fileLoaders = Array.isArray(metaEntry?.inspectedLoaders) && metaEntry.inspectedLoaders.length > 0
+          ? metaEntry.inspectedLoaders
+          : (metaEntry?.loader ? [metaEntry.loader] : inferLoadersFromFilenameHint(file));
+        const isDifferentLoader = Boolean(
+          targetLoader && fileLoaders.length > 0 && !isLoaderListCompatible(fileLoaders, targetLoader, targetMcVersion)
+        );
+        // Cache existing .jar as .jar.disabled if it belongs to a different MC version OR different Loader so switching back is instant!
+        if (isDifferentMc || isDifferentLoader) {
           try {
-            fs.renameSync(path.join(modsFolder, file), path.join(modsFolder, `${file}.disabled`));
+            const disTarget = path.join(modsFolder, `${file}.disabled`);
+            if (fs.existsSync(disTarget)) fs.unlinkSync(disTarget);
+            fs.renameSync(path.join(modsFolder, file), disTarget);
           } catch (_) {}
         } else {
           try {
@@ -1132,7 +1176,8 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
     if (!Array.isArray(loaders)) return false;
     if (loaders.includes(effectiveLoader)) return true;
     if (effectiveLoader === 'quilt' && loaders.includes('fabric')) return true;
-    if (effectiveLoader === 'forge' && loaders.includes('neoforge')) return true;
+    // NeoForge was only binary-compatible with Forge on 1.20.1; on 1.20.2+ / 1.21+ / 26.x they are completely distinct!
+    if (effectiveLoader === 'forge' && mcVersion === '1.20.1' && loaders.includes('neoforge')) return true;
     return false;
   };
 
@@ -1216,12 +1261,13 @@ async function installModrinthProject({ slug, projectType = 'mod', mcVersion = '
 
   const recordInstalledModMeta = () => {
     if (projectType !== 'mod') return;
-    removeConflictingModJars(targetFolder, slug, fileObj.filename, mcVersion, chosen.project_id);
+    removeConflictingModJars(targetFolder, slug, fileObj.filename, mcVersion, chosen.project_id, effectiveLoader);
     const meta = readModsMetaManifest(targetFolder);
     const inspected = inspectJarModMetadata(destPath);
     const canonicalSlug = matchKnownSlugByFilename(fileObj.filename) || (!/[A-Z]/.test(slug) ? slug : (inspected?.modId || slug));
     meta[fileObj.filename] = {
       ...(meta[fileObj.filename] || {}),
+      metaSchema: 2,
       slug: canonicalSlug,
       projectId: chosen.project_id || slug,
       mcVersion: isFallbackMatch ? (chosen.game_versions?.[chosen.game_versions.length - 1] || mcVersion) : mcVersion,
@@ -2235,9 +2281,17 @@ function createLogThrottle(emit, maxPerSec = 150) {
 
 function parseMcVersionTuple(verStr) {
   const clean = String(verStr || '').trim().replace(/^[vV=]/, '').split(/[-+]/)[0];
-  const m = clean.match(/^(\d+)\.(\d+)(?:\.(\d+))?$/);
+  const m = clean.match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
   if (!m) return null;
-  return [parseInt(m[1], 10), parseInt(m[2], 10), m[3] !== undefined ? parseInt(m[3], 10) : 0, m[3] !== undefined];
+  const hasMinor = m[2] !== undefined;
+  const hasPatch = m[3] !== undefined;
+  return [
+    parseInt(m[1], 10),
+    hasMinor ? parseInt(m[2], 10) : 0,
+    hasPatch ? parseInt(m[3], 10) : 0,
+    hasPatch,
+    hasMinor
+  ];
 }
 
 function compareMcTuples(a, b) {
@@ -2247,22 +2301,29 @@ function compareMcTuples(a, b) {
   return 0;
 }
 
-function doesMcVersionSatisfySpec(targetMcVer, specRaw) {
+function doesMcVersionSatisfySpec(targetMcVer, specRaw, options = {}) {
   if (!specRaw) return true;
   if (Array.isArray(specRaw)) {
-    return specRaw.length === 0 || specRaw.some((s) => doesMcVersionSatisfySpec(targetMcVer, s));
+    return specRaw.length === 0 || specRaw.some((s) => doesMcVersionSatisfySpec(targetMcVer, s, options));
   }
   const target = parseMcVersionTuple(targetMcVer);
-  if (!target) return true; // Snapshot or custom ID -> don't falsely reject
+  if (!target || !target[4]) return true; // Snapshot (e.g. 24w14a) or custom ID -> don't falsely reject
   const raw = String(specRaw).trim();
   if (!raw || raw === '*' || raw === 'any') return true;
+  const enforceEraBoundary = options?.enforceEraBoundary !== false;
 
   // Handle OR pipes "1.21.4 || 1.21.5"
   if (raw.includes('||')) {
-    return raw.split('||').some((part) => doesMcVersionSatisfySpec(targetMcVer, part.trim()));
+    return raw.split('||').some((part) => doesMcVersionSatisfySpec(targetMcVer, part.trim(), options));
   }
 
-  // Handle Maven / Forge / NeoForge interval notation: [1.20.1,1.21), [1.21.4]
+  // Handle multi-interval Maven notation: "[1.20.1,1.20.4],[1.21,1.21.2)"
+  if (/^[\[(]/.test(raw) && /[\])]\s*,\s*[\[(]/.test(raw)) {
+    const parts = raw.split(/(?<=[\])])\s*,\s*(?=[\[(])/);
+    return parts.some((p) => doesMcVersionSatisfySpec(targetMcVer, p.trim(), options));
+  }
+
+  // Handle single Maven / Forge / NeoForge interval notation: [1.20.1,1.21), [1.21.4], [1.21,)
   if (/^[\[(]/.test(raw) && /[\])]$/.test(raw)) {
     const minInc = raw.startsWith('[');
     const maxInc = raw.endsWith(']');
@@ -2272,61 +2333,162 @@ function doesMcVersionSatisfySpec(targetMcVer, specRaw) {
       return exactT ? compareMcTuples(target, exactT) === 0 : true;
     }
     const [minStr, maxStr] = inner.split(',').map((x) => x.trim());
+    let minT = null;
+    let maxT = null;
     if (minStr) {
-      const minT = parseMcVersionTuple(minStr);
+      minT = parseMcVersionTuple(minStr);
       if (minT) {
         const c = compareMcTuples(target, minT);
         if (minInc ? c < 0 : c <= 0) return false;
       }
     }
     if (maxStr) {
-      const maxT = parseMcVersionTuple(maxStr);
+      maxT = parseMcVersionTuple(maxStr);
       if (maxT) {
         const c = compareMcTuples(target, maxT);
         if (maxInc ? c > 0 : c >= 0) return false;
       }
     }
+    // Mojang Era Boundary: unbounded "[1.21,)" from unconfirmed 1.x jar does NOT cross into 26.x+ unobfuscated Java 25 era
+    if (enforceEraBoundary && target[0] >= 26 && minT && minT[0] === 1 && (!maxT || maxT[0] < 26)) {
+      return false;
+    }
     return true;
   }
 
-  // Handle wildcard 1.21.x / 1.21.*
+  // Handle wildcard 1.21.x / 1.21.* or 26.x / 26.*
   const wildM = raw.match(/^(\d+)\.(\d+)\.[xX*]$/);
   if (wildM) {
     return target[0] === parseInt(wildM[1], 10) && target[1] === parseInt(wildM[2], 10);
   }
+  const majorWildM = raw.match(/^(\d+)\.[xX*]$/);
+  if (majorWildM) {
+    return target[0] === parseInt(majorWildM[1], 10);
+  }
 
-  // Handle Tilde ~1.21.4 or ~1.21 (Fabric SemVer: ~1.21.4 allows >=1.21.4 <1.22.0)
+  // Handle Tilde ~1.21.4, ~1.21, ~26.2- (Fabric SemVer: ~1.21.4 allows >=1.21.4 <1.22.0; ~26.2- allows >=26.2- <26.3.0-)
   if (raw.startsWith('~')) {
-    const baseT = parseMcVersionTuple(raw.slice(1));
+    const sub = raw.slice(1).trim();
+    const baseT = parseMcVersionTuple(sub);
     if (!baseT) return true;
+    if (!baseT[4]) {
+      return target[0] === baseT[0];
+    }
     return target[0] === baseT[0] && target[1] === baseT[1] && target[2] >= baseT[2];
   }
 
-  // Handle Caret ^1.21.4 (>=1.21.4 <2.0.0 for 1.x, or same major)
+  // Handle Caret ^1.21.4 or ^26.2 (same major & >= base)
   if (raw.startsWith('^')) {
-    const baseT = parseMcVersionTuple(raw.slice(1));
+    const baseT = parseMcVersionTuple(raw.slice(1).trim());
     if (!baseT) return true;
     return target[0] === baseT[0] && compareMcTuples(target, baseT) >= 0;
   }
 
-  // Handle space-separated comparators: ">=1.21 <1.21.2" or ">=1.20.1 <=1.20.4"
+  // Handle space-separated comparators: ">=1.21.11 <26", ">26.1.2 <27", ">=1.21.11- <1.21.12-", ">=1.21"
   const tokens = raw.split(/\s+/).filter(Boolean);
   let checkedAny = false;
+  let sawEra1LowerBound = false;
+  let sawEra26Ref = false;
   for (const tok of tokens) {
-    const opM = tok.match(/^(>=|<=|>|<|=)?(\d+\.\d+(?:\.\d+)?)(?:[-+].*)?$/);
+    const opM = tok.match(/^(>=|<=|>|<|=)?(\d+(?:\.\d+){0,2})([-+].*)?$/);
     if (!opM) continue;
     const op = opM[1] || '=';
-    const refT = parseMcVersionTuple(opM[2]);
+    const verDigits = opM[2];
+    const suffix = opM[3] || '';
+    const refT = parseMcVersionTuple(verDigits);
     if (!refT) continue;
+    // Ignore bare single-digit exact tokens without operator unless major >= 26
+    if (!opM[1] && !refT[4] && refT[0] < 26) continue;
     checkedAny = true;
+    if (refT[0] >= 26) sawEra26Ref = true;
+    if ((op === '>=' || op === '>') && refT[0] === 1) sawEra1LowerBound = true;
+
     const cmp = compareMcTuples(target, refT);
-    if (op === '=' && cmp !== 0) return false;
-    if (op === '>=' && cmp < 0) return false;
-    if (op === '<=' && cmp > 0) return false;
-    if (op === '>' && cmp <= 0) return false;
-    if (op === '<' && cmp >= 0) return false;
+    // Fabric SemVer trailing '-' (e.g. "<1.21.12-" or ">=1.21.11-"): release X.Y.Z is strictly GREATER than X.Y.Z-!
+    const isLowestPreMarker = suffix === '-';
+    if (op === '=') {
+      if (!refT[4]) {
+        if (target[0] !== refT[0]) return false;
+      } else if (cmp !== 0) {
+        return false;
+      }
+    } else if (op === '>=') {
+      if (cmp < 0) return false;
+    } else if (op === '<=') {
+      if (isLowestPreMarker ? cmp >= 0 : cmp > 0) return false;
+    } else if (op === '>') {
+      if (isLowestPreMarker ? cmp < 0 : cmp <= 0) return false;
+    } else if (op === '<') {
+      if (cmp >= 0) return false;
+    }
   }
-  return checkedAny ? true : true;
+  // Mojang Era Boundary: ">=1.21" without any 26.x bound on an unconfirmed jar was authored for 1.x Intermediary & cannot run on 26.x+
+  if (enforceEraBoundary && checkedAny && target[0] >= 26 && sawEra1LowerBound && !sawEra26Ref) {
+    return false;
+  }
+  return true;
+}
+
+function isJarZipCorruptOrEmpty(jarFullPath) {
+  try {
+    if (!jarFullPath || !fs.existsSync(jarFullPath)) return true;
+    const st = fs.statSync(jarFullPath);
+    if (!st.isFile() || st.size < 64) return true;
+    const fd = fs.openSync(jarFullPath, 'r');
+    const hdr = Buffer.alloc(4);
+    const bytesRead = fs.readSync(fd, hdr, 0, 4, 0);
+    fs.closeSync(fd);
+    // Standard ZIP/JAR local file header starts with PK\x03\x04 (0x50,0x4b,0x03,0x04)
+    if (bytesRead < 4 || hdr[0] !== 0x50 || hdr[1] !== 0x4b || hdr[2] !== 0x03 || hdr[3] !== 0x04) {
+      return true;
+    }
+    const zip = openPackZip(jarFullPath);
+    const entries = zip.getEntries();
+    return !Array.isArray(entries) || entries.length === 0;
+  } catch (_) {
+    return true;
+  }
+}
+
+function collectFabricNestedProvidedIds(zipObj, providedSet, depth = 0, extraJarPaths = [], strictDeclared = false) {
+  if (!zipObj || depth > 1) return;
+  try {
+    const candidateNames = new Set(
+      (Array.isArray(extraJarPaths) ? extraJarPaths : [])
+        .map((p) => String(p || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, ''))
+        .filter((p) => p.toLowerCase().endsWith('.jar'))
+    );
+    if (strictDeclared && candidateNames.size === 0) return;
+    for (const e of zipObj.getEntries()) {
+      const en = e.entryName.replace(/\\/g, '/').replace(/^\.\//, '');
+      if (!en.toLowerCase().endsWith('.jar')) continue;
+      if (strictDeclared ? !candidateNames.has(en) : (!en.startsWith('META-INF/jars/') && !candidateNames.has(en))) continue;
+      if (e.header && e.header.size > 10 * 1024 * 1024) continue;
+      try {
+        const innerZip = openPackZip(e.getData());
+        const innerFab = innerZip.getEntry('fabric.mod.json');
+        let childExtra = [];
+        let childStrict = false;
+        if (innerFab) {
+          const ij = JSON.parse(innerFab.getData().toString('utf8').replace(/^\uFEFF/, ''));
+          childStrict = true;
+          if (ij?.id) providedSet.add(String(ij.id).toLowerCase());
+          if (Array.isArray(ij?.provides)) {
+            for (const p of ij.provides) {
+              const pid = typeof p === 'string' ? p : p?.id;
+              if (pid) providedSet.add(String(pid).toLowerCase());
+            }
+          }
+          if (Array.isArray(ij?.jars)) {
+            childExtra = ij.jars.map((j) => j?.file).filter(Boolean);
+          }
+        }
+        if (depth < 1) {
+          collectFabricNestedProvidedIds(innerZip, providedSet, depth + 1, childExtra, childStrict);
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
 }
 
 function inspectJarModMetadata(jarFullPath) {
@@ -2340,13 +2502,16 @@ function inspectJarModMetadata(jarFullPath) {
     let modId = '';
     let mcDepSpec = null;
 
-    // 1. Fabric (fabric.mod.json + nested JIJ META-INF/jars/*.jar)
+    // 1. Fabric (fabric.mod.json + 2-level nested JIJ declared in jars[].file — exact parity with Fabric Loader KnotClient!)
     const fabEntry = zip.getEntry('fabric.mod.json');
     if (fabEntry) {
       loaders.add('fabric');
+      let declaredJars = [];
+      let parsedOk = false;
       try {
         const rawJson = fabEntry.getData().toString('utf8').replace(/^\uFEFF/, '');
         const parsed = JSON.parse(rawJson);
+        parsedOk = true;
         if (parsed?.id && !modId) {
           modId = String(parsed.id).toLowerCase();
           providedSet.add(modId);
@@ -2357,6 +2522,9 @@ function inspectJarModMetadata(jarFullPath) {
             if (pid) providedSet.add(String(pid).toLowerCase());
           }
         }
+        if (Array.isArray(parsed?.jars)) {
+          declaredJars = parsed.jars.map((j) => j?.file).filter(Boolean);
+        }
         if (parsed?.depends && typeof parsed.depends === 'object') {
           if (parsed.depends.minecraft) mcDepSpec = parsed.depends.minecraft;
           for (const depKey of Object.keys(parsed.depends)) {
@@ -2366,28 +2534,7 @@ function inspectJarModMetadata(jarFullPath) {
         }
       } catch (_) {}
 
-      // Inspect embedded Jar-In-Jar (META-INF/jars/*.jar) so bundled sub-libraries are marked as provided
-      try {
-        for (const e of zip.getEntries()) {
-          const en = e.entryName.replace(/\\/g, '/');
-          if (!en.startsWith('META-INF/jars/') || !en.toLowerCase().endsWith('.jar')) continue;
-          if (e.header && e.header.size > 8 * 1024 * 1024) continue;
-          try {
-            const innerZip = openPackZip(e.getData());
-            const innerFab = innerZip.getEntry('fabric.mod.json');
-            if (innerFab) {
-              const ij = JSON.parse(innerFab.getData().toString('utf8').replace(/^\uFEFF/, ''));
-              if (ij?.id) providedSet.add(String(ij.id).toLowerCase());
-              if (Array.isArray(ij?.provides)) {
-                for (const p of ij.provides) {
-                  const pid = typeof p === 'string' ? p : p?.id;
-                  if (pid) providedSet.add(String(pid).toLowerCase());
-                }
-              }
-            }
-          } catch (_) {}
-        }
-      } catch (_) {}
+      collectFabricNestedProvidedIds(zip, providedSet, 0, declaredJars, parsedOk);
     }
 
     // 2. Quilt (quilt.mod.json)
@@ -2443,12 +2590,19 @@ function inspectJarModMetadata(jarFullPath) {
       } catch (_) {}
     }
 
-    // 4. Forge (META-INF/mods.toml or legacy mcmod.info)
+    // 4. Forge (META-INF/mods.toml or legacy mcmod.info — disambiguating 1.20.4 NeoForge mods.toml)
     const forgeEntry = zip.getEntry('META-INF/mods.toml');
     if (forgeEntry) {
-      loaders.add('forge');
       try {
         const toml = forgeEntry.getData().toString('utf8');
+        const hasNeoDep = /modId\s*=\s*"neoforge"/i.test(toml);
+        const hasForgeDep = /modId\s*=\s*"forge"/i.test(toml);
+        if (hasNeoDep && !hasForgeDep) {
+          loaders.add('neoforge');
+        } else {
+          loaders.add('forge');
+          if (hasNeoDep) loaders.add('neoforge');
+        }
         const idM = toml.match(/modId\s*=\s*"([^"]+)"/);
         if (idM && !modId) {
           modId = idM[1].toLowerCase();
@@ -2461,7 +2615,9 @@ function inspectJarModMetadata(jarFullPath) {
             if (vrM && !mcDepSpec) mcDepSpec = vrM[1].trim();
           }
         }
-      } catch (_) {}
+      } catch (_) {
+        loaders.add('forge');
+      }
     } else if (zip.getEntry('mcmod.info')) {
       loaders.add('forge');
       try {
@@ -2469,6 +2625,17 @@ function inspectJarModMetadata(jarFullPath) {
         const mcM = infoTxt.match(/"mcversion"\s*:\s*"([^"]+)"/i);
         if (mcM && !mcDepSpec) mcDepSpec = mcM[1].trim();
       } catch (_) {}
+    }
+
+    // 5. Proprietary OptiFine jar detection (for standalone/tweaker OptiFine_*.jar without mods.toml)
+    if (loaders.size === 0) {
+      const ofInfo = inspectOptifineJar(jarFullPath);
+      if (ofInfo?.isOptifine) {
+        loaders.add('forge');
+        modId = modId || 'optifine';
+        providedSet.add('optifine');
+        if (!mcDepSpec && ofInfo.mcVersion) mcDepSpec = ofInfo.mcVersion;
+      }
     }
 
     for (const p of providedSet) requiredSet.delete(p);
@@ -2490,6 +2657,7 @@ function getOrInspectModMeta(modsFolder, meta, cleanFileName, actualDiskFileName
   let mEntry = meta[cleanFileName];
   if (
     mEntry &&
+    mEntry.metaSchema === 3 &&
     Array.isArray(mEntry.inspectedLoaders) &&
     Array.isArray(mEntry.providedIds) &&
     Array.isArray(mEntry.requiredModIds)
@@ -2501,6 +2669,7 @@ function getOrInspectModMeta(modsFolder, meta, cleanFileName, actualDiskFileName
   if (!inspected) return { entry: mEntry || null, dirty: false };
   const merged = {
     ...(mEntry || {}),
+    metaSchema: 3,
     inspectedLoaders: inspected.inspectedLoaders,
     mcDepSpec: inspected.mcDepSpec,
     modId: inspected.modId || mEntry?.modId || '',
@@ -2518,9 +2687,20 @@ function resolveModIdToInstallSlug(rawId = '') {
     return '';
   }
   if (id === 'fabric-language-kotlin') return 'fabric-language-kotlin';
-  if (id === 'fabric' || id === 'fabric-api' || /^fabric-[a-z0-9-]+-v\d+$/i.test(id)) return 'fabric-api';
+  if (id === 'fabric' || id === 'fabric-api' || id === 'fabric-api-base' || /^fabric-[a-z0-9_-]+-v\d+$/i.test(id)) return 'fabric-api';
   if (COMMON_MODID_TO_MODRINTH_SLUG[id]) return COMMON_MODID_TO_MODRINTH_SLUG[id];
   return id.replace(/_/g, '-');
+}
+
+function isProvidedByActiveFabricSet(providedSet, reqId) {
+  if (providedSet.has(reqId)) return true;
+  if (
+    (providedSet.has('fabric-api') || providedSet.has('fabric') || providedSet.has('quilted_fabric_api')) &&
+    (reqId === 'fabric' || reqId === 'fabric-api' || reqId === 'fabric-api-base' || /^fabric-[a-z0-9_-]+-v\d+$/i.test(reqId))
+  ) {
+    return true;
+  }
+  return false;
 }
 
 async function autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion, effectiveLoader, onStatus) {
@@ -2552,19 +2732,20 @@ async function autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion,
     }
     if (dirty) writeModsMetaManifest(modsFolder, meta);
 
-    const slugsNeeded = new Set();
+    const slugsNeeded = new Map();
     for (const reqId of required) {
-      if (provided.has(reqId)) continue;
+      if (isProvidedByActiveFabricSet(provided, reqId)) continue;
       const slug = resolveModIdToInstallSlug(reqId);
       if (slug && !triedSlugs.has(slug)) {
-        slugsNeeded.add(slug);
+        slugsNeeded.set(slug, reqId);
       }
     }
     if (slugsNeeded.size === 0) break;
 
     let installedAnyThisPass = false;
-    for (const slug of slugsNeeded) {
+    for (const [slug, rawReqId] of slugsNeeded.entries()) {
       triedSlugs.add(slug);
+      let resolvedThisDep = false;
       try {
         onStatus?.(`🧩 Tự động tải thư viện còn thiếu "${slug}" cho MC ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
         const depRes = await installModrinthProject({
@@ -2578,22 +2759,160 @@ async function autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion,
         if (depRes?.fileName) {
           if (!depRes.skipped) installedFiles.push(depRes.fileName);
           installedAnyThisPass = true;
+          resolvedThisDep = true;
         }
       } catch (_) {}
+
+      // Fallback search on Modrinth when modId differs from project slug (e.g. entity_texture_features -> entitytexturefeatures)
+      if (!resolvedThisDep && rawReqId && rawReqId.length >= 4) {
+        try {
+          const normTarget = rawReqId.replace(/[-_]/g, '').toLowerCase();
+          const facets = JSON.stringify([['project_type:mod'], [`versions:${mcVersion}`], [`categories:${effectiveLoader}`]]);
+          const sRes = await fetchJson(`https://api.modrinth.com/v2/search?query=${encodeURIComponent(rawReqId)}&facets=${encodeURIComponent(facets)}&limit=5`);
+          const bestHit = (sRes?.hits || []).find((h) => {
+            const hs = String(h.slug || '').replace(/[-_]/g, '').toLowerCase();
+            const ht = String(h.title || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+            return hs === normTarget || ht === normTarget || hs.includes(normTarget) || normTarget.includes(hs);
+          });
+          if (bestHit?.project_id && !triedSlugs.has(bestHit.project_id)) {
+            triedSlugs.add(bestHit.project_id);
+            const fbRes = await installModrinthProject({
+              slug: bestHit.project_id,
+              projectType: 'mod',
+              mcVersion,
+              loaderType: effectiveLoader,
+              gameDir: rootDir,
+              _isDep: true
+            }, onStatus);
+            if (fbRes?.fileName) {
+              if (!fbRes.skipped) installedFiles.push(fbRes.fileName);
+              installedAnyThisPass = true;
+            }
+          }
+        } catch (_) {}
+      }
     }
     if (!installedAnyThisPass) break;
   }
   return installedFiles;
 }
 
-function isLoaderListCompatible(modLoaders, effectiveLoader) {
+// v41.0.3 PRO: Post-resolution dependency closure quarantine — guarantees 0 "Incompatible mods found!" crashes
+// even if a required parent library has NO build for target MC version on Modrinth or PC is offline!
+function quarantineUnresolvedFabricMods(modsFolder, effectiveLoader, onStatus) {
+  const quarantined = [];
+  if (!['fabric', 'quilt'].includes(effectiveLoader) || !fs.existsSync(modsFolder)) {
+    return quarantined;
+  }
+  const meta = readModsMetaManifest(modsFolder);
+  let metaDirty = false;
+  for (let pass = 0; pass < 6; pass++) {
+    let activeJars = [];
+    try {
+      activeJars = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+    } catch (_) {
+      break;
+    }
+    if (activeJars.length === 0) break;
+
+    const provided = new Set(['minecraft', 'java', 'fabricloader', 'quilt_loader', 'mixinextras']);
+    const entriesByFile = new Map();
+    for (const f of activeJars) {
+      const { entry, dirty } = getOrInspectModMeta(modsFolder, meta, f, f);
+      if (dirty) metaDirty = true;
+      entriesByFile.set(f, entry);
+      if (entry?.modId) provided.add(entry.modId);
+      if (Array.isArray(entry?.providedIds)) entry.providedIds.forEach((p) => provided.add(p));
+    }
+
+    let parkedThisPass = 0;
+    for (const f of activeJars) {
+      const entry = entriesByFile.get(f);
+      if (!entry || !Array.isArray(entry.requiredModIds) || entry.requiredModIds.length === 0) continue;
+      const missingDep = entry.requiredModIds.find((reqId) => !isProvidedByActiveFabricSet(provided, reqId));
+      if (missingDep) {
+        try {
+          const src = path.join(modsFolder, f);
+          const dst = path.join(modsFolder, `${f}.disabled`);
+          if (fs.existsSync(dst)) fs.unlinkSync(dst);
+          fs.renameSync(src, dst);
+          quarantined.push({ fileName: f, missingDep });
+          parkedThisPass++;
+          onStatus?.(`🛡️ Tạm cất "${f}" vì thư viện gốc "${missingDep}" chưa hỗ trợ phiên bản này (tránh lỗi văng game).`);
+        } catch (_) {}
+      }
+    }
+    if (parkedThisPass === 0) break;
+  }
+  if (metaDirty) writeModsMetaManifest(modsFolder, meta);
+  return quarantined;
+}
+
+function areModsSameIdentity(metaA, cleanFileA, metaB, cleanFileB, hashHitA = null, hashHitB = null) {
+  if (cleanFileA === cleanFileB) return true;
+  const pidA = String(hashHitA?.project_id || metaA?.projectId || '').trim();
+  const pidB = String(hashHitB?.project_id || metaB?.projectId || '').trim();
+  if (pidA && pidB) return pidA === pidB;
+
+  const modIdA = String(metaA?.modId || '').trim().toLowerCase();
+  const modIdB = String(metaB?.modId || '').trim().toLowerCase();
+  if (modIdA && modIdB) return modIdA === modIdB;
+
+  const slugA = (matchKnownSlugByFilename(cleanFileA) || (metaA?.slug && !/[A-Z]/.test(metaA.slug) ? metaA.slug : '') || (modIdA && COMMON_MODID_TO_MODRINTH_SLUG[modIdA]) || '').toLowerCase();
+  const slugB = (matchKnownSlugByFilename(cleanFileB) || (metaB?.slug && !/[A-Z]/.test(metaB.slug) ? metaB.slug : '') || (modIdB && COMMON_MODID_TO_MODRINTH_SLUG[modIdB]) || '').toLowerCase();
+  if (slugA && slugB) return slugA === slugB;
+
+  const stemA = extractModBaseStem(cleanFileA);
+  const stemB = extractModBaseStem(cleanFileB);
+  return Boolean(stemA && stemB && stemA === stemB);
+}
+
+function dedupeActiveModsByIdentity(modsFolder, meta) {
+  const parkedDupes = [];
+  if (!fs.existsSync(modsFolder)) return parkedDupes;
+  let active = [];
+  try {
+    active = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+  } catch (_) {
+    return parkedDupes;
+  }
+  if (active.length <= 1) return parkedDupes;
+
+  // Sort newest first so we always keep the latest build and park older duplicates
+  const ranked = active.map((f) => {
+    let mtime = 0;
+    try { mtime = fs.statSync(path.join(modsFolder, f)).mtimeMs || 0; } catch (_) {}
+    const upd = Number(meta[f]?.updatedAt) || 0;
+    return { f, score: Math.max(mtime, upd) };
+  }).sort((a, b) => (b.score - a.score) || b.f.localeCompare(a.f, undefined, { numeric: true }));
+
+  const keptList = [];
+  for (const item of ranked) {
+    const f = item.f;
+    const isDupe = keptList.some((k) => areModsSameIdentity(meta[k], k, meta[f], f));
+    if (isDupe) {
+      try {
+        const dst = path.join(modsFolder, `${f}.disabled`);
+        if (fs.existsSync(dst)) fs.unlinkSync(dst);
+        fs.renameSync(path.join(modsFolder, f), dst);
+        parkedDupes.push(f);
+      } catch (_) {}
+    } else {
+      keptList.push(f);
+    }
+  }
+  return parkedDupes;
+}
+
+function isLoaderListCompatible(modLoaders, effectiveLoader, mcVersion = '') {
   if (!Array.isArray(modLoaders) || modLoaders.length === 0) return true;
   if (modLoaders.includes(effectiveLoader)) return true;
   if (effectiveLoader === 'quilt' && modLoaders.includes('fabric')) return true;
+  if (effectiveLoader === 'forge' && mcVersion === '1.20.1' && modLoaders.includes('neoforge')) return true;
   return false;
 }
 
-async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) {
+async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus, options = {}) {
   if (!loaderType || loaderType === 'vanilla') return;
   const rootDir = gameDir && gameDir.trim() ? gameDir.trim() : getDefaultGameDir();
   const modsFolder = path.join(rootDir, 'mods');
@@ -2610,34 +2929,104 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
   }
   if (files.length === 0) return;
 
-  // Populate Deep .jar Metadata for all jars so modId, mcDepSpec, providedIds & requiredModIds are accurate
+  // Step 0: Detect & quarantine any 0-byte / truncated / corrupt .jar files BEFORE KnotClient / ModLoader touches them!
+  const validFiles = [];
+  for (const f of files) {
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const fullPath = path.join(modsFolder, f);
+    if (meta[cleanName]?.corruptJar || isJarZipCorruptOrEmpty(fullPath)) {
+      meta[cleanName] = { ...(meta[cleanName] || {}), corruptJar: true };
+      metaDirty = true;
+      if (!f.toLowerCase().endsWith('.disabled')) {
+        try {
+          const dst = `${fullPath}.disabled`;
+          if (fs.existsSync(dst)) fs.unlinkSync(dst);
+          fs.renameSync(fullPath, dst);
+          onStatus?.(`⚠️ Đã tự động cách ly tệp Mod bị lỗi / hỏng định dạng ZIP: ${f}`);
+        } catch (_) {}
+      }
+      continue;
+    }
+    validFiles.push(f);
+  }
+  files = validFiles;
+  if (files.length === 0) {
+    if (metaDirty) writeModsMetaManifest(modsFolder, meta);
+    return;
+  }
+
+  // Populate Deep .jar Metadata for all valid jars so modId, mcDepSpec, providedIds & requiredModIds are accurate
+  const unindexedPaths = [];
+  const unindexedMap = new Map();
   for (const f of files) {
     const cleanName = f.replace(/\.disabled$/i, '');
     const res = getOrInspectModMeta(modsFolder, meta, cleanName, f);
     if (res.dirty) metaDirty = true;
+    const entry = meta[cleanName];
+    if ((!entry?.projectId || !Array.isArray(entry?.gameVersions) || entry.gameVersions.length === 0) && !entry?.sha1Checked) {
+      const fp = path.join(modsFolder, f);
+      unindexedPaths.push(fp);
+      unindexedMap.set(fp, cleanName);
+    }
+  }
+  // Batch SHA-1 enrichment on Modrinth ONLY once for un-indexed jars (0ms on subsequent switches!)
+  if (unindexedPaths.length > 0) {
+    try {
+      const { byHash, fileToHash } = await lookupModrinthBySha1Map(unindexedPaths);
+      for (const [fp, cleanName] of unindexedMap.entries()) {
+        const sha1 = fileToHash[fp];
+        const hit = sha1 ? byHash[sha1] : null;
+        if (hit?.project_id) {
+          meta[cleanName] = {
+            ...(meta[cleanName] || {}),
+            projectId: hit.project_id,
+            gameVersions: Array.isArray(hit.game_versions) && hit.game_versions.length > 0 ? hit.game_versions : (meta[cleanName]?.gameVersions || []),
+            sha1Checked: true
+          };
+          metaDirty = true;
+        } else if (sha1) {
+          meta[cleanName] = { ...(meta[cleanName] || {}), sha1Checked: true };
+          metaDirty = true;
+        }
+      }
+    } catch (_) {}
   }
   if (metaDirty) writeModsMetaManifest(modsFolder, meta);
 
+  const isWildcardSpec = (spec) => !spec || spec === '*' || spec === 'any';
+
   const isFileCompatibleWithVersion = (cleanFileName, strictReEnable = false) => {
     const mEntry = meta[cleanFileName];
+    if (mEntry?.corruptJar) return false;
+    const explicitVer = extractMcVerFromFilename(cleanFileName);
     if (mEntry) {
       const modLoaders = Array.isArray(mEntry.inspectedLoaders) && mEntry.inspectedLoaders.length > 0
         ? mEntry.inspectedLoaders
-        : (mEntry.loader ? [mEntry.loader] : []);
-      if (modLoaders.length > 0 && !isLoaderListCompatible(modLoaders, effectiveLoader)) {
+        : (mEntry.loader ? [mEntry.loader] : inferLoadersFromFilenameHint(cleanFileName));
+      if (modLoaders.length > 0 && !isLoaderListCompatible(modLoaders, effectiveLoader, mcVersion)) {
         return false;
       }
-      if (mEntry.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec)) {
+      const hasGameVers = Array.isArray(mEntry.gameVersions) && mEntry.gameVersions.length > 0;
+      const confirmedForTarget = (hasGameVers && mEntry.gameVersions.includes(mcVersion)) || explicitVer === mcVersion;
+      if (mEntry.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec, { enforceEraBoundary: !confirmedForTarget })) {
         return false;
       }
-      if (Array.isArray(mEntry.gameVersions) && mEntry.gameVersions.length > 0) {
+      if (hasGameVers) {
         return mEntry.gameVersions.includes(mcVersion);
       }
-      if (mEntry.mcDepSpec) {
-        return doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec);
+      // Hand-dropped jar without Modrinth gameVersions: if mcDepSpec is wildcard ("*"), filename version tag is authoritative!
+      if (!isWildcardSpec(mEntry.mcDepSpec)) {
+        return doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec, { enforceEraBoundary: !confirmedForTarget });
       }
+      if (explicitVer) {
+        return explicitVer === mcVersion;
+      }
+      return !strictReEnable;
     }
-    const explicitVer = extractMcVerFromFilename(cleanFileName);
+    const hintLoaders = inferLoadersFromFilenameHint(cleanFileName);
+    if (hintLoaders.length > 0 && !isLoaderListCompatible(hintLoaders, effectiveLoader, mcVersion)) {
+      return false;
+    }
     if (explicitVer) {
       return explicitVer === mcVersion;
     }
@@ -2651,56 +3040,91 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
     if (modId && COMMON_MODID_TO_MODRINTH_SLUG[modId]) return COMMON_MODID_TO_MODRINTH_SLUG[modId];
     const known = matchKnownSlugByFilename(cleanFileName);
     if (known) return known;
-    if (modId && modId.length >= 3) return modId;
+    if (modId && modId.length >= 3 && modId !== 'optifine') return modId;
     return '';
   };
 
-  // Step 1: Re-enable cached .jar.disabled files that strictly match target mcVersion + effectiveLoader
-  // v40.8: …but NEVER the ones the player (or PvP Mode) switched off on purpose
-  for (const f of files) {
-    if (!f.toLowerCase().endsWith('.disabled')) continue;
-    const cleanName = f.replace(/\.disabled$/i, '');
-    if (meta[cleanName]?.userDisabled) continue;
-    if (isFileCompatibleWithVersion(cleanName, true)) {
-      const enabledPath = path.join(modsFolder, cleanName);
-      const disabledPath = path.join(modsFolder, f);
-      if (!fs.existsSync(enabledPath)) {
-        try {
-          fs.renameSync(disabledPath, enabledPath);
-        } catch (_) {}
-      }
-    }
-  }
+  // Track mods explicitly turned OFF by the player (where NO active build of that mod is enabled)
+  const activeBeforeStep1 = files.filter((f) => /\.jar$/i.test(f));
+  const userDisabledCleanNames = files
+    .map((f) => f.replace(/\.disabled$/i, ''))
+    .filter((clean) => Boolean(meta[clean]?.userDisabled))
+    .filter((clean) => !activeBeforeStep1.some((act) => areModsSameIdentity(meta[act], act, meta[clean], clean)));
 
-  // Refresh file list after Step 1
-  try {
-    files = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
-  } catch (_) {
-    return;
-  }
+  const isIdentityUserDisabled = (cleanName) =>
+    Boolean(meta[cleanName]?.userDisabled) ||
+    userDisabledCleanNames.some((ud) => areModsSameIdentity(meta[ud], ud, meta[cleanName], cleanName));
 
-  // Step 2: Check enabled .jar files for version/loader mismatch; disable incompatible ones and auto-fetch matching build if known
-  const slugsToAutoFetch = new Set();
-  for (const f of files) {
+  // Step 1: Disable incompatible active .jar files FIRST, keeping track of mods that may need a version upgrade
+  const disabledCandidates = [];
+  const activeCompatible = [];
+  for (const f of activeBeforeStep1) {
     if (!isFileCompatibleWithVersion(f, false)) {
       const slug = inferSlugOrIdFromFilename(f);
       try {
-        fs.renameSync(path.join(modsFolder, f), path.join(modsFolder, `${f}.disabled`));
+        const dst = path.join(modsFolder, `${f}.disabled`);
+        if (fs.existsSync(dst)) fs.unlinkSync(dst);
+        fs.renameSync(path.join(modsFolder, f), dst);
       } catch (_) {}
-      if (slug) slugsToAutoFetch.add(slug);
+      if (slug && !isIdentityUserDisabled(f)) {
+        disabledCandidates.push({ cleanName: f, slug });
+      }
+    } else {
+      activeCompatible.push(f);
     }
   }
 
-  // Step 3: Strictly upgrade disabled mods ONLY if an official build for mcVersion exists on Modrinth
-  if (slugsToAutoFetch.size > 0) {
-    const activeFilesNow = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
-    for (const slug of slugsToAutoFetch) {
-      const alreadyActive = activeFilesNow.some((f) => inferSlugOrIdFromFilename(f).toLowerCase() === slug.toLowerCase());
+  // Step 2: Re-enable cached .jar.disabled files that strictly match target mcVersion + effectiveLoader (newest first, deduplicated!)
+  const disabledOnDisk = [];
+  try {
+    for (const f of fs.readdirSync(modsFolder)) {
+      if (!/\.jar\.disabled$/i.test(f)) continue;
+      const cleanName = f.replace(/\.disabled$/i, '');
+      if (meta[cleanName]?.corruptJar || isIdentityUserDisabled(cleanName)) continue;
+      if (!isFileCompatibleWithVersion(cleanName, true)) continue;
+      let mtime = 0;
+      try { mtime = fs.statSync(path.join(modsFolder, f)).mtimeMs || 0; } catch (_) {}
+      disabledOnDisk.push({ f, cleanName, score: Math.max(mtime, Number(meta[cleanName]?.updatedAt) || 0) });
+    }
+  } catch (_) {}
+  disabledOnDisk.sort((a, b) => (b.score - a.score) || b.cleanName.localeCompare(a.cleanName, undefined, { numeric: true }));
+
+  for (const cand of disabledOnDisk) {
+    const alreadyActiveSameMod = activeCompatible.some((act) =>
+      areModsSameIdentity(meta[act], act, meta[cand.cleanName], cand.cleanName)
+    );
+    if (alreadyActiveSameMod) continue;
+    const enabledPath = path.join(modsFolder, cand.cleanName);
+    const disabledPath = path.join(modsFolder, cand.f);
+    if (!fs.existsSync(enabledPath)) {
+      try {
+        fs.renameSync(disabledPath, enabledPath);
+        activeCompatible.push(cand.cleanName);
+      } catch (_) {}
+    }
+  }
+
+  // Ensure no duplicate active builds of the exact same mod coexist
+  dedupeActiveModsByIdentity(modsFolder, meta);
+
+  // Step 3: Strictly upgrade disabled mods ONLY if NO matching build is already active AND an official build exists on Modrinth
+  if (disabledCandidates.length > 0) {
+    let activeFilesNow = [];
+    try { activeFilesNow = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f)); } catch (_) {}
+    const fetchedSlugs = new Set();
+    for (const item of disabledCandidates) {
+      const slugKey = item.slug.toLowerCase();
+      if (fetchedSlugs.has(slugKey)) continue;
+      const alreadyActive = activeFilesNow.some((act) =>
+        areModsSameIdentity(meta[act], act, meta[item.cleanName], item.cleanName) ||
+        inferSlugOrIdFromFilename(act).toLowerCase() === slugKey
+      );
       if (!alreadyActive) {
+        fetchedSlugs.add(slugKey);
         try {
-          onStatus?.(`🔄 Tự động đồng bộ Mod "${slug}" sang đúng phiên bản ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
-          await installModrinthProject({
-            slug,
+          onStatus?.(`🔄 Tự động đồng bộ Mod "${item.slug}" sang đúng phiên bản ${mcVersion} (${effectiveLoader.toUpperCase()})...`);
+          const upRes = await installModrinthProject({
+            slug: item.slug,
             projectType: 'mod',
             mcVersion,
             loaderType: effectiveLoader,
@@ -2708,13 +3132,31 @@ async function ensureModsMatchVersion(gameDir, mcVersion, loaderType, onStatus) 
             _isDep: true,
             strictMcVersion: true
           }, onStatus);
+          if (upRes?.fileName) activeFilesNow.push(upRes.fileName);
         } catch (_) {}
       }
     }
   }
 
-  // Step 4: Inspect active Fabric/Quilt jars (including JIJ) and auto-install any missing required libraries (e.g. fabric-language-kotlin, fabric-api) BEFORE launch!
+  // Step 4: Inspect active Fabric/Quilt jars (including 2-level JIJ) and auto-install any missing required libraries BEFORE launch!
   await autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion, effectiveLoader, onStatus);
+
+  // Step 5: Quarantine any active Fabric/Quilt mod whose required parent dependency STILL could not be satisfied (offline / unupdated parent)
+  quarantineUnresolvedFabricMods(modsFolder, effectiveLoader, onStatus);
+
+  // Step 6: Guard against simultaneous OptiFine.jar + Sodium/Embeddium/Iris/Oculus collision
+  try {
+    const activeFinal = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+    const hasOptifineActive = activeFinal.some((f) => isProprietaryOptifineFile(f));
+    const hasModernRenderActive = activeFinal.some((f) => /^(?:sodium|embeddium|rubidium|iris|oculus)[-_+.]/i.test(f));
+    if (hasOptifineActive && hasModernRenderActive) {
+      parkOptifineConflictsInMods(modsFolder, options?.preferOptifineForgeJar ? 'for-optifine' : 'for-parity');
+    }
+  } catch (_) {}
+
+  // Final safety dedupe pass after any dependency/upgrade installs
+  const refreshedMeta = readModsMetaManifest(modsFolder);
+  dedupeActiveModsByIdentity(modsFolder, refreshedMeta);
 }
 async function installFpsBoostPack({ mcVersion = '1.21.4', loaderType = 'fabric', gameDir }, onStatus) {
   const norm = normalizeModrinthLoader(loaderType, mcVersion);
@@ -2751,8 +3193,9 @@ function isProprietaryOptifineFile(fileName = '') {
 }
 
 function inspectOptifineJar(filePath) {
-  const baseName = path.basename(String(filePath || ''));
-  if (!filePath || !/\.jar$/i.test(baseName) || !fs.existsSync(filePath)) {
+  const rawBaseName = path.basename(String(filePath || ''));
+  const baseName = rawBaseName.replace(/\.disabled$/i, '');
+  if (!filePath || !/\.jar(\.disabled)?$/i.test(rawBaseName) || !fs.existsSync(filePath)) {
     return { isOptifine: false };
   }
   const nameMatches = /^(?:preview_)?optifine(?:[_-]|$|\.jar)/i.test(baseName);
@@ -2797,11 +3240,13 @@ function parkOptifineConflictsInMods(modsDir, mode = 'for-parity') {
       if (!/\.jar$/i.test(f)) continue;
       if (!rx.test(f)) continue;
       try {
-        fs.renameSync(path.join(modsDir, f), path.join(modsDir, `${f}.disabled`));
+        const dst = path.join(modsDir, `${f}.disabled`);
+        if (fs.existsSync(dst)) fs.unlinkSync(dst);
+        fs.renameSync(path.join(modsDir, f), dst);
         parked.push(f);
       } catch (_) {}
     }
-    if (parked.length > 0) setModUserDisabledFlags(modsDir, parked, true);
+    // Note: automatic conflict isolation must NOT set userDisabled=true, so switching back to Fabric/Forge restores them automatically!
   } catch (_) {}
   return parked;
 }
@@ -2995,15 +3440,30 @@ async function ensureVanillaBaseForOptifine(gameDir, mcVersion, onStatus) {
   }
 }
 
-function findActiveOptifineForgeJar(modsDir, mcVersion) {
+function findActiveOptifineForgeJar(modsDir, mcVersion, allowWakeDisabled = false) {
   if (!modsDir || !fs.existsSync(modsDir)) return null;
   try {
-    const files = fs.readdirSync(modsDir).filter((f) => /\.jar$/i.test(f) && isProprietaryOptifineFile(f) && !/^optifabric/i.test(f));
-    for (const f of files) {
+    const all = fs.readdirSync(modsDir);
+    const activeFiles = all.filter((f) => /\.jar$/i.test(f) && isProprietaryOptifineFile(f) && !/^optifabric/i.test(f));
+    for (const f of activeFiles) {
       const info = inspectOptifineJar(path.join(modsDir, f));
       if (!info.isOptifine) continue;
       if (!mcVersion || !info.mcVersion || info.mcVersion === mcVersion) {
         return f;
+      }
+    }
+    if (allowWakeDisabled && mcVersion) {
+      const meta = readModsMetaManifest(modsDir);
+      const disabledFiles = all.filter((f) => /\.jar\.disabled$/i.test(f) && isProprietaryOptifineFile(f.replace(/\.disabled$/i, '')) && !/^optifabric/i.test(f));
+      for (const f of disabledFiles) {
+        const clean = f.replace(/\.disabled$/i, '');
+        if (meta[clean]?.userDisabled || meta[clean]?.corruptJar) continue;
+        const info = inspectOptifineJar(path.join(modsDir, f));
+        if (!info.isOptifine || info.mcVersion !== mcVersion) continue;
+        try {
+          fs.renameSync(path.join(modsDir, f), path.join(modsDir, clean));
+          return clean;
+        } catch (_) {}
       }
     }
   } catch (_) {}
@@ -3026,7 +3486,7 @@ async function resolveOptifineRuntimePlan({ rootDir, gameDirectory, mcVersion, l
   }
 
   const modsDir = path.join(gameDirectory, 'mods');
-  const activeOfJar = findActiveOptifineForgeJar(modsDir, mcVersion);
+  const activeOfJar = findActiveOptifineForgeJar(modsDir, mcVersion, true);
   if (activeOfJar) {
     const forgeBuilds = await fetchLoaderVersions(mcVersion, 'forge');
     if (forgeBuilds.length > 0) {
@@ -3131,12 +3591,16 @@ function installOptifineJarSmart({
     const targetMc = info.mcVersion || effectiveMc || '1.20.1';
     const meta = readModsMetaManifest(modsDir);
     meta[info.fileName] = {
+      metaSchema: 2,
       slug: 'optifine',
       modId: 'optifine',
+      mcDepSpec: targetMc,
       mcVersion: targetMc,
       gameVersions: info.mcVersion ? [info.mcVersion] : [targetMc],
       loader: 'forge',
-      inspectedLoaders: ['forge', 'optifine'],
+      inspectedLoaders: ['forge'],
+      providedIds: ['optifine'],
+      requiredModIds: [],
       updatedAt: Date.now()
     };
     writeModsMetaManifest(modsDir, meta);
@@ -3191,6 +3655,12 @@ function listLocalAddons(gameDir, folderType = 'mods') {
         try { sizeKB = Math.round(fs.statSync(full).size / 1024); } catch (_) {}
         const rawSpec = Array.isArray(mEntry?.mcDepSpec) ? mEntry.mcDepSpec.join(', ') : (mEntry?.mcDepSpec || '');
         const specVerClean = rawSpec && /^\d+\.\d+/.test(rawSpec) ? rawSpec : '';
+        const specExactVers = Array.isArray(mEntry?.mcDepSpec)
+          ? mEntry.mcDepSpec.filter((v) => /^\d+\.\d+(?:\.\d+)?$/.test(String(v || '').trim()))
+          : [];
+        const resolvedGameVers = Array.isArray(mEntry?.gameVersions) && mEntry.gameVersions.length > 0
+          ? mEntry.gameVersions
+          : specExactVers;
         const isEquippedInGame = safeFolder === 'shaderpacks'
           ? (equipped.activeShader === cleanName)
           : (safeFolder === 'resourcepacks' ? equipped.activeResourcePacks.includes(cleanName) : false);
@@ -3204,7 +3674,7 @@ function listLocalAddons(gameDir, folderType = 'mods') {
           loaders: Array.isArray(mEntry?.inspectedLoaders) ? mEntry.inspectedLoaders : (mEntry?.loader ? [mEntry.loader] : []),
           mcDepSpec: rawSpec,
           mcVersion: mEntry?.mcVersion || extractMcVerFromFilename(cleanName) || specVerClean || '',
-          gameVersions: Array.isArray(mEntry?.gameVersions) ? mEntry.gameVersions : [],
+          gameVersions: resolvedGameVers,
           equippedInGame: isEquippedInGame
         };
       });
@@ -3887,7 +4357,13 @@ async function launchMinecraft(config, callbacks = {}) {
   }
 
   if (gameDirectory === rootDir) {
-    await ensureModsMatchVersion(rootDir, mcVersion, effectiveLoaderType, callbacks.onStatus);
+    await ensureModsMatchVersion(
+      rootDir,
+      mcVersion,
+      effectiveLoaderType,
+      callbacks.onStatus,
+      { preferOptifineForgeJar: optifineRuntimePlan?.mode === 'forge-jar' }
+    );
   } else {
     // v40.4.1 PRO: Ensure SkyBlock / OneBlock instances auto-default "World Type: Default" to Void Island!
     try {
@@ -6759,6 +7235,29 @@ const COMMON_MODID_TO_MODRINTH_SLUG = {
   ferritecore: 'ferrite-core',
   'ferrite-core': 'ferrite-core',
   entityculling: 'entityculling',
+  entity_texture_features: 'entitytexturefeatures',
+  'entity-texture-features': 'entitytexturefeatures',
+  entitytexturefeatures: 'entitytexturefeatures',
+  entity_model_features: 'entity-model-features',
+  'entity-model-features': 'entity-model-features',
+  skinlayers3d: '3dskinlayers',
+  '3dskinlayers': '3dskinlayers',
+  notenoughanimations: 'not-enough-animations',
+  reeses_sodium_options: 'reeses-sodium-options',
+  'reeses-sodium-options': 'reeses-sodium-options',
+  sodium_extra: 'sodium-extra',
+  'sodium-extra': 'sodium-extra',
+  supermartijn642corelib: 'supermartijn642s-core-lib',
+  supermartijn642configlib: 'supermartijn642s-config-lib',
+  midnightlib: 'midnightlib',
+  accessories: 'accessories',
+  playeranimator: 'playeranimator',
+  creativecore: 'creativecore',
+  modernfix: 'modernfix',
+  krypton: 'krypton',
+  dynamic_fps: 'dynamic-fps',
+  skinshuffle: 'skinshuffle',
+  customlan: 'custom-lan',
   immediatelyfast: 'immediatelyfast',
   zoomify: 'zoomify',
   capes: 'capes',
@@ -6792,7 +7291,34 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
   } catch (_) {}
 
   if (allFiles.length === 0) {
-    return { ok: true, upgraded: [], kept: [], disabledIncompatible: [], depsInstalled: [], effectiveLoader };
+    return { ok: true, upgraded: [], kept: [], disabledIncompatible: [], depsInstalled: [], quarantined: [], effectiveLoader };
+  }
+
+  // Step 0: Quarantine corrupt / 0-byte .jar files upfront so neither Modrinth SHA-1 nor ModLoader chokes on them
+  const validFiles = [];
+  const disabledIncompatible = [];
+  for (const f of allFiles) {
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const fullPath = path.join(modsFolder, f);
+    if (meta[cleanName]?.corruptJar || isJarZipCorruptOrEmpty(fullPath)) {
+      meta[cleanName] = { ...(meta[cleanName] || {}), corruptJar: true };
+      metaDirty = true;
+      if (!f.toLowerCase().endsWith('.disabled')) {
+        try {
+          const dst = `${fullPath}.disabled`;
+          if (fs.existsSync(dst)) fs.unlinkSync(dst);
+          fs.renameSync(fullPath, dst);
+          disabledIncompatible.push(cleanName);
+        } catch (_) {}
+      }
+      continue;
+    }
+    validFiles.push(f);
+  }
+  allFiles = validFiles;
+  if (allFiles.length === 0) {
+    if (metaDirty) writeModsMetaManifest(modsFolder, meta);
+    return { ok: true, mcVersion, effectiveLoader, upgraded: [], kept: [], disabledIncompatible, depsInstalled: [], quarantined: [] };
   }
 
   for (const f of allFiles) {
@@ -6805,87 +7331,166 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
   onStatus?.(`🔍 Đang quét & nhận diện ${allFiles.length} Mod trong máy qua cơ sở dữ liệu Modrinth...`);
   const fullPaths = allFiles.map((f) => path.join(modsFolder, f));
   const { byHash, fileToHash } = await lookupModrinthBySha1Map(fullPaths);
+  const hashHitByClean = {};
+  for (const f of allFiles) {
+    const cleanName = f.replace(/\.disabled$/i, '');
+    const sha1 = fileToHash[path.join(modsFolder, f)];
+    if (sha1 && byHash[sha1]) {
+      const hit = byHash[sha1];
+      hashHitByClean[cleanName] = hit;
+      if (hit.project_id && (!meta[cleanName]?.projectId || !Array.isArray(meta[cleanName]?.gameVersions) || meta[cleanName].gameVersions.length === 0)) {
+        meta[cleanName] = {
+          ...(meta[cleanName] || {}),
+          projectId: hit.project_id,
+          gameVersions: Array.isArray(hit.game_versions) ? hit.game_versions : (meta[cleanName]?.gameVersions || []),
+          sha1Checked: true
+        };
+        metaDirty = true;
+      }
+    }
+  }
+  if (metaDirty) writeModsMetaManifest(modsFolder, meta);
 
-  const inferSlugOrProjectId = (fileName, fullPath) => {
-    const cleanName = fileName.replace(/\.disabled$/i, '');
-    const sha1 = fileToHash[fullPath];
-    const hashHit = sha1 ? byHash[sha1] : null;
+  const inferSlugOrProjectId = (cleanName) => {
+    const hashHit = hashHitByClean[cleanName] || null;
     if (hashHit?.project_id) return hashHit.project_id;
     if (meta[cleanName]?.projectId) return meta[cleanName].projectId;
     if (meta[cleanName]?.slug) return meta[cleanName].slug;
     const known = matchKnownSlugByFilename(cleanName);
     if (known) return known;
     const modId = meta[cleanName]?.modId;
+    if (modId && modId === 'optifine') return '';
     if (modId && COMMON_MODID_TO_MODRINTH_SLUG[modId]) return COMMON_MODID_TO_MODRINTH_SLUG[modId];
     const guess = extractModBaseStem(cleanName);
     return COMMON_MODID_TO_MODRINTH_SLUG[guess] || (modId && modId.length >= 3 ? modId : (guess.length >= 3 ? guess : ''));
   };
 
-  const isModMatchingTarget = (fileName, fullPath) => {
-    const cleanName = fileName.replace(/\.disabled$/i, '');
-    const sha1 = fileToHash[fullPath];
-    const hashHit = sha1 ? byHash[sha1] : null;
-    const mEntry = meta[cleanName];
-    const gVers = hashHit?.game_versions || mEntry?.gameVersions || [];
-    const loaders = hashHit?.loaders
-      || (Array.isArray(mEntry?.inspectedLoaders) && mEntry.inspectedLoaders.length ? mEntry.inspectedLoaders : (mEntry?.loader ? [mEntry.loader] : []));
+  const isWildcardSpec = (spec) => !spec || spec === '*' || spec === 'any';
 
-    if (Array.isArray(loaders) && loaders.length > 0) {
-      const lOk = loaders.includes(effectiveLoader)
-        || (effectiveLoader === 'quilt' && loaders.includes('fabric'))
-        || (effectiveLoader === 'forge' && loaders.includes('neoforge'));
-      if (!lOk) return false;
-    }
-    if (mEntry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec)) {
+  const isModMatchingTarget = (cleanName) => {
+    const hashHit = hashHitByClean[cleanName] || null;
+    const mEntry = meta[cleanName];
+    if (mEntry?.corruptJar) return false;
+    const gVers = hashHit?.game_versions || mEntry?.gameVersions || [];
+    const explicitVer = mEntry?.mcVersion || extractMcVerFromFilename(cleanName);
+    const loaders = hashHit?.loaders
+      || (Array.isArray(mEntry?.inspectedLoaders) && mEntry.inspectedLoaders.length ? mEntry.inspectedLoaders : (mEntry?.loader ? [mEntry.loader] : inferLoadersFromFilenameHint(cleanName)));
+
+    if (Array.isArray(loaders) && loaders.length > 0 && !isLoaderListCompatible(loaders, effectiveLoader, mcVersion)) {
       return false;
     }
-    if (Array.isArray(gVers) && gVers.length > 0) {
+    const hasGameVers = Array.isArray(gVers) && gVers.length > 0;
+    const confirmedForTarget = (hasGameVers && gVers.includes(mcVersion)) || explicitVer === mcVersion;
+    if (mEntry?.mcDepSpec && !doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec, { enforceEraBoundary: !confirmedForTarget })) {
+      return false;
+    }
+    if (hasGameVers) {
       return gVers.includes(mcVersion);
     }
-    const explicitVer = mEntry?.mcVersion || extractMcVerFromFilename(cleanName);
+    if (mEntry && !isWildcardSpec(mEntry.mcDepSpec)) {
+      return doesMcVersionSatisfySpec(mcVersion, mEntry.mcDepSpec, { enforceEraBoundary: !confirmedForTarget });
+    }
     if (explicitVer) return explicitVer === mcVersion;
     return true;
   };
 
   const kept = [];
   const upgraded = [];
-  const disabledIncompatible = [];
   const depsInstalled = [];
   const requiredDepIds = new Set();
 
-  for (let i = 0; i < allFiles.length; i++) {
-    const f = allFiles[i];
-    const cleanName = f.replace(/\.disabled$/i, '');
-    const fullPath = path.join(modsFolder, f);
-    const isDisabled = f.toLowerCase().endsWith('.disabled');
-    const sha1 = fileToHash[fullPath];
-    const hashHit = sha1 ? byHash[sha1] : null;
+  const activeInitial = allFiles.filter((f) => /\.jar$/i.test(f));
+  const userDisabledCleanNames = allFiles
+    .map((f) => f.replace(/\.disabled$/i, ''))
+    .filter((clean) => Boolean(meta[clean]?.userDisabled))
+    .filter((clean) => !activeInitial.some((act) => areModsSameIdentity(meta[act], act, meta[clean], clean, hashHitByClean[act], hashHitByClean[clean])));
 
-    if (isModMatchingTarget(f, fullPath)) {
-      if (isDisabled) {
-        if (meta[cleanName]?.userDisabled) continue;
-        const enabledDest = path.join(modsFolder, cleanName);
-        if (!fs.existsSync(enabledDest)) {
-          try { fs.renameSync(fullPath, enabledDest); } catch (_) {}
-        }
-      }
-      if (hashHit && Array.isArray(hashHit.dependencies)) {
-        for (const d of hashHit.dependencies) {
+  const isIdentityUserDisabled = (cleanName) =>
+    Boolean(meta[cleanName]?.userDisabled) ||
+    userDisabledCleanNames.some((ud) => areModsSameIdentity(meta[ud], ud, meta[cleanName], cleanName, hashHitByClean[ud], hashHitByClean[cleanName]));
+
+  // Phase 1A: Separate currently active .jar files into compatible vs incompatible (parking incompatible ones first)
+  const incompatibleItems = [];
+  for (const f of activeInitial) {
+    const fullPath = path.join(modsFolder, f);
+    if (isModMatchingTarget(f)) {
+      kept.push(f);
+      const hit = hashHitByClean[f];
+      if (hit && Array.isArray(hit.dependencies)) {
+        for (const d of hit.dependencies) {
           if (d.dependency_type === 'required' && d.project_id) requiredDepIds.add(d.project_id);
         }
       }
-      kept.push(cleanName);
-      continue;
-    }
-
-    // Mod does not match target mcVersion + effectiveLoader -> try to strictly upgrade/switch from Modrinth!
-    const slugOrId = inferSlugOrProjectId(f, fullPath);
-    if (slugOrId) {
-      onStatus?.(`🔄 [${i + 1}/${allFiles.length}] Đang tìm bản ${mcVersion} (${effectiveLoader.toUpperCase()}) cho Mod "${cleanName}"...`);
+    } else {
       try {
-        if (!isDisabled && fs.existsSync(fullPath)) {
-          try { fs.renameSync(fullPath, `${fullPath}.disabled`); } catch (_) {}
-        }
+        const dst = `${fullPath}.disabled`;
+        if (fs.existsSync(dst)) fs.unlinkSync(dst);
+        fs.renameSync(fullPath, dst);
+      } catch (_) {}
+      incompatibleItems.push({ cleanName: f, wasActive: true });
+    }
+  }
+
+  // Phase 1B: Re-enable matching .jar.disabled files (newest first, deduplicated!) BEFORE making any network upgrade calls!
+  const disabledNow = [];
+  try {
+    for (const f of fs.readdirSync(modsFolder)) {
+      if (!/\.jar\.disabled$/i.test(f)) continue;
+      const cleanName = f.replace(/\.disabled$/i, '');
+      if (meta[cleanName]?.corruptJar) continue;
+      let mtime = 0;
+      try { mtime = fs.statSync(path.join(modsFolder, f)).mtimeMs || 0; } catch (_) {}
+      disabledNow.push({ f, cleanName, score: Math.max(mtime, Number(meta[cleanName]?.updatedAt) || 0) });
+    }
+  } catch (_) {}
+  disabledNow.sort((a, b) => (b.score - a.score) || b.cleanName.localeCompare(a.cleanName, undefined, { numeric: true }));
+
+  for (const cand of disabledNow) {
+    if (isIdentityUserDisabled(cand.cleanName)) continue;
+    if (isModMatchingTarget(cand.cleanName)) {
+      const alreadyKept = kept.some((k) =>
+        areModsSameIdentity(meta[k], k, meta[cand.cleanName], cand.cleanName, hashHitByClean[k], hashHitByClean[cand.cleanName])
+      );
+      if (alreadyKept) continue;
+      const enabledDest = path.join(modsFolder, cand.cleanName);
+      const disFull = path.join(modsFolder, cand.f);
+      if (!fs.existsSync(enabledDest)) {
+        try {
+          fs.renameSync(disFull, enabledDest);
+          kept.push(cand.cleanName);
+          const hit = hashHitByClean[cand.cleanName];
+          if (hit && Array.isArray(hit.dependencies)) {
+            for (const d of hit.dependencies) {
+              if (d.dependency_type === 'required' && d.project_id) requiredDepIds.add(d.project_id);
+            }
+          }
+        } catch (_) {}
+      }
+    } else if (!incompatibleItems.some((it) => it.cleanName === cand.cleanName)) {
+      incompatibleItems.push({ cleanName: cand.cleanName, wasActive: false });
+    }
+  }
+
+  dedupeActiveModsByIdentity(modsFolder, meta);
+
+  // Phase 2: Query Modrinth ONLY for mods that do NOT already have a matching active build on disk!
+  const triedSlugs = new Set();
+  for (let i = 0; i < incompatibleItems.length; i++) {
+    const { cleanName, wasActive } = incompatibleItems[i];
+    if (isIdentityUserDisabled(cleanName)) continue;
+    const alreadySatisfied = kept.some((k) =>
+      areModsSameIdentity(meta[k], k, meta[cleanName], cleanName, hashHitByClean[k], hashHitByClean[cleanName])
+    ) || upgraded.some((u) =>
+      areModsSameIdentity(meta[u.to], u.to, meta[cleanName], cleanName, hashHitByClean[u.to], hashHitByClean[cleanName])
+    );
+    if (alreadySatisfied) continue;
+
+    const slugOrId = inferSlugOrProjectId(cleanName);
+    const slugKey = String(slugOrId || '').toLowerCase();
+    if (slugOrId && !triedSlugs.has(slugKey)) {
+      triedSlugs.add(slugKey);
+      onStatus?.(`🔄 [${i + 1}/${incompatibleItems.length}] Đang tìm bản ${mcVersion} (${effectiveLoader.toUpperCase()}) cho Mod "${cleanName}"...`);
+      try {
         const res = await installModrinthProject({
           slug: slugOrId,
           projectType: 'mod',
@@ -6904,16 +7509,12 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
       } catch (_) {}
     }
 
-    // No compatible build found -> keep disabled so it doesn't crash the game
-    if (!isDisabled && fs.existsSync(fullPath)) {
-      try { fs.renameSync(fullPath, `${fullPath}.disabled`); } catch (_) {}
-    }
-    if (!isDisabled) {
+    if (wasActive) {
       disabledIncompatible.push(cleanName);
     }
   }
 
-  // 1. Ensure all required dependencies discovered from Modrinth SHA-1 lookup are installed
+  // Phase 3: Ensure required dependencies discovered from Modrinth SHA-1 lookup are installed
   for (const depProjectId of requiredDepIds) {
     try {
       const depRes = await installModrinthProject({
@@ -6930,9 +7531,28 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
     } catch (_) {}
   }
 
-  // 2. Also inspect fabric.mod.json / quilt.mod.json (including nested JIJ) of all active jars so dependencies like fabric-language-kotlin are 100% guaranteed installed!
+  // Phase 4: Inspect fabric.mod.json / quilt.mod.json (including 2-level nested JIJ) of all active jars
   const jarResolvedDeps = await autoResolveMissingJarDependencies(modsFolder, rootDir, mcVersion, effectiveLoader, onStatus);
   jarResolvedDeps.forEach((dName) => depsInstalled.push(dName));
+
+  // Phase 5: Quarantine any active Fabric/Quilt mod whose required parent dependency STILL could not be satisfied
+  const quarantined = quarantineUnresolvedFabricMods(modsFolder, effectiveLoader, onStatus);
+  quarantined.forEach((q) => {
+    if (!disabledIncompatible.includes(q.fileName)) disabledIncompatible.push(q.fileName);
+  });
+
+  // Phase 6: OptiFine vs Sodium/Iris conflict isolation + final dedupe
+  try {
+    const activeFinal = fs.readdirSync(modsFolder).filter((f) => /\.jar$/i.test(f));
+    if (
+      activeFinal.some((f) => isProprietaryOptifineFile(f)) &&
+      activeFinal.some((f) => /^(?:sodium|embeddium|rubidium|iris|oculus)[-_+.]/i.test(f))
+    ) {
+      parkOptifineConflictsInMods(modsFolder, 'for-parity');
+    }
+  } catch (_) {}
+  const finalMeta = readModsMetaManifest(modsFolder);
+  dedupeActiveModsByIdentity(modsFolder, finalMeta);
 
   return {
     ok: true,
@@ -6941,6 +7561,7 @@ async function syncAllLocalModsToVersion({ gameDir, instanceDir, mcVersion = '1.
     upgraded,
     kept,
     disabledIncompatible,
+    quarantined,
     depsInstalled: Array.from(new Set(depsInstalled))
   };
 }
@@ -10930,5 +11551,11 @@ module.exports = {
   inspectDeepGameSmoothState,
   applyDeepGameSmoothEngine,
   revertDeepGameSmoothEngine,
-  applyDeepSmoothJvmFlags
+  applyDeepSmoothJvmFlags,
+  quarantineUnresolvedFabricMods,
+  removeConflictingModJars,
+  extractModBaseStem,
+  extractMcVerFromFilename,
+  isJarZipCorruptOrEmpty,
+  areModsSameIdentity
 };
