@@ -1674,7 +1674,7 @@ function applyGentleJvmTuning(args, { javaMajor = 0, cpuCores = os.cpus().length
  */
 const DEEP_SMOOTH_BACKUP_FILE = '.blockway-deep-smooth-backup.json';
 const DEEP_SMOOTH_STATE_FILE = '.blockway-deep-smooth-state.json';
-const DEEP_SMOOTH_VERSION = 1;
+const DEEP_SMOOTH_VERSION = 2;
 const DEEP_SMOOTH_ALL_LAYERS = [
   'vanilla_io',
   'optifine',
@@ -2093,21 +2093,25 @@ function applyDeepGameSmoothEngine({
       );
     }
 
-    // LAYER 3: config/sodium-options.json & config/embeddium-options.json
+    // LAYER 3: config/sodium-options.json & config/embeddium-options.json (supports both Sodium 0.5/Embeddium & Sodium 0.6-0.9+ schemas)
     if (normLayers.includes('sodium')) {
       const sodiumPatch = {
         performance: {
           always_defer_chunk_updates: true,
+          chunk_build_defer_mode: 'ALWAYS',
           animate_only_visible_textures: true,
           use_entity_culling: true,
           use_fog_occlusion: true,
           use_block_face_culling: true,
-          use_no_error_gl_context: true
+          use_no_error_gl_context: true,
+          use_no_error_g_l_context: true
         },
         advanced: {
+          use_advanced_staging_buffers: true,
           cpu_render_ahead_limit: normProfile === 'esports' ? 1 : 2
         },
         quality: {
+          hidden_fluid_culling: true,
           enable_vignette: false,
           ...(normProfile === 'ultra_low' ? { leaves_quality: 'FAST', weather_quality: 'FAST' } : {})
         }
@@ -2122,7 +2126,7 @@ function applyDeepGameSmoothEngine({
       ) {
         applyJsonConfigFile('config/embeddium-options.json', sodiumPatch);
       }
-      highlights.push(`sodium-options.json: Hoãn chunk đa luồng, chỉ vẽ hoạt ảnh nhìn thấy & hàng đợi khung hình = ${normProfile === 'esports' ? 1 : 2}`);
+      highlights.push(`sodium-options.json: Hoãn chunk đa luồng (ALWAYS), ẩn chất lỏng khuất & hàng đợi khung hình = ${normProfile === 'esports' ? 1 : 2}`);
     }
 
     // LAYER 4: config/modernfix-mixins.properties (-35~50% RAM & 2x Boot Speed, without background Mixin audit freeze)
@@ -2141,21 +2145,25 @@ function applyDeepGameSmoothEngine({
       highlights.push('modernfix-mixins.properties: Kích hoạt dynamic_resources=true & tắt clear_mixin_classinfo (tránh khựng luồng nạp thế giới)');
     }
 
-    // LAYER 5: config/immediatelyfast.json & config/entityculling.json
+    // LAYER 5: config/immediatelyfast.json & config/entityculling.json (supports both 1.20 & 1.21+/26.2 ImmediatelyFast 1.14+ schemas)
     if (normLayers.includes('culling_hud')) {
       applyJsonConfigFile('config/immediatelyfast.json', {
         hud_batching: true,
+        enhanced_batching: true,
         fast_text_lookup: true,
         fast_buffer_upload: true,
+        skip_text_translucency_sorting: true,
+        avoid_redundant_framebuffer_switching: true,
         font_atlas_resizing: true,
         map_atlas_generation: true
       });
       applyJsonConfigFile('config/entityculling.json', {
         tickCulling: true,
         renderNametagsThroughWalls: true,
+        blockEntityFrustumCulling: true,
         sleepDelay: normProfile === 'esports' ? 5 : 10
       });
-      highlights.push('immediatelyfast.json & entityculling.json: Gom mẻ vẽ HUD 1-lần-gọi GPU & ngừng tính toán thực thể khuất tường');
+      highlights.push('immediatelyfast.json & entityculling.json: Gom mẻ vẽ enhanced_batching 1-lần-gọi GPU & ngừng tính toán thực thể khuất tường');
     }
 
     // LAYER 6: JVM Safepoint & Network Low-Latency
