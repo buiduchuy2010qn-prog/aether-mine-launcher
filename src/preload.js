@@ -167,6 +167,21 @@ contextBridge.exposeInMainWorld('aetherAPI', {
   applyDeepSmooth: (params) => ipcRenderer.invoke('deepsmooth:apply', params),
   revertDeepSmooth: (params) => ipcRenderer.invoke('deepsmooth:revert', params),
 
+  // v41.2.0 PRO — 5 Opt-In Power Upgrades (Headless Server, Visual Boost, Framed Screenshots, Cloud Prefs, Worldgen Boost)
+  inspectLocalServer: (params) => ipcRenderer.invoke('localServer:inspect', params),
+  startLocalServer: (params) => ipcRenderer.invoke('localServer:start', params),
+  stopLocalServer: () => ipcRenderer.invoke('localServer:stop'),
+  sendLocalServerCmd: (command) => ipcRenderer.invoke('localServer:command', command),
+  onLocalServerLog: (cb) => ipcRenderer.on('localServer:log', (_e, line) => cb(line)),
+  onLocalServerState: (cb) => ipcRenderer.on('localServer:state', (_e, state) => cb(state)),
+  getVisualBoostStatus: (params) => ipcRenderer.invoke('visualBoost:status', params),
+  toggleVisualBoostPack: (params) => ipcRenderer.invoke('visualBoost:toggle', params),
+  copyDataUrlToClipboard: (dataUrl) => ipcRenderer.invoke('screenshots:copy-dataurl', dataUrl),
+  exportPlayerPrefs: (params) => ipcRenderer.invoke('prefs:export', params),
+  importPlayerPrefs: (params) => ipcRenderer.invoke('prefs:import', params),
+  getWorldgenBoostStatus: (params) => ipcRenderer.invoke('worldgenBoost:status', params),
+  installWorldgenBoostPack: (params) => ipcRenderer.invoke('worldgenBoost:install', params),
+
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: (downloadUrl, latestVersion) => ipcRenderer.invoke('updater:install-now', downloadUrl, latestVersion),
   onUpdateProgress: (cb) => ipcRenderer.on('updater:progress', (_e, pct) => cb(pct)),

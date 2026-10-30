@@ -1,4 +1,4 @@
-# ⚡ BlockWay Launcher v41.1.0 PRO — Every World, One Place (`blockway-launcher`)
+# ⚡ BlockWay Launcher v41.2.0 PRO — Every World, One Place (`blockway-launcher`)
 
 <p align="center">
   <img src="src/ui/app-banner.png" alt="BlockWay Launcher — Every World, One Place" width="100%" style="border-radius:14px;" />
@@ -6,19 +6,30 @@
 
 <p align="center">
   <a href="https://buiduchuy2010qn-prog.github.io/blockway-launcher/"><img src="https://img.shields.io/badge/Official_Website-BlockWay_Launcher-0284c7?style=for-the-badge" alt="Website" /></a>
-  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v41.1.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
+  <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher/releases/latest"><img src="https://img.shields.io/badge/Release-v41.2.0_PRO-22c55e?style=for-the-badge" alt="Latest Release" /></a>
   <a href="https://github.com/buiduchuy2010qn-prog/blockway-launcher"><img src="https://img.shields.io/badge/Minecraft_1.7.10_to_26.3-7_Core_Loaders-06b6d4?style=for-the-badge" alt="Loaders" /></a>
 </p>
 
-**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới sở hữu tính năng đặc biệt **⚡ Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click**, **Menu Nhanh Tài Khoản & Ảnh Avatar Hồ Sơ Riêng**, **Trợ Lý OptiFine Đa Nền Tảng (`Fabric` • `Forge` • `NeoForge` • `Quilt` • `OptiFine`)**, **Ảnh bản đồ 16:9 trực quan cho Kho Hạt Giống (Seed Đẹp) & Kho Bản Đồ / Datapack**, **Đóng gói gửi bộ Mod cho bạn bè 2.0**, **Servers 2.0 ping thật & vào thẳng 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
+**BlockWay Launcher** (*Every World, One Place* — phát triển bởi **buiduchuy2010qn-prog**) là trình khởi chạy Minecraft thế hệ mới sở hữu **🖥️ Trạm Server Ngầm `0% GPU` kèm Tư Vấn Cấu Hình Thông Minh**, **🎨 Kho Làm Đẹp Không Tụt FPS 1-Click**, **📸 Studio Ảnh Chụp 2.0 (Copy Kèm Khung Thông Tin)**, **☁️ Sao Lưu & Khôi Phục Phím Tắt + Danh Sách Server**, **🚀 Tăng Tốc Nạp Thế Giới Đa Nhân**, **⚡ Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click**, hỗ trợ đầy đủ cả **Tài khoản Bản quyền Microsoft**, **Chế độ Offline / Crack (chơi miễn phí)** và **Tài khoản Đám mây 24/7** kèm **Mã OTP 6 số gửi thẳng về Gmail**.
 
 🌐 **Trang chủ chính thức:** **[https://buiduchuy2010qn-prog.github.io/blockway-launcher/](https://buiduchuy2010qn-prog.github.io/blockway-launcher/)**
 
 ---
 
-## 📦 Mới trong phiên bản `v41.1.0 PRO`
+## 📦 Mới trong phiên bản `v41.2.0 PRO`
 
-1. **⚡ Tính Năng Đặc Biệt: Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click (MỚI `v41.1.0 PRO`):**
+1. **🖥️ Trạm Server Ngầm `0% GPU` & Tư Vấn Cấu Hình Máy Chủ Thông Minh (MỚI `v41.2.0 PRO`):**
+   - **Tư vấn cấu hình tự động trước khi mở Server:** Tự động đo dung lượng RAM & số luồng CPU của máy chủ để đưa ra khuyến cáo rõ ràng (máy `< 8 GB RAM` được khuyên dùng **Chơi Chung LAN `e4mc`** để không quá tải khi vừa mở Server vừa bật game 3D; máy `8–16 GB+ RAM` được tự động gợi ý mức RAM Server tối ưu).
+   - **Chạy `server.jar` chính chủ ở chế độ `nogui` (`0% GPU`):** Tự tải `server.jar` Mojang, tự điền `eula=true`, cho phép bật hỗ trợ bạn bè Offline/Crack (`online-mode=false`), copy map từ Chơi Đơn sang Server và tích hợp sẵn các nút lệnh Admin 1-Click (`👑 Cấp OP`, `☀️ Trời sáng`, `🌤️ Tạnh mưa`, `🛡️ Giữ đồ khi chết`, `💾 Lưu Map`).
+2. **🎨 Kho Làm Đẹp Không Tụt FPS 1-Click (MỚI `v41.2.0 PRO`):**
+   - Tích hợp sẵn 4 gói làm đẹp nhẹ máy, ai cần mục nào chỉ việc bấm bật mục đó: **🔥 Lửa Thấp PvP & Bỏ Mờ Bí Ngô** (tạo trực tiếp gói Resource Pack nội bộ trong `< 15 ms`), **💎 Viền Quặng Phát Sáng** (dễ nhìn Kim Cương & Khoáng sản trong hang tối không cần Shader), **🐾 Cử Động Sinh Vật Sống Động (Fresh Animations + EMF/ETF)** và **🔊 Âm Thanh Vòm Hang Động & Tiếng Bước Chân**.
+3. **📸 Studio Ảnh Chụp 2.0 — Copy Kèm Khung Thông Tin 1-Click (MỚI `v41.2.0 PRO`):**
+   - Bổ sung nút **🏷️ Khung** trên từng ảnh chụp `F2` và trong chế độ phóng to để tự động đóng khung thông tin phía dưới ảnh (`BlockWay Launcher • Phiên bản MC • Tên người chơi • Ngày chụp`) và copy thẳng vào Clipboard để `Ctrl+V` dán ngay lên Zalo, Discord, Messenger.
+4. **☁️ Sao Lưu & Khôi Phục Phím Tắt + Danh Sách Server 1-Click (MỚI `v41.2.0 PRO`):**
+   - Xuất và nạp lại toàn bộ phím điều khiển (`key_*`), độ nhạy chuột, âm lượng, góc nhìn `FOV` và danh sách máy chủ `servers.dat` khi chuyển sang phiên bản Minecraft mới hoặc cài lại máy.
+5. **🚀 Tăng Tốc Nạp Thế Giới Đa Nhân & Tinh Chỉnh Giao Diện Dễ Đọc (MỚI `v41.2.0 PRO`):**
+   - Cài đặt 1-Click bộ Mod nạp Chunk đa luồng (`C2ME`, `Noisium`, `Faster Random`, `ScalableLux`) giúp bay Elytra mượt mà; đồng thời tinh gọn câu chữ và độ đậm nhạt phông chữ trên toàn giao diện để nhìn thoáng mắt, rõ ràng trong mọi chủ đề sáng/tối.
+6. **⚡ Tính Năng Đặc Biệt: Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game & Hoàn Tác 1-Click (`v41.1.0 PRO`):**
    - **Can thiệp trực tiếp vào tệp cấu hình thực của Minecraft & Modpack:** Không chỉ chỉnh tham số khởi chạy bên ngoài, BlockWay đi sâu tối ưu đồng bộ 6 tầng tệp bên trong `.minecraft` hoặc từng gói Modpack riêng:
      1. **`options.txt` (Async Disk I/O & Raw Input 1:1):** Ghi `syncChunkWrites:false` triệt tiêu hiện tượng khựng 0.5s khi lưu chunk trên ổ cứng Windows, tắt phím đọc `Ctrl+B` (`narrator:0`), bật `rawMouseInput:true` và cân chỉnh khung hình.
      2. **`optionsof.txt` + Khóa Bảo Vệ Shader Tự Động:** Bật `ofSmartAnimations`, `ofRenderRegions`, `ofFastMath`, `ofSmoothFps`; đặc biệt **tự động phát hiện gói Shader đang bật** (`iris.properties` / `optionsshaders.txt` / `oculus.properties`) để giữ `ofFastRender:false`, ngăn lỗi đen màn hình hoặc văng game.

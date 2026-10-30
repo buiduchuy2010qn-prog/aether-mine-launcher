@@ -43,7 +43,11 @@ const {
   inspectLocalWorldDetails, rescuePatchLocalWorld, getCuratedSeedsVault, createStandaloneQuickWorld,
   getReplayStudioStatus, installReplayStudioPack,
   saveCustomLocalCape, removeCustomLocalCape, getCustomLocalCape,
-  inspectDeepGameSmoothState, applyDeepGameSmoothEngine, revertDeepGameSmoothEngine
+  inspectDeepGameSmoothState, applyDeepGameSmoothEngine, revertDeepGameSmoothEngine,
+  inspectLocalServerStatus, startLocalHeadlessServer, sendLocalServerCommand, stopLocalHeadlessServer,
+  getVisualBoostStatus, toggleVisualBoostPack,
+  exportPlayerPrefsSnapshot, importPlayerPrefsSnapshot,
+  getWorldgenBoostStatus, installWorldgenBoostPack
 } = require('./launcher-engine');
 const {
   loginWithMicrosoftModal,
@@ -2617,6 +2621,160 @@ ipcMain.handle('deepsmooth:revert', async (_e, params = {}) => {
     return { ok: false, error: err.message };
   }
 });
+
+/* ============================================================================
+   v41.2.0 PRO — 5 OPT-IN POWER UPGRADES IPC HANDLERS
+   ============================================================================ */
+ipcMain.handle('localServer:inspect', async (_e, params = {}) => {
+  try {
+    return inspectLocalServerStatus({
+      ...(params || {}),
+      gameDir: resolveUserGameDir(params?.gameDir)
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('localServer:start', async (_e, params = {}) => {
+  try {
+    return await startLocalHeadlessServer(
+      { ...(params || {}), gameDir: resolveUserGameDir(params?.gameDir) },
+      {
+        onLog: (line) => { mainWindow?.webContents.send('localServer:log', line); },
+        onStatus: (st) => { mainWindow?.webContents.send('mc:status', st); },
+        onProgress: (p) => { mainWindow?.webContents.send('mc:progress', p); },
+        onStateChange: (st) => { mainWindow?.webContents.send('localServer:state', st); }
+      }
+    );
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('localServer:stop', async () => {
+  try {
+    return await stopLocalHeadlessServer();
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('localServer:command', async (_e, command = '') => {
+  try {
+    return sendLocalServerCommand(command);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+app.on('before-quit', () => {
+  try { stopLocalHeadlessServer(); } catch (_) {}
+});
+
+ipcMain.handle('visualBoost:status', async (_e, params = {}) => {
+  try {
+    return getVisualBoostStatus({
+      ...(params || {}),
+      gameDir: resolveUserGameDir(params?.gameDir)
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('visualBoost:toggle', async (_e, params = {}) => {
+  try {
+    return await toggleVisualBoostPack(
+      { ...(params || {}), gameDir: resolveUserGameDir(params?.gameDir) },
+      (st) => { mainWindow?.webContents.send('mc:status', st); }
+    );
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('screenshots:copy-dataurl', async (_e, dataUrl = '') => {
+  try {
+    if (!dataUrl || !String(dataUrl).startsWith('data:image/')) {
+      return { ok: false, error: 'Dữ liệu ảnh không hợp lệ.' };
+    }
+    const img = nativeImage.createFromDataURL(String(dataUrl));
+    if (img.isEmpty()) return { ok: false, error: 'Không thể giải mã ảnh khung.' };
+    clipboard.writeImage(img);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('prefs:export', async (_e, params = {}) => {
+  try {
+    let saveToFilePath = '';
+    if (params?.promptSaveDialog) {
+      const saveRes = await dialog.showSaveDialog(mainWindow, {
+        title: 'Sao lưu Phím tắt & Danh sách Server (.bwprefs.json)',
+        defaultPath: 'BlockWay-Keybinds-Servers.bwprefs.json',
+        filters: [{ name: 'BlockWay Preferences (.bwprefs.json)', extensions: ['json'] }]
+      });
+      if (saveRes.canceled || !saveRes.filePath) return { ok: false, canceled: true };
+      saveToFilePath = saveRes.filePath;
+    }
+    const out = exportPlayerPrefsSnapshot({
+      ...(params || {}),
+      gameDir: resolveUserGameDir(params?.gameDir),
+      saveToFilePath
+    });
+    return { ...out, filePath: saveToFilePath };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('prefs:import', async (_e, params = {}) => {
+  try {
+    let filePath = params?.filePath || '';
+    if (params?.promptOpenDialog && !filePath) {
+      const openRes = await dialog.showOpenDialog(mainWindow, {
+        title: 'Chọn tệp Sao lưu Phím tắt & Server (.bwprefs.json / .json)',
+        properties: ['openFile'],
+        filters: [{ name: 'BlockWay Preferences (.json)', extensions: ['json'] }]
+      });
+      if (openRes.canceled || !openRes.filePaths?.length) return { ok: false, canceled: true };
+      filePath = openRes.filePaths[0];
+    }
+    return importPlayerPrefsSnapshot({
+      ...(params || {}),
+      gameDir: resolveUserGameDir(params?.gameDir),
+      filePath
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worldgenBoost:status', async (_e, params = {}) => {
+  try {
+    return getWorldgenBoostStatus({
+      ...(params || {}),
+      gameDir: resolveUserGameDir(params?.gameDir)
+    });
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('worldgenBoost:install', async (_e, params = {}) => {
+  try {
+    return await installWorldgenBoostPack(
+      { ...(params || {}), gameDir: resolveUserGameDir(params?.gameDir) },
+      (st) => { mainWindow?.webContents.send('mc:status', st); }
+    );
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 
 
 

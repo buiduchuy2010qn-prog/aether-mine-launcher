@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; base-uri 'self';" />
-  <title>BlockWay Launcher v41.1.0 PRO — Every World, One Place</title>
+  <title>BlockWay Launcher v41.2.0 PRO — Every World, One Place</title>
   <link rel="icon" href="app-icon.ico" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="layout-v33.css" />
@@ -23,7 +23,7 @@
         </div>
         <button class="titlebar-update-btn" id="btnTitlebarCheckUpdate" title="Kiểm tra và cập nhật phiên bản mới từ GitHub">
           <span>🔄 Kiểm tra cập nhật</span>
-          <strong id="titlebarUpdateVer">v41.1.0</strong>
+          <strong id="titlebarUpdateVer">v41.2.0</strong>
         </button>
       </div>
 
@@ -949,7 +949,7 @@
                 <h2>🧩 Kho Mod, Shader &amp; Resource Pack (Modrinth Official)</h2>
                 <span class="installed-count-tag" id="modTotalCounterBadge">77,600+ Gói</span>
               </div>
-              <p>Tự động lọc, cài kèm thư viện bắt buộc (Fabric API, GeckoLib...) và cài thẳng vào <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong> trên máy bạn.</p>
+              <p>Tự động cài kèm thư viện bắt buộc vào <strong id="modStoreVerLabel">1.21.4 (FABRIC)</strong>.</p>
             </div>
             <div class="mods-header-actions">
               <button class="btn-fps-boost-1click" id="btnStoreFpsBoost" title="Tự động tải bộ Mod tối ưu X3 FPS (Sodium, Lithium, FerriteCore, EntityCulling, ModernFix, Iris)">
@@ -957,6 +957,9 @@
               </button>
               <button class="btn-sync-skin is-ok" id="btnModsOptifineHub" title="Trang bị 1-Click trọn bộ tính năng OptiFine (Shader, Zoom phím C, Đuốc sáng hang, Nối kính, Fresh Animations) hoặc cài tệp OptiFine.jar">
                 🔆 Bộ Chuẩn OptiFine
+              </button>
+              <button class="btn-sync-skin" id="btnModsVisualBoost" title="Mở Kho Làm Đẹp 0% Lag: Lửa thấp PvP, Viền quặng phát sáng, Hoạt ảnh sinh vật, Âm thanh 3D &amp; Tăng tốc tải Chunk">
+                🎨 Làm Đẹp 0% Lag
               </button>
               <button class="btn-sync-skin is-turbo" id="btnModsTurboSmooth" title="Mở Turbo Smooth Core™: Can thiệp sâu 6 tầng tệp cấu hình Sodium, OptiFine, ModernFix, ImmediatelyFast &amp; options.txt">
                 ⚡ Can Thiệp File Mượt
@@ -1084,7 +1087,7 @@
                 <h2>📦 Kho Modpack Toàn Cầu — Cài Tự Động 1-Click</h2>
                 <span class="installed-count-tag" id="packsTotalBadge">40.000+ Gói</span>
               </div>
-              <p>Tìm và cài tự động gói sinh tồn có sẵn (OneBlock, SkyBlock, Đại dịch Zombie, 100 Days, RPG, Create...) từ <strong>Modrinth • CurseForge • FTB • Technic • ATLauncher</strong>. Mỗi gói có thư mục riêng, tự cài đúng phiên bản Minecraft, Loader (Fabric / Forge / NeoForge / Quilt) và Java.</p>
+              <p>Cài tự động gói sinh tồn (OneBlock, SkyBlock, Zombie, RPG, Create) từ <strong>Modrinth • CurseForge • FTB • Technic</strong>.</p>
             </div>
             <div class="packs-header-actions">
               <button class="btn-fps-boost-1click" id="btnQuickInstallSkyBlock" title="Tạo ngay gói Đảo Sinh Tồn SkyBlock chuẩn (Cây Sồi + Rương Lava/Băng + Đảo Cát — vào Chơi Đơn bấm Tạo Thế Giới Mới là ra Đảo Bay ngay!)">🏝️ Tạo Đảo SkyBlock (1-Click)</button>
@@ -1204,10 +1207,11 @@
                 <h2>🌐 Chơi Chung Bạn Bè &amp; Máy Chủ Multiplayer</h2>
                 <span class="installed-count-tag" id="serversCountBadge">18 Server</span>
               </div>
-              <p>Chơi chung với bạn bè qua <strong>Mạng LAN (Wi-Fi)</strong>, mở thế giới qua <strong>Internet 1-Click (e4mc)</strong>, vào <strong>Phòng BlockWay 6 ký tự</strong> (tự đồng bộ phiên bản &amp; Modpack) hoặc tham gia Server lớn.</p>
+              <p>Chơi chung qua <strong>Wi-Fi LAN</strong>, <strong>Internet 1-Click (e4mc)</strong>, <strong>Mã Phòng 6 Ký Tự</strong> hoặc mở Trạm Server riêng.</p>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="field-hint-mini" id="activeServerBadge">Chế độ: Vào Menu chính</span>
+              <button class="btn-fps-boost-1click" id="btnOpenLocalServerStudio" title="Dành cho máy làm chủ: Tự tải server.jar và chạy máy chủ ngầm 0% GPU (có khuyến cáo cấu hình máy tự động)">🖥️ Mở Trạm Server Ngầm (Tùy chọn)</button>
               <button class="btn-sync-skin" id="btnPingAllServers">📡 Kiểm tra Ping</button>
               <button class="vtype-btn" id="btnSyncServersDat" title="Đồng bộ 2 chiều với danh sách Multiplayer bên trong Minecraft (servers.dat)">🔄 Đồng bộ với game</button>
             </div>
@@ -1228,27 +1232,27 @@
             <!-- v40.6 PRO: CO-OP VOICE CHAT & TEAM SURVIVAL PACK 1-CLICK -->
             <div class="coop-combo-bar" id="coopComboBar">
               <div class="ccb-left">
-                <span class="ccb-title">🎙️ Combo Chơi Chung Nâng Cao (Tự đồng bộ cho bạn bè qua Mã Phòng):</span>
+                <span class="ccb-title">🎙️ Tiện ích chơi chung:</span>
                 <label class="ccb-check" title="Tự cài Simple Voice Chat và cấu hình sẵn đàm thoại khoảng cách gần trong game (bấm phím V để nói)">
                   <input type="checkbox" id="chkCoopVoiceChat" checked />
-                  <span>🗣️ Đàm thoại trong game (Simple Voice Chat)</span>
+                  <span>🗣️ Voice Chat (Phím V)</span>
                 </label>
                 <label class="ccb-check" title="Tự cài Bản đồ Minimap Xaero, Jade xem thông tin khối, Carry On bế rương/thú cưng & Cột dịch chuyển Waystones">
                   <input type="checkbox" id="chkCoopTeamQol" />
-                  <span>🧭 Bộ Tổ Đội Sinh Tồn (Minimap + Jade + Bế Rương + Waystones)</span>
+                  <span>🧭 Tổ Đội Sinh Tồn (Minimap + Jade + Waystones)</span>
                 </label>
               </div>
-              <button type="button" class="btn-sync-skin" id="btnCoopInstallCombo" title="Tải và trang bị ngay Combo Voice Chat & Tổ Đội cho phiên bản đang chọn">🎙️ Cài Sẵn Combo Voice &amp; Tổ Đội</button>
+              <button type="button" class="btn-sync-skin" id="btnCoopInstallCombo" title="Tải và trang bị ngay Combo Voice Chat & Tổ Đội cho phiên bản đang chọn">🎙️ Cài Sẵn Combo</button>
             </div>
 
             <div class="coop-modes-3grid">
               <!-- MODE 1: LAN / WIFI -->
               <div class="coop-mode-box">
                 <div class="cmb-head">
-                  <span class="cmb-badge lan">📡 Chế Độ 1 • Không Cần Internet</span>
-                  <strong>Chơi Chung Cùng Wi-Fi / Mạng LAN</strong>
+                  <span class="cmb-badge lan">📡 Chế Độ 1 • Cùng Wi-Fi</span>
+                  <strong>Chơi Chung Mạng LAN / Radmin</strong>
                 </div>
-                <p class="cmb-desc">Tự động dò thế giới đang bấm <em>Open to LAN</em> trong cùng mạng Wi-Fi / dây LAN hoặc Radmin VPN. Hỗ trợ cài Mod mở LAN cho cả bạn bè dùng tài khoản Offline.</p>
+                <p class="cmb-desc">Tự dò phòng đang bấm <em>Open to LAN</em> trong cùng Wi-Fi và hỗ trợ cả tài khoản Offline.</p>
                 <div class="cmb-ip-strip" id="coopLocalIpStrip">🖧 IP LAN máy bạn: <strong>Đang dò...</strong></div>
                 <div class="cmb-actions">
                   <button class="btn-sync-skin" id="btnCoopScanLan">🔍 Quét Phòng LAN</button>
@@ -1262,10 +1266,10 @@
               <!-- MODE 2: INTERNET 1-CLICK E4MC -->
               <div class="coop-mode-box highlight">
                 <div class="cmb-head">
-                  <span class="cmb-badge internet">🌐 Chế Độ 2 • Qua Mạng Internet</span>
+                  <span class="cmb-badge internet">🌐 Chế Độ 2 • Qua Internet</span>
                   <strong>Mở Thế Giới Qua Internet 1-Click (e4mc)</strong>
                 </div>
-                <p class="cmb-desc">Không cần mở Port modem hay cài phần mềm phụ! BlockWay tự cài <strong>e4mc</strong>, mở game và tự lấy <strong>Link IP Internet + Mã Phòng 6 Ký Tự</strong> ngay khi bạn bấm <em>Open to LAN</em> trong thế giới đơn.</p>
+                <p class="cmb-desc">Không cần mở Port modem! Tự cài <strong>e4mc</strong> và tạo <strong>Mã Phòng 6 Ký Tự</strong> ngay khi bấm <em>Open to LAN</em>.</p>
                 <div class="cmb-steps">
                   <span>① Bấm nút dưới</span>
                   <span>② Vào Map → Esc → Open to LAN</span>
@@ -1279,10 +1283,10 @@
               <!-- MODE 3: BLOCKWAY 6-CHAR ROOM CODE -->
               <div class="coop-mode-box">
                 <div class="cmb-head">
-                  <span class="cmb-badge room">🎟️ Chế Độ 3 • Tự Đồng Bộ Phiên Bản</span>
-                  <strong>Mã Phòng BlockWay (6 Ký Tự / Mã Mời)</strong>
+                  <span class="cmb-badge room">🎟️ Chế Độ 3 • Tự Khớp Phiên Bản</span>
+                  <strong>Mã Phòng BlockWay (6 Ký Tự)</strong>
                 </div>
-                <p class="cmb-desc">Nhập <strong>Mã phòng 6 ký tự</strong> (VD: <code>BW7K2X</code>) hoặc <strong>Mã mời BW-...</strong> của bạn bè — Launcher tự kiểm tra đúng <strong>Phiên bản MC + Loader + Modpack</strong> và kết nối thẳng!</p>
+                <p class="cmb-desc">Nhập <strong>Mã phòng 6 ký tự</strong> (VD: <code>BW7K2X</code>) — tự khớp đúng phiên bản MC + Modpack và vào thẳng!</p>
                 <div class="coop-join-row">
                   <input type="text" id="coopJoinCodeInput" class="pro-input" placeholder="Nhập Mã phòng (VD: BW7K2X) hoặc BW-..." />
                   <button class="btn-install-mod" id="btnCoopJoinRoom">▶ Vào Phòng</button>
@@ -1304,11 +1308,11 @@
           <div class="bento-card pvp-client-banner" id="pvpClientModeCard">
             <div class="pvp-banner-left">
               <div class="pvp-title-row">
-                <span class="pvp-badge-pill">⚔️ CHẾ ĐỘ CHIẾN ĐẤU PVP</span>
+                <span class="pvp-badge-pill">⚔️ CHẾ ĐỘ PVP</span>
                 <strong>Giao Diện PvP / BedWars 1-Click (Phong Cách Lunar Client)</strong>
                 <span class="installed-count-tag" id="pvpModeStateBadge">Đang tắt</span>
               </div>
-              <p class="pvp-desc-text">Tự trang bị <strong>Bảng phím bấm + tốc độ nhấp CPS, Tự chạy nhanh (ToggleSprint), Thanh độ bền Giáp &amp; Hiệu ứng Thuốc, Tâm ngắm động, Phóng to / Góc nhìn 360° và Lửa thấp không che màn hình</strong> — tắt 1-Click là trả lại nguyên vẹn bộ Mod sinh tồn!</p>
+              <p class="pvp-desc-text">Trang bị <strong>Keystrokes + CPS, ToggleSprint, Thanh độ bền Giáp, Tâm ngắm động, Zoom &amp; Lửa thấp</strong> — tắt 1-Click trả lại nguyên bộ Mod sinh tồn.</p>
             </div>
             <div class="pvp-banner-actions">
               <button type="button" class="btn-fps-boost-1click" id="btnTogglePvpClientMode">⚔️ Bật Chế Độ PvP 1-Click</button>
@@ -1498,22 +1502,22 @@
           <div class="subtab-header">
             <div class="subpage-title-block">
               <h2>🛠️ Công Cụ Hữu Ích &amp; Nhật Ký Hệ Thống (Console)</h2>
-              <p>Đồng bộ dữ liệu từ Launcher cũ, dọn dẹp bộ nhớ RAM, mở nhanh các thư mục tài nguyên và theo dõi tiến trình khởi chạy.</p>
+              <p>Các công cụ mở rộng 1-Click: cần mục nào thì bấm mở mục đó, gọn nhẹ và dễ đọc.</p>
             </div>
           </div>
 
           <div class="settings-bento-4" style="margin-bottom:16px;">
-            <!-- SIGNATURE FEATURE (v41.1.0 PRO): TURBO SMOOTH CORE™ — 6-LAYER DEEP GAME FILE OPTIMIZER -->
+            <!-- SIGNATURE FEATURE (v41.2.0 PRO): TURBO SMOOTH CORE™ — 6-LAYER DEEP GAME FILE OPTIMIZER -->
             <div class="bento-card settings-card-unit turbo-signature-card" id="turboSmoothSignatureCard" style="grid-column: 1 / -1;">
               <div class="dsp-head">
                 <div class="dsp-head-left" style="flex-wrap:wrap;gap:8px;">
-                  <span class="ds-sig-pill">★ TÍNH NĂNG ĐẶC BIỆT</span>
-                  <h3>⚡ Turbo Smooth Core™ — Can Thiệp Sâu 6 Tầng Tệp Cấu Hình Game</h3>
+                  <span class="ds-sig-pill">★ ĐẶC BIỆT</span>
+                  <h3>⚡ Turbo Smooth Core™ — Tối Ưu Sâu 6 Tầng Tệp Cấu Hình Game</h3>
                 </div>
                 <span class="installed-count-tag is-turbo-status" id="toolsDeepSmoothBadge">🟢 Tự bật khi Chơi</span>
               </div>
               <p class="settings-card-desc">
-                Tối ưu trực tiếp các tệp cấu hình thực bên trong <strong>.minecraft &amp; từng gói Modpack</strong>: triệt tiêu khựng 0.5s khi lưu chunk trên ổ cứng Windows, mở kết xuất nhanh kèm <strong>khóa bảo vệ Shader tự động</strong>, dựng địa hình đa luồng, giảm 35–50% RAM và gom nét vẽ HUD — <strong>tự lưu bản gốc, hoàn tác 1-Click giữ nguyên Phím tắt &amp; Thế giới!</strong>
+                Can thiệp trực tiếp tệp cấu hình <strong>.minecraft &amp; Modpack</strong>: chống khựng ổ cứng, bảo vệ Shader, đa luồng Sodium &amp; giảm 40% RAM (hoàn tác 1-Click).
               </p>
               <div class="turbo-layer-tags-row">
                 <span class="turbo-mini-tag">⚡ Chống đơ ổ cứng (options.txt)</span>
@@ -1530,6 +1534,25 @@
               </div>
             </div>
 
+            <!-- NEW v41.2 OPT-IN HUB: 5 POWER TOOLS (AI CẦN THÌ MỞ LÀM THÔI) -->
+            <div class="bento-card settings-card-unit" style="grid-column: 1 / -1;">
+              <div class="dsp-head">
+                <div class="dsp-head-left">
+                  <span class="card-dot emerald"></span>
+                  <h3>✨ Bộ Công Cụ Mở Rộng Tùy Chọn (Ai Cần Thì Bấm Mở)</h3>
+                </div>
+                <span class="installed-count-tag" id="toolsPowerSuiteBadge">5 Tiện ích 1-Click</span>
+              </div>
+              <p class="settings-card-desc">Tất cả đều hoạt động độc lập theo nhu cầu: Trạm Server Ngầm (có khuyến cáo cấu hình máy), Làm Đẹp 0% Lag, Tăng Tốc Tải Chunk &amp; Sao Lưu Phím Tắt.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-fps-boost-1click" id="btnToolsOpenLocalServer">🖥️ Trạm Server Ngầm (0% GPU)</button>
+                <button class="btn-sync-skin is-ok" id="btnToolsOpenVisualBoost">🎨 Kho Làm Đẹp 0% Lag</button>
+                <button class="btn-sync-skin" id="btnToolsWorldgenBoost">🚀 Tăng Tốc Tải Chunk Đa Nhân</button>
+                <button class="btn-sync-skin" id="btnToolsBackupPrefs">☁️ Sao Lưu Phím Tắt &amp; Server</button>
+                <button class="btn-sync-skin" id="btnToolsRestorePrefs">♻️ Khôi Phục Phím Tắt</button>
+              </div>
+            </div>
+
             <!-- TOOL 1: MIGRATE FROM OLD LAUNCHERS -->
             <div class="bento-card settings-card-unit">
               <div class="dsp-head">
@@ -1539,7 +1562,7 @@
                 </div>
                 <span class="installed-count-tag">1-Click Sync</span>
               </div>
-              <p class="settings-card-desc">Tự động quét và chuyển Thế giới (Saves), Mods, Shaders, Resource Packs, Server &amp; Tài khoản từ TLauncher, CurseForge, Prism, Modrinth sang BlockWay Launcher.</p>
+              <p class="settings-card-desc">Chuyển Map, Mods, Shaders, Server &amp; Tài khoản từ TLauncher, CurseForge, Prism, Modrinth sang BlockWay.</p>
               <button class="btn-fps-boost-1click" id="btnSettingsMigrate" style="width:100%;">🔄 Mở Trình Đồng Bộ Dữ Liệu (1-Click)</button>
             </div>
 
@@ -1552,7 +1575,7 @@
                 </div>
                 <span class="installed-count-tag" id="cpuBadge">Multi-Core</span>
               </div>
-              <p class="settings-card-desc">Giải phóng bộ nhớ đệm hệ thống ngay lập tức (<strong id="ramBadge">RAM trống: -- GB</strong>) hoặc tự động cài trọn bộ Mod tăng X3 FPS.</p>
+              <p class="settings-card-desc">Giải phóng bộ nhớ đệm (<strong id="ramBadge">RAM trống: -- GB</strong>) hoặc cài nhanh bộ Mod X3 FPS.</p>
               <div class="ram-mini-track" style="height:6px;margin-bottom:10px;"><div class="ram-mini-fill" id="ramLiveBarFill" style="width: 45%"></div></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-sync-skin" id="btnTrimRam" style="flex:1;"><span id="ramBoostText">⚡ Dọn RAM Ngay</span></button>
@@ -1570,7 +1593,7 @@
                 </div>
                 <span class="installed-count-tag">AI Doctor Tiếng Việt</span>
               </div>
-              <p class="settings-card-desc">Tự động phân tích nguyên nhân văng game bằng Tiếng Việt, phát hiện Mod xung đột (OptiFine/Sodium), tự cài thư viện thiếu (Fabric API, GeckoLib...) hoặc đồng bộ toàn bộ Mod theo phiên bản mới.</p>
+              <p class="settings-card-desc">Chẩn đoán lỗi văng game bằng Tiếng Việt, gỡ xung đột Mod và tự cài thư viện thiếu 1-Click.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-fps-boost-1click" id="btnOpenCrashDoctor" style="flex:1;">🩺 Mở Bác Sĩ Sửa Lỗi Crash</button>
                 <button class="btn-sync-skin" id="btnToolsSyncMods" style="flex:1;">🔄 Đồng Bộ Toàn Bộ Mod</button>
@@ -1582,11 +1605,11 @@
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot cyan"></span>
-                  <h3>Thư Viện Ảnh Chụp Trong Game (F2)</h3>
+                  <h3>Studio Ảnh Chụp Trong Game (F2)</h3>
                 </div>
                 <span class="installed-count-tag">Copy Zalo / Discord</span>
               </div>
-              <p class="settings-card-desc">Xem toàn bộ ảnh chụp màn hình trong game (<code>F2</code>), bấm 1-Click <strong>Copy ảnh dán thẳng vào Zalo / Discord / Messenger</strong> hoặc đặt làm hình nền Banner cho Launcher.</p>
+              <p class="settings-card-desc">Xem ảnh chụp (<code>F2</code>), bấm 1-Click <strong>Copy ảnh hoặc Đóng khung thông tin</strong> dán thẳng Zalo / Discord.</p>
               <button class="btn-sync-skin" id="btnToolsOpenScreenshots" style="width:100%;">📸 Mở Thư Viện Ảnh Chụp Trong Game</button>
             </div>
 
@@ -1599,7 +1622,7 @@
                 </div>
                 <span class="installed-count-tag" id="toolsKeyConflictBadge">Sẵn sàng kiểm tra</span>
               </div>
-              <p class="settings-card-desc">Chỉnh nhanh <strong>Góc nhìn FOV, Tầm nhìn chunk, Trần FPS, Tắt VSync/Tự nhảy, Sáng hang động 1-Click (Fullbright)</strong> ngay ngoài game và <strong>tự động phát hiện + gỡ trùng phím tắt</strong> khi cài nhiều Mod mà không chạm vào phím di chuyển <code>WASD</code>.</p>
+              <p class="settings-card-desc">Chỉnh nhanh <strong>FOV, Tầm nhìn, Trần FPS, Sáng hang động (Fullbright)</strong> và tự động gỡ trùng phím tắt Modpack.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-fps-boost-1click" id="btnToolsGameTweaker">🎛️ Mở Bảng Phím Tắt &amp; Cấu Hình Game</button>
                 <button class="btn-sync-skin" id="btnToolsQuickFullbright">💡 Bật / Tắt Sáng Hang Động (Fullbright 1-Click)</button>
@@ -1612,11 +1635,11 @@
               <div class="dsp-head">
                 <div class="dsp-head-left">
                   <span class="card-dot cyan"></span>
-                  <h3>🎬 Studio Quay Lại Trận Đấu &amp; Góc Máy Điện Ảnh (1-Click Replay Cam + Xuất .MP4)</h3>
+                  <h3>🎬 Studio Quay Lại Trận Đấu &amp; Góc Máy Điện Ảnh (Replay Cam + Xuất .MP4)</h3>
                 </div>
                 <span class="installed-count-tag" id="replayStudioBadge">Sẵn sàng trang bị</span>
               </div>
-              <p class="settings-card-desc">Tự động cài trình ghi hình 3D trong game (<strong>Flashback / ReplayMod</strong>) + <strong>Camera bay tự do (Freecam)</strong> kèm bộ kết xuất Video <code>.MP4</code> tự động — chơi mượt không tụt FPS, chơi xong mới xoay camera điện ảnh để xuất clip đăng TikTok / YouTube!</p>
+              <p class="settings-card-desc">Trang bị <strong>Flashback / ReplayMod + Camera tự do (Freecam)</strong> và bộ xuất Video <code>.MP4</code> đăng TikTok / YouTube.</p>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-fps-boost-1click" id="btnInstallReplayStudio">🎬 Trang Bị Bộ Quay Phim 3D &amp; Xuất Video MP4</button>
                 <button class="btn-sync-skin" id="btnOpenReplayVideosDir">📂 Mở Thư Mục Video Đã Xuất</button>
@@ -1632,7 +1655,7 @@
                 </div>
                 <span class="installed-count-tag" id="diskJunkBadge">Sẵn sàng quét</span>
               </div>
-              <p class="settings-card-desc">Tự động quét và giải phóng nhật ký nén cũ (<code>logs/*.gz</code>), báo cáo Crash cũ, bộ nhớ đệm tạm (<code>remappedJars</code>, <code>.tmp</code>) mà <strong>tuyệt đối không chạm vào Thế giới (Saves), Bản sao lưu, Ảnh chụp hay Mod đang bật</strong>.</p>
+              <p class="settings-card-desc">Dọn sạch <code>logs/*.gz</code>, báo cáo Crash cũ và file tạm (<code>.tmp</code>) — giữ nguyên 100% Thế giới, Ảnh chụp và Mod.</p>
               <div id="diskCleanerSummaryBox" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Bấm <strong>🔍 Quét Dung Lượng Rác</strong> để kiểm tra lượng bộ nhớ có thể giải phóng cho ổ SSD.</div>
               <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                 <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-muted);cursor:pointer;">
@@ -1684,7 +1707,7 @@
               </div>
             </div>
             <div class="console-terminal" id="consoleOutput">
-              <div class="log-entry info">[BlockWay Launcher v41.1.0 PRO] Sẵn sàng khởi chạy.</div>
+              <div class="log-entry info">[BlockWay Launcher v41.2.0 PRO] Sẵn sàng khởi chạy.</div>
             </div>
           </div>
         </section>
@@ -1696,7 +1719,7 @@
           <div class="subtab-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
             <div class="subpage-title-block">
               <h2>⚙️ Cài Đặt Hệ Thống, Cỡ Chữ, Hiển Thị &amp; Tối Ưu</h2>
-              <p>Quản lý Java Runtime, thư mục <code>.minecraft</code>, cỡ chữ hiển thị giao diện, chủ đề màu sắc và các tuỳ chọn tối ưu thông minh.</p>
+              <p>Quản lý Java Runtime, thư mục <code>.minecraft</code>, cỡ chữ hiển thị giao diện và các tuỳ chọn tối ưu.</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <button class="btn-sync-skin" id="btnOpenOfficialWebsite" title="Mở trang web quảng bá chính thức của BlockWay Launcher">
@@ -1706,7 +1729,7 @@
                 📦 GitHub Repo
               </button>
               <button class="btn-sync-skin" id="btnCheckUpdate">
-                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v41.1.0</span>)
+                🔄 Kiểm tra cập nhật (<span id="updateBtnText">v41.2.0</span>)
               </button>
             </div>
           </div>
@@ -1721,7 +1744,7 @@
                 </div>
                 <span class="installed-count-tag" id="settingsJavaBadge">Java 25/21 • Tự động</span>
               </div>
-              <p class="settings-card-desc">Đường dẫn tệp thực thi <code>javaw.exe</code> dùng để khởi chạy máy ảo Minecraft.</p>
+              <p class="settings-card-desc">Tệp thực thi Java tự động tương thích trên cả Windows &amp; Linux.</p>
               <div class="input-with-btn">
                 <input type="text" id="javaPathInput" class="pro-input path-ellipsis-input" title="Đường dẫn Java đang sử dụng" />
                 <button class="btn-sync-skin" id="btnCopyJavaPath">📋 Sao chép</button>
@@ -1742,7 +1765,7 @@
                 </div>
                 <span class="installed-count-tag">Lưu trữ cục bộ</span>
               </div>
-              <p class="settings-card-desc">Nơi lưu trữ toàn bộ Phiên bản, Thế giới chơi đơn, Mods, Shaders và Resource Packs.</p>
+              <p class="settings-card-desc">Nơi lưu trữ Phiên bản, Thế giới, Mods, Shaders và Resource Packs.</p>
               <div class="input-with-btn">
                 <input type="text" id="gameDirInput" class="pro-input path-ellipsis-input" title="Thư mục dữ liệu .minecraft" />
                 <button class="btn-sync-skin" id="btnCopyGameDir">📋 Sao chép</button>
@@ -1768,7 +1791,7 @@
                   <span class="installed-count-tag" id="settingsResBadge">1280×720 (HD)</span>
                 </div>
               </div>
-              <p class="settings-card-desc">Chọn kích thước cửa sổ khi mở Minecraft, chỉnh cỡ chữ dễ đọc cho màn hình của bạn và đổi bảng màu giao diện.</p>
+              <p class="settings-card-desc">Chọn độ phân giải cửa sổ game, cỡ chữ giao diện và bảng màu yêu thích.</p>
               <div class="res-preset-bar" id="winResolutionBar">
                 <button class="res-pill-btn" data-res="854x480">854×480 (Nhẹ)</button>
                 <button class="res-pill-btn active" data-res="1280x720">1280×720 (HD)</button>
@@ -1817,7 +1840,7 @@
                   <input type="checkbox" id="deepSmoothEngineCheck" checked />
                   <div class="soi-body">
                     <strong>⚡ Turbo Smooth™ — Tối ưu 6 tầng cấu hình</strong>
-                    <span>Chống đơ ổ cứng Windows, bảo vệ Shader, giảm 40% RAM &amp; gom vẽ HUD (hoàn tác 1-Click).</span>
+                    <span>Chống đơ ổ cứng, bảo vệ Shader, giảm 40% RAM &amp; gom vẽ HUD (hoàn tác 1-Click).</span>
                   </div>
                   <button type="button" class="vtype-btn soi-side-action" id="btnSettingsOpenDeepSmooth" title="Mở bảng tùy chỉnh 3 chế độ &amp; 6 tầng tệp cấu hình game">⚙️ Tùy chỉnh ›</button>
                 </label>
@@ -1825,77 +1848,77 @@
                   <input type="checkbox" id="hideLauncherCheck" checked />
                   <div class="soi-body">
                     <strong>Ngủ đông Launcher khi chơi (0% GPU) &amp; Tắt nhanh (&lt;0.2s)</strong>
-                    <span>Tự động tạm dừng 3D WebGL khi vào game và giải phóng tiến trình javaw.exe ngay khi đóng.</span>
+                    <span>Tạm dừng 3D WebGL khi vào game và giải phóng tiến trình ngay khi đóng.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="fastSkipCheck" checked />
                   <div class="soi-body">
                     <strong>Vào game siêu tốc (Fast-Skip SHA1 Verification)</strong>
-                    <span>Bỏ qua kiểm tra lặp lại hàng nghìn file tài nguyên đã có sẵn để vào game dưới 1 giây.</span>
+                    <span>Bỏ qua kiểm tra lặp lại các tệp tài nguyên đã đủ để vào game dưới 1 giây.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="aikarFlagsCheck" checked />
                   <div class="soi-body">
                     <strong>Tối ưu bộ nhớ G1GC (Dynamic Low-Commit Heap)</strong>
-                    <span>Tự động thu hồi và trả RAM trống về Windows mỗi 15 giây, chống tràn Pagefile gây đơ máy.</span>
+                    <span>Tự động thu hồi và trả RAM trống về hệ điều hành mỗi 15 giây.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="smartRamCoachCheck" checked />
                   <div class="soi-body">
                     <strong>📊 Cố Vấn RAM Tự Động &amp; Chống Giật Khựng (Generational ZGC / G1GC)</strong>
-                    <span>Tự động cân đối RAM theo số lượng Mod + Shader đang bật, chừa an toàn cho Windows và tự bật Generational ZGC (Java 21+) cho gói nhiều Mod.</span>
+                    <span>Tự cân đối RAM theo số Mod + Shader và bật Generational ZGC trên Java 21+.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="crackSkinSyncToggle" checked />
                   <div class="soi-body">
                     <strong>Đồng bộ Skin 3D vào Game (Offline &amp; ResourcePack)</strong>
-                    <span>Tự động nạp Skin 3D đang chọn trên Launcher vào thẳng nhân vật trong chế độ Offline / Crack.</span>
+                    <span>Tự nạp Skin 3D đang chọn trên Launcher vào nhân vật trong chế độ Offline.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="autoBackupWorldsCheck" checked />
                   <div class="soi-body">
-                    <strong>Tự động sao lưu ngầm Thế giới khi thoát game (Giữ 3 bản gần nhất)</strong>
-                    <span>Tự nén .zip các Map vừa chơi khi đóng game và tự dọn bản cũ để không bao giờ lo hỏng Map hay đầy ổ cứng.</span>
+                    <strong>Tự động sao lưu Thế giới khi thoát game (Giữ 3 bản gần nhất)</strong>
+                    <span>Tự nén .zip Map vừa chơi khi đóng game và tự xóa bản cũ để nhẹ ổ cứng.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="autoCreateFirstWorldCheck" checked />
                   <div class="soi-body">
                     <strong>Tự tạo thế giới &amp; vào thẳng khi chơi gói Modpack lần đầu (MC 1.20+)</strong>
-                    <span>Gói chưa có thế giới nào thì bấm ▶ Chơi là game tự có sẵn thế giới đúng kiểu của gói (VD: Đảo OneBlock giữa khoảng không) và vào thẳng, không cần qua Menu.</span>
+                    <span>Gói mới cài chưa có Map sẽ tự tạo đúng kiểu thế giới (VD: Đảo OneBlock) và vào thẳng.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="discordRpcCheck" checked />
                   <div class="soi-body">
                     <strong>Hiển thị trạng thái đang chơi trên Discord (Rich Presence)</strong>
-                    <span>Tự hiện phiên bản / Modpack / Mã phòng chơi chung bạn đang chơi lên hồ sơ Discord khi mở app Discord.</span>
+                    <span>Hiện phiên bản, Modpack hoặc Mã phòng đang chơi lên hồ sơ Discord.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="autoViLangCheck" checked />
                   <div class="soi-body">
                     <strong><span class="bw-vi-badge">VI</span> Tự động chuyển ngôn ngữ trong Minecraft sang Tiếng Việt (<code>vi_vn</code>)</strong>
-                    <span>Tự thiết lập sẵn Tiếng Việt trong <code>options.txt</code> trước khi mở game để menu và vật phẩm hiển thị Tiếng Việt ngay lần đầu.</span>
+                    <span>Thiết lập sẵn Tiếng Việt trong <code>options.txt</code> ngay từ lần mở game đầu tiên.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="gentleSmoothCheck" checked />
                   <div class="soi-body">
-                    <strong>🍃 Mượt Êm — Không Ép Máy (Khóa FPS theo màn hình)</strong>
-                    <span>Khóa FPS bằng tần số màn hình, giảm tải CPU mô phỏng &amp; Đồ họa Fabulous, giới hạn luồng dọn RAM chạy nền. Máy mát, quạt êm mà vẫn mượt — tắt là tự khôi phục thiết lập gốc.</span>
+                    <strong>🍃 Mượt Êm — Không Ép Máy (Nhịp khung hình đồng bộ)</strong>
+                    <span>Giữ khung hình ổn định theo màn hình, giảm nhiệt độ CPU/GPU và chống khựng.</span>
                   </div>
                 </label>
                 <label class="settings-opt-item">
                   <input type="checkbox" id="potatoGraphicsCheck" />
                   <div class="soi-body">
-                    <strong>🚀 Chế độ Đồ họa Siêu Mượt cho Máy Yếu (Bung trần 120 FPS)</strong>
-                    <span>Dành cho máy rất yếu muốn mở trần 120 FPS: tự tắt VSync, tắt bóng thực thể và hạ Simulation 5 (tự chuyển từ chế độ Khóa FPS Mượt Êm).</span>
+                    <strong>🚀 Chế độ Đồ họa Siêu Nhẹ cho Máy Yếu (Bung trần 120 FPS)</strong>
+                    <span>Tắt VSync, tắt bóng thực thể và hạ khoảng cách mô phỏng xuống 5 chunk.</span>
                   </div>
                 </label>
               </div>
@@ -1998,6 +2021,7 @@
               <strong id="screenshotLightboxName"></strong>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-fps-boost-1click" id="btnLightboxCopy">📋 Copy Ảnh (Dán Zalo / Discord)</button>
+                <button class="btn-sync-skin is-ok" id="btnLightboxCopyFramed" title="Đóng khung tên phiên bản MC + tên nhân vật + ngày chụp rồi Copy thẳng vào Clipboard">🏷️ Copy Kèm Khung</button>
                 <button class="btn-sync-skin" id="btnLightboxSetBanner">🖼️ Đặt Làm Hình Nền Banner</button>
                 <button class="vtype-btn" id="btnLightboxClose">Thu nhỏ</button>
               </div>
@@ -2242,6 +2266,174 @@
           <div class="ds-foot-right">
             <button type="button" class="btn-modal-cancel ds-revert-btn" id="btnDsRevertNow" disabled title="Khôi phục nguyên trạng toàn bộ tệp cấu hình trước khi BlockWay can thiệp">↩️ Khôi phục gốc</button>
             <button type="button" class="btn-modal-agree ds-apply-btn" id="btnDsApplyNow">⚡ Áp Dụng Tối Ưu Ngay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- v41.2.0 PRO OPT-IN MODAL #1: TRẠM SERVER NGẦM 0% GPU (HEADLESS SERVER STUDIO + KHUYẾN CÁO CẤU HÌNH) -->
+    <div class="modal-backdrop hidden" id="localServerStudioModal">
+      <div class="modal-dialog-card ls-studio-card" role="dialog" aria-label="Trạm Server Ngầm 0% GPU">
+        <div class="modal-head ds-studio-head">
+          <div class="ds-head-title">
+            <span class="ds-sig-pill">OPT-IN • 0% GPU</span>
+            <h3>🖥️ Trạm Server Ngầm Trên Máy (Headless Server)</h3>
+            <span class="ds-live-badge" id="lsStateBadge">⚪ Đang nghỉ</span>
+          </div>
+          <button type="button" class="vtype-btn" id="btnLsCloseTop">✕ Đóng</button>
+        </div>
+
+        <div class="modal-body ds-studio-body">
+          <!-- HARDWARE REQUIREMENT & RAM ADVISOR BANNER (KHUYẾN CÁO CẤU HÌNH RÕ RÀNG) -->
+          <div class="ls-hw-banner" id="lsHardwareAdviceBanner">
+            <div class="lshw-top">
+              <strong id="lsHwBadgeTitle">🔍 Đang kiểm tra cấu hình máy chủ...</strong>
+              <span class="lshw-ip-pill" id="lsLanIpBadge">IP LAN: 127.0.0.1:25565</span>
+            </div>
+            <p id="lsHwAdviceDesc">
+              Lưu ý: Máy mở Server là máy làm chủ (chịu tải tính toán thế giới &amp; quái cho cả nhóm). Nếu máy dưới 8 GB RAM, khuyên bạn dùng tính năng <strong>Mở Thế Giới Qua Internet (e4mc)</strong> ở ngoài để nhẹ máy hơn.
+            </p>
+          </div>
+
+          <div class="ls-config-grid">
+            <div class="ls-field">
+              <label for="lsWorldSelect">🌍 Chọn Bản Đồ (World)</label>
+              <select id="lsWorldSelect" class="pro-select">
+                <option value="__server_default__">🌱 Tạo Map Server Mới (Mặc định)</option>
+              </select>
+            </div>
+            <div class="ls-field">
+              <label for="lsRamSelect">🧠 Cấp RAM Cho Server</label>
+              <select id="lsRamSelect" class="pro-select">
+                <option value="1.5">1.5 GB RAM (Nhẹ • 2–4 người)</option>
+                <option value="2" selected>2.0 GB RAM (Chuẩn • 4–6 người)</option>
+                <option value="3">3.0 GB RAM (Mạnh • 6–12 người)</option>
+                <option value="4">4.0 GB RAM (Máy 16GB+ • 10–16 người)</option>
+              </select>
+            </div>
+            <div class="ls-field">
+              <label for="lsGamemodeSelect">🎮 Chế Độ Chơi</label>
+              <select id="lsGamemodeSelect" class="pro-select">
+                <option value="survival" selected>⚔️ Sinh Tồn (Survival)</option>
+                <option value="creative">🎨 Sáng Tạo (Creative)</option>
+                <option value="adventure">🗺️ Phiêu Lưu (Adventure)</option>
+              </select>
+            </div>
+            <div class="ls-field">
+              <label for="lsAuthModeSelect">🔓 Chế Độ Tài Khoản Bạn Bè</label>
+              <select id="lsAuthModeSelect" class="pro-select">
+                <option value="offline" selected>🔓 Cho phép cả Offline / Crack &amp; Bản quyền</option>
+                <option value="online">👑 Chỉ tài khoản Microsoft Bản quyền</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- QUICK ADMIN 1-CLICK BAR -->
+          <div class="ls-quick-cmd-bar">
+            <span class="ls-cmd-lbl">⚡ Lệnh nhanh 1-Click:</span>
+            <button type="button" class="vtype-btn" data-lscmd="op_me" title="Cấp quyền Admin (OP) cho tên nhân vật đang chọn trên Launcher">👑 Cấp OP cho tôi</button>
+            <button type="button" class="vtype-btn" data-lscmd="time set day">☀️ Trời sáng</button>
+            <button type="button" class="vtype-btn" data-lscmd="weather clear">🌤️ Tạnh mưa</button>
+            <button type="button" class="vtype-btn" data-lscmd="gamerule keepInventory true">🛡️ Giữ đồ khi chết</button>
+            <button type="button" class="vtype-btn" data-lscmd="save-all">💾 Lưu Map ngay</button>
+          </div>
+
+          <div class="ls-cmd-input-row">
+            <input type="text" id="lsCustomCmdInput" class="pro-input" placeholder="Nhập lệnh Server (vd: op TenBanBe, gamemode creative TenBanBe, tp ...)" />
+            <button type="button" class="btn-sync-skin" id="btnLsSendCmd">Gửi lệnh</button>
+          </div>
+
+          <pre class="ls-console-box" id="lsConsoleOutput">[Trạm Server Ngầm] Sẵn sàng. Bấm "🚀 Khởi Động Server Ngầm" khi bạn muốn mở máy chủ riêng.</pre>
+        </div>
+
+        <div class="modal-foot ds-studio-foot">
+          <div class="ds-foot-left">
+            <button type="button" class="btn-sync-skin" id="btnLsCopyIp">📋 Copy IP Server</button>
+            <button type="button" class="btn-sync-skin" id="btnLsOpenFolder">📂 Mở thư mục Server</button>
+          </div>
+          <div class="ds-foot-right">
+            <button type="button" class="btn-modal-cancel" id="btnLsStopServer" disabled>⏹ Lưu &amp; Dừng Server</button>
+            <button type="button" class="btn-modal-agree" id="btnLsStartServer">🚀 Khởi Động Server Ngầm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- v41.2.0 PRO OPT-IN MODAL #2: KHO LÀM ĐẸP 0% LAG & TĂNG TỐC TẢI CHUNK + ĐỒNG BỘ PHÍM TẮT -->
+    <div class="modal-backdrop hidden" id="visualBoostStudioModal">
+      <div class="modal-dialog-card ds-studio-card" role="dialog" aria-label="Kho Làm Đẹp 0% Lag & Tiện Ích">
+        <div class="modal-head ds-studio-head">
+          <div class="ds-head-title">
+            <span class="ds-sig-pill">0% HAO FPS</span>
+            <h3>🎨 Kho Làm Đẹp Không Tụt FPS &amp; Tiện Ích Nhanh</h3>
+          </div>
+          <button type="button" class="vtype-btn" id="btnVbCloseTop">✕ Đóng</button>
+        </div>
+
+        <div class="modal-body ds-studio-body">
+          <div class="ds-sec-head">
+            <strong>1. Gói Làm Đẹp &amp; Âm Thanh Nhẹ Máy (Bật / Tắt 1-Click)</strong>
+            <span>Tự kích hoạt thẳng vào <code>options.txt</code></span>
+          </div>
+
+          <div class="ds-layers-grid" id="vbPacksGrid">
+            <div class="vb-item-card">
+              <div class="vb-item-info">
+                <strong>🔥 Lửa Thấp PvP &amp; Bí Ngô Trong Suốt</strong>
+                <span>Hạ thấp ngọn lửa 60% không che tâm ngắm &amp; đội bí ngô nhìn rõ 100% (Tích hợp sẵn • 0% Lag).</span>
+              </div>
+              <button type="button" class="btn-sync-skin" data-vbpack="low_fire_clean_gui">Bật ngay</button>
+            </div>
+
+            <div class="vb-item-card">
+              <div class="vb-item-info">
+                <strong>💎 Viền Quặng Phát Sáng Trong Hang</strong>
+                <span>Đóng khung nổi bật Kim Cương, Emerald, Vàng, Cổ đại trong hang tối mà không cần bật Shader.</span>
+              </div>
+              <button type="button" class="btn-sync-skin" data-vbpack="glowing_ores">Bật ngay</button>
+            </div>
+
+            <div class="vb-item-card">
+              <div class="vb-item-info">
+                <strong>🐾 Hoạt Ảnh Sinh Vật Sống Động (Fresh Animations)</strong>
+                <span>Tự tải Fresh Animations + EMF/ETF giúp dân làng và sinh vật liếc mắt, bước đi mượt mà.</span>
+              </div>
+              <button type="button" class="btn-sync-skin" data-vbpack="fresh_animations">Trang bị</button>
+            </div>
+
+            <div class="vb-item-card">
+              <div class="vb-item-info">
+                <strong>🔊 Âm Thanh Vòm Hang Động &amp; Bước Chân 3D</strong>
+                <span>Tiếng vang chân thực trong hang sâu và tiếng bước chân riêng trên cỏ, gỗ, đá, tuyết.</span>
+              </div>
+              <button type="button" class="btn-sync-skin" data-vbpack="immersive_sound">Trang bị</button>
+            </div>
+          </div>
+
+          <div class="ds-sec-head" style="margin-top:4px;">
+            <strong>2. Tăng Tốc Tải Bản Đồ Đa Nhân &amp; Sao Lưu Phím Tắt</strong>
+            <span>Dành cho máy cần bay Elytra nhanh hoặc chuyển máy</span>
+          </div>
+
+          <div class="vb-bottom-tools-row">
+            <div class="vb-tool-box">
+              <div>
+                <strong>🚀 Tăng Tốc Nạp Thế Giới Đa Nhân (Noisium + C2ME)</strong>
+                <span>Tận dụng đa luồng CPU để tạo và nạp Chunk nhanh gấp 3 lần khi bay Elytra.</span>
+              </div>
+              <button type="button" class="btn-fps-boost-1click" id="btnVbInstallWorldgen">🚀 Cài Tăng Tốc Chunk</button>
+            </div>
+
+            <div class="vb-tool-box">
+              <div>
+                <strong>☁️ Sao Lưu &amp; Khôi Phục Phím Tắt + Danh Sách Server</strong>
+                <span>Lưu toàn bộ phím tắt (Keybinds), FOV, Âm lượng và Server yêu thích ra file hoặc bộ nhớ máy.</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button type="button" class="btn-sync-skin is-ok" id="btnVbExportPrefs">📤 Sao lưu</button>
+                <button type="button" class="btn-sync-skin" id="btnVbImportPrefs">📥 Khôi phục</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

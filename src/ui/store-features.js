@@ -5463,6 +5463,63 @@ async function importWorldZipUI(customZipPath = '') {
 // 5. Thư Viện Ảnh Chụp Trong Game (Screenshots Gallery & 1-Click Copy Zalo/Discord)
 let activeScreenshotLightboxItem = null;
 
+async function copyFramedScreenshotToClipboard(item) {
+  if (!item || !item.fileUrl) return { ok: false, error: 'Không tìm thấy ảnh' };
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = async () => {
+      try {
+        const w = Math.max(640, img.naturalWidth || 1280);
+        const h = Math.max(360, img.naturalHeight || 720);
+        const barH = Math.max(46, Math.round(h * 0.068));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h + barH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Sleek bottom badge bar
+        const grad = ctx.createLinearGradient(0, h, w, h + barH);
+        grad.addColorStop(0, '#0f172a');
+        grad.addColorStop(0.55, '#1e1b4b');
+        grad.addColorStop(1, '#0f172a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, h, w, barH);
+
+        ctx.fillStyle = 'rgba(244, 114, 182, 0.75)';
+        ctx.fillRect(0, h, w, 2);
+
+        const padX = Math.round(barH * 0.42);
+        const fontMain = Math.max(13, Math.round(barH * 0.36));
+        const fontSub = Math.max(11, Math.round(barH * 0.30));
+        const player = (document.getElementById('username')?.value || state.username || 'Player').trim();
+        const mcVer = item.instanceName || state.selectedVersion || '1.21.4';
+        const dateStr = item.dateLabel || (item.mtimeMs ? new Date(item.mtimeMs).toLocaleString('vi-VN') : new Date().toLocaleDateString('vi-VN'));
+
+        ctx.textBaseline = 'middle';
+        ctx.font = `600 ${fontMain}px "Inter", "Segoe UI", sans-serif`;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(`⚡ BlockWay Launcher  •  MC ${mcVer}`, padX, h + barH / 2);
+
+        const rightText = `👤 ${player}   •   📅 ${dateStr}`;
+        ctx.font = `500 ${fontSub}px "Inter", "Segoe UI", sans-serif`;
+        ctx.fillStyle = '#cbd5e1';
+        const rightW = ctx.measureText(rightText).width;
+        ctx.fillText(rightText, Math.max(padX + 260, w - padX - rightW), h + barH / 2);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        const res = await window.aetherAPI.copyDataUrlToClipboard(dataUrl);
+        resolve(res || { ok: false });
+      } catch (err) {
+        resolve({ ok: false, error: err.message });
+      }
+    };
+    img.onerror = () => resolve({ ok: false, error: 'Không đọc được ảnh gốc' });
+    img.src = item.fileUrl;
+  });
+}
+
 async function openScreenshotsGalleryModal() {
   const modal = document.getElementById('screenshotsGalleryModal');
   const grid = document.getElementById('screenshotsGalleryGrid');
@@ -5501,8 +5558,9 @@ async function openScreenshotsGalleryModal() {
         <div class="screenshot-name" title="${safeName}">${safeName}</div>
         <div class="screenshot-sub">${escapeHtml(dateStr)} • ${escapeHtml(it.sizeKB)} KB${it.instanceName ? ` • ${escapeHtml(it.instanceName)}` : ''}</div>
         <div class="screenshot-actions">
-          <button class="btn-install-mod" data-copyshot="${idx}" title="Copy ảnh vào Clipboard để Ctrl+V dán thẳng vào Zalo, Discord, Messenger">📋 Copy Ảnh</button>
-          <button class="vtype-btn" data-wallpapershot="${idx}" title="Đặt bức ảnh này làm hình nền trang chủ Launcher">🖼️ Làm Nền</button>
+          <button class="btn-install-mod" data-copyshot="${idx}" title="Copy ảnh vào Clipboard để Ctrl+V dán thẳng vào Zalo, Discord, Messenger">📋 Copy</button>
+          <button class="vtype-btn" data-copyframedshot="${idx}" title="Copy ảnh kèm khung thông tin (Phiên bản MC + Tên người chơi + Ngày chụp)">🏷️ Khung</button>
+          <button class="vtype-btn" data-wallpapershot="${idx}" title="Đặt bức ảnh này làm hình nền trang chủ Launcher">🖼️ Nền</button>
           <button class="vtype-btn" data-delshot="${idx}" style="color:#ef4444;" title="Xóa ảnh này">🗑️</button>
         </div>
       </div>
@@ -5546,6 +5604,25 @@ async function openScreenshotsGalleryModal() {
         btn.textContent = '✓ Đã Copy!';
         showAetherNotification(`📋 Đã copy ảnh "${it.name}" vào bộ nhớ tạm! Bạn có thể bấm Ctrl+V để dán ngay vào Zalo / Discord / Facebook.`, 'success', 4500);
         setTimeout(() => { btn.textContent = orig; }, 1600);
+      }
+    };
+  });
+
+  grid.querySelectorAll('[data-copyframedshot]').forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const it = items[Number(btn.dataset.copyframedshot)];
+      if (!it) return;
+      const orig = btn.textContent;
+      btn.textContent = '⏳...';
+      const r = await copyFramedScreenshotToClipboard(it);
+      if (r?.ok) {
+        btn.textContent = '✓ Đã Copy!';
+        showAetherNotification(`🏷️ Đã copy ảnh "${it.name}" kèm khung thông tin (Phiên bản + Người chơi + Ngày chụp)! Bấm Ctrl+V để dán ngay vào Zalo / Discord.`, 'success', 4800);
+        setTimeout(() => { btn.textContent = orig; }, 1600);
+      } else {
+        btn.textContent = orig;
+        showAetherNotification(`⚠️ Không thể tạo khung ảnh: ${r?.error || 'Lỗi'}`, 'error', 3500);
       }
     };
   });
@@ -5741,6 +5818,21 @@ function initV402FeaturesUI() {
       };
     }
   });
+  const btnLightboxCopyFramed = document.getElementById('btnLightboxCopyFramed');
+  if (btnLightboxCopyFramed) {
+    btnLightboxCopyFramed.onclick = async () => {
+      if (!activeScreenshotLightboxItem) return;
+      const orig = btnLightboxCopyFramed.textContent;
+      btnLightboxCopyFramed.textContent = '⏳ Đang tạo khung...';
+      const r = await copyFramedScreenshotToClipboard(activeScreenshotLightboxItem);
+      btnLightboxCopyFramed.textContent = orig;
+      if (r?.ok) {
+        showAetherNotification(`🏷️ Đã copy ảnh "${activeScreenshotLightboxItem.name}" kèm khung thông tin (Ctrl+V để dán vào Zalo/Discord)!`, 'success', 4800);
+      } else {
+        showAetherNotification(`⚠️ Không thể copy kèm khung: ${r?.error || 'Lỗi'}`, 'error', 3500);
+      }
+    };
+  }
   ['btnLightboxSetBanner', 'btnLightboxSetWallpaper'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -8152,6 +8244,520 @@ function initV410TurboSmoothUI() {
   }, 600);
 }
 
+// =========================================================================
+// v41.2.0 PRO: 5 OPT-IN POWER UPGRADES UI CONTROLLER
+// 1. Headless Local Server Studio (#localServerStudioModal) + Hardware Advisor
+// 2. Visual & Audio Boost Studio (#visualBoostStudioModal)
+// 3. Screenshot Studio 2.0 Framed Copy (above)
+// 4. Backup & Restore Controls + Servers (prefs:export / prefs:import)
+// 5. Async Multi-Core Worldgen Boost (worldgenBoost:install)
+// =========================================================================
+
+let localServerRunningState = false;
+
+async function refreshLocalServerStudioModalUI() {
+  const modal = document.getElementById('localServerStudioModal');
+  if (!modal || !window.aetherAPI.inspectLocalServer) return;
+  const res = await window.aetherAPI.inspectLocalServer({ gameDir: state.gameDir });
+  if (!res?.ok) return;
+
+  localServerRunningState = Boolean(res.running);
+  const hw = res.hardware || {};
+  const banner = document.getElementById('lsHardwareAdviceBanner');
+  const titleEl = document.getElementById('lsHwTitle');
+  const msgEl = document.getElementById('lsHwMessage');
+  const iconEl = document.getElementById('lsHwIcon');
+
+  const tier = hw.tier || hw.level || 'medium';
+  if (banner) {
+    banner.classList.remove('is-low', 'is-medium', 'is-high');
+    if (tier === 'low') {
+      banner.classList.add('is-low');
+      if (iconEl) iconEl.textContent = '⚠️';
+    } else if (tier === 'high') {
+      banner.classList.add('is-high');
+      if (iconEl) iconEl.textContent = '✅';
+    } else {
+      banner.classList.add('is-medium');
+      if (iconEl) iconEl.textContent = '💡';
+    }
+  }
+  if (titleEl && (hw.badgeVi || hw.title)) titleEl.textContent = hw.badgeVi || hw.title;
+  if (msgEl && (hw.adviceVi || hw.advice)) msgEl.textContent = hw.adviceVi || hw.advice;
+
+  // Populate singleplayer worlds dropdown
+  const worldSel = document.getElementById('lsWorldSource');
+  const worldList = Array.isArray(res.worlds) ? res.worlds : (Array.isArray(res.singleplayerWorlds) ? res.singleplayerWorlds : []);
+  if (worldSel) {
+    const prevVal = worldSel.value;
+    const opts = ['<option value="">🌱 Tạo thế giới Server mới (hoặc giữ world hiện tại)</option>'];
+    for (const w of worldList) {
+      const fName = w.folderName || w.folder || '';
+      const dName = w.displayName || w.name || fName;
+      opts.push(`<option value="${escapeHtml(fName)}">🗺️ Copy từ Chơi Đơn: ${escapeHtml(dName)} (${escapeHtml(fName)})</option>`);
+    }
+    worldSel.innerHTML = opts.join('');
+    if (prevVal && Array.from(worldSel.options).some((o) => o.value === prevVal)) {
+      worldSel.value = prevVal;
+    }
+  }
+
+  // Sync version selector with current launcher version if available
+  const verSel = document.getElementById('lsMcVersion');
+  if (verSel && !localServerRunningState) {
+    const curVer = res.meta?.mcVersion || state.selectedVersion || '1.21.4';
+    if (Array.from(verSel.options).some((o) => o.value === curVer)) {
+      verSel.value = curVer;
+    }
+  }
+
+  // Sync RAM slider recommended default if not running
+  const ramRange = document.getElementById('lsRamRange');
+  const ramLabel = document.getElementById('lsRamValLabel');
+  const recRamMB = hw.recommendedRamGB ? Math.round(hw.recommendedRamGB * 1024) : (hw.recommendedServerRamMB || 2048);
+  if (ramRange && !localServerRunningState && recRamMB && !ramRange.dataset.userTouched) {
+    ramRange.value = String(recRamMB);
+    if (ramLabel) ramLabel.textContent = `${recRamMB} MB (${(recRamMB / 1024).toFixed(1)} GB)`;
+  }
+
+  updateLocalServerLivePillUI({
+    running: res.running,
+    pid: res.pid,
+    mcVersion: res.meta?.mcVersion || state.selectedVersion || '1.21.4',
+    port: res.meta?.port || res.savedProps?.port || 25565
+  });
+
+  const logBox = document.getElementById('lsConsoleOutput');
+  const logsArr = Array.isArray(res.recentLogs) ? res.recentLogs : (Array.isArray(res.logs) ? res.logs : []);
+  if (logBox && logsArr.length > 0) {
+    logBox.textContent = logsArr.join('\n');
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+}
+
+function updateLocalServerLivePillUI(st = {}) {
+  localServerRunningState = Boolean(st.running);
+  const pill = document.getElementById('lsStatusPill');
+  const toggleBtn = document.getElementById('btnLsToggleServer');
+  if (pill) {
+    if (st.running) {
+      pill.textContent = `🟢 Đang chạy (MC ${st.mcVersion || 'Server'} • Cổng ${st.port || 25565})`;
+      pill.classList.add('is-running');
+    } else if (st.starting) {
+      pill.textContent = `⏳ ${st.message || 'Đang khởi động Server...'}`;
+      pill.classList.remove('is-running');
+    } else {
+      pill.textContent = '⚪ Đang tắt';
+      pill.classList.remove('is-running');
+    }
+  }
+  if (toggleBtn) {
+    toggleBtn.disabled = Boolean(st.starting);
+    if (st.running) {
+      toggleBtn.textContent = '⏹️ Dừng Server An Toàn (Lưu Map)';
+      toggleBtn.classList.add('is-danger');
+    } else if (st.starting) {
+      toggleBtn.textContent = '⏳ Đang nạp Server...';
+      toggleBtn.classList.remove('is-danger');
+    } else {
+      toggleBtn.textContent = '🚀 Khởi Động Trạm Server Ngầm';
+      toggleBtn.classList.remove('is-danger');
+    }
+  }
+}
+
+async function openLocalServerStudioModal() {
+  const modal = document.getElementById('localServerStudioModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  await refreshLocalServerStudioModalUI();
+}
+window.openLocalServerStudioModal = openLocalServerStudioModal;
+
+async function refreshVisualBoostStudioModalUI() {
+  const modal = document.getElementById('visualBoostStudioModal');
+  if (!modal || !window.aetherAPI.getVisualBoostStatus) return;
+
+  const selTarget = document.getElementById('vbTargetInstanceSelect');
+  if (selTarget) {
+    const prev = selTarget.value;
+    const opts = [`<option value="">🏠 Hồ sơ chính (.minecraft — MC ${escapeHtml(state.selectedVersion || '1.21.4')})</option>`];
+    try {
+      const packsRes = await window.aetherAPI.packsInstancesList(state.gameDir);
+      const list = Array.isArray(packsRes?.instances) ? packsRes.instances : [];
+      for (const inst of list) {
+        opts.push(`<option value="${escapeHtml(inst.dir)}">📦 ${escapeHtml(inst.name)} (MC ${escapeHtml(inst.minecraftVersion || '?')})</option>`);
+      }
+    } catch (_) {}
+    selTarget.innerHTML = opts.join('');
+    if (prev && Array.from(selTarget.options).some((o) => o.value === prev)) {
+      selTarget.value = prev;
+    } else if (state.modTargetInstanceDir && Array.from(selTarget.options).some((o) => o.value === state.modTargetInstanceDir)) {
+      selTarget.value = state.modTargetInstanceDir;
+    }
+  }
+
+  const instanceDir = selTarget?.value || '';
+  const st = await window.aetherAPI.getVisualBoostStatus({ gameDir: state.gameDir, instanceDir });
+  if (!st?.ok) return;
+
+  let activeCount = 0;
+  const packMap = st.packs || st.status || {};
+  modal.querySelectorAll('[data-vbpack]').forEach((btn) => {
+    const packId = btn.dataset.vbpack;
+    const isOn = Boolean(packMap[packId]);
+    if (isOn) activeCount++;
+    btn.dataset.active = isOn ? '1' : '0';
+    btn.textContent = isOn ? '✓ Đang Bật (Bấm để Tắt)' : '✨ Bật Ngay';
+    btn.classList.toggle('is-active', isOn);
+  });
+
+  const badge = document.getElementById('vbStatusSummaryBadge');
+  if (badge) {
+    badge.textContent = activeCount > 0 ? `✓ Đang bật ${activeCount}/4 gói` : 'Sẵn sàng';
+  }
+}
+
+async function openVisualBoostStudioModal() {
+  const modal = document.getElementById('visualBoostStudioModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  await refreshVisualBoostStudioModalUI();
+}
+window.openVisualBoostStudioModal = openVisualBoostStudioModal;
+
+async function runWorldgenBoostInstallUI(triggerBtn) {
+  if (!window.aetherAPI.installWorldgenBoostPack) return;
+  const origText = triggerBtn ? triggerBtn.textContent : '';
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = '⏳ Đang cài Đa Nhân...';
+  }
+  const instanceDir = state.modTargetInstanceDir || '';
+  const mcVersion = state.selectedVersion || '1.21.4';
+  const loaderType = state.selectedLoader || 'fabric';
+  const res = await window.aetherAPI.installWorldgenBoostPack({
+    gameDir: state.gameDir,
+    instanceDir,
+    mcVersion,
+    loaderType
+  });
+  if (triggerBtn) {
+    triggerBtn.disabled = false;
+    triggerBtn.textContent = origText;
+  }
+  const installedArr = Array.isArray(res?.installed) ? res.installed : [];
+  if (res?.ok && installedArr.length > 0) {
+    showAetherNotification(
+      `🚀 Đã trang bị ${installedArr.length} Mod nạp Chunk đa nhân (${installedArr.join(', ')}) cho MC ${mcVersion}! Bay Elytra hoặc chạy bộ khám phá map sẽ mượt hơn rõ rệt.`,
+      'success',
+      5500
+    );
+  } else {
+    showAetherNotification(
+      `⚠️ Chưa tìm thấy bản Mod nạp Chunk tương thích với MC ${mcVersion} (${loaderType}). Bạn hãy ưu tiên chọn Fabric 1.20.1 – 1.21.4 để đạt hiệu quả cao nhất!`,
+      'info',
+      5000
+    );
+  }
+}
+
+async function runBackupPlayerPrefsUI(triggerBtn) {
+  if (!window.aetherAPI.exportPlayerPrefs) return;
+  const orig = triggerBtn ? triggerBtn.textContent : '';
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = '⏳ Đang xuất...';
+  }
+  const res = await window.aetherAPI.exportPlayerPrefs({
+    gameDir: state.gameDir,
+    instanceDir: state.modTargetInstanceDir || '',
+    favoriteServers: state.favoriteServers || [],
+    pinnedServers: state.pinnedServers || []
+  });
+  if (triggerBtn) {
+    triggerBtn.disabled = false;
+    triggerBtn.textContent = orig;
+  }
+  if (res?.canceled) return;
+  if (res?.ok) {
+    showAetherNotification(
+      `☁️ Đã xuất bản sao lưu Phím Tắt (${res.keybindsCount ?? res.keyCount ?? 0} phím), Độ nhạy chuột, Âm lượng & Danh sách Server ra file thành công!`,
+      'success',
+      5200
+    );
+  } else {
+    showAetherNotification(`⚠️ Không thể xuất sao lưu: ${res?.error || 'Lỗi'}`, 'error', 4000);
+  }
+}
+
+async function runRestorePlayerPrefsUI(triggerBtn) {
+  if (!window.aetherAPI.importPlayerPrefs) return;
+  const orig = triggerBtn ? triggerBtn.textContent : '';
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = '⏳ Đang nạp...';
+  }
+  const res = await window.aetherAPI.importPlayerPrefs({
+    gameDir: state.gameDir,
+    instanceDir: state.modTargetInstanceDir || ''
+  });
+  if (triggerBtn) {
+    triggerBtn.disabled = false;
+    triggerBtn.textContent = orig;
+  }
+  if (res?.canceled) return;
+  if (res?.ok) {
+    if (Array.isArray(res.favoriteServers) && res.favoriteServers.length > 0) {
+      state.favoriteServers = res.favoriteServers;
+      localStorage.setItem('aether_favorite_servers', JSON.stringify(res.favoriteServers));
+    }
+    if (Array.isArray(res.pinnedServers) && res.pinnedServers.length > 0) {
+      state.pinnedServers = res.pinnedServers;
+      localStorage.setItem('aether_pinned_servers', JSON.stringify(res.pinnedServers));
+    }
+    showAetherNotification(
+      `📥 Đã khôi phục ${res.restoredKeys || 0} Phím Tắt, Độ nhạy chuột${(res.restoredServers || res.restoredServersDat) ? ' & Danh sách Server trong game' : ''} thành công!`,
+      'success',
+      5200
+    );
+  } else {
+    showAetherNotification(`⚠️ Không thể khôi phục: ${res?.error || 'File không hợp lệ'}`, 'error', 4200);
+  }
+}
+
+function initV412PowerSuiteUI() {
+  const lsModal = document.getElementById('localServerStudioModal');
+  const vbModal = document.getElementById('visualBoostStudioModal');
+
+  // Trigger buttons for Local Server Studio
+  ['btnOpenLocalServerStudio', 'btnToolsOpenLocalServer'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => openLocalServerStudioModal());
+  });
+  ['btnCloseLocalServerStudioTop', 'btnCloseLocalServerStudioFoot'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => lsModal?.classList.add('hidden'));
+  });
+  if (lsModal) {
+    lsModal.addEventListener('click', (e) => {
+      if (e.target === lsModal) lsModal.classList.add('hidden');
+    });
+  }
+
+  // RAM slider in Local Server Studio
+  const ramRange = document.getElementById('lsRamRange');
+  const ramLabel = document.getElementById('lsRamValLabel');
+  if (ramRange) {
+    ramRange.addEventListener('input', () => {
+      ramRange.dataset.userTouched = '1';
+      const mb = Number(ramRange.value) || 2048;
+      if (ramLabel) ramLabel.textContent = `${mb} MB (${(mb / 1024).toFixed(1)} GB)`;
+    });
+  }
+
+  // Start / Stop Local Server button
+  const btnLsToggle = document.getElementById('btnLsToggleServer');
+  if (btnLsToggle) {
+    btnLsToggle.addEventListener('click', async () => {
+      if (localServerRunningState) {
+        btnLsToggle.disabled = true;
+        btnLsToggle.textContent = '⏳ Đang lưu Map & tắt...';
+        const r = await window.aetherAPI.stopLocalServer();
+        btnLsToggle.disabled = false;
+        if (r?.ok) {
+          showAetherNotification('🛑 Đã lưu thế giới và dừng Trạm Server Ngầm an toàn.', 'info', 4000);
+        }
+        await refreshLocalServerStudioModalUI();
+        return;
+      }
+
+      const mcVersion = document.getElementById('lsMcVersion')?.value || '1.21.4';
+      const ramMB = Number(document.getElementById('lsRamRange')?.value) || 2048;
+      const ramGB = Math.max(1, Math.round((ramMB / 1024) * 10) / 10);
+      const gamemode = document.getElementById('lsGamemode')?.value || 'survival';
+      const onlineMode = document.getElementById('lsOfflineMode')?.value === 'true';
+      const worldFolderName = document.getElementById('lsWorldSource')?.value || '';
+
+      updateLocalServerLivePillUI({ starting: true, message: 'Đang chuẩn bị server.jar...' });
+      const r = await window.aetherAPI.startLocalServer({
+        gameDir: state.gameDir,
+        mcVersion,
+        ramGB,
+        port: 25565,
+        onlineMode,
+        gamemode,
+        difficulty: 'normal',
+        maxPlayers: 10,
+        viewDistance: 8,
+        worldFolderName
+      });
+      if (r?.ok) {
+        showAetherNotification(
+          `🚀 Trạm Server Ngầm MC ${mcVersion} đang khởi chạy (0% GPU)! Bạn có thể vào Multiplayer -> Direct Connect nhập localhost:25565.`,
+          'success',
+          6000
+        );
+        await refreshLocalServerStudioModalUI();
+      } else {
+        updateLocalServerLivePillUI({ running: false });
+        showAetherNotification(`⚠️ Không thể khởi chạy Server: ${r?.error || 'Lỗi'}`, 'error', 5000);
+      }
+    });
+  }
+
+  // Quick command buttons inside Local Server Studio
+  lsModal?.querySelectorAll('[data-lscmd]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = btn.dataset.lscmd;
+      if (!cmd) return;
+      const r = await window.aetherAPI.sendLocalServerCmd(cmd);
+      if (r?.ok) {
+        showAetherNotification(`⚡ Đã gửi lệnh "/${cmd}" vào Server!`, 'success', 2800);
+      } else {
+        showAetherNotification(`⚠️ ${r?.error || 'Server chưa chạy'}`, 'error', 3000);
+      }
+    });
+  });
+
+  const btnLsQuickOp = document.getElementById('btnLsQuickOp');
+  if (btnLsQuickOp) {
+    btnLsQuickOp.addEventListener('click', async () => {
+      const player = (document.getElementById('username')?.value || state.username || 'Player').trim();
+      const r = await window.aetherAPI.sendLocalServerCmd(`op ${player}`);
+      if (r?.ok) {
+        showAetherNotification(`👑 Đã cấp quyền Admin (OP) cho "${player}" trên Server!`, 'success', 3800);
+      } else {
+        showAetherNotification(`⚠️ ${r?.error || 'Server chưa chạy'}`, 'error', 3000);
+      }
+    });
+  }
+
+  const sendCustomServerCmd = async () => {
+    const inp = document.getElementById('lsCmdInput');
+    if (!inp) return;
+    const cmd = inp.value.trim().replace(/^\//, '');
+    if (!cmd) return;
+    const r = await window.aetherAPI.sendLocalServerCmd(cmd);
+    if (r?.ok) {
+      inp.value = '';
+    } else {
+      showAetherNotification(`⚠️ ${r?.error || 'Server chưa chạy'}`, 'error', 3000);
+    }
+  };
+  document.getElementById('btnLsSendCmd')?.addEventListener('click', sendCustomServerCmd);
+  document.getElementById('lsCmdInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendCustomServerCmd();
+  });
+  document.getElementById('btnLsClearConsole')?.addEventListener('click', () => {
+    const box = document.getElementById('lsConsoleOutput');
+    if (box) box.textContent = 'Đã xóa màn hình nhật ký.';
+  });
+  document.getElementById('btnLsCopyIp')?.addEventListener('click', () => {
+    navigator.clipboard?.writeText('localhost:25565');
+    showAetherNotification('📋 Đã copy địa chỉ "localhost:25565"! Vào Multiplayer -> Direct Connect để dán.', 'success', 3800);
+  });
+  document.getElementById('btnLsOpenFolder')?.addEventListener('click', () => {
+    window.aetherAPI.openSubFolder(state.gameDir, 'local-server');
+  });
+
+  // Live IPC listeners for Local Server logs & state
+  if (window.aetherAPI.onLocalServerLog) {
+    window.aetherAPI.onLocalServerLog((payload) => {
+      const box = document.getElementById('lsConsoleOutput');
+      if (box && payload?.line) {
+        box.textContent += `\n${payload.line}`;
+        if (box.textContent.length > 28000) {
+          box.textContent = box.textContent.slice(-22000);
+        }
+        box.scrollTop = box.scrollHeight;
+      }
+    });
+  }
+  if (window.aetherAPI.onLocalServerState) {
+    window.aetherAPI.onLocalServerState((st) => {
+      updateLocalServerLivePillUI(st || {});
+    });
+  }
+
+  // Trigger buttons for Visual & Audio Boost Studio
+  ['btnModsVisualBoost', 'btnToolsOpenVisualBoost'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => openVisualBoostStudioModal());
+  });
+  ['btnCloseVisualBoostTop', 'btnCloseVisualBoostFoot'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => vbModal?.classList.add('hidden'));
+  });
+  if (vbModal) {
+    vbModal.addEventListener('click', (e) => {
+      if (e.target === vbModal) vbModal.classList.add('hidden');
+    });
+  }
+
+  document.getElementById('vbTargetInstanceSelect')?.addEventListener('change', () => {
+    refreshVisualBoostStudioModalUI();
+  });
+  document.getElementById('btnVbOpenResourcepacks')?.addEventListener('click', () => {
+    const instDir = document.getElementById('vbTargetInstanceSelect')?.value || '';
+    if (instDir) {
+      window.aetherAPI.packsInstanceOpen({ gameDir: state.gameDir, dir: instDir, sub: 'resourcepacks' });
+    } else {
+      window.aetherAPI.openSubFolder(state.gameDir, 'resourcepacks');
+    }
+  });
+
+  // Toggle buttons inside Visual Boost Studio
+  vbModal?.querySelectorAll('[data-vbpack]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const packId = btn.dataset.vbpack;
+      if (!packId) return;
+      const currentlyActive = btn.dataset.active === '1';
+      const enable = !currentlyActive;
+      const instanceDir = document.getElementById('vbTargetInstanceSelect')?.value || '';
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = enable ? '⏳ Đang trang bị...' : '⏳ Đang tắt...';
+      const r = await window.aetherAPI.toggleVisualBoostPack({
+        gameDir: state.gameDir,
+        instanceDir,
+        packId,
+        enable,
+        mcVersion: state.selectedVersion || '1.21.4',
+        loaderType: state.selectedLoader || 'fabric'
+      });
+      btn.disabled = false;
+      if (r?.ok) {
+        showAetherNotification(
+          enable
+            ? `✨ Đã bật gói "${packId}" thành công (0% tụt FPS)!`
+            : `↩️ Đã tắt gói "${packId}".`,
+          'success',
+          4000
+        );
+        await refreshVisualBoostStudioModalUI();
+      } else {
+        btn.textContent = orig;
+        showAetherNotification(`⚠️ Không thể đổi trạng thái: ${r?.error || 'Lỗi'}`, 'error', 4000);
+      }
+    });
+  });
+
+  // Worldgen Boost & Backup/Restore Prefs triggers (both in Tab Tools and inside Visual Boost Modal)
+  ['btnToolsWorldgenBoost', 'btnVbQuickWorldgen'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', (e) => runWorldgenBoostInstallUI(e.currentTarget));
+  });
+  ['btnToolsBackupPrefs', 'btnVbQuickBackupPrefs'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', (e) => runBackupPlayerPrefsUI(e.currentTarget));
+  });
+  ['btnToolsRestorePrefs', 'btnVbQuickRestorePrefs'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', (e) => runRestorePlayerPrefsUI(e.currentTarget));
+  });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   initCoopHubUI();
   initV402FeaturesUI();
@@ -8159,4 +8765,5 @@ window.addEventListener('DOMContentLoaded', () => {
   initV407FeaturesUI();
   initUniversalDropUI();
   initV410TurboSmoothUI();
+  initV412PowerSuiteUI();
 });

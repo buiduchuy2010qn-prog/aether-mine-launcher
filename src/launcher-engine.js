@@ -11862,6 +11862,854 @@ function installDroppedAddonFile({ gameDir, instanceDir = '', filePath, currentL
   }
 }
 
+/* ============================================================================
+   v41.2.0 PRO — 5 OPT-IN POWER UPGRADES
+   1) 🌐 Trạm Server Ngầm 0% GPU (Headless Local Server Studio + Hardware Advisor)
+   2) 🎨 Kho Làm Đẹp Không Tụt FPS 1-Click (Low Fire / Clean GUI / Viền Quặng / Âm Thanh)
+   3) 📸 Studio Ảnh Chụp 2.0 (Copy Kèm Khung Thông Tin / Watermark Zalo & Discord)
+   4) ☁️ Đồng Bộ Phím Tắt & Danh Sách Server (Cloud & File Keybinds + Servers Sync)
+   5) 🚀 Bộ Tăng Tốc Nạp Thế Giới Đa Nhân (Async Worldgen Boost: Noisium + C2ME + FasterRandom)
+   ============================================================================ */
+
+let activeHeadlessServerProc = null;
+let activeHeadlessServerMeta = null;
+let activeHeadlessServerLogs = [];
+
+function evaluateHostHardwareForServer() {
+  const totalMemBytes = os.totalmem() || 8 * 1024 ** 3;
+  const freeMemBytes = os.freemem() || 4 * 1024 ** 3;
+  const totalMemGB = Math.round((totalMemBytes / (1024 ** 3)) * 10) / 10;
+  const freeMemGB = Math.round((freeMemBytes / (1024 ** 3)) * 10) / 10;
+  const cpus = os.cpus() || [];
+  const cpuCores = cpus.length || 4;
+  const cpuModel = String(cpus[0]?.model || 'CPU').replace(/\s+/g, ' ').trim();
+
+  if (totalMemGB < 7.5 || cpuCores < 4) {
+    return {
+      totalMemGB,
+      freeMemGB,
+      cpuCores,
+      cpuModel,
+      tier: 'low',
+      recommendedRamGB: 1.5,
+      maxSafeRamGB: 2,
+      canPlayAndHostTogether: false,
+      badgeVi: `⚠️ Máy ${totalMemGB} GB RAM (${cpuCores} luồng) — Khuyên dùng Mở LAN / e4mc`,
+      adviceVi: 'Máy dưới 8 GB RAM nếu vừa chạy Server riêng vừa mở game 3D sẽ dễ thiếu bộ nhớ. Khuyên bạn dùng "Mở Thế Giới Qua Internet (e4mc)" ở ngay bên ngoài để nhẹ hơn 50% RAM, hoặc chỉ bật Trạm Server Ngầm khi máy chủ không mở cửa sổ 3D.'
+    };
+  }
+  if (totalMemGB < 13.5) {
+    return {
+      totalMemGB,
+      freeMemGB,
+      cpuCores,
+      cpuModel,
+      tier: 'medium',
+      recommendedRamGB: 2,
+      maxSafeRamGB: 3,
+      canPlayAndHostTogether: true,
+      badgeVi: `🟡 Cấu hình Khá (${totalMemGB} GB RAM • ${cpuCores} luồng) — Khuyên cấp 2 GB RAM Server`,
+      adviceVi: 'Máy 8–12 GB RAM chạy tốt Trạm Server Ngầm ở mức 2 GB RAM (4–6 người chơi). Nếu vừa mở Server vừa vào game trên cùng máy này, hãy giữ RAM Server = 2 GB và RAM Game = 3.5–4 GB để không khựng.'
+    };
+  }
+  return {
+    totalMemGB,
+    freeMemGB,
+    cpuCores,
+    cpuModel,
+    tier: 'high',
+    recommendedRamGB: 3,
+    maxSafeRamGB: 6,
+    canPlayAndHostTogether: true,
+    badgeVi: `🟢 Cấu hình Mạnh (${totalMemGB} GB RAM • ${cpuCores} luồng) — Chạy Server + Game Mượt 100%`,
+    adviceVi: 'Máy có dung lượng RAM và đa nhân dồi dào! Có thể cấp 3–4 GB RAM cho Trạm Server Ngầm (8–16 người chơi) và vừa mở game chiến cùng bạn bè mượt mà.'
+  };
+}
+
+function inspectLocalServerStatus({ gameDir } = {}) {
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const serverRoot = path.join(rootDir, 'local-server');
+  const hw = evaluateHostHardwareForServer();
+  const worlds = listLocalWorlds(rootDir) || [];
+  const lanIps = getLocalLanIpAddresses();
+  const isRunning = Boolean(activeHeadlessServerProc && !activeHeadlessServerProc.killed);
+
+  let savedProps = {
+    port: 25565,
+    onlineMode: false,
+    maxPlayers: 8,
+    gamemode: 'survival',
+    difficulty: 'normal',
+    viewDistance: 8,
+    motd: 'BlockWay Local Server'
+  };
+  try {
+    const propsPath = path.join(serverRoot, 'server.properties');
+    if (fs.existsSync(propsPath)) {
+      const raw = fs.readFileSync(propsPath, 'utf8');
+      const getP = (k, def) => {
+        const m = raw.match(new RegExp(`^${k}=(.*)$`, 'm'));
+        return m ? m[1].trim() : def;
+      };
+      savedProps = {
+        port: parseInt(getP('server-port', '25565'), 10) || 25565,
+        onlineMode: getP('online-mode', 'false') === 'true',
+        maxPlayers: parseInt(getP('max-players', '8'), 10) || 8,
+        gamemode: getP('gamemode', 'survival') || 'survival',
+        difficulty: getP('difficulty', 'normal') || 'normal',
+        viewDistance: parseInt(getP('view-distance', '8'), 10) || 8,
+        motd: getP('motd', 'BlockWay Local Server') || 'BlockWay Local Server'
+      };
+    }
+  } catch (_) {}
+
+  return {
+    ok: true,
+    running: isRunning,
+    pid: isRunning ? activeHeadlessServerProc.pid : null,
+    meta: isRunning ? activeHeadlessServerMeta : null,
+    savedProps,
+    hardware: hw,
+    lanIps,
+    serverDir: serverRoot,
+    worlds: worlds.map((w) => ({
+      folderName: w.folderName || w.name,
+      displayName: w.name || w.folderName,
+      sizeMB: w.sizeMB || 0
+    })),
+    recentLogs: activeHeadlessServerLogs.slice(-120)
+  };
+}
+
+function copyDirRecursiveSync(src, dest) {
+  if (!fs.existsSync(src)) return;
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (entry.name === 'session.lock') continue;
+    const sPath = path.join(src, entry.name);
+    const dPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursiveSync(sPath, dPath);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(sPath, dPath);
+    }
+  }
+}
+
+async function startLocalHeadlessServer({
+  gameDir,
+  mcVersion = '1.21.4',
+  ramGB = 2,
+  port = 25565,
+  onlineMode = false,
+  maxPlayers = 8,
+  gamemode = 'survival',
+  difficulty = 'normal',
+  viewDistance = 8,
+  worldFolderName = '',
+  motd = 'BlockWay Local Server'
+} = {}, callbacks = {}) {
+  if (activeHeadlessServerProc && !activeHeadlessServerProc.killed) {
+    return { ok: false, error: 'Trạm Server Ngầm đang chạy rồi. Hãy bấm Dừng Server trước khi khởi động lại.' };
+  }
+  const rootDir = gameDir && String(gameDir).trim() ? String(gameDir).trim() : getDefaultGameDir();
+  const serverRoot = path.join(rootDir, 'local-server');
+  const jarsDir = path.join(serverRoot, 'jars');
+  fs.mkdirSync(jarsDir, { recursive: true });
+
+  const emitLog = (line) => {
+    const clean = String(line || '').trim();
+    if (!clean) return;
+    activeHeadlessServerLogs.push(clean);
+    if (activeHeadlessServerLogs.length > 250) {
+      activeHeadlessServerLogs = activeHeadlessServerLogs.slice(-200);
+    }
+    callbacks.onLog?.(clean);
+  };
+
+  callbacks.onStatus?.(`☕ Đang kiểm tra Java Runtime cho Server MC ${mcVersion}...`);
+  const reqMajor = getRequiredJavaMajor(mcVersion);
+  let javaBin = detectJavaPath(rootDir, mcVersion);
+  if (!javaBin) {
+    javaBin = await downloadPortableJava(reqMajor, rootDir, callbacks.onProgress, callbacks.onStatus);
+  }
+  if (process.platform === 'win32' && /javaw\.exe$/i.test(javaBin)) {
+    const cliJava = javaBin.replace(/javaw\.exe$/i, 'java.exe');
+    if (fs.existsSync(cliJava)) javaBin = cliJava;
+  }
+
+  const jarPath = path.join(jarsDir, `server-${mcVersion}.jar`);
+  if (!fs.existsSync(jarPath) || fs.statSync(jarPath).size < 100000) {
+    callbacks.onStatus?.(`🌐 Đang tải hạt nhân Server chính thức Mojang (MC ${mcVersion})...`);
+    emitLog(`[BlockWay Server] Đang tra cứu bản dựng Server chính thức cho Minecraft ${mcVersion}...`);
+    const manifest = await fetchVersionManifest();
+    const entry = (manifest.versions || []).find((v) => v.id === mcVersion);
+    if (!entry?.url) {
+      throw new Error(`Không tìm thấy thông tin phiên bản Minecraft ${mcVersion} từ Mojang.`);
+    }
+    const vJson = await fetchJson(entry.url);
+    const srvDl = vJson?.downloads?.server;
+    if (!srvDl?.url) {
+      throw new Error(`Phiên bản Minecraft ${mcVersion} không có gói server.jar chính thức.`);
+    }
+    await downloadFile(srvDl.url, jarPath, srvDl.sha1);
+    emitLog(`[BlockWay Server] ✓ Đã tải xong server-${mcVersion}.jar (${Math.round((srvDl.size || 0) / 1048576)} MB).`);
+  }
+
+  let levelName = 'world';
+  if (worldFolderName && worldFolderName !== '__server_default__') {
+    const safeStem = String(worldFolderName).replace(/[^A-Za-z0-9._-]/g, '_');
+    const srcWorld = path.join(rootDir, 'saves', worldFolderName);
+    if (fs.existsSync(srcWorld)) {
+      levelName = `world_${safeStem}`;
+      const destWorld = path.join(serverRoot, levelName);
+      if (!fs.existsSync(path.join(destWorld, 'level.dat'))) {
+        callbacks.onStatus?.(`🗺️ Đang sao chép thế giới "${worldFolderName}" sang Trạm Server...`);
+        copyDirRecursiveSync(srcWorld, destWorld);
+        emitLog(`[BlockWay Server] ✓ Đã nạp bản sao thế giới "${worldFolderName}" vào thư mục Server (${levelName}).`);
+      }
+    }
+  }
+
+  const safePort = Math.max(1024, Math.min(65535, parseInt(port, 10) || 25565));
+  const safeMaxPlayers = Math.max(1, Math.min(100, parseInt(maxPlayers, 10) || 8));
+  const safeViewDist = Math.max(4, Math.min(16, parseInt(viewDistance, 10) || 8));
+  const safeGamemode = ['survival', 'creative', 'adventure', 'spectator'].includes(gamemode) ? gamemode : 'survival';
+  const safeDifficulty = ['peaceful', 'easy', 'normal', 'hard'].includes(difficulty) ? difficulty : 'normal';
+  const cleanMotd = String(motd || `BlockWay Server - MC ${mcVersion}`).replace(/[\r\n]/g, ' ').trim();
+
+  fs.writeFileSync(path.join(serverRoot, 'eula.txt'), '# Auto-accepted by BlockWay Headless Server Studio\neula=true\n', 'utf8');
+
+  const propsLines = [
+    '# BlockWay Headless Server Properties',
+    `server-port=${safePort}`,
+    `online-mode=${onlineMode ? 'true' : 'false'}`,
+    `max-players=${safeMaxPlayers}`,
+    `gamemode=${safeGamemode}`,
+    `difficulty=${safeDifficulty}`,
+    `view-distance=${safeViewDist}`,
+    `simulation-distance=${Math.min(safeViewDist, 6)}`,
+    `level-name=${levelName}`,
+    `motd=${cleanMotd}`,
+    'sync-chunk-writes=false',
+    'network-compression-threshold=256',
+    'spawn-protection=0',
+    'enable-command-block=true',
+    'enforce-secure-profile=false'
+  ];
+  fs.writeFileSync(path.join(serverRoot, 'server.properties'), propsLines.join('\n') + '\n', 'utf8');
+
+  const clampedRamGB = Math.max(1, Math.min(12, Number(ramGB) || 2));
+  const xmxMB = Math.round(clampedRamGB * 1024);
+  const xmsMB = Math.min(1024, xmxMB);
+
+  const jvmArgs = [
+    `-Xms${xmsMB}M`,
+    `-Xmx${xmxMB}M`,
+    '-XX:+UseG1GC',
+    '-XX:+ParallelRefProcEnabled',
+    '-XX:MaxGCPauseMillis=100',
+    '-XX:+UnlockExperimentalVMOptions',
+    '-XX:+DisableExplicitGC',
+    '-Djava.net.preferIPv4Stack=true',
+    '-jar',
+    jarPath,
+    'nogui'
+  ];
+
+  activeHeadlessServerLogs = [];
+  emitLog(`[BlockWay Server] 🚀 Khởi chạy Server MC ${mcVersion} (0% GPU • RAM ${xmxMB}MB • Cổng ${safePort} • ${onlineMode ? 'Bản quyền' : 'Cho phép Offline/Crack'})...`);
+
+  const child = spawn(javaBin, jvmArgs, {
+    cwd: serverRoot,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: true
+  });
+
+  activeHeadlessServerProc = child;
+  activeHeadlessServerMeta = {
+    pid: child.pid,
+    mcVersion,
+    ramGB: clampedRamGB,
+    port: safePort,
+    onlineMode: Boolean(onlineMode),
+    maxPlayers: safeMaxPlayers,
+    gamemode: safeGamemode,
+    difficulty: safeDifficulty,
+    levelName,
+    worldFolderName: worldFolderName || '__server_default__',
+    startedAt: Date.now(),
+    ready: false
+  };
+
+  const handleStream = (chunk) => {
+    const text = String(chunk || '');
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      emitLog(line);
+      if (/Done \([\d.,]+s\)! For help, type "help"/i.test(line)) {
+        if (activeHeadlessServerMeta) activeHeadlessServerMeta.ready = true;
+        callbacks.onStateChange?.({ running: true, ready: true, meta: activeHeadlessServerMeta });
+      }
+    }
+  };
+
+  child.stdout?.on('data', handleStream);
+  child.stderr?.on('data', handleStream);
+  child.on('exit', (code) => {
+    emitLog(`[BlockWay Server] ⏹ Máy chủ đã dừng (mã thoát: ${code ?? 0}).`);
+    activeHeadlessServerProc = null;
+    if (activeHeadlessServerMeta) activeHeadlessServerMeta.ready = false;
+    callbacks.onStateChange?.({ running: false, ready: false, exitCode: code ?? 0 });
+  });
+
+  return {
+    ok: true,
+    running: true,
+    pid: child.pid,
+    meta: activeHeadlessServerMeta,
+    lanIps: getLocalLanIpAddresses(),
+    serverDir: serverRoot
+  };
+}
+
+function sendLocalServerCommand(command) {
+  if (!activeHeadlessServerProc || activeHeadlessServerProc.killed || !activeHeadlessServerProc.stdin) {
+    return { ok: false, error: 'Trạm Server Ngầm hiện chưa chạy.' };
+  }
+  const cleanCmd = String(command || '').trim().replace(/^\/+/, '');
+  if (!cleanCmd) return { ok: false, error: 'Lệnh trống.' };
+  try {
+    activeHeadlessServerProc.stdin.write(`${cleanCmd}\n`);
+    activeHeadlessServerLogs.push(`> /${cleanCmd}`);
+    return { ok: true, command: cleanCmd };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+async function stopLocalHeadlessServer() {
+  if (!activeHeadlessServerProc || activeHeadlessServerProc.killed) {
+    activeHeadlessServerProc = null;
+    return { ok: true, alreadyStopped: true };
+  }
+  const proc = activeHeadlessServerProc;
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      activeHeadlessServerProc = null;
+      resolve({ ok: true });
+    };
+    proc.once('exit', finish);
+    try {
+      proc.stdin?.write('save-all\nstop\n');
+    } catch (_) {}
+    setTimeout(() => {
+      if (!settled) {
+        try { proc.kill('SIGTERM'); } catch (_) {}
+        setTimeout(() => {
+          if (!settled) {
+            try { proc.kill('SIGKILL'); } catch (_) {}
+            finish();
+          }
+        }, 1200);
+      }
+    }, 4500);
+  });
+}
+
+/* ---------------- Upgrade 2: 🎨 Kho "Làm Đẹp Không Tụt FPS" 1-Click ---------------- */
+let _crc32Table = null;
+function computeCrc32Buf(buf) {
+  if (!_crc32Table) {
+    _crc32Table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) {
+        c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      _crc32Table[n] = c >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc = _crc32Table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function createRgbaPngBuffer(width, height, pixelFn) {
+  const raw = Buffer.alloc(height * (1 + width * 4));
+  for (let y = 0; y < height; y++) {
+    const rowOff = y * (1 + width * 4);
+    raw[rowOff] = 0; // filter type 0
+    for (let x = 0; x < width; x++) {
+      const [r, g, b, a] = pixelFn(x, y);
+      const pOff = rowOff + 1 + x * 4;
+      raw[pOff] = r & 255;
+      raw[pOff + 1] = g & 255;
+      raw[pOff + 2] = b & 255;
+      raw[pOff + 3] = a & 255;
+    }
+  }
+  const makeChunk = (typeStr, dataBuf) => {
+    const lenBuf = Buffer.alloc(4);
+    lenBuf.writeUInt32BE(dataBuf.length, 0);
+    const typeBuf = Buffer.from(typeStr, 'ascii');
+    const crcBuf = Buffer.alloc(4);
+    crcBuf.writeUInt32BE(computeCrc32Buf(Buffer.concat([typeBuf, dataBuf])), 0);
+    return Buffer.concat([lenBuf, typeBuf, dataBuf, crcBuf]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // RGBA
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+  const idat = zlib.deflateSync(raw, { level: 6 });
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    makeChunk('IHDR', ihdr),
+    makeChunk('IDAT', idat),
+    makeChunk('IEND', Buffer.alloc(0))
+  ]);
+}
+
+const LOWFIRE_PACK_FILENAME = 'BlockWay-LowFire-CleanGUI.zip';
+const GLOWORES_PACK_FILENAME = 'BlockWay-GlowingOres-Border.zip';
+
+function ensureBuiltInLowFireCleanGuiPack(targetDir) {
+  const rpDir = path.join(targetDir, 'resourcepacks');
+  fs.mkdirSync(rpDir, { recursive: true });
+  const zipPath = path.join(rpDir, LOWFIRE_PACK_FILENAME);
+  if (fs.existsSync(zipPath) && fs.statSync(zipPath).size > 200) return zipPath;
+
+  const zip = openPackZip();
+  const mcmeta = {
+    pack: {
+      pack_format: 34,
+      supported_formats: { min_inclusive: 1, max_inclusive: 99 },
+      description: '§bBlockWay §fLửa Thấp PvP & Bí Ngô Trong Suốt (0% Lag)'
+    }
+  };
+  zip.addFile('pack.mcmeta', Buffer.from(JSON.stringify(mcmeta, null, 2), 'utf8'));
+
+  // 1) Transparent pumpkinblur.png so wearing a carved pumpkin in The End has 100% clear screen
+  const clearPng = createRgbaPngBuffer(16, 16, () => [0, 0, 0, 0]);
+  zip.addFile('assets/minecraft/textures/misc/pumpkinblur.png', clearPng);
+
+  // 2) Low fire textures (fire_0.png & fire_1.png) — upper 60% completely transparent so fire never blocks crosshair!
+  const lowFire0 = createRgbaPngBuffer(16, 16, (x, y) => {
+    if (y < 9) return [0, 0, 0, 0];
+    const distCenter = Math.abs(x - 7.5);
+    if (y === 9 && distCenter > 5) return [0, 0, 0, 0];
+    if (y >= 13) return [255, 215, 70, 235];
+    if (y >= 11) return [255, 145, 25, 220];
+    return [235, 75, 15, 190];
+  });
+  const lowFire1 = createRgbaPngBuffer(16, 16, (x, y) => {
+    if (y < 10) return [0, 0, 0, 0];
+    if (y >= 13) return [255, 225, 85, 235];
+    if (y >= 11) return [255, 155, 30, 220];
+    return [240, 85, 20, 195];
+  });
+  const flameMeta = Buffer.from(JSON.stringify({ animation: { frametime: 2 } }), 'utf8');
+  zip.addFile('assets/minecraft/textures/block/fire_0.png', lowFire0);
+  zip.addFile('assets/minecraft/textures/block/fire_0.png.mcmeta', flameMeta);
+  zip.addFile('assets/minecraft/textures/block/fire_1.png', lowFire1);
+  zip.addFile('assets/minecraft/textures/block/fire_1.png.mcmeta', flameMeta);
+  zip.addFile('pack.png', lowFire0);
+
+  zip.writeZip(zipPath);
+  return zipPath;
+}
+
+function ensureBuiltInGlowingOresPack(targetDir) {
+  const rpDir = path.join(targetDir, 'resourcepacks');
+  fs.mkdirSync(rpDir, { recursive: true });
+  const zipPath = path.join(rpDir, GLOWORES_PACK_FILENAME);
+  if (fs.existsSync(zipPath) && fs.statSync(zipPath).size > 200) return zipPath;
+
+  const zip = openPackZip();
+  const mcmeta = {
+    pack: {
+      pack_format: 34,
+      supported_formats: { min_inclusive: 1, max_inclusive: 99 },
+      description: '§bBlockWay §eViền Quặng Phát Sáng Trong Hang (0% Lag)'
+    }
+  };
+  zip.addFile('pack.mcmeta', Buffer.from(JSON.stringify(mcmeta, null, 2), 'utf8'));
+
+  const ores = [
+    { files: ['diamond_ore.png', 'deepslate_diamond_ore.png'], border: [56, 248, 255], core: [40, 210, 230] },
+    { files: ['emerald_ore.png', 'deepslate_emerald_ore.png'], border: [40, 255, 130], core: [22, 200, 95] },
+    { files: ['gold_ore.png', 'deepslate_gold_ore.png', 'nether_gold_ore.png'], border: [255, 220, 55], core: [235, 180, 25] },
+    { files: ['iron_ore.png', 'deepslate_iron_ore.png'], border: [245, 195, 160], core: [215, 165, 130] },
+    { files: ['redstone_ore.png', 'deepslate_redstone_ore.png'], border: [255, 55, 55], core: [210, 25, 25] },
+    { files: ['lapis_ore.png', 'deepslate_lapis_ore.png'], border: [65, 130, 255], core: [35, 90, 220] },
+    { files: ['coal_ore.png', 'deepslate_coal_ore.png'], border: [180, 190, 205], core: [40, 44, 52] },
+    { files: ['ancient_debris_side.png', 'ancient_debris_top.png'], border: [255, 135, 45], core: [130, 75, 55] }
+  ];
+
+  for (const ore of ores) {
+    for (const fileName of ore.files) {
+      const isDeepslate = fileName.startsWith('deepslate_');
+      const isNether = fileName.startsWith('nether_') || fileName.startsWith('ancient_');
+      const bgBase = isNether ? [95, 42, 42] : (isDeepslate ? [62, 62, 68] : [118, 118, 122]);
+      const png = createRgbaPngBuffer(16, 16, (x, y) => {
+        if (x === 0 || y === 0 || x === 15 || y === 15) {
+          return [...ore.border, 255];
+        }
+        const speck = ((x * 7 + y * 13) % 11 === 0) || ((x >= 4 && x <= 6 && y >= 5 && y <= 6)) || ((x >= 9 && x <= 11 && y >= 9 && y <= 11));
+        if (speck) return [...ore.core, 255];
+        const shade = ((x * 3 + y * 5) % 7) - 3;
+        return [
+          Math.max(0, Math.min(255, bgBase[0] + shade * 2)),
+          Math.max(0, Math.min(255, bgBase[1] + shade * 2)),
+          Math.max(0, Math.min(255, bgBase[2] + shade * 2)),
+          255
+        ];
+      });
+      zip.addFile(`assets/minecraft/textures/block/${fileName}`, png);
+      if (fileName === 'diamond_ore.png') zip.addFile('pack.png', png);
+    }
+  }
+
+  zip.writeZip(zipPath);
+  return zipPath;
+}
+
+function getVisualBoostStatus({ gameDir, instanceDir = '' } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const equipped = getEquippedAddonsState(targetDir);
+  const activeRps = (equipped.activeResourcePacks || []).map((s) => String(s).toLowerCase());
+  const modsDir = path.join(targetDir, 'mods');
+  const enabledMods = fs.existsSync(modsDir)
+    ? fs.readdirSync(modsDir).filter((f) => /\.jar$/i.test(f)).map((f) => f.toLowerCase())
+    : [];
+
+  return {
+    ok: true,
+    targetDir,
+    packs: {
+      low_fire_clean_gui: activeRps.some((p) => p.includes('lowfire') || p.includes('low-fire') || p.includes('low_fire')),
+      glowing_ores: activeRps.some((p) => p.includes('glowingores') || p.includes('visible-ores') || p.includes('ore')),
+      fresh_animations: activeRps.some((p) => p.includes('fresh') && p.includes('animation')),
+      immersive_sound: enabledMods.some((m) => m.includes('presencefootsteps') || m.includes('presence-footsteps') || m.includes('sound-physics') || m.includes('soundphysics') || m.includes('ambientsounds'))
+    }
+  };
+}
+
+async function toggleVisualBoostPack({
+  gameDir,
+  instanceDir = '',
+  packId = 'low_fire_clean_gui',
+  enable = true,
+  mcVersion = '1.21.4',
+  loaderType = 'fabric'
+} = {}, onStatus) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const effectiveLoader = normalizeModrinthLoader(loaderType, mcVersion);
+
+  if (packId === 'low_fire_clean_gui') {
+    ensureBuiltInLowFireCleanGuiPack(targetDir);
+    equipResourcePackInGame(targetDir, LOWFIRE_PACK_FILENAME, Boolean(enable));
+    return {
+      ok: true,
+      packId,
+      enabled: Boolean(enable),
+      fileName: LOWFIRE_PACK_FILENAME,
+      status: getVisualBoostStatus({ gameDir: targetDir })
+    };
+  }
+
+  if (packId === 'glowing_ores') {
+    ensureBuiltInGlowingOresPack(targetDir);
+    equipResourcePackInGame(targetDir, GLOWORES_PACK_FILENAME, Boolean(enable));
+    return {
+      ok: true,
+      packId,
+      enabled: Boolean(enable),
+      fileName: GLOWORES_PACK_FILENAME,
+      status: getVisualBoostStatus({ gameDir: targetDir })
+    };
+  }
+
+  if (packId === 'fresh_animations') {
+    const rpDir = path.join(targetDir, 'resourcepacks');
+    fs.mkdirSync(rpDir, { recursive: true });
+    if (!enable) {
+      for (const f of fs.readdirSync(rpDir)) {
+        if (/fresh.*animation/i.test(f)) equipResourcePackInGame(targetDir, f, false);
+      }
+      return { ok: true, packId, enabled: false, status: getVisualBoostStatus({ gameDir: targetDir }) };
+    }
+    onStatus?.('🐾 Đang tải Fresh Animations + EMF/ETF hỗ trợ cử động mắt & dáng đi sinh vật...');
+    if (effectiveLoader !== 'vanilla') {
+      for (const slug of ['entity-model-features', 'entity-texture-features']) {
+        try {
+          await installModrinthProject({ slug, projectType: 'mod', mcVersion, loaderType: effectiveLoader, gameDir: targetDir }, onStatus);
+        } catch (_) {}
+      }
+    }
+    let rpFile = fs.readdirSync(rpDir).find((f) => /fresh.*animation/i.test(f) && /\.zip$/i.test(f)) || '';
+    if (!rpFile) {
+      const r = await installModrinthProject({
+        slug: 'fresh-animations',
+        projectType: 'resourcepack',
+        mcVersion,
+        loaderType: 'vanilla',
+        gameDir: targetDir
+      }, onStatus);
+      rpFile = r?.fileName || '';
+    }
+    if (rpFile) equipResourcePackInGame(targetDir, rpFile, true);
+    return {
+      ok: Boolean(rpFile),
+      packId,
+      enabled: Boolean(rpFile),
+      fileName: rpFile,
+      status: getVisualBoostStatus({ gameDir: targetDir })
+    };
+  }
+
+  if (packId === 'immersive_sound') {
+    const modsDir = path.join(targetDir, 'mods');
+    fs.mkdirSync(modsDir, { recursive: true });
+    if (!enable) {
+      for (const f of fs.readdirSync(modsDir)) {
+        if (/^(presence-?footsteps|sound-?physics|ambientsounds)/i.test(f) && /\.jar$/i.test(f)) {
+          try { fs.renameSync(path.join(modsDir, f), path.join(modsDir, `${f}.disabled`)); } catch (_) {}
+        }
+      }
+      return { ok: true, packId, enabled: false, status: getVisualBoostStatus({ gameDir: targetDir }) };
+    }
+    const installed = [];
+    for (const slug of ['sound-physics-remastered', 'presence-footsteps']) {
+      try {
+        onStatus?.(`🔊 Đang cài âm thanh vòm 3D (${slug}) cho MC ${mcVersion}...`);
+        const r = await installModrinthProject({
+          slug,
+          projectType: 'mod',
+          mcVersion,
+          loaderType: effectiveLoader === 'vanilla' ? 'fabric' : effectiveLoader,
+          gameDir: targetDir
+        }, onStatus);
+        if (r?.fileName) installed.push(r.fileName);
+      } catch (_) {}
+    }
+    return {
+      ok: installed.length > 0,
+      packId,
+      enabled: installed.length > 0,
+      installed,
+      status: getVisualBoostStatus({ gameDir: targetDir })
+    };
+  }
+
+  return { ok: false, error: 'Gói làm đẹp không xác định.' };
+}
+
+/* ---------------- Upgrade 4: ☁️ Đồng Bộ Phím Tắt & Danh Sách Server ---------------- */
+const CLOUD_PREFS_SNAPSHOT_FILE = '.blockway-cloud-prefs.json';
+
+function exportPlayerPrefsSnapshot({
+  gameDir,
+  instanceDir = '',
+  favoriteServers = [],
+  pinnedServers = [],
+  saveToFilePath = ''
+} = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const optsPath = path.join(targetDir, 'options.txt');
+  const keybinds = {};
+  const comfortSettings = {};
+  const COMFORT_KEYS = new Set([
+    'fov', 'gamma', 'guiScale', 'autoJump', 'toggleSprint', 'toggleCrouch',
+    'rawMouseInput', 'enableVsync', 'maxFps', 'renderDistance', 'simulationDistance',
+    'soundCategory_master', 'soundCategory_music', 'soundCategory_record',
+    'soundCategory_weather', 'soundCategory_block', 'soundCategory_hostile',
+    'soundCategory_neutral', 'soundCategory_player', 'soundCategory_ambient', 'lang'
+  ]);
+
+  if (fs.existsSync(optsPath)) {
+    const raw = fs.readFileSync(optsPath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const idx = line.indexOf(':');
+      if (idx <= 0) continue;
+      const k = line.slice(0, idx).trim();
+      const v = line.slice(idx + 1).trim();
+      if (k.startsWith('key_')) {
+        keybinds[k] = v;
+      } else if (COMFORT_KEYS.has(k)) {
+        comfortSettings[k] = v;
+      }
+    }
+  }
+
+  const srvDat = readServersDat(targetDir);
+  const gameServers = Array.isArray(srvDat?.servers) ? srvDat.servers.map((s) => ({ name: s.name, ip: s.ip })) : [];
+
+  const snapshot = {
+    format: 'blockway-prefs-v1',
+    updatedAt: new Date().toISOString(),
+    keybindsCount: Object.keys(keybinds).length,
+    keybinds,
+    comfortSettings,
+    gameServers,
+    favoriteServers: Array.isArray(favoriteServers) ? favoriteServers : [],
+    pinnedServers: Array.isArray(pinnedServers) ? pinnedServers : []
+  };
+
+  try {
+    fs.mkdirSync(targetDir, { recursive: true });
+    fs.writeFileSync(path.join(targetDir, CLOUD_PREFS_SNAPSHOT_FILE), JSON.stringify(snapshot, null, 2), 'utf8');
+  } catch (_) {}
+
+  if (saveToFilePath) {
+    fs.writeFileSync(saveToFilePath, JSON.stringify(snapshot, null, 2), 'utf8');
+  }
+
+  return {
+    ok: true,
+    keybindsCount: snapshot.keybindsCount,
+    serversCount: Math.max(gameServers.length, snapshot.favoriteServers.length),
+    snapshot
+  };
+}
+
+function importPlayerPrefsSnapshot({
+  gameDir,
+  instanceDir = '',
+  snapshotData = null,
+  filePath = ''
+} = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  let snap = snapshotData;
+  if (!snap && filePath && fs.existsSync(filePath)) {
+    snap = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  }
+  if (!snap) {
+    const localSnapPath = path.join(targetDir, CLOUD_PREFS_SNAPSHOT_FILE);
+    if (fs.existsSync(localSnapPath)) {
+      snap = JSON.parse(fs.readFileSync(localSnapPath, 'utf8'));
+    }
+  }
+  if (!snap || typeof snap !== 'object') {
+    return { ok: false, error: 'Chưa có bản sao lưu Phím tắt & Server nào để khôi phục.' };
+  }
+
+  const optsPath = path.join(targetDir, 'options.txt');
+  let content = fs.existsSync(optsPath) ? fs.readFileSync(optsPath, 'utf8') : '';
+  const nl = content.includes('\r\n') ? '\r\n' : '\n';
+  const upsert = (k, v) => {
+    const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(`^${esc}:.*(\\r?)$`, 'm');
+    if (rx.test(content)) content = content.replace(rx, `${k}:${v}$1`);
+    else content += (content && !content.endsWith('\n') ? nl : '') + `${k}:${v}${nl}`;
+  };
+
+  let restoredKeys = 0;
+  for (const [k, v] of Object.entries(snap.keybinds || {})) {
+    if (k.startsWith('key_') && v !== undefined) {
+      upsert(k, v);
+      restoredKeys++;
+    }
+  }
+  for (const [k, v] of Object.entries(snap.comfortSettings || {})) {
+    if (v !== undefined) upsert(k, v);
+  }
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.writeFileSync(optsPath, content, 'utf8');
+
+  const mergedServers = [
+    ...(Array.isArray(snap.gameServers) ? snap.gameServers : []),
+    ...(Array.isArray(snap.favoriteServers) ? snap.favoriteServers : [])
+  ].filter((s) => s && s.ip);
+
+  if (mergedServers.length > 0) {
+    try {
+      syncServersDat(targetDir, mergedServers, { writeToGame: true, writeList: mergedServers });
+    } catch (_) {}
+  }
+
+  return {
+    ok: true,
+    restoredKeys,
+    restoredServers: mergedServers.length,
+    favoriteServers: Array.isArray(snap.favoriteServers) ? snap.favoriteServers : [],
+    pinnedServers: Array.isArray(snap.pinnedServers) ? snap.pinnedServers : []
+  };
+}
+
+/* ---------------- Upgrade 5: 🚀 Bộ Tăng Tốc Nạp Thế Giới Đa Nhân (Async Worldgen Boost) ---------------- */
+function getWorldgenBoostStatus({ gameDir, instanceDir = '' } = {}) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const modsDir = path.join(targetDir, 'mods');
+  const activeMods = [];
+  if (fs.existsSync(modsDir)) {
+    for (const f of fs.readdirSync(modsDir)) {
+      if (!/\.jar$/i.test(f)) continue;
+      if (/^(noisium|c2me|faster-?random|scalablelux|starlight|chunky)/i.test(f)) {
+        activeMods.push(f);
+      }
+    }
+  }
+  return {
+    ok: true,
+    installed: activeMods.length > 0,
+    activeMods
+  };
+}
+
+async function installWorldgenBoostPack({
+  gameDir,
+  instanceDir = '',
+  mcVersion = '1.21.4',
+  loaderType = 'fabric'
+} = {}, onStatus) {
+  const targetDir = resolveTweakerDir(gameDir, instanceDir);
+  const effectiveLoader = normalizeModrinthLoader(loaderType === 'vanilla' ? 'fabric' : loaderType, mcVersion);
+  const installed = [];
+  const candidates = [
+    { slug: 'noisium', label: 'Noisium (Tăng 30% tốc độ tạo địa hình)' },
+    { slug: 'faster-random', label: 'Faster Random (Tăng tốc sinh quần xã)' },
+    { slug: 'c2me-fabric', label: 'C2ME (Tải Chunk đa nhân CPU)' },
+    { slug: 'scalablelux', label: 'ScalableLux (Ánh sáng đa luồng)' }
+  ];
+
+  for (const item of candidates) {
+    if (item.slug === 'c2me-fabric' && effectiveLoader !== 'fabric' && effectiveLoader !== 'quilt') continue;
+    try {
+      onStatus?.(`🚀 Đang trang bị ${item.label} cho MC ${mcVersion}...`);
+      const r = await installModrinthProject({
+        slug: item.slug,
+        projectType: 'mod',
+        mcVersion,
+        loaderType: effectiveLoader,
+        gameDir: targetDir
+      }, onStatus);
+      if (r?.fileName) installed.push(r.fileName);
+    } catch (_) {}
+  }
+
+  // Run Mixin Conflict Resolver to guarantee zero overlap with existing mods
+  try {
+    resolveKnownModMixinConflicts(path.join(targetDir, 'mods'), mcVersion, effectiveLoader, () => {});
+  } catch (_) {}
+
+  return {
+    ok: installed.length > 0,
+    installed,
+    status: getWorldgenBoostStatus({ gameDir: targetDir })
+  };
+}
+
 module.exports = {
   applyGentleSmoothOptions,
   applyGentleJvmTuning,
@@ -11991,5 +12839,18 @@ module.exports = {
   applyCrossPlatformDriverEnv,
   getCrossPlatformConfigRoot,
   getCrossPlatformDataRoot,
-  autoPruneGameLogsAndTemp
+  autoPruneGameLogsAndTemp,
+  evaluateHostHardwareForServer,
+  inspectLocalServerStatus,
+  startLocalHeadlessServer,
+  sendLocalServerCommand,
+  stopLocalHeadlessServer,
+  ensureBuiltInLowFireCleanGuiPack,
+  ensureBuiltInGlowingOresPack,
+  getVisualBoostStatus,
+  toggleVisualBoostPack,
+  exportPlayerPrefsSnapshot,
+  importPlayerPrefsSnapshot,
+  getWorldgenBoostStatus,
+  installWorldgenBoostPack
 };
