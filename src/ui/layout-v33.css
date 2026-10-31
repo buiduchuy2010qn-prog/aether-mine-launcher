@@ -9370,6 +9370,56 @@ html[data-theme="sakura"] .ds-sig-pill {
   font-weight: 700 !important;
 }
 
+/* Ensure zero tiny (<12px) buttons/chips across Home, Play, Mods, Packs, Skin, Settings & Turbo Smooth Modal */
+.turbo-hpc-pill,
+.lpc-optifine-link,
+.ram-pill-btn,
+.ram-auto-btn,
+#tab-home .ram-pill-btn,
+#tab-home .ram-auto-btn,
+#btnSysOptimize,
+#btnToggleMoreModCats,
+#btnSettingsOpenDeepSmooth,
+.card-link-btn.turbo-link-btn,
+.qver-chip,
+.btn-save-acc-mini,
+.mqt-chip,
+.mqt-more-btn,
+.wt-upload-btn,
+.soi-side-action,
+.ds-check-all-link {
+  font-size: 12.6px !important;
+  font-weight: 600 !important;
+}
+
+.auth-tab-btn {
+  font-size: 12.4px !important;
+  padding: 7px 6px !important;
+  white-space: nowrap !important;
+}
+
+#btnPacksCurseForgeKey {
+  max-width: none !important;
+}
+
+#deepSmoothStudioModal .ds-studio-card {
+  width: min(900px, calc(100vw - 28px)) !important;
+  max-width: 900px !important;
+}
+
+#deepSmoothStudioModal .ds-profile-card p,
+#deepSmoothStudioModal .ds-layer-text span,
+#deepSmoothStudioModal .ds-feedback-banner {
+  font-size: 12.8px !important;
+  line-height: 1.46 !important;
+}
+
+#deepSmoothStudioModal .ds-layer-head strong,
+#deepSmoothStudioModal .dsp-top strong {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
 /* 2. Dedicated Section Card in #tab-servers (#localServerDedicatedCard) */
 .ls-dedicated-section-card {
   display: flex;
