@@ -1090,8 +1090,8 @@
               <p>Cài tự động gói sinh tồn (OneBlock, SkyBlock, Zombie, RPG, Create) từ <strong>Modrinth • CurseForge • FTB • Technic</strong>.</p>
             </div>
             <div class="packs-header-actions">
-              <button class="btn-fps-boost-1click" id="btnQuickInstallSkyBlock" title="Tạo ngay gói Đảo Sinh Tồn SkyBlock chuẩn (Cây Sồi + Rương Lava/Băng + Đảo Cát — vào Chơi Đơn bấm Tạo Thế Giới Mới là ra Đảo Bay ngay!)">🏝️ Tạo Đảo SkyBlock (1-Click)</button>
-              <button class="btn-sync-skin" id="btnQuickInstallOneBlock" title="Tạo ngay gói Một Ô Đất OneBlock chuẩn (Sinh tồn trên 1 khối đất tự tái tạo)">🧱 Tạo OneBlock (1-Click)</button>
+              <button class="btn-fps-boost-1click" id="btnQuickInstallSkyBlock" title="Tạo ngay gói Đảo Sinh Tồn SkyBlock chuẩn (Cây Sồi + Rương Lava/Băng + Đảo Cát — vào Chơi Đơn bấm Tạo Thế Giới Mới là ra Đảo Bay ngay!)">🏝️ Tạo Đảo SkyBlock</button>
+              <button class="btn-sync-skin" id="btnQuickInstallOneBlock" title="Tạo ngay gói Một Ô Đất OneBlock chuẩn (Sinh tồn trên 1 khối đất tự tái tạo)">🧱 Tạo Đảo OneBlock</button>
               <button class="btn-sync-skin" id="btnPacksImportFile" title="Nhập .mrpack, CurseForge .zip, Prism/MultiMC .zip, Technic .zip, Map .zip, Datapack .zip">📥 Nhập file pack</button>
               <button class="btn-sync-skin" id="btnPacksImportUrl">🔗 Nhập từ link</button>
               <button class="btn-sync-skin is-ok" id="btnPacksToggleVi" title="Tự động dịch mô tả Modpack sang Tiếng Việt dễ hiểu">🌐 Mô tả: Tiếng Việt</button>
@@ -1131,7 +1131,7 @@
             </div>
             <div class="packs-filter-row">
               <div class="mods-search-box packs-search-box">
-                <input type="text" id="packsSearchInput" class="pro-input" placeholder="Tìm gói (vd: OneBlock, Zombie, 100 Days, Pixelmon, RLCraft, Create, StoneBlock...)" />
+                <input type="text" id="packsSearchInput" class="pro-input" placeholder="Tìm Modpack, Map, Datapack (vd: OneBlock, RLCraft)..." />
                 <button class="btn-sync-skin" id="btnPacksSearch">🔍 Tìm kiếm</button>
               </div>
               <select id="packsMcFilter" class="pro-select packs-select" title="Lọc theo phiên bản Minecraft">
@@ -1290,10 +1290,10 @@
                   <input type="text" id="coopJoinCodeInput" class="pro-input" placeholder="Nhập Mã phòng (VD: BW7K2X) hoặc BW-..." />
                   <button class="btn-install-mod" id="btnCoopJoinRoom">▶ Vào Phòng</button>
                 </div>
-                <div class="cmb-actions" style="margin-top:8px;">
-                  <button class="btn-sync-skin" id="btnCoopCreateRoomModal" style="flex:1;">➕ Tạo Mã Phòng Cho Thế Giới Đang Mở</button>
-                  <button class="vtype-btn" id="btnCoopRefreshRooms" title="Xem các phòng công khai đang mở">🔄 Phòng đang mở</button>
-                </div>
+                  <div class=" cmb-actions" style="margin-top:8px;">
+                    <button class="btn-sync-skin" id="btnCoopCreateRoomModal" style="flex:1;">➕ Tạo Mã Phòng</button>
+                    <button class="vtype-btn" id="btnCoopRefreshRooms" style="flex:1;" title="Xem các phòng công khai đang mở">🔄 Phòng đang mở</button>
+                  </div>
                 <div class="cmb-actions" style="margin-top:4px;">
                   <button class="btn-sync-skin" id="btnCoopExportBasket" style="flex:1;" title="Xuất danh sách Mod trong máy bạn thành file nhỏ gửi qua Zalo/Discord cho bạn bè">📤 Xuất Giỏ Mod Phòng</button>
                   <button class="btn-sync-skin" id="btnCoopImportBasket" style="flex:1;" title="Nhập file Giỏ Mod của chủ phòng để tự tải đủ Mod trước khi vào">📥 Nhập Giỏ Mod Bạn Bè</button>

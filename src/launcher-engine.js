@@ -680,7 +680,7 @@ async function fetchLoaderVersions(mcVersion, loaderType, gameDir = '') {
         version: 'Auto-Shader-Zoom',
         stable: true,
         kind: 'parity',
-        displayLabel: '🔆 Tự động đủ bộ (Shader • Zoom • Đuốc sáng • Hỗ trợ Mod)'
+        displayLabel: '🔆 Tự động đủ bộ (Shader • Zoom)'
       }
     ];
     const installedProfiles = findInstalledOptifineProfiles(gameDir || getDefaultGameDir(), mcVersion);

@@ -9420,6 +9420,131 @@ html[data-theme="sakura"] .ds-sig-pill {
   font-weight: 700 !important;
 }
 
+/* =========================================================================
+   v41.2.0 PRO — FULL-UI VISUAL AUDIT POLISH ACROSS ALL 9 TABS
+   ========================================================================= */
+
+/* Home Tab: Fit all cards in viewport & keep Legacy loader + RAM pills crisp */
+#tab-home .home-left-col {
+  gap: 10px !important;
+}
+
+.loader-pick-card .lpc-sub {
+  font-size: 10.6px !important;
+  letter-spacing: -0.02em !important;
+  white-space: nowrap !important;
+}
+
+#tab-home .ram-pill-btn,
+#tab-home .ram-auto-btn {
+  font-size: 12.2px !important;
+  padding: 4px 7px !important;
+}
+
+/* Play Tab: Keep Smart RAM Coach icon inline & stretch 6 Popular Version chips evenly */
+#smartRamCoachBar .srcb-left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 12px !important;
+}
+
+#smartRamCoachBar .srcb-icon {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  flex: 0 0 auto !important;
+}
+
+#quickVersionGrid,
+.quick-version-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.qver-chip {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+/* Worlds Tab: Expand search input so Row 1 fills full width */
+#worldSearchInput {
+  flex: 1 1 220px !important;
+}
+
+/* Packs Tab: Fit all 7 top action buttons cleanly on 1 single row (no orphan button) */
+#tab-packs .packs-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+}
+
+#tab-packs .packs-header-actions > button {
+  padding: 6px 8px !important;
+  font-size: 11.9px !important;
+  white-space: nowrap !important;
+  flex: 1 1 auto !important;
+  justify-content: center !important;
+}
+
+/* Servers Tab: Keep header actions on 1 row & Co-Op mode buttons side-by-side */
+#tab-servers > .subtab-header {
+  flex-wrap: nowrap !important;
+}
+
+#tab-servers > .subtab-header .subpage-title-block {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.coop-mode-box .cmb-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+}
+
+.coop-mode-box .cmb-actions > button {
+  flex: 1 1 0 !important;
+  padding: 7px 8px !important;
+  font-size: 12.4px !important;
+  white-space: nowrap !important;
+  justify-content: center !important;
+}
+
+/* Skin Tab: Give Upload PNG & Cape buttons proper 36px height & full-width flex */
+#tab-skin .wt-upload-btn,
+#tab-skin .wt-snap-btn,
+#tab-skin .wt-layer-inline-btn {
+  min-height: 36px !important;
+  padding: 7px 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12.8px !important;
+  font-weight: 600 !important;
+}
+
+#wtab-cape .wt-row-2col {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+#wtab-cape .wt-row-2col > button {
+  flex: 1 1 auto !important;
+}
+
+/* Tools Tab: Ensure RAM mini progress bar spans 100% width of card */
+.ram-mini-track {
+  width: 100% !important;
+  display: block !important;
+}
+
 /* 2. Dedicated Section Card in #tab-servers (#localServerDedicatedCard) */
 .ls-dedicated-section-card {
   display: flex;
